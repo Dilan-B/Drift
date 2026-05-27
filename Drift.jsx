@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, ScrollView,
   StyleSheet, SafeAreaView, KeyboardAvoidingView,
-  StatusBar, Platform,
+  StatusBar, Platform, BackHandler, Alert,
 } from "react-native";
 
 // ── Design tokens ────────────────────────────────────────────
@@ -35,12 +35,24 @@ const EFFORT = [
 ];
 
 const CHALLENGES = [
-  { id: "pushups", title: "10 pushups",         emoji: "💪", type: "reps",  goal: 10,   desc: "Drop and do 10" },
-  { id: "walk",    title: "5 min walk outside",  emoji: "🚶", type: "timer", secs: 300,  desc: "Get outside, move your legs" },
-  { id: "squats",  title: "20 squats",           emoji: "🏋️", type: "reps",  goal: 20,   desc: "Full depth counts" },
-  { id: "work",    title: "25 min work session", emoji: "💼", type: "timer", secs: 1500, desc: "Lock in and focus" },
-  { id: "stretch", title: "3 min stretch",       emoji: "🧘", type: "timer", secs: 180,  desc: "Full body, take your time" },
-  { id: "jacks",   title: "30 jumping jacks",    emoji: "⚡", type: "reps",  goal: 30,   desc: "Get that heart rate up" },
+  { id: "pushups",   title: "10 pushups",              emoji: "💪", type: "reps",  goal: 10,   desc: "Drop and do 10 — full range" },
+  { id: "walk",      title: "5 min walk outside",       emoji: "🚶", type: "timer", secs: 300,  desc: "Get outside, move your legs" },
+  { id: "squats",    title: "20 squats",                emoji: "🏋️", type: "reps",  goal: 20,   desc: "Full depth counts" },
+  { id: "work",      title: "25 min work session",      emoji: "💼", type: "timer", secs: 1500, desc: "Lock in and actually focus" },
+  { id: "stretch",   title: "3 min full stretch",       emoji: "🧘", type: "timer", secs: 180,  desc: "Full body — take your time" },
+  { id: "jacks",     title: "30 jumping jacks",         emoji: "⚡", type: "reps",  goal: 30,   desc: "Get that heart rate up" },
+  { id: "water",     title: "Drink a full glass of water", emoji: "💧", type: "reps", goal: 1,  desc: "Hydrate before you scroll" },
+  { id: "journal",   title: "3 things you're grateful for", emoji: "📓", type: "reps", goal: 3, desc: "One sentence each — write it down" },
+  { id: "coldwater", title: "60s cold water on your face", emoji: "🚿", type: "timer", secs: 60, desc: "Wake up the hard way" },
+  { id: "meditate",  title: "5 min breathing",          emoji: "🌬️", type: "timer", secs: 300,  desc: "Box breathing or just slow breaths" },
+  { id: "burpees",   title: "10 burpees",               emoji: "🔥", type: "reps",  goal: 10,   desc: "Full range — no shortcuts" },
+  { id: "read",      title: "10 min reading",           emoji: "📚", type: "timer", secs: 600,  desc: "Anything — just not social media" },
+  { id: "lunges",    title: "20 lunges",                emoji: "🦵", type: "reps",  goal: 20,   desc: "10 each leg, full depth" },
+  { id: "plank",     title: "1 min plank",              emoji: "🏄", type: "timer", secs: 60,   desc: "Core tight, breathe steady" },
+  { id: "situps",    title: "15 sit-ups",               emoji: "🤸", type: "reps",  goal: 15,   desc: "Controlled movement, no yanking" },
+  { id: "dips",      title: "10 tricep dips",           emoji: "💺", type: "reps",  goal: 10,   desc: "Use your chair or a low surface" },
+  { id: "run",       title: "10 min jog or run",        emoji: "🏃", type: "timer", secs: 600,  desc: "Outside or treadmill" },
+  { id: "hiit",      title: "2 min HIIT",               emoji: "🌡️", type: "timer", secs: 120,  desc: "Max effort — go all out" },
 ];
 
 const LEVELS = [
@@ -105,6 +117,142 @@ function CreditTicker({ value }) {
   );
 }
 
+// ── Payment Screen ────────────────────────────────────────────
+function PaymentScreen({ skips, onPay }) {
+  const [cardNum,  setCardNum]  = useState("");
+  const [expiry,   setExpiry]   = useState("");
+  const [cvv,      setCvv]      = useState("");
+  const [name,     setName]     = useState("");
+  const [processing, setProcessing] = useState(false);
+  const [paid,     setPaid]     = useState(false);
+
+  // Block all back navigation from payment screen
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, []);
+
+  const fmtCard   = t => t.replace(/\D/g,"").slice(0,16).replace(/(.{4})/g,"$1 ").trim();
+  const fmtExpiry = t => { const c=t.replace(/\D/g,"").slice(0,4); return c.length>=3?c.slice(0,2)+"/"+c.slice(2):c; };
+  const fmtCvv    = t => t.replace(/\D/g,"").slice(0,3);
+
+  const canPay = cardNum.replace(/\s/g,"").length === 16 && expiry.length === 5 && cvv.length === 3 && name.trim().length > 1;
+
+  const handlePay = () => {
+    if (!canPay || processing) return;
+    setProcessing(true);
+    setTimeout(() => { setPaid(true); setTimeout(onPay, 1600); }, 2200);
+  };
+
+  if (paid) return (
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: earn.green, alignItems:"center", justifyContent:"center" }]}>
+      <StatusBar barStyle="light-content" />
+      <Text style={{ fontSize: 72, marginBottom: 16 }}>✓</Text>
+      <Text style={{ fontFamily: FD, fontSize: 26, color: "#fff", fontStyle: "italic" }}>Payment accepted</Text>
+      <Text style={{ fontFamily: FB, fontSize: 14, color: "rgba(255,255,255,0.7)", marginTop: 8 }}>Unlocking your phone…</Text>
+    </View>
+  );
+
+  if (processing) return (
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: ink.void, alignItems:"center", justifyContent:"center" }]}>
+      <StatusBar barStyle="light-content" />
+      <Text style={{ fontSize: 48, marginBottom: 20 }}>⏳</Text>
+      <Text style={{ fontFamily: FB, fontSize: 15, color: "#8A7060" }}>Processing payment…</Text>
+    </View>
+  );
+
+  return (
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: ink.void }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <StatusBar barStyle="light-content" />
+      <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 60 }} keyboardShouldPersistTaps="handled">
+
+        {/* Header */}
+        <View style={{ alignItems: "center", marginBottom: 32 }}>
+          <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: earn.terra, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+            <Text style={{ fontSize: 26 }}>💳</Text>
+          </View>
+          <Text style={{ fontFamily: FD, fontSize: 24, color: "#F0E8D8", fontStyle: "italic", marginBottom: 4 }}>Skip this morning</Text>
+          <Text style={{ fontFamily: FB, fontSize: 13, color: "#5A4838" }}>One-time charge of <Text style={{ color: earn.terra, fontWeight: "600" }}>$0.25</Text></Text>
+        </View>
+
+        {/* Card */}
+        <View style={{ backgroundColor: "rgba(255,255,255,0.055)", borderRadius: 16, padding: 20, borderWidth: 0.5, borderColor: "rgba(255,255,255,0.09)", marginBottom: 20 }}>
+          {/* Card number */}
+          <Text style={{ fontFamily: FB, fontSize: 10, fontWeight: "600", color: "#4A3828", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Card number</Text>
+          <TextInput
+            value={cardNum}
+            onChangeText={t => setCardNum(fmtCard(t))}
+            placeholder="1234 5678 9012 3456"
+            placeholderTextColor="#3A2818"
+            keyboardType="number-pad"
+            style={{ fontFamily: FB, fontSize: 17, color: "#F0E8D8", letterSpacing: 2, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.1)", marginBottom: 18 }}
+          />
+
+          {/* Expiry + CVV */}
+          <View style={{ flexDirection: "row", gap: 16 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: FB, fontSize: 10, fontWeight: "600", color: "#4A3828", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Expiry</Text>
+              <TextInput
+                value={expiry}
+                onChangeText={t => setExpiry(fmtExpiry(t))}
+                placeholder="MM/YY"
+                placeholderTextColor="#3A2818"
+                keyboardType="number-pad"
+                style={{ fontFamily: FB, fontSize: 17, color: "#F0E8D8", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.1)" }}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: FB, fontSize: 10, fontWeight: "600", color: "#4A3828", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>CVV</Text>
+              <TextInput
+                value={cvv}
+                onChangeText={t => setCvv(fmtCvv(t))}
+                placeholder="123"
+                placeholderTextColor="#3A2818"
+                keyboardType="number-pad"
+                secureTextEntry
+                style={{ fontFamily: FB, fontSize: 17, color: "#F0E8D8", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.1)" }}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Name */}
+        <View style={{ backgroundColor: "rgba(255,255,255,0.055)", borderRadius: 16, padding: 20, borderWidth: 0.5, borderColor: "rgba(255,255,255,0.09)", marginBottom: 28 }}>
+          <Text style={{ fontFamily: FB, fontSize: 10, fontWeight: "600", color: "#4A3828", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Name on card</Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Your name"
+            placeholderTextColor="#3A2818"
+            autoCapitalize="words"
+            style={{ fontFamily: FB, fontSize: 17, color: "#F0E8D8", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.1)" }}
+          />
+        </View>
+
+        {/* Pay button */}
+        <TouchableOpacity
+          onPress={handlePay}
+          disabled={!canPay}
+          style={{ paddingVertical: 16, borderRadius: 14, backgroundColor: canPay ? earn.terra : "rgba(212,98,42,0.25)", alignItems: "center", marginBottom: 16 }}
+        >
+          <Text style={{ fontFamily: FB, fontWeight: "700", fontSize: 16, color: canPay ? "#fff" : "#4A2A18" }}>
+            Pay $0.25
+          </Text>
+        </TouchableOpacity>
+
+        {/* Fine print */}
+        <View style={{ alignItems: "center", gap: 4 }}>
+          <Text style={{ fontFamily: FB, fontSize: 11, color: "#3A2818" }}>🔒 Secured by Stripe</Text>
+          <Text style={{ fontFamily: FB, fontSize: 10, color: "#2A1808", textAlign: "center" }}>
+            {skips > 0 ? `You've paid to skip ${skips}× this week ($${(skips * 0.25).toFixed(2)} total)` : "First skip this week"}
+          </Text>
+        </View>
+
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
 // ── Morning Gate ─────────────────────────────────────────────
 function MorningGate({ skips, onUnlock, onPay }) {
   const [chosen, setChosen] = useState(null);
@@ -114,6 +262,12 @@ function MorningGate({ skips, onUnlock, onPay }) {
   const [repsLeft, setRepsLeft] = useState(0);
   const [done, setDone] = useState(false);
   const timerRef = useRef(null);
+
+  // Block back button entirely on morning gate — can't exit or go back mid-challenge
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     const i = setInterval(() => setClock(clockStr()), 1000);
@@ -161,9 +315,7 @@ function MorningGate({ skips, onUnlock, onPay }) {
   if (chosen) return (
     <View style={{ flex: 1, backgroundColor: ink.void, alignItems: "center", justifyContent: "center", padding: 24 }}>
       <StatusBar barStyle="light-content" />
-      <TouchableOpacity onPress={back} style={{ position: "absolute", top: 60, left: 20, flexDirection: "row", alignItems: "center", gap: 5 }}>
-        <Text style={{ fontFamily: FB, fontSize: 13, color: "#5A4838" }}>← Back</Text>
-      </TouchableOpacity>
+      {/* No back button — once you start a challenge you finish it */}
 
       <Text style={{ fontSize: 64, marginBottom: 16 }}>{chosen.emoji}</Text>
       <Text style={{ fontFamily: FD, fontSize: 24, color: "#F0E8D8", fontStyle: "italic", marginBottom: 6 }}>{chosen.title}</Text>
@@ -781,8 +933,9 @@ export default function App() {
     } catch {}
   };
 
-  const unlock = () => { setScreen("app"); persist({ morningDone: true }); };
-  const pay    = () => { const ns = skips + 1; setSkips(ns); setScreen("app"); persist({ morningDone: true, skips: ns }); };
+  const unlock  = () => { setScreen("app"); persist({ morningDone: true }); };
+  const goToPay = () => { setScreen("payment"); };
+  const pay     = () => { const ns = skips + 1; setSkips(ns); setScreen("app"); persist({ morningDone: true, skips: ns }); };
 
   const loadDemo = () => {
     const dc = { balance: 90, earned: 180, spent: 90 };
@@ -817,7 +970,8 @@ export default function App() {
     </View>
   );
 
-  if (screen === "morning") return <MorningGate skips={skips} onUnlock={unlock} onPay={pay} />;
+  if (screen === "morning") return <MorningGate skips={skips} onUnlock={unlock} onPay={goToPay} />;
+  if (screen === "payment") return <PaymentScreen skips={skips} onPay={pay} />;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: paper.card }}>
