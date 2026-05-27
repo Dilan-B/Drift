@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Drift",
+    "slug": "drift",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#16120E"
+    },
+    "platforms": ["ios", "android", "web"],
+    "web": {
+      "bundler": "metro"
+    },
+    "newArchEnabled": false
+  }
+}
