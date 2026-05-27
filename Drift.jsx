@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import {
   View, Text, TouchableOpacity, TextInput, ScrollView,
   StyleSheet, SafeAreaView, KeyboardAvoidingView,
-  StatusBar, Platform, BackHandler, Alert,
+  StatusBar, Platform, BackHandler, Alert, AppState,
 } from "react-native";
 
 // ── Design tokens ────────────────────────────────────────────
@@ -55,6 +56,22 @@ const CHALLENGES = [
   { id: "hiit",      title: "2 min HIIT",               emoji: "🌡️", type: "timer", secs: 120,  desc: "Max effort — go all out" },
 ];
 
+// ── Camera motion scoring ────────────────────────────────────
+// Samples 60 evenly-spaced positions in the base64 image data region
+// and returns the average absolute character-code difference between frames.
+// Score ~0 = no movement; score > 15 = person is moving; score > 30 = vigorous.
+const camMotion = (a, b) => {
+  if (!a || !b) return 0;
+  const len   = Math.min(a.length, b.length);
+  if (len < 200) return 0;
+  const start = Math.floor(len * 0.12); // skip JPEG header bytes
+  const span  = len - start;
+  const step  = Math.max(1, Math.floor(span / 60));
+  let diff = 0;
+  for (let i = start; i < len; i += step) diff += Math.abs(a.charCodeAt(i) - b.charCodeAt(i));
+  return diff / (span / step);
+};
+
 const LEVELS = [
   { name: "Seedling",   min: 0,    e: "🌱" },
   { name: "Sprout",     min: 150,  e: "🌿" },
@@ -81,8 +98,15 @@ const fmtSecs = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 const getLevel  = xp => [...LEVELS].reverse().find(l => xp >= l.min) || LEVELS[0];
 const xpProg    = xp => { const lv = getLevel(xp); const ni = LEVELS.findIndex(l => l.min > xp); if (ni === -1) return 1; return (xp - lv.min) / (LEVELS[ni].min - lv.min); };
 const xpToNext  = xp => { const ni = LEVELS.findIndex(l => l.min > xp); return ni === -1 ? 0 : LEVELS[ni].min - xp; };
-const todayKey  = () => new Date().toISOString().slice(0, 10);
-const clockStr  = () => new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+const todayKey    = () => new Date().toISOString().slice(0, 10);
+const clockStr    = () => new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+const fmtSecLeft  = s => {
+  if (s <= 0)   return "locked";
+  if (s < 60)   return `0:${String(s).padStart(2, "0")}`;
+  if (s < 3600) return `${Math.floor(s/60)}:${String(s%60).padStart(2, "0")}`;
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+};
 
 // ── Storage (in-memory) ──────────────────────────────────────
 const _store = {};
@@ -261,7 +285,17 @@ function MorningGate({ skips, onUnlock, onPay }) {
   const [clock, setClock] = useState(clockStr());
   const [repsLeft, setRepsLeft] = useState(0);
   const [done, setDone] = useState(false);
-  const timerRef = useRef(null);
+  const [motionVal, setMotionVal] = useState(0);     // 0–1 normalised motion bar
+  const [repFlash, setRepFlash]   = useState(false); // brief highlight on rep detect
+
+  const timerRef    = useRef(null);
+  const repsLeftRef = useRef(0);     // stale-closure-safe rep counter
+  const cameraRef   = useRef(null);  // CameraView ref
+  const snapRef     = useRef(null);  // snapshot setInterval handle
+  const prevB64Ref  = useRef(null);  // last frame base64 for diff
+  const histRef     = useRef([]);    // rolling motion-score history (smoothing)
+  const inMotRef    = useRef(false); // are we in the "moving" phase of a rep?
+  const lastRepRef  = useRef(0);     // timestamp of last counted rep (debounce)
 
   // Block back button entirely on morning gate — can't exit or go back mid-challenge
   useEffect(() => {
@@ -275,10 +309,66 @@ function MorningGate({ skips, onUnlock, onPay }) {
   }, []);
   useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
 
+  // Camera permission
+  const [camPerm, requestCamPerm] = useCameraPermissions();
+
+  // ── Camera rep detection ──────────────────────────────────────
+  // Takes a snapshot every 450ms, diffs consecutive base64 strings to
+  // measure motion. Rep = motion spike that settles back to stillness.
+  useEffect(() => {
+    if (!chosen || chosen.type !== "reps" || done || !camPerm?.granted) return;
+
+    snapRef.current = setInterval(async () => {
+      if (!cameraRef.current) return;
+      try {
+        const photo = await cameraRef.current.takePictureAsync({
+          quality: 0,      // lowest JPEG quality = smallest file, fastest
+          base64: true,
+          exif: false,
+        });
+        if (!photo?.base64) return;
+
+        const score = camMotion(prevB64Ref.current, photo.base64);
+        prevB64Ref.current = photo.base64;
+
+        // Smooth over last 3 frames
+        histRef.current.push(score);
+        if (histRef.current.length > 3) histRef.current.shift();
+        const avg = histRef.current.reduce((a, b) => a + b, 0) / histRef.current.length;
+
+        setMotionVal(Math.min(1, avg / 30)); // normalise: score 30 → full bar
+
+        const now = Date.now();
+        if (avg > 15 && !inMotRef.current) {
+          inMotRef.current = true; // person started moving
+        } else if (avg < 7 && inMotRef.current && (now - lastRepRef.current) > 800) {
+          // Movement completed and settled → count the rep
+          inMotRef.current = false;
+          lastRepRef.current = now;
+          setRepFlash(true);
+          setTimeout(() => setRepFlash(false), 450);
+          const next = Math.max(0, repsLeftRef.current - 1);
+          repsLeftRef.current = next;
+          setRepsLeft(next);
+          if (next <= 0) { setDone(true); setTimeout(onUnlock, 1400); }
+        }
+      } catch {}
+    }, 450);
+
+    return () => {
+      if (snapRef.current) { clearInterval(snapRef.current); snapRef.current = null; }
+    };
+  }, [chosen, done, camPerm?.granted]);
+
   const pick = ch => {
     setChosen(ch);
     if (ch.type === "timer") setCountdown(ch.secs);
-    if (ch.type === "reps")  setRepsLeft(ch.goal);
+    if (ch.type === "reps") {
+      repsLeftRef.current = ch.goal;
+      setRepsLeft(ch.goal);
+      // Immediately trigger the system camera permission dialog
+      requestCamPerm();
+    }
   };
 
   const startTimer = () => {
@@ -291,15 +381,22 @@ function MorningGate({ skips, onUnlock, onPay }) {
     }, 1000);
   };
 
-  const doRep = () => {
-    const next = repsLeft - 1;
+  // Manual fallback (also used by accelerometer path via repsLeftRef)
+  const doRepManual = () => {
+    const next = Math.max(0, repsLeftRef.current - 1);
+    repsLeftRef.current = next;
     setRepsLeft(next);
     if (next <= 0) { setDone(true); setTimeout(onUnlock, 1400); }
   };
 
   const back = () => {
-    setChosen(null); setCountdown(null); setRunning(false); setRepsLeft(0); setDone(false);
+    if (snapRef.current)  { clearInterval(snapRef.current); snapRef.current = null; }
     if (timerRef.current) clearInterval(timerRef.current);
+    setChosen(null); setCountdown(null); setRunning(false);
+    setRepsLeft(0); repsLeftRef.current = 0; setDone(false);
+    setMotionVal(0); setRepFlash(false);
+    prevB64Ref.current = null; histRef.current = [];
+    inMotRef.current = false; lastRepRef.current = 0;
   };
 
   if (done) return (
@@ -346,25 +443,82 @@ function MorningGate({ skips, onUnlock, onPay }) {
       )}
 
       {chosen.type === "reps" && (
-        <View style={{ alignItems: "center" }}>
+        <View style={{ alignItems: "center", width: "100%" }}>
+
+          {/* Camera preview — or grant-permission prompt */}
+          {camPerm?.granted ? (
+            <CameraView
+              ref={cameraRef}
+              style={{ width: 220, height: 160, borderRadius: 14, overflow: "hidden", marginBottom: 16 }}
+              facing="front"
+            />
+          ) : (
+            <TouchableOpacity
+              onPress={requestCamPerm}
+              style={{
+                width: 220, height: 160, borderRadius: 14, marginBottom: 16,
+                backgroundColor: "rgba(255,255,255,0.04)",
+                borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+                alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <Text style={{ fontSize: 36, marginBottom: 8 }}>📷</Text>
+              <Text style={{ fontFamily: FB, fontSize: 13, fontWeight: "600", color: earn.terra }}>Enable Camera</Text>
+              <Text style={{ fontFamily: FB, fontSize: 11, color: "#4A3020", marginTop: 4, textAlign: "center" }}>
+                Camera watches your movement{"\n"}to count reps automatically
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Rep counter ring */}
           <View style={{
-            width: 140, height: 140, borderRadius: 70,
-            borderWidth: 4, borderColor: repsLeft <= 0 ? earn.green : earn.terra,
-            alignItems: "center", justifyContent: "center", marginBottom: 24,
+            width: 120, height: 120, borderRadius: 60,
+            borderWidth: 4,
+            borderColor: repsLeft <= 0 ? earn.green : repFlash ? "#FFD700" : earn.terra,
+            alignItems: "center", justifyContent: "center", marginBottom: 14,
           }}>
-            <Text style={{ fontFamily: FD, fontSize: 42, color: "#F0E8D8", fontWeight: "300", lineHeight: 46 }}>{repsLeft}</Text>
-            <Text style={{ fontFamily: FB, fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>remaining</Text>
+            <Text style={{ fontFamily: FD, fontSize: 38, color: repFlash ? "#FFD700" : "#F0E8D8", fontWeight: "300", lineHeight: 44 }}>
+              {repsLeft}
+            </Text>
+            <Text style={{ fontFamily: FB, fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>remaining</Text>
           </View>
-          <TouchableOpacity
-            onPress={doRep}
-            disabled={repsLeft <= 0}
-            style={{ paddingVertical: 14, paddingHorizontal: 32, borderRadius: 14, backgroundColor: earn.green, opacity: repsLeft <= 0 ? 0.4 : 1 }}
-          >
-            <Text style={{ fontFamily: FB, fontWeight: "600", fontSize: 15, color: "#fff" }}>✓ I did one — count it</Text>
-          </TouchableOpacity>
-          <Text style={{ fontFamily: FB, fontSize: 11, color: "#3A2A18", marginTop: 12, textAlign: "center" }}>
-            Honor system for now. AI camera tracking coming soon.
+
+          {/* Status label */}
+          <Text style={{ fontFamily: FB, fontSize: 13, color: repFlash ? "#FFD700" : "#5A4838", marginBottom: 12, textAlign: "center" }}>
+            {repFlash ? "⚡ Rep counted!" : repsLeft <= 0 ? "✓ Done!" : camPerm?.granted ? "Camera is watching — do your reps" : "Grant camera access above"}
           </Text>
+
+          {/* Live motion bar */}
+          {repsLeft > 0 && camPerm?.granted && (
+            <View style={{ width: 220, marginBottom: 16 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
+                <Text style={{ fontFamily: FB, fontSize: 9, color: "#3A2818" }}>still</Text>
+                <Text style={{ fontFamily: FB, fontSize: 9, color: "#3A2818" }}>moving</Text>
+              </View>
+              <View style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
+                <View style={{
+                  height: "100%",
+                  width: `${motionVal * 100}%`,
+                  backgroundColor: repFlash ? "#FFD700" : motionVal > 0.5 ? earn.green : earn.terra,
+                  borderRadius: 3,
+                }} />
+              </View>
+            </View>
+          )}
+
+          {/* Manual fallback */}
+          <TouchableOpacity
+            onPress={doRepManual}
+            disabled={repsLeft <= 0}
+            style={{
+              paddingVertical: 7, paddingHorizontal: 18, borderRadius: 10,
+              borderWidth: 0.5, borderColor: "rgba(255,255,255,0.1)",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              opacity: repsLeft <= 0 ? 0.3 : 1,
+            }}
+          >
+            <Text style={{ fontFamily: FB, fontSize: 11, color: "#4A3020" }}>+ Count manually</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -899,6 +1053,70 @@ export default function App() {
   const [skips,   setSkips]   = useState(0);
   const [overlay, setOverlay] = useState(null);
   const [popup,   setPopup]   = useState(null);
+  const [secLeft, setSecLeft] = useState(0);
+
+  // ── Countdown engine ─────────────────────────────────────────
+  const secRef   = useRef(0);   // source of truth for seconds remaining
+  const tickRef  = useRef(null);
+  const screenRef = useRef("loading");
+
+  const stopTick = () => { if (tickRef.current) clearInterval(tickRef.current); };
+
+  const startTick = (initialSec) => {
+    stopTick();
+    secRef.current = initialSec;
+    if (initialSec <= 0) return;
+    tickRef.current = setInterval(() => {
+      secRef.current = Math.max(0, secRef.current - 1);
+      const s = secRef.current;
+      setSecLeft(s);
+      // Keep credits.balance in sync (in whole minutes, rounded up so 1s remaining ≠ 0m)
+      setCredits(c => {
+        const newBal = s > 0 ? Math.ceil(s / 60) : 0;
+        return c.balance === newBal ? c : { ...c, balance: newBal };
+      });
+      if (s <= 0) {
+        stopTick();
+        if (screenRef.current === "app") setScreen("morning");
+      }
+    }, 1000);
+  };
+
+  // Track screen in a ref so AppState listener always sees latest value
+  useEffect(() => { screenRef.current = screen; }, [screen]);
+
+  // Start/stop tick when screen changes
+  useEffect(() => {
+    if (screen === "app" && secRef.current > 0) startTick(secRef.current);
+    else stopTick();
+    return stopTick;
+  }, [screen]);
+
+  // Pause when backgrounded, recalculate elapsed when foregrounded
+  useEffect(() => {
+    let bgTime = null;
+    const sub = AppState.addEventListener("change", nextState => {
+      if (nextState !== "active") {
+        bgTime = Date.now();
+        stopTick();
+      } else {
+        if (bgTime && screenRef.current === "app") {
+          const elapsedSec = Math.floor((Date.now() - bgTime) / 1000);
+          const remaining  = Math.max(0, secRef.current - elapsedSec);
+          secRef.current   = remaining;
+          setSecLeft(remaining);
+          setCredits(c => {
+            const nb = remaining > 0 ? Math.ceil(remaining / 60) : 0;
+            return c.balance === nb ? c : { ...c, balance: nb };
+          });
+          if (remaining > 0) startTick(remaining);
+          else setScreen("morning");
+        }
+        bgTime = null;
+      }
+    });
+    return () => { sub.remove(); stopTick(); };
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -909,10 +1127,14 @@ export default function App() {
           if (p.date !== todayKey()) {
             setTotalXp(p.totalXp || 0); setSkips(0); setScreen("morning");
           } else {
+            const savedCredits = p.credits || { balance: 0, earned: 0, spent: 0 };
             setTasks(p.tasks || []);
-            setCredits(p.credits || { balance: 0, earned: 0, spent: 0 });
+            setCredits(savedCredits);
             setTotalXp(p.totalXp || 0);
             setSkips(p.skips || 0);
+            const initSec = (savedCredits.balance || 0) * 60;
+            secRef.current = initSec;
+            setSecLeft(initSec);
             setScreen(p.morningDone ? "app" : "morning");
           }
         } else setScreen("morning");
@@ -939,6 +1161,8 @@ export default function App() {
 
   const loadDemo = () => {
     const dc = { balance: 90, earned: 180, spent: 90 };
+    secRef.current = 90 * 60;
+    setSecLeft(90 * 60);
     setTasks(DEMO_TASKS); setCredits(dc); setTotalXp(340); setSkips(1); setScreen("app");
     persist({ tasks: DEMO_TASKS, credits: dc, totalXp: 340, skips: 1, morningDone: true });
   };
@@ -946,20 +1170,28 @@ export default function App() {
   const completeTask = id => {
     const task = tasks.find(t => t.id === id);
     if (!task || task.done) return;
-    const nt = tasks.map(t => t.id === id ? { ...t, done: true } : t);
-    const nc = { balance: credits.balance + task.credits, earned: credits.earned + task.credits, spent: credits.spent };
-    const nx = totalXp + task.xp;
+    const nt  = tasks.map(t => t.id === id ? { ...t, done: true } : t);
+    const nx  = totalXp + task.xp;
+    // Add earned minutes to the live countdown
+    const newSec = secRef.current + task.credits * 60;
+    const nc  = { balance: Math.ceil(newSec / 60), earned: credits.earned + task.credits, spent: credits.spent };
     setTasks(nt); setCredits(nc); setTotalXp(nx);
     setPopup({ credits: task.credits, xp: task.xp });
     setTimeout(() => setPopup(null), 2000);
+    startTick(newSec); // restart countdown with new total
     persist({ tasks: nt, credits: nc, totalXp: nx });
   };
 
   const addTask  = t => { const nt = [...tasks, t]; setTasks(nt); persist({ tasks: nt }); };
   const simSpend = () => {
-    const use = Math.min(10, credits.balance);
-    const nc  = { ...credits, balance: credits.balance - use, spent: credits.spent + use };
-    setCredits(nc); persist({ credits: nc });
+    const useSec = Math.min(10 * 60, secRef.current);
+    const newSec = Math.max(0, secRef.current - useSec);
+    const newBal = Math.ceil(newSec / 60);
+    const nc     = { ...credits, balance: newBal, spent: credits.spent + Math.floor(useSec / 60) };
+    startTick(newSec);
+    setCredits(nc);
+    persist({ credits: nc });
+    if (newSec <= 0) setScreen("morning");
   };
 
   if (screen === "loading") return (
@@ -1003,18 +1235,18 @@ export default function App() {
       }}>
         <View style={{
           width: 28, height: 28, borderRadius: 9,
-          backgroundColor: credits.balance > 0 ? earn.green : "#1C1408",
+          backgroundColor: secLeft > 0 ? earn.green : "#1C1408",
           alignItems: "center", justifyContent: "center", marginRight: 8,
         }}>
-          <Text style={{ fontSize: 13 }}>{credits.balance > 0 ? "🔓" : "🔒"}</Text>
+          <Text style={{ fontSize: 13 }}>{secLeft > 0 ? "🔓" : "🔒"}</Text>
         </View>
         <Text style={{ fontFamily: FD, fontSize: 17, color: ink.deep, fontStyle: "italic", flex: 1 }}>Drift</Text>
         <View style={{
-          backgroundColor: credits.balance > 0 ? earn.greenLo : "#EDE7D8",
+          backgroundColor: secLeft > 0 ? (secLeft < 120 ? "#FDECEA" : earn.greenLo) : "#EDE7D8",
           borderRadius: 20, paddingVertical: 3, paddingHorizontal: 10, marginRight: 10,
         }}>
-          <Text style={{ fontFamily: FB, fontSize: 11, fontWeight: "600", color: credits.balance > 0 ? earn.greenD : ink.faint }}>
-            {credits.balance > 0 ? `${credits.balance}m` : "locked"}
+          <Text style={{ fontFamily: FB, fontSize: 11, fontWeight: "600", color: secLeft > 0 ? (secLeft < 120 ? "#C0392B" : earn.greenD) : ink.faint }}>
+            {fmtSecLeft(secLeft)}
           </Text>
         </View>
         <TouchableOpacity onPress={loadDemo}>
