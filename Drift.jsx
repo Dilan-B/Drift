@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import PoseCamera, { POSE_EXERCISE_IDS } from "./PoseCamera";
 import {
   View, Text, TouchableOpacity, TextInput, ScrollView,
   StyleSheet, SafeAreaView, KeyboardAvoidingView,
@@ -56,21 +56,6 @@ const CHALLENGES = [
   { id: "hiit",      title: "2 min HIIT",               emoji: "🌡️", type: "timer", secs: 120,  desc: "Max effort — go all out" },
 ];
 
-// ── Camera motion scoring ────────────────────────────────────
-// Samples 60 evenly-spaced positions in the base64 image data region
-// and returns the average absolute character-code difference between frames.
-// Score ~0 = no movement; score > 15 = person is moving; score > 30 = vigorous.
-const camMotion = (a, b) => {
-  if (!a || !b) return 0;
-  const len   = Math.min(a.length, b.length);
-  if (len < 200) return 0;
-  const start = Math.floor(len * 0.12); // skip JPEG header bytes
-  const span  = len - start;
-  const step  = Math.max(1, Math.floor(span / 60));
-  let diff = 0;
-  for (let i = start; i < len; i += step) diff += Math.abs(a.charCodeAt(i) - b.charCodeAt(i));
-  return diff / (span / step);
-};
 
 const LEVELS = [
   { name: "Seedling",   min: 0,    e: "🌱" },
@@ -285,17 +270,10 @@ function MorningGate({ skips, onUnlock, onPay }) {
   const [clock, setClock] = useState(clockStr());
   const [repsLeft, setRepsLeft] = useState(0);
   const [done, setDone] = useState(false);
-  const [motionVal, setMotionVal] = useState(0);     // 0–1 normalised motion bar
-  const [repFlash, setRepFlash]   = useState(false); // brief highlight on rep detect
+  const [repFlash, setRepFlash] = useState(false); // brief flash on rep detect
 
   const timerRef    = useRef(null);
-  const repsLeftRef = useRef(0);     // stale-closure-safe rep counter
-  const cameraRef   = useRef(null);  // CameraView ref
-  const snapRef     = useRef(null);  // snapshot setInterval handle
-  const prevB64Ref  = useRef(null);  // last frame base64 for diff
-  const histRef     = useRef([]);    // rolling motion-score history (smoothing)
-  const inMotRef    = useRef(false); // are we in the "moving" phase of a rep?
-  const lastRepRef  = useRef(0);     // timestamp of last counted rep (debounce)
+  const repsLeftRef = useRef(0); // stale-closure-safe rep counter
 
   // Block back button entirely on morning gate — can't exit or go back mid-challenge
   useEffect(() => {
@@ -309,56 +287,15 @@ function MorningGate({ skips, onUnlock, onPay }) {
   }, []);
   useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
 
-  // Camera permission
-  const [camPerm, requestCamPerm] = useCameraPermissions();
-
-  // ── Camera rep detection ──────────────────────────────────────
-  // Takes a snapshot every 450ms, diffs consecutive base64 strings to
-  // measure motion. Rep = motion spike that settles back to stillness.
-  useEffect(() => {
-    if (!chosen || chosen.type !== "reps" || done || !camPerm?.granted) return;
-
-    snapRef.current = setInterval(async () => {
-      if (!cameraRef.current) return;
-      try {
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 0,      // lowest JPEG quality = smallest file, fastest
-          base64: true,
-          exif: false,
-        });
-        if (!photo?.base64) return;
-
-        const score = camMotion(prevB64Ref.current, photo.base64);
-        prevB64Ref.current = photo.base64;
-
-        // Smooth over last 3 frames
-        histRef.current.push(score);
-        if (histRef.current.length > 3) histRef.current.shift();
-        const avg = histRef.current.reduce((a, b) => a + b, 0) / histRef.current.length;
-
-        setMotionVal(Math.min(1, avg / 30)); // normalise: score 30 → full bar
-
-        const now = Date.now();
-        if (avg > 15 && !inMotRef.current) {
-          inMotRef.current = true; // person started moving
-        } else if (avg < 7 && inMotRef.current && (now - lastRepRef.current) > 800) {
-          // Movement completed and settled → count the rep
-          inMotRef.current = false;
-          lastRepRef.current = now;
-          setRepFlash(true);
-          setTimeout(() => setRepFlash(false), 450);
-          const next = Math.max(0, repsLeftRef.current - 1);
-          repsLeftRef.current = next;
-          setRepsLeft(next);
-          if (next <= 0) { setDone(true); setTimeout(onUnlock, 1400); }
-        }
-      } catch {}
-    }, 450);
-
-    return () => {
-      if (snapRef.current) { clearInterval(snapRef.current); snapRef.current = null; }
-    };
-  }, [chosen, done, camPerm?.granted]);
+  // Called by PoseCamera each time a rep is detected
+  const handleRepCounted = useCallback(() => {
+    setRepFlash(true);
+    setTimeout(() => setRepFlash(false), 450);
+    const next = Math.max(0, repsLeftRef.current - 1);
+    repsLeftRef.current = next;
+    setRepsLeft(next);
+    if (next <= 0) { setDone(true); setTimeout(onUnlock, 1400); }
+  }, [onUnlock]);
 
   const pick = ch => {
     setChosen(ch);
@@ -366,8 +303,6 @@ function MorningGate({ skips, onUnlock, onPay }) {
     if (ch.type === "reps") {
       repsLeftRef.current = ch.goal;
       setRepsLeft(ch.goal);
-      // Immediately trigger the system camera permission dialog
-      requestCamPerm();
     }
   };
 
@@ -390,13 +325,10 @@ function MorningGate({ skips, onUnlock, onPay }) {
   };
 
   const back = () => {
-    if (snapRef.current)  { clearInterval(snapRef.current); snapRef.current = null; }
     if (timerRef.current) clearInterval(timerRef.current);
     setChosen(null); setCountdown(null); setRunning(false);
     setRepsLeft(0); repsLeftRef.current = 0; setDone(false);
-    setMotionVal(0); setRepFlash(false);
-    prevB64Ref.current = null; histRef.current = [];
-    inMotRef.current = false; lastRepRef.current = 0;
+    setRepFlash(false);
   };
 
   if (done) return (
@@ -445,30 +377,12 @@ function MorningGate({ skips, onUnlock, onPay }) {
       {chosen.type === "reps" && (
         <View style={{ alignItems: "center", width: "100%" }}>
 
-          {/* Camera preview — or grant-permission prompt */}
-          {camPerm?.granted ? (
-            <CameraView
-              ref={cameraRef}
-              style={{ width: 220, height: 160, borderRadius: 14, overflow: "hidden", marginBottom: 16 }}
-              facing="front"
-            />
-          ) : (
-            <TouchableOpacity
-              onPress={requestCamPerm}
-              style={{
-                width: 220, height: 160, borderRadius: 14, marginBottom: 16,
-                backgroundColor: "rgba(255,255,255,0.04)",
-                borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
-                alignItems: "center", justifyContent: "center",
-              }}
-            >
-              <Text style={{ fontSize: 36, marginBottom: 8 }}>📷</Text>
-              <Text style={{ fontFamily: FB, fontSize: 13, fontWeight: "600", color: earn.terra }}>Enable Camera</Text>
-              <Text style={{ fontFamily: FB, fontSize: 11, color: "#4A3020", marginTop: 4, textAlign: "center" }}>
-                Camera watches your movement{"\n"}to count reps automatically
-              </Text>
-            </TouchableOpacity>
-          )}
+          {/* Pose camera — handles its own permission prompt */}
+          <PoseCamera
+            exerciseId={chosen.id}
+            repsLeft={repsLeft}
+            onRepCounted={handleRepCounted}
+          />
 
           {/* Rep counter ring */}
           <View style={{
@@ -485,26 +399,8 @@ function MorningGate({ skips, onUnlock, onPay }) {
 
           {/* Status label */}
           <Text style={{ fontFamily: FB, fontSize: 13, color: repFlash ? "#FFD700" : "#5A4838", marginBottom: 12, textAlign: "center" }}>
-            {repFlash ? "⚡ Rep counted!" : repsLeft <= 0 ? "✓ Done!" : camPerm?.granted ? "Camera is watching — do your reps" : "Grant camera access above"}
+            {repFlash ? "⚡ Rep counted!" : repsLeft <= 0 ? "✓ Done!" : "Pose detection active"}
           </Text>
-
-          {/* Live motion bar */}
-          {repsLeft > 0 && camPerm?.granted && (
-            <View style={{ width: 220, marginBottom: 16 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
-                <Text style={{ fontFamily: FB, fontSize: 9, color: "#3A2818" }}>still</Text>
-                <Text style={{ fontFamily: FB, fontSize: 9, color: "#3A2818" }}>moving</Text>
-              </View>
-              <View style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
-                <View style={{
-                  height: "100%",
-                  width: `${motionVal * 100}%`,
-                  backgroundColor: repFlash ? "#FFD700" : motionVal > 0.5 ? earn.green : earn.terra,
-                  borderRadius: 3,
-                }} />
-              </View>
-            </View>
-          )}
 
           {/* Manual fallback */}
           <TouchableOpacity

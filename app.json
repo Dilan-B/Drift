@@ -9,10 +9,25 @@
       "resizeMode": "contain",
       "backgroundColor": "#16120E"
     },
-    "platforms": ["ios", "android", "web"],
-    "web": {
-      "bundler": "metro"
+    "ios": {
+      "bundleIdentifier": "com.drift.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Drift uses your camera to track body position and count reps automatically.",
+        "NSMotionUsageDescription": "Drift uses motion data to detect exercise movement."
+      }
     },
-    "newArchEnabled": false
+    "android": {
+      "package": "com.drift.app",
+      "permissions": ["CAMERA"]
+    },
+    "plugins": [
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "Drift needs your camera to count reps automatically using pose detection."
+        }
+      ],
+      "react-native-fast-tflite"
+    ]
   }
 }
