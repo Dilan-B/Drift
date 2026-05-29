@@ -12,13 +12,17 @@
     "ios": {
       "bundleIdentifier": "com.drift.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Drift uses your camera to track body position and count reps automatically.",
-        "NSMotionUsageDescription": "Drift uses motion data to detect exercise movement."
+        "NSCameraUsageDescription": "Drift needs your camera to count reps automatically using pose detection.",
+        "NSMotionUsageDescription": "Drift uses motion data to detect exercise movement.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.drift.app",
-      "permissions": ["CAMERA"]
+      "permissions": [
+        "CAMERA",
+        "android.permission.CAMERA"
+      ]
     },
     "plugins": [
       [
@@ -28,6 +32,11 @@
         }
       ],
       "react-native-fast-tflite"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3294efa2-e568-4d08-889a-ee2210347743"
+      }
+    }
   }
 }
