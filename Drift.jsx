@@ -3,8 +3,13 @@ import PoseCamera, { POSE_EXERCISE_IDS } from "./PoseCamera";
 import {
   View, Text, TouchableOpacity, TextInput, ScrollView,
   StyleSheet, SafeAreaView, KeyboardAvoidingView,
-  StatusBar, Platform, BackHandler, Alert, AppState,
+  StatusBar, Platform, BackHandler, Alert, AppState, Modal,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase, syncScreenTime } from "./supabase";
+import SocialScreen from "./SocialScreen";
+import PaywallScreen, { initTrial, getTrialStatus } from "./PaywallScreen";
+import OnboardingScreen from "./OnboardingScreen";
 
 // ── Design tokens ────────────────────────────────────────────
 const ink = {
@@ -938,18 +943,31 @@ const s = StyleSheet.create({
 });
 
 // ── Root App ─────────────────────────────────────────────────
-const TABS = [{ id: "today", label: "Today" }, { id: "progress", label: "Progress" }];
+const TABS = [
+  { id: "today",    label: "Today"    },
+  { id: "progress", label: "Progress" },
+  { id: "friends",  label: "Friends"  },
+];
 
 export default function App() {
-  const [screen,  setScreen]  = useState("loading");
-  const [tab,     setTab]     = useState("today");
-  const [tasks,   setTasks]   = useState([]);
-  const [credits, setCredits] = useState({ balance: 0, earned: 0, spent: 0 });
-  const [totalXp, setTotalXp] = useState(0);
-  const [skips,   setSkips]   = useState(0);
-  const [overlay, setOverlay] = useState(null);
-  const [popup,   setPopup]   = useState(null);
-  const [secLeft, setSecLeft] = useState(0);
+  const [screen,      setScreen]      = useState("loading");
+  const [tab,         setTab]         = useState("today");
+  const [tasks,       setTasks]       = useState([]);
+  const [credits,     setCredits]     = useState({ balance: 0, earned: 0, spent: 0 });
+  const [totalXp,     setTotalXp]     = useState(0);
+  const [skips,       setSkips]       = useState(0);
+  const [overlay,     setOverlay]     = useState(null);
+  const [popup,       setPopup]       = useState(null);
+  const [secLeft,     setSecLeft]     = useState(0);
+
+  // ── Social + subscription state ──────────────────────────
+  const [userId,      setUserId]      = useState(null);
+  const [isPremium,   setIsPremium]   = useState(false);
+  const [trialDays,   setTrialDays]   = useState(7);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  // ── Onboarding ───────────────────────────────────────────
+  const [onboarding,  setOnboarding]  = useState(false); // shows onboarding overlay
 
   // ── Countdown engine ─────────────────────────────────────────
   const secRef   = useRef(0);   // source of truth for seconds remaining
@@ -1017,6 +1035,22 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
+        // Init trial tracking
+        await initTrial();
+
+        // Check Supabase auth session
+        const { data: { session } } = await supabase.auth.getSession();
+        const uid = session?.user?.id ?? null;
+        setUserId(uid);
+
+        // Show onboarding if not logged in yet
+        if (!uid) { setOnboarding(true); return; }
+
+        // Trial / subscription status
+        const { isPremium: prem, daysLeft, trialActive } = await getTrialStatus(uid);
+        setIsPremium(prem);
+        setTrialDays(daysLeft);
+
         const d = await storage.get("drift_v4");
         if (d?.value) {
           const p = JSON.parse(d.value);
@@ -1051,7 +1085,12 @@ export default function App() {
     } catch {}
   };
 
-  const unlock  = () => { setScreen("app"); persist({ morningDone: true }); };
+  const unlock  = () => {
+    setScreen("app");
+    persist({ morningDone: true });
+    // Sync today's screen time to Supabase for friends to see
+    if (userId) syncScreenTime(userId, credits.earned + 30).catch(() => {});
+  };
   const goToPay = () => { setScreen("payment"); };
   const pay     = () => { const ns = skips + 1; setSkips(ns); setScreen("app"); persist({ morningDone: true, skips: ns }); };
 
@@ -1089,6 +1128,21 @@ export default function App() {
     persist({ credits: nc });
     if (newSec <= 0) setScreen("morning");
   };
+
+  // ── Onboarding gate ──────────────────────────────────────
+  if (onboarding) return (
+    <OnboardingScreen
+      onComplete={async ({ user }) => {
+        setUserId(user?.id ?? null);
+        setOnboarding(false);
+        await initTrial();
+        const { isPremium: prem, daysLeft } = await getTrialStatus(user?.id);
+        setIsPremium(prem);
+        setTrialDays(daysLeft);
+        setScreen("morning");
+      }}
+    />
+  );
 
   if (screen === "loading") return (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: ink.void }}>
@@ -1169,9 +1223,16 @@ export default function App() {
       </View>
 
       {/* Content */}
-      <View style={{ flex: 1, backgroundColor: paper.warm }}>
+      <View style={{ flex: 1, backgroundColor: tab === "friends" ? "#16120E" : paper.warm }}>
         {tab === "today"    && <TodayView    tasks={tasks} credits={credits} totalXp={totalXp} onComplete={completeTask} onAdd={() => setOverlay("add")} onSimSpend={simSpend} />}
         {tab === "progress" && <ProgressView tasks={tasks} totalXp={totalXp} skips={skips} />}
+        {tab === "friends"  && (
+          <SocialScreen
+            userId={userId}
+            isPremium={isPremium}
+            onOpenPaywall={() => setShowPaywall(true)}
+          />
+        )}
       </View>
 
       {/* Overlay */}
@@ -1179,6 +1240,18 @@ export default function App() {
         <View style={[StyleSheet.absoluteFill, { zIndex: 200 }]}>
           {overlay === "add" && <AddTaskOverlay onSave={addTask} onClose={() => setOverlay(null)} />}
         </View>
+      )}
+
+      {/* Paywall modal */}
+      {showPaywall && (
+        <Modal animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPaywall(false)}>
+          <PaywallScreen
+            userId={userId}
+            daysLeft={trialDays}
+            onSubscribe={() => { setIsPremium(true); setShowPaywall(false); }}
+            onClose={() => setShowPaywall(false)}
+          />
+        </Modal>
       )}
     </SafeAreaView>
   );
