@@ -11,6 +11,8 @@ import { evaluateTask } from "./aiEvaluate";
 import { useSubscription, createCheckoutSession } from "./useSubscription";
 import BlockedAppsModal from "./BlockedAppsModal";
 import { applyBlocking, clearBlocking } from "./blockedApps";
+import { Spinner } from "./Skeleton";
+import Slider from "@react-native-community/slider";
 import { useFonts } from "expo-font";
 import {
   Orbitron_400Regular,
@@ -316,41 +318,53 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
             />
           </View>
 
-          {/* Category */}
+          {/* Category — clean horizontal text-only row */}
           <View style={{ marginBottom: 14 }}>
             <Text style={[s.label, { color: ink.faint }]}>Category</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 18, paddingVertical: 4 }}>
               {Object.entries(CATS).map(([k, v]) => (
-                <TouchableOpacity key={k} onPress={() => setCat(k)} style={{
-                  paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20,
-                  borderWidth: 1.5,
-                  borderColor: cat === k ? v.c : ink.border,
-                  backgroundColor: cat === k ? `${v.c}18` : "transparent",
-                }}>
-                  <Text style={{ fontFamily: FB, fontSize: 11, fontWeight: cat === k ? "600" : "400", color: cat === k ? v.c : ink.mid }}>
-                    {v.e} {v.l}
+                <TouchableOpacity key={k} onPress={() => setCat(k)} style={{ paddingVertical: 4 }}>
+                  <Text style={{
+                    fontFamily: FK, fontSize: 14,
+                    color: cat === k ? v.c : ink.mid,
+                    letterSpacing: 0.3,
+                  }}>
+                    {v.l}
                   </Text>
+                  {cat === k && (
+                    <View style={{
+                      height: 2, backgroundColor: v.c, borderRadius: 1,
+                      marginTop: 4,
+                    }} />
+                  )}
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           </View>
 
-          {/* Duration */}
+          {/* Duration — slider 15m to 5h, 15m steps */}
           <View style={{ marginBottom: 14 }}>
-            <Text style={[s.label, { color: ink.faint }]}>Duration</Text>
-            <View style={{ flexDirection: "row", gap: 7 }}>
-              {[15, 30, 45, 60, 90, 120].map(d => (
-                <TouchableOpacity key={d} onPress={() => setMins(d)} style={{
-                  flex: 1, paddingVertical: 9, borderRadius: 10,
-                  borderWidth: 1.5,
-                  borderColor: mins === d ? earn.terra : ink.border,
-                  backgroundColor: mins === d ? earn.terraLo : "transparent",
-                }}>
-                  <Text style={{ fontFamily: FB, fontSize: 12, fontWeight: mins === d ? "600" : "400", color: mins === d ? earn.terra : ink.mid, textAlign: "center" }}>
-                    {d < 60 ? `${d}m` : `${d / 60}h`}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <Text style={[s.label, { color: ink.faint, marginBottom: 0 }]}>Duration</Text>
+              <Text style={{ fontFamily: FO, fontSize: 14, color: earn.terra, letterSpacing: 0.5 }}>
+                {mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60 ? `${mins%60}m` : ""}`.trim() : `${mins}m`}
+              </Text>
+            </View>
+            <Slider
+              minimumValue={15}
+              maximumValue={300}
+              step={15}
+              value={mins}
+              onValueChange={setMins}
+              minimumTrackTintColor={earn.terra}
+              maximumTrackTintColor={ink.ghost}
+              thumbTintColor={earn.terra}
+              style={{ width: "100%", height: 36 }}
+            />
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -4 }}>
+              <Text style={{ fontFamily: FB, fontSize: 10, color: ink.faint }}>15m</Text>
+              <Text style={{ fontFamily: FB, fontSize: 10, color: ink.faint }}>5h</Text>
             </View>
           </View>
 
@@ -424,7 +438,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
               flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
             }}
           >
-            {evaluating && <ActivityIndicator color="#fff" size="small" />}
+            {evaluating && <Spinner size={20} color="#fff" />}
             <Text style={{ fontFamily: FK, fontSize: 15, fontWeight: "600", color: "#fff", textAlign: "center" }}>
               {evaluating ? "AI is evaluating…" : "Add task"}
             </Text>
@@ -732,7 +746,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend, dar
 }
 
 // ── Progress View ────────────────────────────────────────────
-function ProgressView({ tasks, totalXp, skips, dark }) {
+function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   const lv        = getLevel(totalXp);
@@ -741,6 +755,29 @@ function ProgressView({ tasks, totalXp, skips, dark }) {
   const done      = tasks.filter(t => t.done);
   const catCounts = done.reduce((a, t) => { a[t.cat] = (a[t.cat] || 0) + t.credits; return a; }, {});
   const maxCat    = Math.max(...Object.values(catCounts), 1);
+
+  // Empty state — no tasks completed yet today
+  if (done.length === 0 && tasks.length === 0) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <Text style={{ fontSize: 56, marginBottom: 14 }}>📊</Text>
+        <Text style={{ fontFamily: FK, fontSize: 22, color: ink.deep, marginBottom: 6 }}>No stats yet</Text>
+        <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid, textAlign: "center", marginBottom: 28, lineHeight: 19 }}>
+          Add a task to start tracking{"\n"}your progress today.
+        </Text>
+        <TouchableOpacity onPress={onAddTask} style={{
+          paddingVertical: 16, paddingHorizontal: 28, borderRadius: 16,
+          backgroundColor: earn.terra,
+          flexDirection: "row", alignItems: "center", gap: 10,
+          shadowColor: earn.terra, shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.25, shadowRadius: 12, elevation: 6,
+        }}>
+          <Text style={{ fontFamily: FO, fontSize: 18, color: "#fff" }}>+</Text>
+          <Text style={{ fontFamily: FK, fontSize: 16, color: "#fff" }}>Do a Task</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 18, paddingBottom: 110 }}>
@@ -1217,7 +1254,7 @@ export default function App() {
           />
         </View>
         <View style={{ flex: 1, display: tab === "progress" && !driftInActive ? "flex" : "none" }}>
-          <ProgressView tasks={tasks} totalXp={totalXp} skips={0} dark={darkMode} />
+          <ProgressView tasks={tasks} totalXp={totalXp} skips={0} onAddTask={() => { setTab("today"); setTimeout(() => setOverlay("add"), 200); }} dark={darkMode} />
         </View>
         <View style={{ flex: 1, display: tab === "friends" && !driftInActive ? "flex" : "none" }}>
           <SocialScreen userId={userId} isPremium={isPremium} onOpenPaywall={() => setShowPaywall(true)} dark={darkMode} />

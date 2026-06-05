@@ -14,6 +14,7 @@ import Svg, { Circle as SvgCircle } from "react-native-svg";
 import { useFonts, Oswald_400Regular, Oswald_700Bold } from "@expo-google-fonts/oswald";
 import { Orbitron_700Bold, Orbitron_400Regular } from "@expo-google-fonts/orbitron";
 import { getTheme } from "./theme";
+import Slider from "@react-native-community/slider";
 
 const { width } = Dimensions.get("window");
 
@@ -222,42 +223,36 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
         />
       </View>
 
-      {/* Duration picker */}
+      {/* Duration — slider 15m to 5h, 15m steps */}
       <View style={{ marginBottom: 24 }}>
-        <Text style={[s.fieldLabel, { color: setupFnt }]}>SESSION LENGTH</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {DURATIONS.map(d => {
-            const active = dur === d.mins;
-            return (
-              <TouchableOpacity
-                key={d.mins}
-                onPress={() => setDur(d.mins)}
-                style={[
-                  s.durPill,
-                  { backgroundColor: active ? theme.earn.greenLo : setupCard, borderColor: active ? GREEN : setupBrd },
-                ]}
-                activeOpacity={0.75}
-              >
-                <Text style={[s.durPillText, { color: active ? GREEN : setupMid }]}>
-                  {d.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <Text style={[s.fieldLabel, { color: setupFnt, marginBottom: 0 }]}>SESSION LENGTH</Text>
+          <Text style={{ fontFamily: FO, fontSize: 16, color: GREEN, letterSpacing: 0.5 }}>
+            {dur >= 60 ? `${Math.floor(dur/60)}h ${dur%60 ? `${dur%60}m` : ""}`.trim() : `${dur}m`}
+          </Text>
+        </View>
+        <Slider
+          minimumValue={15}
+          maximumValue={300}
+          step={15}
+          value={dur}
+          onValueChange={setDur}
+          minimumTrackTintColor={GREEN}
+          maximumTrackTintColor={dark ? "rgba(255,255,255,0.1)" : "rgba(26,43,31,0.08)"}
+          thumbTintColor={GREEN}
+          style={{ width: "100%", height: 36 }}
+        />
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -4 }}>
+          <Text style={{ fontFamily: FB, fontSize: 10, color: setupFnt }}>15m</Text>
+          <Text style={{ fontFamily: FB, fontSize: 10, color: setupFnt }}>5h</Text>
         </View>
       </View>
 
       {/* Drift Lock notice */}
       <View style={[s.lockNotice, { backgroundColor: theme.earn.blueLo, borderColor: "rgba(90,180,212,0.2)" }]}>
-        <Text style={[s.lockNoticeTitle, { color: "#2A7FA0" }]}>⚡ DRIFT LOCK</Text>
+        <Text style={[s.lockNoticeTitle, { color: "#2A7FA0" }]}>DRIFT LOCK</Text>
         <Text style={[s.lockNoticeBody, { color: "#2A7FA0" }]}>
-          Back navigation is blocked and your screen stays on throughout your session.
-        </Text>
-        <View style={{ height: 1, backgroundColor: "rgba(90,180,212,0.2)", marginVertical: 10 }} />
-        <Text style={[s.lockNoticeBody, { color: "#2A7FA0" }]}>
-          For full app blocking, enable{" "}
-          <Text style={{ fontWeight: "700" }}>iOS Focus Mode</Text> or{" "}
-          <Text style={{ fontWeight: "700" }}>Android Digital Wellbeing</Text> before starting.
+          Screen stays on. Back is blocked until you finish.
         </Text>
       </View>
 

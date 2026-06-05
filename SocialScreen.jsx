@@ -11,10 +11,12 @@ import {
 import { supabase, getFriendsWithScreenTime } from "./supabase";
 
 const LIGHT_INK = { void: "#F4F9F6", deep: "#1A2B1F", mid: "#6B8A78", faint: "#A8BFB5", border: "rgba(26,43,31,0.09)" };
-const DARK_INK  = { void: "#0A1810", deep: "#DFF2E7", mid: "#6B9A7A", faint: "#3D6650",  border: "rgba(255,255,255,0.09)" };
+const DARK_INK  = { void: "#0E1B17", deep: "#DFF2E7", mid: "#6B9A7A", faint: "#3D6650",  border: "rgba(255,255,255,0.09)" };
 const terra = "#2FAB72";
 const FD = "Georgia";
 const FB = undefined;
+const FO = "Orbitron_700Bold";
+const FK = "Oswald_700Bold";
 
 // Simple avatar from initials
 function Avatar({ username = "?", size = 40 }) {
@@ -153,14 +155,14 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, dark = 
   };
 
   if (!userId) return (
-    <View style={[s.center, { backgroundColor: dark ? "#0A1810" : "#F4F9F6" }]}>
+    <View style={[s.center, { backgroundColor: dark ? "#0E1B17" : "#F4F9F6" }]}>
       <Text style={[s.emptyTitle, { color: ink.deep }]}>Sign in to see friends</Text>
       <Text style={[s.emptySub, { color: ink.mid }]}>Create an account to compare screen time with friends.</Text>
     </View>
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: dark ? "#0A1810" : "#F4F9F6" }}>
+    <View style={{ flex: 1, backgroundColor: dark ? "#0E1B17" : "#F4F9F6" }}>
 
       {/* Header */}
       <View style={s.header}>
@@ -238,8 +240,21 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, dark = 
             }
             ListEmptyComponent={
               <View style={s.center}>
+                <Text style={{ fontSize: 56, marginBottom: 14 }}>👥</Text>
                 <Text style={[s.emptyTitle, { color: ink.deep }]}>No friends yet</Text>
-                <Text style={[s.emptySub, { color: ink.mid }]}>Add friends by username to{"\n"}see their screen time today.</Text>
+                <Text style={[s.emptySub, { color: ink.mid, marginBottom: 28 }]}>
+                  Add friends by username to{"\n"}see their screen time today.
+                </Text>
+                <TouchableOpacity onPress={() => setShowAdd(true)} style={{
+                  paddingVertical: 16, paddingHorizontal: 28, borderRadius: 16,
+                  backgroundColor: terra,
+                  flexDirection: "row", alignItems: "center", gap: 10,
+                  shadowColor: terra, shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.25, shadowRadius: 12, elevation: 6,
+                }}>
+                  <Text style={{ fontFamily: FO, fontSize: 18, color: "#fff" }}>+</Text>
+                  <Text style={{ fontFamily: FK, fontSize: 16, color: "#fff" }}>Add Friends</Text>
+                </TouchableOpacity>
               </View>
             }
             contentContainerStyle={{ padding: 16, paddingBottom: 80, flexGrow: 1 }}

@@ -17,14 +17,15 @@ export const LIGHT = {
 
 export const DARK = {
   ink: {
-    void: "#060D09", deep: "#DFF2E7", mid: "#6B9A7A",
-    faint: "#3D6650", ghost: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.09)",
+    void: "#091310", deep: "#E8F5EC", mid: "#7BAA8C",
+    faint: "#4F7868", ghost: "rgba(255,255,255,0.07)", border: "rgba(255,255,255,0.1)",
   },
-  paper: { warm: "#0A1810", card: "#0F2218" },
+  // Slightly cooler + brighter — less swampy, more "night forest"
+  paper: { warm: "#0E1B17", card: "#15251F" },
   earn: {
-    terra: "#2FAB72", terraLo: "rgba(47,171,114,0.18)",
-    green: "#3DC98A", greenLo: "rgba(47,171,114,0.14)", greenD: "#7DDBA8",
-    blue: "#5AB4D4", blueLo: "rgba(90,180,212,0.14)",
+    terra: "#3DC98A", terraLo: "rgba(61,201,138,0.2)",
+    green: "#3DC98A", greenLo: "rgba(61,201,138,0.16)", greenD: "#8FE5B8",
+    blue: "#6DC3DF", blueLo: "rgba(109,195,223,0.16)",
   },
 };
 

@@ -11,15 +11,39 @@ import {
 } from "react-native";
 import { supabase } from "./supabase";
 import { getTheme } from "./theme";
+import { Spinner } from "./Skeleton";
 
 const FO  = "Orbitron_700Bold";
 const FOM = "Orbitron_400Regular";
 const FK  = "Oswald_700Bold";
 const FB  = undefined;
 
-// ── Attempt to import expo-image-picker (optional dep) ────────
+// ── Attempt to import expo-image-picker + image manipulator ───
 let ImagePicker = null;
+let ImageManipulator = null;
 try { ImagePicker = require("expo-image-picker"); } catch {}
+try { ImageManipulator = require("expo-image-manipulator"); } catch {}
+
+// Force-shrink to at most ~600px on the long edge with JPEG 0.5 — keeps
+// the image under ~150 KB so OpenAI doesn't choke and we don't hit the
+// Edge Function WallClockTime limit.
+async function shrinkImage(uri) {
+  if (!ImageManipulator?.manipulateAsync) {
+    // Manipulator not installed yet — return original. Submission may still work
+    // for small photos but big ones will timeout. Tell user to install.
+    return null;
+  }
+  try {
+    const out = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 600 } }],
+      { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+    );
+    return out.base64;
+  } catch {
+    return null;
+  }
+}
 
 // ── Main Modal Component ──────────────────────────────────────
 export default function AICheckModal({ visible, task, onVerified, onCancel, dark = false }) {
@@ -55,11 +79,13 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
     if (status !== "granted") { Alert.alert("Permission denied", "Allow photo access in Settings."); return; }
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.5,
+      quality: 0.4,
       base64: true,
+      exif: false,
     });
     if (!res.canceled && res.assets?.[0]) {
-      setPhoto({ uri: res.assets[0].uri, base64: res.assets[0].base64 });
+      const shrunk = await shrinkImage(res.assets[0].uri);
+      setPhoto({ uri: res.assets[0].uri, base64: shrunk || res.assets[0].base64 });
     }
   };
 
@@ -72,7 +98,8 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
     if (status !== "granted") { Alert.alert("Permission denied", "Allow camera in Settings."); return; }
     const res = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true });
     if (!res.canceled && res.assets?.[0]) {
-      setPhoto({ uri: res.assets[0].uri, base64: res.assets[0].base64 });
+      const shrunk = await shrinkImage(res.assets[0].uri);
+      setPhoto({ uri: res.assets[0].uri, base64: shrunk || res.assets[0].base64 });
     }
   };
 
@@ -189,6 +216,12 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
         return;
       }
 
+      // OpenAI-side error (network, model down, image rejected)
+      if (body?.error === "ai_error" || body?.error === "ai_unreachable") {
+        Alert.alert("Verification failed", body.message || "The AI service is having trouble. Please try again.");
+        return;
+      }
+
       // Success
       if (body && !body.error && (body.verified !== undefined)) {
         setResult(body);
@@ -223,6 +256,8 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
       let msg = e?.message || "Could not reach the AI. Check your internet connection.";
       if (raw.includes("openai_key") || raw.includes("api key")) {
         msg = "AI service isn't configured. Contact support.";
+      } else if (raw.includes("aborted") || raw.includes("timeout")) {
+        msg = "AI took too long. Try a smaller photo.";
       }
       Alert.alert("Verification failed", msg);
     } finally {
@@ -347,7 +382,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                 }}
               >
                 {loading
-                  ? <ActivityIndicator color="#fff" size="small" />
+                  ? <Spinner size={22} color="#fff" />
                   : <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 2 }}>
                       SUBMIT FOR VERIFICATION
                     </Text>

@@ -8,7 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const MAX_PER_HOUR     = 5;
 const MAX_PER_DAY      = 20;
 const MAX_PROOF_CHARS  = 1000;
-const MAX_IMAGE_BYTES  = 500_000; // ~375 KB original image
+const MAX_IMAGE_BYTES  = 450_000; // ~330 KB original after shrink → safer for OpenAI
 const MAX_BODY_BYTES   = 800_000; // hard ceiling on request body
 
 // In-memory subscription cache (per cold-start instance)
@@ -160,24 +160,57 @@ serve(async (req: Request) => {
     });
 
     // ── 5. Call OpenAI ────────────────────────────────────────
-    const openaiResp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: messageContent }],
-        max_tokens: 200,
-        temperature: 0.3,
-      }),
-    });
+    // Supabase Edge Functions kill us at 60s WallClockTime. Budget conservatively.
+    const startedAt = Date.now();
+    async function callOpenAI(timeoutMs: number) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openaiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: messageContent }],
+            max_tokens: 200,
+            temperature: 0.3,
+          }),
+          signal: controller.signal,
+        });
+      } finally { clearTimeout(timeout); }
+    }
+
+    let openaiResp: Response;
+    try {
+      openaiResp = await callOpenAI(28_000);
+      // Retry on 5xx ONLY if we have time budget left (don't risk WallClockTime kill)
+      if (openaiResp.status >= 500 && openaiResp.status < 600 && Date.now() - startedAt < 25_000) {
+        await new Promise(r => setTimeout(r, 500));
+        openaiResp = await callOpenAI(20_000);
+      }
+    } catch (e: any) {
+      const tag = e?.name === "AbortError" ? "timeout" : (e?.message || "unknown");
+      console.error("OpenAI request failed:", tag);
+      return json({
+        error: "ai_unreachable",
+        message: tag === "timeout"
+          ? "AI took too long. Try a smaller photo or text-only proof."
+          : "AI service didn't respond. Try again."
+      }, 503);
+    }
 
     if (!openaiResp.ok) {
       const errBody = await openaiResp.json().catch(() => ({}));
-      console.error("OpenAI error:", openaiResp.status, errBody);
-      return json({ error: "AI service temporarily unavailable" }, 502);
+      const openAiMsg = errBody?.error?.message || `status ${openaiResp.status}`;
+      console.error("OpenAI error:", openaiResp.status, JSON.stringify(errBody));
+      return json({
+        error: "ai_error",
+        message: `AI rejected the request: ${openAiMsg}`,
+        debug: { status: openaiResp.status, openai: errBody?.error?.code || null },
+      }, 502);
     }
 
     const openaiData = await openaiResp.json();
