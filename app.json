@@ -3,11 +3,14 @@
     "name": "Drift",
     "slug": "drift",
     "version": "1.0.0",
+    "scheme": "drift",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
     "splash": {
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#16120E"
+      "backgroundColor": "#0B1A11"
     },
     "ios": {
       "bundleIdentifier": "com.drift.app",
@@ -18,7 +21,11 @@
     },
     "android": {
       "package": "com.drift.app",
-      "permissions": ["CAMERA"]
+      "permissions": ["CAMERA"],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0B1A11"
+      }
     },
     "plugins": [
       [

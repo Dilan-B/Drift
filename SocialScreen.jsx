@@ -10,11 +10,9 @@ import {
 } from "react-native";
 import { supabase, getFriendsWithScreenTime } from "./supabase";
 
-const ink = {
-  void: "#16120E", deep: "#1E1B15", mid: "#8A7E70",
-  faint: "#BFB5A6", border: "rgba(255,255,255,0.09)",
-};
-const terra = "#D4622A";
+const LIGHT_INK = { void: "#F4F9F6", deep: "#1A2B1F", mid: "#6B8A78", faint: "#A8BFB5", border: "rgba(26,43,31,0.09)" };
+const DARK_INK  = { void: "#0A1810", deep: "#DFF2E7", mid: "#6B9A7A", faint: "#3D6650",  border: "rgba(255,255,255,0.09)" };
+const terra = "#2FAB72";
 const FD = "Georgia";
 const FB = undefined;
 
@@ -67,7 +65,8 @@ function FriendRow({ friend, onChallenge, isPremium }) {
   );
 }
 
-export default function SocialScreen({ userId, isPremium, onOpenPaywall }) {
+export default function SocialScreen({ userId, isPremium, onOpenPaywall, dark = false }) {
+  const ink = dark ? DARK_INK : LIGHT_INK;
   const [friends,     setFriends]     = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [refreshing,  setRefreshing]  = useState(false);
@@ -154,18 +153,18 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall }) {
   };
 
   if (!userId) return (
-    <View style={s.center}>
-      <Text style={s.emptyTitle}>Sign in to see friends</Text>
-      <Text style={s.emptySub}>Create an account to compare screen time with friends.</Text>
+    <View style={[s.center, { backgroundColor: dark ? "#0A1810" : "#F4F9F6" }]}>
+      <Text style={[s.emptyTitle, { color: ink.deep }]}>Sign in to see friends</Text>
+      <Text style={[s.emptySub, { color: ink.mid }]}>Create an account to compare screen time with friends.</Text>
     </View>
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: ink.void }}>
+    <View style={{ flex: 1, backgroundColor: dark ? "#0A1810" : "#F4F9F6" }}>
 
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.headerTitle}>Friends</Text>
+        <Text style={[s.headerTitle, { color: ink.deep }]}>Friends</Text>
         <TouchableOpacity onPress={() => setShowAdd(v => !v)} style={s.addBtn}>
           <Text style={s.addBtnText}>{showAdd ? "Cancel" : "+ Add"}</Text>
         </TouchableOpacity>
@@ -177,7 +176,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall }) {
           <TextInput
             style={s.input}
             placeholder="@username"
-            placeholderTextColor="#4A3828"
+            placeholderTextColor="#A8BFB5"
             value={addUsername}
             onChangeText={setAddUsername}
             autoCapitalize="none"
@@ -239,8 +238,8 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall }) {
             }
             ListEmptyComponent={
               <View style={s.center}>
-                <Text style={s.emptyTitle}>No friends yet</Text>
-                <Text style={s.emptySub}>Add friends by username to{"\n"}see their screen time today.</Text>
+                <Text style={[s.emptyTitle, { color: ink.deep }]}>No friends yet</Text>
+                <Text style={[s.emptySub, { color: ink.mid }]}>Add friends by username to{"\n"}see their screen time today.</Text>
               </View>
             }
             contentContainerStyle={{ padding: 16, paddingBottom: 80, flexGrow: 1 }}
@@ -268,23 +267,23 @@ const s = StyleSheet.create({
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12,
-    borderBottomWidth: 0.5, borderColor: "rgba(255,255,255,0.07)",
+    borderBottomWidth: 0.5, borderColor: "rgba(26,43,31,0.09)",
   },
-  headerTitle: { fontFamily: FD, fontSize: 24, color: "#F0E8D8", fontWeight: "300", fontStyle: "italic" },
+  headerTitle: { fontFamily: FD, fontSize: 24, color: "#1A2B1F", fontWeight: "300", fontStyle: "italic" },
   addBtn: {
     paddingVertical: 6, paddingHorizontal: 14, borderRadius: 10,
-    borderWidth: 0.5, borderColor: terra, backgroundColor: "rgba(212,98,42,0.1)",
+    borderWidth: 0.5, borderColor: terra, backgroundColor: "#E4F5EE",
   },
   addBtnText: { color: terra, fontSize: 13, fontWeight: "600" },
   addRow: {
     flexDirection: "row", gap: 8, padding: 12,
-    borderBottomWidth: 0.5, borderColor: "rgba(255,255,255,0.06)",
+    borderBottomWidth: 0.5, borderColor: "rgba(26,43,31,0.09)",
   },
   input: {
-    flex: 1, backgroundColor: "rgba(255,255,255,0.06)",
-    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.1)", borderRadius: 10,
+    flex: 1, backgroundColor: "#FFFFFF",
+    borderWidth: 1, borderColor: "rgba(26,43,31,0.1)", borderRadius: 10,
     paddingVertical: 10, paddingHorizontal: 14,
-    color: "#F0E8D8", fontSize: 14,
+    color: "#1A2B1F", fontSize: 14,
   },
   sendBtn: {
     paddingHorizontal: 18, borderRadius: 10,
@@ -293,40 +292,40 @@ const s = StyleSheet.create({
   sendBtnText: { color: "#fff", fontWeight: "600", fontSize: 14 },
   pendingBox: {
     margin: 12, padding: 12, borderRadius: 12,
-    borderWidth: 0.5, borderColor: "rgba(212,98,42,0.3)",
-    backgroundColor: "rgba(212,98,42,0.07)",
+    borderWidth: 0.5, borderColor: "rgba(47,171,114,0.25)",
+    backgroundColor: "#E4F5EE",
   },
   pendingLabel: { fontSize: 11, color: terra, fontWeight: "600", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.8 },
   pendingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 4 },
-  pendingName: { color: "#C0B0A0", fontSize: 14 },
+  pendingName: { color: "#1A2B1F", fontSize: 14 },
   acceptBtn: { paddingVertical: 5, paddingHorizontal: 14, borderRadius: 8, backgroundColor: terra },
   acceptBtnText: { color: "#fff", fontSize: 13, fontWeight: "600" },
   trialBanner: {
     marginHorizontal: 12, marginTop: 8, padding: 10, borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "#E6F4FB",
+    borderWidth: 0.5, borderColor: "rgba(90,180,212,0.3)",
     alignItems: "center",
   },
-  trialText: { color: "#5A4838", fontSize: 12 },
+  trialText: { color: "#2A7FA0", fontSize: 12 },
   row: {
     flexDirection: "row", alignItems: "center",
     padding: 14, marginBottom: 8,
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 0.5, borderColor: "rgba(26,43,31,0.09)",
     borderRadius: 14,
   },
-  name:    { color: "#F0E8D8", fontSize: 14, fontWeight: "500" },
+  name:    { color: "#1A2B1F", fontSize: 14, fontWeight: "500" },
   time:    { color: terra, fontSize: 14, fontWeight: "600", fontFamily: FD },
-  barBg:   { height: 3, backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 2, overflow: "hidden" },
+  barBg:   { height: 3, backgroundColor: "rgba(26,43,31,0.07)", borderRadius: 2, overflow: "hidden" },
   barFill: { height: 3, backgroundColor: terra, borderRadius: 2 },
-  sub:     { fontSize: 11, color: "#4A3828", marginTop: 4 },
+  sub:     { fontSize: 11, color: "#6B8A78", marginTop: 4 },
   chalBtn: {
     marginLeft: 10, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 8,
-    borderWidth: 0.5, borderColor: terra, backgroundColor: "rgba(212,98,42,0.12)",
+    borderWidth: 0.5, borderColor: terra, backgroundColor: "#E4F5EE",
   },
-  chalBtnLocked: { borderColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(255,255,255,0.03)" },
+  chalBtnLocked: { borderColor: "rgba(26,43,31,0.1)", backgroundColor: "#F4F9F6" },
   chalBtnText: { color: terra, fontSize: 12, fontWeight: "600" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
-  emptyTitle: { fontFamily: FD, fontSize: 20, color: "#F0E8D8", fontStyle: "italic", marginBottom: 8 },
-  emptySub:   { fontSize: 13, color: "#4A3828", textAlign: "center", lineHeight: 20 },
+  emptyTitle: { fontFamily: FD, fontSize: 20, color: "#1A2B1F", fontStyle: "italic", marginBottom: 8 },
+  emptySub:   { fontSize: 13, color: "#6B8A78", textAlign: "center", lineHeight: 20 },
 });

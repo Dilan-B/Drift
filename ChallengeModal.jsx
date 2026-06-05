@@ -11,8 +11,8 @@ import {
 } from "react-native";
 import { supabase } from "./supabase";
 
-const ink = { void: "#16120E", deep: "#1E1B15", border: "rgba(255,255,255,0.09)" };
-const terra = "#D4622A";
+const ink = { void: "#0B1A11", deep: "#1A2B1F", border: "rgba(255,255,255,0.1)" };
+const terra = "#2FAB72";
 const FD = "Georgia";
 
 const CHALLENGE_OPTIONS = [
@@ -181,7 +181,7 @@ const s = StyleSheet.create({
     alignSelf: "center", marginBottom: 20,
   },
   title: {
-    fontFamily: FD, fontSize: 22, color: "#F0E8D8",
+    fontFamily: FD, fontSize: 22, color: "#E8F5EC",
     fontStyle: "italic", fontWeight: "300", marginBottom: 20,
   },
   modeRow:    { flexDirection: "row", gap: 10, marginBottom: 20 },
@@ -190,32 +190,32 @@ const s = StyleSheet.create({
     borderWidth: 0.5, borderColor: "rgba(255,255,255,0.08)",
     backgroundColor: "rgba(255,255,255,0.04)",
   },
-  modeCardOn:  { borderColor: terra, backgroundColor: "rgba(212,98,42,0.12)" },
-  modeLabel:   { color: "#8A7E70", fontSize: 15, fontWeight: "600", marginBottom: 4 },
+  modeCardOn:  { borderColor: terra, backgroundColor: "rgba(47,171,114,0.1)" },
+  modeLabel:   { color: "#4A8060", fontSize: 15, fontWeight: "600", marginBottom: 4 },
   modeLabelOn: { color: terra },
-  modeSub:     { color: "#4A3828", fontSize: 11, lineHeight: 16 },
-  modeSubOn:   { color: "#9A6858" },
-  pickLabel:   { color: "#5A4838", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 },
+  modeSub:     { color: "#4A8060", fontSize: 11, lineHeight: 16 },
+  modeSubOn:   { color: "#1A8050" },
+  pickLabel:   { color: "#4A8060", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 },
   exCard: {
     width: 90, padding: 12, marginRight: 8, borderRadius: 12, alignItems: "center",
-    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.05)",
   },
-  exCardOn: { borderColor: terra, backgroundColor: "rgba(212,98,42,0.12)" },
-  exLabel:  { color: "#C0B0A0", fontSize: 12, fontWeight: "600", textAlign: "center" },
-  exSub:    { color: "#4A3828", fontSize: 10, marginTop: 3 },
+  exCardOn: { borderColor: terra, backgroundColor: "rgba(47,171,114,0.12)" },
+  exLabel:  { color: "#E8F5EC", fontSize: 12, fontWeight: "600", textAlign: "center" },
+  exSub:    { color: "#4A8060", fontSize: 10, marginTop: 3 },
   infoBox: {
     padding: 14, borderRadius: 12, marginBottom: 20,
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.09)",
   },
-  infoText: { color: "#8A7060", fontSize: 13, lineHeight: 20 },
+  infoText: { color: "#4A8060", fontSize: 13, lineHeight: 20 },
   cancelBtn: {
     flex: 1, padding: 14, borderRadius: 12,
-    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.1)",
+    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.12)",
     alignItems: "center",
   },
-  cancelBtnText: { color: "#5A4838", fontSize: 14 },
+  cancelBtnText: { color: "#4A8060", fontSize: 14 },
   sendBtn: {
     flex: 2, padding: 14, borderRadius: 12,
     backgroundColor: terra, alignItems: "center",
@@ -223,15 +223,15 @@ const s = StyleSheet.create({
   sendBtnText: { color: "#fff", fontWeight: "600", fontSize: 15 },
   incomingRow: {
     margin: 12, padding: 14, borderRadius: 12,
-    borderWidth: 0.5, borderColor: "rgba(212,98,42,0.3)",
-    backgroundColor: "rgba(212,98,42,0.07)",
+    borderWidth: 0.5, borderColor: "rgba(47,171,114,0.3)",
+    backgroundColor: "rgba(47,171,114,0.08)",
   },
-  incomingText: { color: "#C0A898", fontSize: 13, lineHeight: 20 },
+  incomingText: { color: "#4A8060", fontSize: 13, lineHeight: 20 },
   declineBtn: {
     flex: 1, padding: 10, borderRadius: 8,
-    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.1)", alignItems: "center",
+    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.12)", alignItems: "center",
   },
-  declineBtnText: { color: "#5A4838", fontSize: 13 },
+  declineBtnText: { color: "#4A8060", fontSize: 13 },
   acceptBtn: {
     flex: 2, padding: 10, borderRadius: 8,
     backgroundColor: terra, alignItems: "center",

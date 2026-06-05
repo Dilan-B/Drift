@@ -17,8 +17,8 @@ const INSTALL_KEY    = "drift_install_date";
 const TRIAL_DAYS     = 7;
 const MONTHLY_PRICE  = "$2.99";
 
-const ink   = { void: "#16120E", deep: "#1E1B15" };
-const terra = "#D4622A";
+const ink   = { void: "#0B1A11", deep: "#1A2B1F" };
+const terra = "#2FAB72";
 const FD    = "Georgia";
 
 // ── Trial logic ──────────────────────────────────────────────
@@ -172,38 +172,38 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.07)", alignItems: "center", justifyContent: "center",
     marginBottom: 8,
   },
-  closeBtnText: { color: "#8A7E70", fontSize: 14 },
+  closeBtnText: { color: "#4A8060", fontSize: 14 },
   hero: { alignItems: "center", marginBottom: 36, marginTop: 20 },
   heroEmoji: { fontSize: 56, marginBottom: 16 },
   heroTitle: {
-    fontFamily: FD, fontSize: 26, color: "#F0E8D8",
+    fontFamily: FD, fontSize: 26, color: "#E8F5EC",
     fontStyle: "italic", fontWeight: "300", textAlign: "center", marginBottom: 10,
   },
-  heroSub: { fontSize: 14, color: "#6A5848", textAlign: "center", lineHeight: 22 },
+  heroSub: { fontSize: 14, color: "#4A8060", textAlign: "center", lineHeight: 22 },
   features: {
     width: "100%", marginBottom: 28, gap: 2,
-    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden",
+    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.09)", borderRadius: 14, overflow: "hidden",
   },
   featureRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
-    padding: 14, backgroundColor: "rgba(255,255,255,0.03)",
-    borderBottomWidth: 0.5, borderColor: "rgba(255,255,255,0.06)",
+    padding: 14, backgroundColor: "rgba(255,255,255,0.05)",
+    borderBottomWidth: 0.5, borderColor: "rgba(255,255,255,0.08)",
   },
-  featureTitle: { color: "#D0C8BC", fontSize: 14, fontWeight: "500", marginBottom: 2 },
-  featureSub:   { color: "#5A4838", fontSize: 12, lineHeight: 17 },
+  featureTitle: { color: "#E8F5EC", fontSize: 14, fontWeight: "500", marginBottom: 2 },
+  featureSub:   { color: "#4A8060", fontSize: 12, lineHeight: 17 },
   pricingBox: {
     width: "100%", padding: 20, borderRadius: 14, alignItems: "center",
-    borderWidth: 0.5, borderColor: "rgba(212,98,42,0.3)",
-    backgroundColor: "rgba(212,98,42,0.07)", marginBottom: 20,
+    borderWidth: 0.5, borderColor: "rgba(47,171,114,0.3)",
+    backgroundColor: "rgba(47,171,114,0.08)", marginBottom: 20,
   },
   priceLabel: { fontSize: 11, color: terra, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 },
-  price:      { fontFamily: FD, fontSize: 42, color: "#F0E8D8", fontWeight: "300" },
-  pricePer:   { fontSize: 18, color: "#6A5848" },
-  priceSub:   { fontSize: 12, color: "#4A3828", marginTop: 6 },
+  price:      { fontFamily: FD, fontSize: 42, color: "#E8F5EC", fontWeight: "300" },
+  pricePer:   { fontSize: 18, color: "#4A8060" },
+  priceSub:   { fontSize: 12, color: "#3A6048", marginTop: 6 },
   ctaBtn: {
     width: "100%", padding: 16, borderRadius: 14,
     backgroundColor: terra, alignItems: "center", marginBottom: 14,
   },
   ctaBtnText: { color: "#fff", fontWeight: "600", fontSize: 16 },
-  legalText: { fontSize: 11, color: "#3A2E28", textAlign: "center", lineHeight: 17 },
+  legalText: { fontSize: 11, color: "#3A6048", textAlign: "center", lineHeight: 17 },
 });

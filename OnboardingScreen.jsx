@@ -3,6 +3,8 @@
  * Opal-style onboarding: stats → goals → login
  */
 import React, { useState, useRef } from "react";
+import { useFonts, Orbitron_700Bold, Orbitron_400Regular } from "@expo-google-fonts/orbitron";
+import { Oswald_700Bold } from "@expo-google-fonts/oswald";
 import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions,
   ScrollView, Animated, StatusBar, TextInput, KeyboardAvoidingView,
@@ -11,13 +13,13 @@ import {
 import { supabase } from "./supabase";
 
 const { width, height } = Dimensions.get("window");
-const BG = "#0D0D0D";
-const CARD_BG = "#1A1A1A";
-const ACCENT = "#D4622A";
-const ACCENT2 = "#E87B45";
-const TEXT = "#F5F0EB";
-const MUTED = "#6B6560";
-const BORDER = "#2A2A2A";
+const BG = "#F4F9F6";
+const CARD_BG = "#FFFFFF";
+const ACCENT = "#2FAB72";
+const ACCENT2 = "#3DC985";
+const TEXT = "#1A2B1F";
+const MUTED = "#6B8A78";
+const BORDER = "#DFF0E8";
 
 // ─── Step data ──────────────────────────────────────────────────────────────
 
@@ -96,11 +98,12 @@ const STEPS = [
 // ─── Welcome Screen ──────────────────────────────────────────────────────────
 
 function WelcomeSlide({ onNext }) {
+  const [fontsLoaded] = useFonts({ Orbitron_700Bold, Orbitron_400Regular, Oswald_700Bold });
   return (
     <View style={styles.slide}>
       <View style={styles.welcomeContent}>
-        <Text style={styles.welcomeLogo}>drift</Text>
-        <Text style={styles.welcomeHeadline}>{"Your phone unlocks\nwhen you earn it."}</Text>
+        <Text style={[styles.welcomeLogo, fontsLoaded && { fontFamily: "Orbitron_700Bold", fontSize: 22, letterSpacing: 4 }]}>DRIFT</Text>
+        <Text style={[styles.welcomeHeadline, fontsLoaded && { fontFamily: "Oswald_700Bold", fontSize: 36, lineHeight: 44, letterSpacing: 0.5 }]}>{"Your phone unlocks\nwhen you earn it."}</Text>
         <Text style={styles.welcomeSub}>
           Complete a physical challenge every morning before your screen time begins.
         </Text>
@@ -168,52 +171,145 @@ function QuestionSlide({ step, answers, onToggle, onNext, canContinue }) {
 
 // ─── Auth Screen ─────────────────────────────────────────────────────────────
 
-function AuthSlide({ onDone }) {
-  const [mode, setMode] = useState("signup"); // "signup" | "login"
-  const [email, setEmail] = useState("");
+// ── Validation helpers ────────────────────────────────────────
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validatePassword(pw) {
+  if (pw.length < 8) return "Password must be at least 8 characters.";
+  if (pw.length > 72) return "Password too long (max 72 characters).";
+  if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw))
+    return "Password must contain letters and at least one number.";
+  return null;
+}
+
+function validateEmail(e) {
+  const trimmed = e.trim().toLowerCase();
+  if (!trimmed) return "Email required.";
+  if (trimmed.length > 254) return "Email too long.";
+  if (!EMAIL_RE.test(trimmed)) return "Enter a valid email address.";
+  return null;
+}
+
+function sanitizeName(n) {
+  // Strip control chars and HTML-ish characters
+  return n.replace(/[\x00-\x1F\x7F<>{}]/g, "").trim().slice(0, 50);
+}
+
+function generateUsername(/* email unused — kept ambiguous on purpose */) {
+  // Random username — does NOT derive from email, so dev accounts can't be
+  // identified by inspection. Format: drifter + 8 random alphanumerics.
+  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789"; // no 1/i/l/o/0 ambiguity
+  let rand = "";
+  for (let i = 0; i < 8; i++) rand += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return `drifter${rand}`;
+}
+
+function AuthSlide({ onDone, defaultMode = "signup" }) {
+  const [mode,     setMode]     = useState(defaultMode); // "signup" | "login"
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [name,     setName]     = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState("");
+
+  // Client-side rate limiting (anti-spam, not a security boundary)
+  const attemptsRef = useRef([]);
 
   async function handleSubmit() {
-    if (!email.trim() || !password.trim()) {
-      setError("Please fill in all fields.");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
     setError("");
+
+    // Validate email
+    const cleanEmail = email.trim().toLowerCase();
+    const emailErr   = validateEmail(cleanEmail);
+    if (emailErr) { setError(emailErr); return; }
+
+    // Validate password
+    const pwErr = validatePassword(password);
+    if (pwErr) { setError(pwErr); return; }
+
+    // Validate name (signup only)
+    const cleanName = sanitizeName(name);
+    if (mode === "signup" && cleanName.length < 1) {
+      setError("Please enter your name.");
+      return;
+    }
+
+    // Client-side rate limit: max 5 attempts per 60s window
+    const now = Date.now();
+    attemptsRef.current = attemptsRef.current.filter(t => now - t < 60_000);
+    if (attemptsRef.current.length >= 5) {
+      setError("Too many attempts. Wait a minute and try again.");
+      return;
+    }
+    attemptsRef.current.push(now);
+
     setLoading(true);
     try {
       if (mode === "signup") {
         const { data, error: err } = await supabase.auth.signUp({
-          email: email.trim().toLowerCase(),
+          email: cleanEmail,
           password,
-          options: { data: { full_name: name.trim() } },
+          options: {
+            data: { full_name: cleanName },
+            // Where Supabase sends the user after they click the confirmation email.
+            // Set Site URL + Redirect URLs in Supabase Auth settings to match.
+            emailRedirectTo: "drift://auth-callback",
+          },
         });
         if (err) throw err;
-        // Insert profile row
+
+        // Create profile (database trigger SHOULD do this; fallback for safety)
         if (data.user) {
-          await supabase.from("profiles").upsert({
-            id: data.user.id,
-            username: email.split("@")[0],
-            full_name: name.trim(),
-          });
+          const username = generateUsername();
+          const { error: profErr } = await supabase.from("profiles").upsert(
+            { id: data.user.id, username, full_name: cleanName },
+            { onConflict: "id" }
+          );
+          // Profile errors are non-fatal — RLS may already have created via trigger
+          if (profErr && !/duplicate|already exists/i.test(profErr.message || "")) {
+            console.warn("Profile upsert:", profErr.message);
+          }
         }
+
+        // If email confirmations are on, no session is returned here
+        if (!data.session) {
+          setError("Check your email to verify your account, then sign in.");
+          setLoading(false);
+          setMode("login");
+          return;
+        }
+
+        // Claim 7-day free trial (server tracks IP hash to prevent abuse)
+        try {
+          await supabase.functions.invoke("claim-trial", {});
+        } catch (e) {
+          // Non-fatal — user just won't get the trial
+          console.warn("Trial claim failed:", e?.message);
+        }
+
         onDone(data.user);
       } else {
         const { data, error: err } = await supabase.auth.signInWithPassword({
-          email: email.trim().toLowerCase(),
+          email: cleanEmail,
           password,
         });
         if (err) throw err;
         onDone(data.user);
       }
     } catch (e) {
-      setError(e.message || "Something went wrong. Try again.");
+      // Map generic Supabase errors to friendlier messages WITHOUT leaking enumeration info
+      const raw = (e?.message || "").toLowerCase();
+      if (raw.includes("already") || raw.includes("registered")) {
+        setError("An account with that email may already exist. Try signing in.");
+      } else if (raw.includes("invalid") && raw.includes("credential")) {
+        setError("Email or password is incorrect.");
+      } else if (raw.includes("network") || raw.includes("fetch")) {
+        setError("Network error. Check your connection.");
+      } else if (raw.includes("rate") || raw.includes("too many")) {
+        setError("Too many attempts. Try again in a few minutes.");
+      } else {
+        setError(e?.message || "Sign-in failed. Try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -300,7 +396,7 @@ function AuthSlide({ onDone }) {
 
       <TouchableOpacity
         onPress={() => { setMode(mode === "signup" ? "login" : "signup"); setError(""); }}
-        style={{ marginTop: 16, alignItems: "center" }}
+        style={{ marginTop: 16, marginBottom: 8, alignItems: "center" }}
       >
         <Text style={styles.switchMode}>
           {mode === "signup"
@@ -314,8 +410,10 @@ function AuthSlide({ onDone }) {
 
 // ─── Main Onboarding ──────────────────────────────────────────────────────────
 
-export default function OnboardingScreen({ onComplete }) {
-  const [stepIndex, setStepIndex] = useState(0);
+export default function OnboardingScreen({ onComplete, signInOnly = false }) {
+  // signInOnly: skip welcome + questionnaire, jump straight to auth slide
+  const authStepIndex = STEPS.findIndex(s => s.id === "auth");
+  const [stepIndex, setStepIndex] = useState(signInOnly ? authStepIndex : 0);
   const [answers, setAnswers] = useState({});
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -353,7 +451,7 @@ export default function OnboardingScreen({ onComplete }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
       {/* Progress bar (hidden on welcome/auth) */}
       {step.id !== "welcome" && step.id !== "auth" && (
@@ -373,7 +471,7 @@ export default function OnboardingScreen({ onComplete }) {
 
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         {step.id === "welcome" && <WelcomeSlide onNext={goNext} />}
-        {step.id === "auth" && <AuthSlide onDone={handleAuthDone} />}
+        {step.id === "auth" && <AuthSlide onDone={handleAuthDone} defaultMode={signInOnly ? "login" : "signup"} />}
         {step.options && (
           <QuestionSlide
             step={step}
@@ -399,7 +497,7 @@ const styles = StyleSheet.create({
   slide: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    paddingBottom: Platform.OS === "ios" ? 64 : 40,
   },
 
   // Welcome
@@ -454,20 +552,20 @@ const styles = StyleSheet.create({
   },
   optionCardSelected: {
     borderColor: ACCENT,
-    backgroundColor: "#2A1810",
+    backgroundColor: "#E4F5EE",
   },
   optionLabel: {
     fontSize: 16,
     fontWeight: "600",
     color: TEXT,
   },
-  optionLabelSelected: { color: ACCENT2 },
+  optionLabelSelected: { color: ACCENT },
   optionSub: {
     fontSize: 13,
     color: MUTED,
     marginTop: 3,
   },
-  optionSubSelected: { color: "#9B5030" },
+  optionSubSelected: { color: "#1A8050" },
   check: {
     width: 24,
     height: 24,
@@ -525,13 +623,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   ctaBtnDisabled: {
-    backgroundColor: "#3A2820",
+    backgroundColor: "#C2DDD3",
   },
   ctaBtnText: {
     color: "#fff",
-    fontSize: 17,
-    fontWeight: "700",
-    letterSpacing: 0.3,
+    fontFamily: "Orbitron_700Bold",
+    fontSize: 13,
+    letterSpacing: 2,
   },
   legal: {
     color: MUTED,
@@ -552,8 +650,8 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 3,
     borderRadius: 2,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#DFF0E8",
   },
-  progressDotDone: { backgroundColor: "#5A3020" },
+  progressDotDone: { backgroundColor: "#1A8050" },
   progressDotActive: { backgroundColor: ACCENT },
 });

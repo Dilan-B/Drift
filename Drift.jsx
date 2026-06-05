@@ -1,64 +1,68 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import PoseCamera, { POSE_EXERCISE_IDS } from "./PoseCamera";
+import React, { useState, useEffect, useRef, useCallback, useContext, createContext } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, ScrollView,
   StyleSheet, SafeAreaView, KeyboardAvoidingView,
-  StatusBar, Platform, BackHandler, Alert, AppState, Modal,
+  StatusBar, Platform, Alert, AppState, Modal, PanResponder, Animated,
+  ActivityIndicator, Linking,
 } from "react-native";
+import { getTheme } from "./theme";
+import AICheckModal from "./AICheckModal";
+import { evaluateTask } from "./aiEvaluate";
+import { useSubscription, createCheckoutSession } from "./useSubscription";
+import BlockedAppsModal from "./BlockedAppsModal";
+import { applyBlocking, clearBlocking } from "./blockedApps";
+import { useFonts } from "expo-font";
+import {
+  Orbitron_400Regular,
+  Orbitron_700Bold,
+} from "@expo-google-fonts/orbitron";
+import {
+  Oswald_400Regular,
+  Oswald_700Bold,
+} from "@expo-google-fonts/oswald";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Svg, { Path, Circle as SvgCircle, Rect } from "react-native-svg";
 import { supabase, syncScreenTime } from "./supabase";
 import SocialScreen from "./SocialScreen";
 import PaywallScreen, { initTrial, getTrialStatus } from "./PaywallScreen";
 import OnboardingScreen from "./OnboardingScreen";
+import DriftInScreen from "./DriftInScreen";
 
-// ── Design tokens ────────────────────────────────────────────
+// ── Theme context ─────────────────────────────────────────────
+export const ThemeContext = createContext({ dark: false, theme: getTheme(false) });
+const useTheme = () => useContext(ThemeContext);
+
+// ── Design tokens (light defaults — components use useTheme()) ─
 const ink = {
-  void: "#16120E", deep: "#1E1B15", mid: "#8A7E70",
-  faint: "#BFB5A6", ghost: "rgba(30,27,21,0.08)", border: "rgba(30,27,21,0.12)",
+  void: "#0B1A11", deep: "#1A2B1F", mid: "#6B8A78",
+  faint: "#A8BFB5", ghost: "rgba(26,43,31,0.07)", border: "rgba(26,43,31,0.09)",
 };
-const paper = { warm: "#F0EBE0", card: "#FBF8F2" };
+const paper = { warm: "#F4F9F6", card: "#FFFFFF" };
 const earn = {
-  terra: "#D4622A", terraLo: "#F7E6DC",
-  green: "#3A7D52", greenLo: "#DCF0E6", greenD: "#275C3B",
+  terra: "#2FAB72", terraLo: "#E4F5EE",
+  green: "#1A8050", greenLo: "#DDF2EA", greenD: "#0E5434",
+  blue: "#5AB4D4", blueLo: "#E6F4FB",
 };
-const FD = "Georgia";   // iOS: Georgia; Android: system serif fallback
-const FB = undefined;   // system default sans-serif on all platforms
+const FO  = "Orbitron_700Bold";    // display headings
+const FOM = "Orbitron_400Regular"; // medium display
+const FK  = "Oswald_700Bold";      // Oswald bold — subheadings + task names
+const FKR = "Oswald_400Regular";   // Oswald regular
+const FB  = undefined;             // system sans-serif body
 
 // ── Data constants ───────────────────────────────────────────
 const CATS = {
-  work:     { e: "💼", c: "#3A6EA8", l: "Work" },
-  physical: { e: "💪", c: "#3A7D52", l: "Physical" },
-  outdoor:  { e: "🌿", c: "#4A8040", l: "Outdoor" },
-  learning: { e: "📚", c: "#6B5EA8", l: "Learning" },
-  life:     { e: "🏠", c: "#8A6040", l: "Life" },
-  social:   { e: "💬", c: "#D4622A", l: "Social" },
+  work:     { e: "💼", c: "#3A7AB8", l: "Work" },
+  physical: { e: "💪", c: "#2FAB72", l: "Physical" },
+  outdoor:  { e: "🌿", c: "#3DA870", l: "Outdoor" },
+  learning: { e: "📚", c: "#7B6EC8", l: "Learning" },
+  life:     { e: "🏠", c: "#5AB4D4", l: "Life" },
+  social:   { e: "💬", c: "#3A9BB5", l: "Social" },
 };
 
 const EFFORT = [
-  { id: 1, label: "Light",    mult: 1.0, desc: "Quick task, easy admin, low exertion" },
-  { id: 2, label: "Moderate", mult: 1.5, desc: "Focused work, gym, cooking, studying" },
-  { id: 3, label: "Intense",  mult: 2.0, desc: "Hard workout, deep sprint, long outdoor" },
-];
-
-const CHALLENGES = [
-  { id: "pushups",   title: "10 pushups",              emoji: "💪", type: "reps",  goal: 10,   desc: "Drop and do 10 — full range" },
-  { id: "walk",      title: "5 min walk outside",       emoji: "🚶", type: "timer", secs: 300,  desc: "Get outside, move your legs" },
-  { id: "squats",    title: "20 squats",                emoji: "🏋️", type: "reps",  goal: 20,   desc: "Full depth counts" },
-  { id: "work",      title: "25 min work session",      emoji: "💼", type: "timer", secs: 1500, desc: "Lock in and actually focus" },
-  { id: "stretch",   title: "3 min full stretch",       emoji: "🧘", type: "timer", secs: 180,  desc: "Full body — take your time" },
-  { id: "jacks",     title: "30 jumping jacks",         emoji: "⚡", type: "reps",  goal: 30,   desc: "Get that heart rate up" },
-  { id: "water",     title: "Drink a full glass of water", emoji: "💧", type: "reps", goal: 1,  desc: "Hydrate before you scroll" },
-  { id: "journal",   title: "3 things you're grateful for", emoji: "📓", type: "reps", goal: 3, desc: "One sentence each — write it down" },
-  { id: "coldwater", title: "60s cold water on your face", emoji: "🚿", type: "timer", secs: 60, desc: "Wake up the hard way" },
-  { id: "meditate",  title: "5 min breathing",          emoji: "🌬️", type: "timer", secs: 300,  desc: "Box breathing or just slow breaths" },
-  { id: "burpees",   title: "10 burpees",               emoji: "🔥", type: "reps",  goal: 10,   desc: "Full range — no shortcuts" },
-  { id: "read",      title: "10 min reading",           emoji: "📚", type: "timer", secs: 600,  desc: "Anything — just not social media" },
-  { id: "lunges",    title: "20 lunges",                emoji: "🦵", type: "reps",  goal: 20,   desc: "10 each leg, full depth" },
-  { id: "plank",     title: "1 min plank",              emoji: "🏄", type: "timer", secs: 60,   desc: "Core tight, breathe steady" },
-  { id: "situps",    title: "15 sit-ups",               emoji: "🤸", type: "reps",  goal: 15,   desc: "Controlled movement, no yanking" },
-  { id: "dips",      title: "10 tricep dips",           emoji: "💺", type: "reps",  goal: 10,   desc: "Use your chair or a low surface" },
-  { id: "run",       title: "10 min jog or run",        emoji: "🏃", type: "timer", secs: 600,  desc: "Outside or treadmill" },
-  { id: "hiit",      title: "2 min HIIT",               emoji: "🌡️", type: "timer", secs: 120,  desc: "Max effort — go all out" },
+  { id: 1, label: "Light",    mult: 0.5,  desc: "Quick task, easy admin, low exertion" },
+  { id: 2, label: "Moderate", mult: 0.75, desc: "Focused work, gym, cooking, studying" },
+  { id: 3, label: "Intense",  mult: 1.25, desc: "Hard workout, deep sprint, long outdoor" },
 ];
 
 
@@ -70,14 +74,6 @@ const LEVELS = [
   { name: "Canopy",     min: 2000, e: "🌲" },
   { name: "Forest",     min: 4000, e: "🌾" },
   { name: "Old Growth", min: 8000, e: "🏔️" },
-];
-
-const DEMO_TASKS = [
-  { id: "d1", title: "Finish the Q2 report",  cat: "work",     effort: 2, minutes: 60, done: true,  credits: 90, xp: 35 },
-  { id: "d2", title: "Morning gym session",   cat: "physical", effort: 3, minutes: 45, done: true,  credits: 90, xp: 42 },
-  { id: "d3", title: "Review pull requests",  cat: "work",     effort: 1, minutes: 30, done: false, credits: 30, xp: 22 },
-  { id: "d4", title: "Walk to get lunch",     cat: "outdoor",  effort: 1, minutes: 20, done: false, credits: 20, xp: 17 },
-  { id: "d5", title: "Call mom",              cat: "social",   effort: 1, minutes: 30, done: false, credits: 30, xp: 22 },
 ];
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -106,7 +102,7 @@ const storage = {
 };
 
 // ── Credit Ticker ────────────────────────────────────────────
-function CreditTicker({ value }) {
+function CreditTicker({ value, textColor }) {
   const prevRef = useRef(value);
   const [show, setShow] = useState(value);
   const animRef = useRef(null);
@@ -125,383 +121,56 @@ function CreditTicker({ value }) {
     return () => { if (animRef.current) clearInterval(animRef.current); };
   }, [value]);
   return (
-    <Text style={{ fontFamily: FD, fontSize: 46, color: "#F0E8D8", fontWeight: "300", lineHeight: 54 }}>
+    <Text style={{ fontFamily: FO, fontSize: 38, color: textColor || "#FFFFFF", letterSpacing: 1 }}>
       {fmtMins(show)}
     </Text>
   );
 }
 
-// ── Payment Screen ────────────────────────────────────────────
-function PaymentScreen({ skips, onPay }) {
-  const [cardNum,  setCardNum]  = useState("");
-  const [expiry,   setExpiry]   = useState("");
-  const [cvv,      setCvv]      = useState("");
-  const [name,     setName]     = useState("");
-  const [processing, setProcessing] = useState(false);
-  const [paid,     setPaid]     = useState(false);
-
-  // Block all back navigation from payment screen
-  useEffect(() => {
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
-    return () => sub.remove();
-  }, []);
-
-  const fmtCard   = t => t.replace(/\D/g,"").slice(0,16).replace(/(.{4})/g,"$1 ").trim();
-  const fmtExpiry = t => { const c=t.replace(/\D/g,"").slice(0,4); return c.length>=3?c.slice(0,2)+"/"+c.slice(2):c; };
-  const fmtCvv    = t => t.replace(/\D/g,"").slice(0,3);
-
-  const canPay = cardNum.replace(/\s/g,"").length === 16 && expiry.length === 5 && cvv.length === 3 && name.trim().length > 1;
-
-  const handlePay = () => {
-    if (!canPay || processing) return;
-    setProcessing(true);
-    setTimeout(() => { setPaid(true); setTimeout(onPay, 1600); }, 2200);
-  };
-
-  if (paid) return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: earn.green, alignItems:"center", justifyContent:"center" }]}>
-      <StatusBar barStyle="light-content" />
-      <Text style={{ fontSize: 72, marginBottom: 16 }}>✓</Text>
-      <Text style={{ fontFamily: FD, fontSize: 26, color: "#fff", fontStyle: "italic" }}>Payment accepted</Text>
-      <Text style={{ fontFamily: FB, fontSize: 14, color: "rgba(255,255,255,0.7)", marginTop: 8 }}>Unlocking your phone…</Text>
-    </View>
-  );
-
-  if (processing) return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: ink.void, alignItems:"center", justifyContent:"center" }]}>
-      <StatusBar barStyle="light-content" />
-      <Text style={{ fontSize: 48, marginBottom: 20 }}>⏳</Text>
-      <Text style={{ fontFamily: FB, fontSize: 15, color: "#8A7060" }}>Processing payment…</Text>
-    </View>
-  );
-
-  return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: ink.void }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <StatusBar barStyle="light-content" />
-      <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 60 }} keyboardShouldPersistTaps="handled">
-
-        {/* Header */}
-        <View style={{ alignItems: "center", marginBottom: 32 }}>
-          <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: earn.terra, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-            <Text style={{ fontSize: 26 }}>💳</Text>
-          </View>
-          <Text style={{ fontFamily: FD, fontSize: 24, color: "#F0E8D8", fontStyle: "italic", marginBottom: 4 }}>Skip this morning</Text>
-          <Text style={{ fontFamily: FB, fontSize: 13, color: "#5A4838" }}>One-time charge of <Text style={{ color: earn.terra, fontWeight: "600" }}>$0.25</Text></Text>
-        </View>
-
-        {/* Card */}
-        <View style={{ backgroundColor: "rgba(255,255,255,0.055)", borderRadius: 16, padding: 20, borderWidth: 0.5, borderColor: "rgba(255,255,255,0.09)", marginBottom: 20 }}>
-          {/* Card number */}
-          <Text style={{ fontFamily: FB, fontSize: 10, fontWeight: "600", color: "#4A3828", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Card number</Text>
-          <TextInput
-            value={cardNum}
-            onChangeText={t => setCardNum(fmtCard(t))}
-            placeholder="1234 5678 9012 3456"
-            placeholderTextColor="#3A2818"
-            keyboardType="number-pad"
-            style={{ fontFamily: FB, fontSize: 17, color: "#F0E8D8", letterSpacing: 2, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.1)", marginBottom: 18 }}
-          />
-
-          {/* Expiry + CVV */}
-          <View style={{ flexDirection: "row", gap: 16 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: FB, fontSize: 10, fontWeight: "600", color: "#4A3828", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Expiry</Text>
-              <TextInput
-                value={expiry}
-                onChangeText={t => setExpiry(fmtExpiry(t))}
-                placeholder="MM/YY"
-                placeholderTextColor="#3A2818"
-                keyboardType="number-pad"
-                style={{ fontFamily: FB, fontSize: 17, color: "#F0E8D8", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.1)" }}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: FB, fontSize: 10, fontWeight: "600", color: "#4A3828", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>CVV</Text>
-              <TextInput
-                value={cvv}
-                onChangeText={t => setCvv(fmtCvv(t))}
-                placeholder="123"
-                placeholderTextColor="#3A2818"
-                keyboardType="number-pad"
-                secureTextEntry
-                style={{ fontFamily: FB, fontSize: 17, color: "#F0E8D8", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.1)" }}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Name */}
-        <View style={{ backgroundColor: "rgba(255,255,255,0.055)", borderRadius: 16, padding: 20, borderWidth: 0.5, borderColor: "rgba(255,255,255,0.09)", marginBottom: 28 }}>
-          <Text style={{ fontFamily: FB, fontSize: 10, fontWeight: "600", color: "#4A3828", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Name on card</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Your name"
-            placeholderTextColor="#3A2818"
-            autoCapitalize="words"
-            style={{ fontFamily: FB, fontSize: 17, color: "#F0E8D8", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.1)" }}
-          />
-        </View>
-
-        {/* Pay button */}
-        <TouchableOpacity
-          onPress={handlePay}
-          disabled={!canPay}
-          style={{ paddingVertical: 16, borderRadius: 14, backgroundColor: canPay ? earn.terra : "rgba(212,98,42,0.25)", alignItems: "center", marginBottom: 16 }}
-        >
-          <Text style={{ fontFamily: FB, fontWeight: "700", fontSize: 16, color: canPay ? "#fff" : "#4A2A18" }}>
-            Pay $0.25
-          </Text>
-        </TouchableOpacity>
-
-        {/* Fine print */}
-        <View style={{ alignItems: "center", gap: 4 }}>
-          <Text style={{ fontFamily: FB, fontSize: 11, color: "#3A2818" }}>🔒 Secured by Stripe</Text>
-          <Text style={{ fontFamily: FB, fontSize: 10, color: "#2A1808", textAlign: "center" }}>
-            {skips > 0 ? `You've paid to skip ${skips}× this week ($${(skips * 0.25).toFixed(2)} total)` : "First skip this week"}
-          </Text>
-        </View>
-
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
-}
-
-// ── Morning Gate ─────────────────────────────────────────────
-function MorningGate({ skips, onUnlock, onPay }) {
-  const [chosen, setChosen] = useState(null);
-  const [countdown, setCountdown] = useState(null);
-  const [running, setRunning] = useState(false);
-  const [clock, setClock] = useState(clockStr());
-  const [repsLeft, setRepsLeft] = useState(0);
-  const [done, setDone] = useState(false);
-  const [repFlash, setRepFlash] = useState(false); // brief flash on rep detect
-
-  const timerRef    = useRef(null);
-  const repsLeftRef = useRef(0); // stale-closure-safe rep counter
-
-  // Block back button entirely on morning gate — can't exit or go back mid-challenge
-  useEffect(() => {
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
-    return () => sub.remove();
-  }, []);
-
-  useEffect(() => {
-    const i = setInterval(() => setClock(clockStr()), 1000);
-    return () => clearInterval(i);
-  }, []);
-  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
-
-  // Called by PoseCamera each time a rep is detected
-  const handleRepCounted = useCallback(() => {
-    setRepFlash(true);
-    setTimeout(() => setRepFlash(false), 450);
-    const next = Math.max(0, repsLeftRef.current - 1);
-    repsLeftRef.current = next;
-    setRepsLeft(next);
-    if (next <= 0) { setDone(true); setTimeout(onUnlock, 1400); }
-  }, [onUnlock]);
-
-  const pick = ch => {
-    setChosen(ch);
-    if (ch.type === "timer") setCountdown(ch.secs);
-    if (ch.type === "reps") {
-      repsLeftRef.current = ch.goal;
-      setRepsLeft(ch.goal);
-    }
-  };
-
-  const startTimer = () => {
-    setRunning(true);
-    timerRef.current = setInterval(() => {
-      setCountdown(p => {
-        if (p <= 1) { clearInterval(timerRef.current); setRunning(false); setDone(true); setTimeout(onUnlock, 1400); return 0; }
-        return p - 1;
-      });
-    }, 1000);
-  };
-
-  // Manual fallback (also used by accelerometer path via repsLeftRef)
-  const doRepManual = () => {
-    const next = Math.max(0, repsLeftRef.current - 1);
-    repsLeftRef.current = next;
-    setRepsLeft(next);
-    if (next <= 0) { setDone(true); setTimeout(onUnlock, 1400); }
-  };
-
-  const back = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    setChosen(null); setCountdown(null); setRunning(false);
-    setRepsLeft(0); repsLeftRef.current = 0; setDone(false);
-    setRepFlash(false);
-  };
-
-  if (done) return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: earn.green, alignItems: "center", justifyContent: "center" }]}>
-      <Text style={{ fontSize: 72, marginBottom: 16 }}>✅</Text>
-      <Text style={{ fontFamily: FD, fontSize: 26, color: "#fff", fontStyle: "italic" }}>Unlocked</Text>
-      <Text style={{ fontFamily: FB, fontSize: 14, color: "rgba(255,255,255,0.7)", marginTop: 6 }}>
-        You earned your screen time.
-      </Text>
-    </View>
-  );
-
-  if (chosen) return (
-    <View style={{ flex: 1, backgroundColor: ink.void, alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <StatusBar barStyle="light-content" />
-      {/* No back button — once you start a challenge you finish it */}
-
-      <Text style={{ fontSize: 64, marginBottom: 16 }}>{chosen.emoji}</Text>
-      <Text style={{ fontFamily: FD, fontSize: 24, color: "#F0E8D8", fontStyle: "italic", marginBottom: 6 }}>{chosen.title}</Text>
-      <Text style={{ fontFamily: FB, fontSize: 13, color: "#6A5848", marginBottom: 32, textAlign: "center" }}>{chosen.desc}</Text>
-
-      {chosen.type === "timer" && countdown !== null && (
-        <View style={{ alignItems: "center" }}>
-          <View style={{
-            width: 140, height: 140, borderRadius: 70,
-            borderWidth: 4, borderColor: countdown === 0 ? earn.green : "rgba(255,255,255,0.1)",
-            alignItems: "center", justifyContent: "center", marginBottom: 24,
-          }}>
-            <Text style={{ fontFamily: FD, fontSize: 36, color: countdown === 0 ? earn.green : "#F0E8D8", fontWeight: "300" }}>
-              {countdown === 0 ? "✓" : fmtSecs(countdown)}
-            </Text>
-          </View>
-          {!running && countdown > 0 && (
-            <TouchableOpacity onPress={startTimer} style={{ paddingVertical: 14, paddingHorizontal: 32, borderRadius: 14, backgroundColor: earn.terra }}>
-              <Text style={{ fontFamily: FB, fontWeight: "600", fontSize: 15, color: "#fff" }}>Start timer</Text>
-            </TouchableOpacity>
-          )}
-          {running && (
-            <Text style={{ fontFamily: FB, fontSize: 12, color: "#4A3020", marginTop: 12 }}>
-              Timer running — stay off your phone
-            </Text>
-          )}
-        </View>
-      )}
-
-      {chosen.type === "reps" && (
-        <View style={{ alignItems: "center", width: "100%" }}>
-
-          {/* Pose camera — handles its own permission prompt */}
-          <PoseCamera
-            exerciseId={chosen.id}
-            repsLeft={repsLeft}
-            onRepCounted={handleRepCounted}
-          />
-
-          {/* Rep counter ring */}
-          <View style={{
-            width: 120, height: 120, borderRadius: 60,
-            borderWidth: 4,
-            borderColor: repsLeft <= 0 ? earn.green : repFlash ? "#FFD700" : earn.terra,
-            alignItems: "center", justifyContent: "center", marginBottom: 14,
-          }}>
-            <Text style={{ fontFamily: FD, fontSize: 38, color: repFlash ? "#FFD700" : "#F0E8D8", fontWeight: "300", lineHeight: 44 }}>
-              {repsLeft}
-            </Text>
-            <Text style={{ fontFamily: FB, fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>remaining</Text>
-          </View>
-
-          {/* Status label */}
-          <Text style={{ fontFamily: FB, fontSize: 13, color: repFlash ? "#FFD700" : "#5A4838", marginBottom: 12, textAlign: "center" }}>
-            {repFlash ? "⚡ Rep counted!" : repsLeft <= 0 ? "✓ Done!" : "Pose detection active"}
-          </Text>
-
-          {/* Manual fallback */}
-          <TouchableOpacity
-            onPress={doRepManual}
-            disabled={repsLeft <= 0}
-            style={{
-              paddingVertical: 7, paddingHorizontal: 18, borderRadius: 10,
-              borderWidth: 0.5, borderColor: "rgba(255,255,255,0.1)",
-              backgroundColor: "rgba(255,255,255,0.04)",
-              opacity: repsLeft <= 0 ? 0.3 : 1,
-            }}
-          >
-            <Text style={{ fontFamily: FB, fontSize: 11, color: "#4A3020" }}>+ Count manually</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
-
-  return (
-    <View style={{ flex: 1, backgroundColor: "#141008", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <StatusBar barStyle="light-content" />
-      <ScrollView
-        style={{ width: "100%" }}
-        contentContainerStyle={{ alignItems: "center", paddingVertical: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ width: "100%", maxWidth: 400 }}>
-          <View style={{ marginBottom: 44, alignItems: "center" }}>
-            <Text style={{ fontFamily: FD, fontSize: 48, color: "#F0E8D8", fontWeight: "300", letterSpacing: -1, lineHeight: 56, marginBottom: 10 }}>
-              {clock}
-            </Text>
-            <Text style={{ fontFamily: FD, fontSize: 22, color: "rgba(240,232,216,0.7)", fontStyle: "italic", fontWeight: "300", marginBottom: 6 }}>
-              Your phone is locked.
-            </Text>
-            <Text style={{ fontFamily: FB, fontSize: 13, color: "#5A4838", lineHeight: 21, textAlign: "center" }}>
-              Complete a challenge to earn your screen time.
-            </Text>
-          </View>
-
-          <View style={{ gap: 8, marginBottom: 22 }}>
-            {CHALLENGES.map(ch => (
-              <TouchableOpacity
-                key={ch.id}
-                onPress={() => pick(ch)}
-                style={{
-                  flexDirection: "row", alignItems: "center", gap: 12,
-                  paddingVertical: 13, paddingHorizontal: 16,
-                  backgroundColor: "rgba(255,255,255,0.055)",
-                  borderWidth: 0.5, borderColor: "rgba(255,255,255,0.09)", borderRadius: 12,
-                }}
-              >
-                <Text style={{ fontSize: 24, width: 32, textAlign: "center" }}>{ch.emoji}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: FB, fontSize: 14, fontWeight: "600", color: "#F0E8D8", marginBottom: 2 }}>{ch.title}</Text>
-                  <Text style={{ fontFamily: FB, fontSize: 11, color: "#5A4838" }}>{ch.desc}</Text>
-                </View>
-                <Text style={{ color: "#4A3A28", fontSize: 18 }}>›</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={{ height: 0.5, backgroundColor: "rgba(255,255,255,0.07)", marginBottom: 18 }} />
-
-          <TouchableOpacity
-            onPress={onPay}
-            style={{
-              width: "100%", padding: 13, borderRadius: 12,
-              borderWidth: 0.5, borderColor: "rgba(212,98,42,0.35)",
-              backgroundColor: "rgba(212,98,42,0.1)",
-            }}
-          >
-            <Text style={{ fontFamily: FB, fontWeight: "600", fontSize: 14, color: earn.terra, textAlign: "center" }}>
-              Pay $0.25 to skip
-            </Text>
-          </TouchableOpacity>
-
-          {skips > 0 && (
-            <Text style={{ fontFamily: FB, fontSize: 11, color: "#4A3020", marginTop: 10, textAlign: "center" }}>
-              ${(skips * 0.25).toFixed(2)} paid this week ({skips}×){skips >= 5 ? " 🤔" : ""}
-            </Text>
-          )}
-        </View>
-      </ScrollView>
-    </View>
-  );
+// Heuristic fallback when AI eval is unavailable (no sub)
+function heuristicCredits(title, mins, category) {
+  const t = (title || "").toLowerCase();
+  let mult = 0.6;
+  if (/deep work|study|exam|sprint|workout|gym|run|interview|writing|build|code/i.test(t)) mult = 1.0;
+  else if (/walk|read|cook|clean|chores|errand|practice/i.test(t)) mult = 0.75;
+  else if (/scroll|browse|chat|text|nap/i.test(t)) mult = 0.35;
+  if (category === "physical" || category === "learning") mult = Math.max(mult, 0.85);
+  const credits = Math.max(1, Math.round(mins * mult));
+  const xp      = Math.max(5, Math.round(credits * 0.6 + 8));
+  return { credits, xp, reasoning: "Estimated locally (no AI)." };
 }
 
 // ── Add Task Overlay ─────────────────────────────────────────
-function AddTaskOverlay({ onSave, onClose }) {
-  const [title, setTitle] = useState("");
-  const [cat, setCat] = useState("work");
-  const [effort, setEffort] = useState(1);
-  const [mins, setMins] = useState(30);
-  const preview   = calcCredits(mins, effort);
-  const xpPreview = calcXp(mins, effort);
+function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall }) {
+  const { dark, theme } = useTheme();
+  const { ink, paper, earn } = theme;
+
+  const [title,    setTitle]    = useState("");
+  const [cat,      setCat]      = useState("work");
+  const [mins,     setMins]     = useState(30);
+  const [aiCheck,  setAiCheck]  = useState(false);
+  const [evaluating, setEvaluating] = useState(false);
+  const [evalError,  setEvalError]  = useState("");
+
+  // Swipe right to dismiss
+  const slideX   = useRef(new Animated.Value(0)).current;
+  const swipeRef = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gs) =>
+        gs.dx > 0 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.8 && gs.dx > 12,
+      onPanResponderMove: (_, gs) => {
+        if (gs.dx > 0) slideX.setValue(gs.dx);
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx > 100) {
+          Animated.timing(slideX, { toValue: 400, duration: 180, useNativeDriver: true }).start(onClose);
+        } else {
+          Animated.spring(slideX, { toValue: 0, useNativeDriver: true }).start();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     if (title.length < 4) return;
@@ -517,195 +186,387 @@ function AddTaskOverlay({ onSave, onClose }) {
     else if (/friend|dinner|date|mom|dad|drinks/i.test(lo))         setCat("social");
   }, [title]);
 
-  const save = () => {
-    if (!title.trim()) return;
-    onSave({
-      id: `t_${Date.now()}`, title: title.trim(), cat, effort, minutes: mins,
-      done: false, credits: calcCredits(mins, effort), xp: calcXp(mins, effort),
+  const save = async () => {
+    if (!title.trim() || evaluating) return;
+    setEvaluating(true);
+    setEvalError("");
+
+    const buildTask = ({ credits, xp, reasoning, aiValued }) => ({
+      id: `t_${Date.now()}`,
+      title:   title.trim(),
+      cat,
+      minutes: mins,
+      done:    false,
+      credits,
+      xp,
+      aiCheck:  aiCheck && isSubActive, // can't claim AI check if not subscribed
+      aiValued: !!aiValued,
+      aiReasoning: reasoning || "",
     });
-    onClose();
+
+    // Free user → heuristic credits, no AI eval call
+    if (!isSubActive) {
+      const { credits, xp, reasoning } = heuristicCredits(title.trim(), mins, cat);
+      onSave(buildTask({ credits, xp, reasoning, aiValued: false }));
+      onClose();
+      return;
+    }
+
+    // Subscribed → server-side AI eval
+    try {
+      const { credits, xp, reasoning } = await evaluateTask({
+        title:    title.trim(),
+        mins,
+        category: cat,
+      });
+      onSave(buildTask({ credits, xp, reasoning, aiValued: true }));
+      onClose();
+    } catch (e) {
+      if (e?.code === "subscription_required") {
+        const { credits, xp, reasoning } = heuristicCredits(title.trim(), mins, cat);
+        onSave(buildTask({ credits, xp, reasoning, aiValued: false }));
+        onClose();
+        return;
+      }
+      setEvalError(e?.message || "AI evaluation failed. Try again.");
+      setEvaluating(false);
+    }
   };
 
+  const safeTop = Platform.OS === "ios" ? 54 : (StatusBar.currentHeight || 24) + 8;
+
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: paper.warm }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      {/* Header */}
-      <View style={{
-        flexDirection: "row", alignItems: "center",
-        paddingVertical: 14, paddingHorizontal: 20,
-        backgroundColor: paper.card,
-        borderBottomWidth: 0.5, borderBottomColor: ink.border,
-      }}>
-        <TouchableOpacity onPress={onClose} style={{ marginRight: 12 }}>
-          <Text style={{ fontSize: 22, color: ink.mid, lineHeight: 26 }}>×</Text>
-        </TouchableOpacity>
-        <Text style={{ fontFamily: FD, fontSize: 17, color: ink.deep, fontStyle: "italic", flex: 1 }}>Add task</Text>
-        <View style={{ flexDirection: "row", gap: 6 }}>
-          <View style={{ backgroundColor: earn.greenLo, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 10 }}>
-            <Text style={{ fontFamily: FB, fontSize: 11, fontWeight: "600", color: earn.greenD }}>+{fmtMins(preview)}</Text>
-          </View>
-          <View style={{ backgroundColor: earn.terraLo, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 10 }}>
-            <Text style={{ fontFamily: FB, fontSize: 11, fontWeight: "600", color: earn.terra }}>+{xpPreview} XP</Text>
+    <Animated.View style={{ flex: 1, transform: [{ translateX: slideX }] }}
+      {...swipeRef.panHandlers}>
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: paper.warm }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        {/* Header — pushed below status bar */}
+        <View style={{
+          flexDirection: "row", alignItems: "center",
+          paddingTop: safeTop, paddingBottom: 14, paddingHorizontal: 20,
+          backgroundColor: paper.card,
+          borderBottomWidth: 0.5, borderBottomColor: ink.border,
+        }}>
+          <TouchableOpacity onPress={onClose} style={{ marginRight: 12 }}>
+            <Text style={{ fontSize: 22, color: ink.mid, lineHeight: 26 }}>×</Text>
+          </TouchableOpacity>
+          <Text style={{ fontFamily: FK, fontSize: 17, color: ink.deep, flex: 1 }}>Add task</Text>
+          <View style={{
+            flexDirection: "row", alignItems: "center", gap: 5,
+            backgroundColor: isSubActive ? earn.blueLo : ink.ghost, borderRadius: 10,
+            paddingVertical: 4, paddingHorizontal: 10,
+          }}>
+            <Text style={{ fontSize: 11 }}>{isSubActive ? "✦" : "·"}</Text>
+            <Text style={{ fontFamily: FOM, fontSize: 9, color: isSubActive ? earn.blue : ink.mid, letterSpacing: 1 }}>
+              {isSubActive ? "AI VALUED" : "STANDARD"}
+            </Text>
           </View>
         </View>
-      </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
-        {/* Preview */}
-        <View style={{ alignItems: "center", padding: 14, backgroundColor: earn.greenLo, borderRadius: 12, marginBottom: 12 }}>
-          <Text style={{ fontFamily: FD, fontSize: 34, color: earn.greenD, fontWeight: "300" }}>{fmtMins(preview)}</Text>
-          <Text style={{ fontFamily: FB, fontSize: 12, color: earn.greenD, marginTop: 2 }}>screen time earned</Text>
-        </View>
-
-        {/* Title */}
-        <View style={{ marginBottom: 14 }}>
-          <Text style={s.label}>What needs doing?</Text>
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder='e.g. "30 min gym" or "finish report"'
-            placeholderTextColor={ink.faint}
-            onSubmitEditing={save}
-            returnKeyType="done"
-            style={{
-              padding: 11, paddingHorizontal: 14, borderRadius: 10,
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
+          {/* AI-valued notice or upgrade prompt */}
+          {isSubActive ? (
+            <View style={{
+              flexDirection: "row", alignItems: "center", gap: 10,
+              padding: 14, backgroundColor: earn.blueLo, borderRadius: 12, marginBottom: 14,
+              borderWidth: 1, borderColor: "rgba(90,180,212,0.2)",
+            }}>
+              <Text style={{ fontSize: 22 }}>✦</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: FK, fontSize: 13, color: earn.blue, marginBottom: 2 }}>AI sets the credits</Text>
+                <Text style={{ fontFamily: FB, fontSize: 11, color: "#2A7FA0", lineHeight: 16 }}>
+                  Reward is calculated based on the task and duration when you save.
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={onOpenPaywall} style={{
+              flexDirection: "row", alignItems: "center", gap: 10,
+              padding: 14, backgroundColor: ink.ghost, borderRadius: 12, marginBottom: 14,
               borderWidth: 1, borderColor: ink.border,
-              fontFamily: FB, fontSize: 14,
-              backgroundColor: "rgba(255,255,255,0.7)", color: ink.deep,
-            }}
-          />
-        </View>
+            }}>
+              <Text style={{ fontSize: 22 }}>🔒</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: FK, fontSize: 13, color: ink.deep, marginBottom: 2 }}>Unlock AI evaluation</Text>
+                <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, lineHeight: 16 }}>
+                  Tap to upgrade — credits are estimated locally until then.
+                </Text>
+              </View>
+              <Text style={{ fontFamily: FO, fontSize: 9, color: earn.terra, letterSpacing: 1 }}>UPGRADE ›</Text>
+            </TouchableOpacity>
+          )}
 
-        {/* Category */}
-        <View style={{ marginBottom: 14 }}>
-          <Text style={s.label}>Category</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
-            {Object.entries(CATS).map(([k, v]) => (
-              <TouchableOpacity
-                key={k}
-                onPress={() => setCat(k)}
-                style={{
+          {/* Title */}
+          <View style={{ marginBottom: 14 }}>
+            <Text style={[s.label, { color: ink.faint }]}>What needs doing?</Text>
+            <TextInput
+              value={title} onChangeText={setTitle}
+              placeholder='e.g. "30 min gym" or "finish report"'
+              placeholderTextColor={ink.faint}
+              returnKeyType="done"
+              blurOnSubmit={true}
+              style={{
+                padding: 11, paddingHorizontal: 14, borderRadius: 10,
+                borderWidth: 1, borderColor: ink.border,
+                fontFamily: FB, fontSize: 14,
+                backgroundColor: paper.card, color: ink.deep,
+              }}
+            />
+          </View>
+
+          {/* Category */}
+          <View style={{ marginBottom: 14 }}>
+            <Text style={[s.label, { color: ink.faint }]}>Category</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
+              {Object.entries(CATS).map(([k, v]) => (
+                <TouchableOpacity key={k} onPress={() => setCat(k)} style={{
                   paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20,
                   borderWidth: 1.5,
                   borderColor: cat === k ? v.c : ink.border,
-                  backgroundColor: cat === k ? `${v.c}14` : "transparent",
-                }}
-              >
-                <Text style={{ fontFamily: FB, fontSize: 11, fontWeight: cat === k ? "600" : "400", color: cat === k ? v.c : ink.mid }}>
-                  {v.e} {v.l}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  backgroundColor: cat === k ? `${v.c}18` : "transparent",
+                }}>
+                  <Text style={{ fontFamily: FB, fontSize: 11, fontWeight: cat === k ? "600" : "400", color: cat === k ? v.c : ink.mid }}>
+                    {v.e} {v.l}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
 
-        {/* Duration */}
-        <View style={{ marginBottom: 14 }}>
-          <Text style={s.label}>Duration</Text>
-          <View style={{ flexDirection: "row", gap: 7 }}>
-            {[15, 30, 45, 60, 90, 120].map(d => (
-              <TouchableOpacity
-                key={d}
-                onPress={() => setMins(d)}
-                style={{
+          {/* Duration */}
+          <View style={{ marginBottom: 14 }}>
+            <Text style={[s.label, { color: ink.faint }]}>Duration</Text>
+            <View style={{ flexDirection: "row", gap: 7 }}>
+              {[15, 30, 45, 60, 90, 120].map(d => (
+                <TouchableOpacity key={d} onPress={() => setMins(d)} style={{
                   flex: 1, paddingVertical: 9, borderRadius: 10,
                   borderWidth: 1.5,
                   borderColor: mins === d ? earn.terra : ink.border,
                   backgroundColor: mins === d ? earn.terraLo : "transparent",
-                }}
-              >
-                <Text style={{ fontFamily: FB, fontSize: 12, fontWeight: mins === d ? "600" : "400", color: mins === d ? earn.terra : ink.mid, textAlign: "center" }}>
-                  {d < 60 ? `${d}m` : `${d / 60}h`}
+                }}>
+                  <Text style={{ fontFamily: FB, fontSize: 12, fontWeight: mins === d ? "600" : "400", color: mins === d ? earn.terra : ink.mid, textAlign: "center" }}>
+                    {d < 60 ? `${d}m` : `${d / 60}h`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* ── AI Check toggle ── */}
+          <TouchableOpacity
+            onPress={() => isSubActive ? setAiCheck(v => !v) : onOpenPaywall?.()}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 12,
+              paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, marginBottom: 10,
+              borderWidth: 1.5,
+              borderColor: aiCheck && isSubActive ? earn.blue : ink.border,
+              backgroundColor: aiCheck && isSubActive ? earn.blueLo : "transparent",
+              opacity: isSubActive ? 1 : 0.7,
+            }}
+          >
+            <Text style={{ fontSize: 20 }}>{isSubActive ? "✦" : "🔒"}</Text>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text style={{ fontFamily: FK, fontSize: 14, fontWeight: "600", color: aiCheck && isSubActive ? earn.blue : ink.deep }}>
+                  AI Check
                 </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Effort */}
-        <View style={{ marginBottom: 24 }}>
-          <Text style={s.label}>Effort <Text style={{ fontWeight: "400", textTransform: "none", letterSpacing: 0, fontSize: 10 }}>— determines payout</Text></Text>
-          <View style={{ gap: 7 }}>
-            {EFFORT.map(e => (
-              <TouchableOpacity
-                key={e.id}
-                onPress={() => setEffort(e.id)}
-                style={{
-                  flexDirection: "row", alignItems: "center", gap: 12,
-                  paddingVertical: 11, paddingHorizontal: 14, borderRadius: 10,
-                  borderWidth: 1.5,
-                  borderColor: effort === e.id ? earn.green : ink.border,
-                  backgroundColor: effort === e.id ? earn.greenLo : "transparent",
-                }}
-              >
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: effort === e.id ? earn.green : ink.ghost, flexShrink: 0 }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: FB, fontSize: 13, fontWeight: "600", color: effort === e.id ? earn.green : ink.deep, marginBottom: 2 }}>
-                    {e.label}{" "}
-                    <Text style={{ fontWeight: "400", color: ink.faint }}>{e.mult}×</Text>
+                <View style={{ backgroundColor: isSubActive ? earn.blueLo : ink.ghost, borderRadius: 6, paddingVertical: 1, paddingHorizontal: 6 }}>
+                  <Text style={{ fontFamily: FOM, fontSize: 8, color: isSubActive ? earn.blue : ink.mid, letterSpacing: 1 }}>
+                    {isSubActive ? "BETA" : "PRO"}
                   </Text>
-                  <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid }}>{e.desc}</Text>
                 </View>
-                {effort === e.id && (
-                  <Text style={{ fontFamily: FB, fontSize: 12, fontWeight: "600", color: earn.green }}>
-                    +{fmtMins(calcCredits(mins, e.id))}
-                  </Text>
-                )}
-              </TouchableOpacity>
+              </View>
+              <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2 }}>
+                {isSubActive
+                  ? "Must submit photo or text proof to earn credits"
+                  : "Subscribe to verify completions with AI"}
+              </Text>
+            </View>
+            {/* Toggle pill (only when subscribed) */}
+            {isSubActive && (
+              <View style={{
+                width: 40, height: 24, borderRadius: 12,
+                backgroundColor: aiCheck ? earn.blue : ink.ghost,
+                justifyContent: "center",
+                paddingHorizontal: 3,
+              }}>
+                <View style={{
+                  width: 18, height: 18, borderRadius: 9, backgroundColor: "#fff",
+                  alignSelf: aiCheck ? "flex-end" : "flex-start",
+                }} />
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Add bottom spacing where Lock Phone toggle used to be */}
+          <View style={{ marginBottom: 10 }} />
+
+          {!!evalError && (
+            <View style={{
+              padding: 11, borderRadius: 10, marginBottom: 10,
+              backgroundColor: "rgba(224,80,80,0.1)",
+              borderWidth: 1, borderColor: "rgba(224,80,80,0.2)",
+            }}>
+              <Text style={{ fontFamily: FB, fontSize: 12, color: "#A32D2D", textAlign: "center" }}>
+                {evalError}
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            onPress={save}
+            disabled={!title.trim() || evaluating}
+            style={{
+              paddingVertical: 14, borderRadius: 14,
+              backgroundColor: !title.trim() ? ink.faint : (evaluating ? "rgba(47,171,114,0.5)" : earn.terra),
+              flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
+            }}
+          >
+            {evaluating && <ActivityIndicator color="#fff" size="small" />}
+            <Text style={{ fontFamily: FK, fontSize: 15, fontWeight: "600", color: "#fff", textAlign: "center" }}>
+              {evaluating ? "AI is evaluating…" : "Add task"}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Animated.View>
+  );
+}
+
+// ── Task Verify Modal ─────────────────────────────────────────
+// Asks 2 honest questions before awarding credits.
+function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
+  const theme = getTheme(dark);
+  const { ink, paper, earn } = theme;
+  const [step, setStep] = useState(0); // 0 = q1, 1 = q2, 2 = confirmed
+
+  if (!task) return null;
+
+  const QUESTIONS = [
+    {
+      q: `Did you actually spend ~${task.minutes} minutes on this?`,
+      sub: "Be honest — estimates are fine, but it should be real time.",
+      emoji: "⏱",
+    },
+    {
+      q: "Was it focused, quality time?",
+      sub: "Not half-distracted, not just started and stopped.",
+      emoji: "🎯",
+    },
+  ];
+
+  const confirm = () => {
+    if (step < QUESTIONS.length - 1) { setStep(s => s + 1); return; }
+    onConfirm();
+  };
+
+  const q = QUESTIONS[step];
+
+  return (
+    <Modal visible={!!task} transparent animationType="fade" onRequestClose={onCancel}>
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "flex-end" }}>
+        <View style={{
+          width: "100%", backgroundColor: paper.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+          padding: 28, paddingBottom: Platform.OS === "ios" ? 44 : 28,
+        }}>
+          {/* Step dots */}
+          <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginBottom: 24 }}>
+            {QUESTIONS.map((_, i) => (
+              <View key={i} style={{
+                width: i === step ? 20 : 6, height: 6, borderRadius: 3,
+                backgroundColor: i <= step ? earn.green : ink.ghost,
+              }} />
             ))}
           </View>
-        </View>
 
-        <TouchableOpacity
-          onPress={save}
-          disabled={!title.trim()}
-          style={{ paddingVertical: 14, borderRadius: 14, backgroundColor: title.trim() ? earn.terra : ink.faint }}
-        >
-          <Text style={{ fontFamily: FB, fontWeight: "600", fontSize: 15, color: "#fff", textAlign: "center" }}>
-            Add task — earn {fmtMins(preview)} screen time
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <Text style={{ fontSize: 36, textAlign: "center", marginBottom: 16 }}>{q.emoji}</Text>
+          <Text style={{ fontFamily: FK, fontSize: 20, color: ink.deep, textAlign: "center", marginBottom: 8 }}>{q.q}</Text>
+          <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid, textAlign: "center", lineHeight: 20, marginBottom: 28 }}>{q.sub}</Text>
+
+          <TouchableOpacity onPress={confirm} style={{
+            paddingVertical: 15, borderRadius: 14, backgroundColor: earn.green, alignItems: "center", marginBottom: 10,
+          }}>
+            <Text style={{ fontFamily: FK, fontSize: 16, color: "#fff" }}>
+              {step < QUESTIONS.length - 1 ? "Yes, next →" : "Yes — claim credits"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={onCancel} style={{ paddingVertical: 12, alignItems: "center" }}>
+            <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid }}>
+              {step === 0 ? "Not really, cancel" : "No, cancel"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
 // ── Today View ───────────────────────────────────────────────
-function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend }) {
+function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend, dark }) {
+  const theme = getTheme(dark);
+  const { ink, paper, earn } = theme;
+
+  const [verifyTask,   setVerifyTask]   = useState(null); // task being verified via prompts
+  const [aiCheckTask,  setAiCheckTask]  = useState(null); // task being verified via AI
+
   const pending       = tasks.filter(t => !t.done);
   const done          = tasks.filter(t => t.done);
   const unlocked      = credits.balance > 0;
   const lv            = getLevel(totalXp);
   const stillEarnable = pending.reduce((s, t) => s + t.credits, 0);
 
+  const handleTaskTap = (t) => {
+    if (t.aiCheck) setAiCheckTask(t);
+    else setVerifyTask(t);
+  };
+
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
+    <>
+    {/* Task verify modal */}
+    <TaskVerifyModal
+      task={verifyTask}
+      onConfirm={() => { onComplete(verifyTask.id); setVerifyTask(null); }}
+      onCancel={() => setVerifyTask(null)}
+      dark={dark}
+    />
+    {/* AI Check modal */}
+    <AICheckModal
+      visible={!!aiCheckTask}
+      task={aiCheckTask}
+      onVerified={() => { onComplete(aiCheckTask.id); setAiCheckTask(null); }}
+      onCancel={() => setAiCheckTask(null)}
+      dark={dark}
+    />
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 18, paddingBottom: 110 }}>
       {/* Credit bank */}
       <View style={{
-        borderRadius: 16, padding: 20, marginBottom: 12,
-        backgroundColor: unlocked ? earn.greenD : "#1C1408",
+        borderRadius: 20, padding: 20, marginBottom: 12,
+        backgroundColor: unlocked ? earn.terra : paper.card,
         overflow: "hidden",
+        borderWidth: unlocked ? 0 : 1,
+        borderColor: ink.border,
       }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
           <View>
             <Text style={{
               fontFamily: FB, fontSize: 11, fontWeight: "600",
-              color: unlocked ? "rgba(255,255,255,0.55)" : "#4A3020",
+              color: unlocked ? "rgba(255,255,255,0.7)" : ink.faint,
               textTransform: "uppercase", letterSpacing: 1, marginBottom: 6,
             }}>
               {unlocked ? "Screen time balance" : "No time earned yet"}
             </Text>
-            <CreditTicker value={credits.balance} />
-            <Text style={{ fontFamily: FB, fontSize: 12, color: unlocked ? "rgba(255,255,255,0.5)" : "#4A3020", marginTop: 4 }}>
+            <CreditTicker value={credits.balance} textColor={unlocked ? "#FFFFFF" : ink.deep} />
+            <Text style={{ fontFamily: FB, fontSize: 12, color: unlocked ? "rgba(255,255,255,0.6)" : ink.faint, marginTop: 4 }}>
               {unlocked ? "Available now" : "Complete a task below"}
             </Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <Text style={{ fontSize: 28 }}>{unlocked ? "🔓" : "🔒"}</Text>
-            <View style={{ backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 8, paddingVertical: 3, paddingHorizontal: 10, marginTop: 6 }}>
-              <Text style={{ fontFamily: FB, fontSize: 10, fontWeight: "600", color: unlocked ? "rgba(255,255,255,0.65)" : "#4A3020" }}>
+            <View style={{ backgroundColor: unlocked ? "rgba(255,255,255,0.15)" : earn.greenLo, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 10, marginTop: 6 }}>
+              <Text style={{ fontFamily: FB, fontSize: 10, fontWeight: "600", color: unlocked ? "rgba(255,255,255,0.8)" : earn.greenD }}>
                 {lv.e} {lv.name}
               </Text>
             </View>
@@ -713,13 +574,13 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend }) {
         </View>
 
         {credits.earned > 0 && (
-          <View style={{ flexDirection: "row", gap: 20, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)" }}>
+          <View style={{ flexDirection: "row", gap: 20, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: unlocked ? "rgba(255,255,255,0.15)" : ink.border }}>
             {[["Earned", fmtMins(credits.earned)], ["Used", fmtMins(credits.spent)], stillEarnable > 0 ? ["Earnable", fmtMins(stillEarnable)] : null]
               .filter(Boolean)
               .map(([l, v]) => (
                 <View key={l}>
-                  <Text style={{ fontFamily: FB, fontSize: 10, color: "rgba(255,255,255,0.4)", marginBottom: 2 }}>{l}</Text>
-                  <Text style={{ fontFamily: FD, fontSize: 15, color: "rgba(255,255,255,0.85)", fontWeight: "300" }}>{v}</Text>
+                  <Text style={{ fontFamily: FB, fontSize: 10, color: unlocked ? "rgba(255,255,255,0.5)" : ink.faint, marginBottom: 2 }}>{l}</Text>
+                  <Text style={{ fontFamily: FO, fontSize: 13, color: unlocked ? "rgba(255,255,255,0.9)" : ink.deep, letterSpacing: 0.5 }}>{v}</Text>
                 </View>
               ))}
           </View>
@@ -731,18 +592,18 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend }) {
           onPress={onSimSpend}
           style={{
             padding: 9, borderRadius: 10,
-            borderWidth: 1, borderColor: earn.terra,
-            backgroundColor: `${earn.terra}14`, marginBottom: 12,
+            borderWidth: 1, borderColor: earn.blue,
+            backgroundColor: earn.blueLo, marginBottom: 12,
           }}
         >
-          <Text style={{ fontFamily: FB, fontWeight: "500", fontSize: 12, color: earn.terra, textAlign: "center" }}>
+          <Text style={{ fontFamily: FB, fontWeight: "500", fontSize: 12, color: earn.blue, textAlign: "center" }}>
             📱 Use 10 min of screen time (demo)
           </Text>
         </TouchableOpacity>
       )}
 
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <Text style={{ fontFamily: FD, fontSize: 18, color: ink.deep, fontStyle: "italic" }}>Today's work</Text>
+        <Text style={{ fontFamily: FK, fontSize: 18, color: ink.deep, fontStyle: "italic" }}>Today's work</Text>
         <TouchableOpacity
           onPress={onAdd}
           style={{
@@ -757,10 +618,25 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend }) {
       </View>
 
       {tasks.length === 0 && (
-        <View style={{ alignItems: "center", paddingVertical: 36 }}>
+        <View style={{ alignItems: "center", paddingVertical: 28 }}>
           <Text style={{ fontSize: 36, marginBottom: 10 }}>📋</Text>
-          <Text style={{ fontFamily: FD, fontSize: 17, color: ink.mid, fontStyle: "italic", marginBottom: 6 }}>Nothing to earn from yet</Text>
-          <Text style={{ fontFamily: FB, fontSize: 13, color: ink.faint }}>Add the work you actually need to do today.</Text>
+          <Text style={{ fontFamily: FK, fontSize: 17, color: ink.mid, marginBottom: 6 }}>Nothing to earn from yet</Text>
+          <Text style={{ fontFamily: FB, fontSize: 13, color: ink.faint, marginBottom: 22, textAlign: "center" }}>
+            Add the work you actually need to do today.
+          </Text>
+          <TouchableOpacity
+            onPress={onAdd}
+            style={{
+              paddingVertical: 16, paddingHorizontal: 28, borderRadius: 16,
+              backgroundColor: earn.terra,
+              flexDirection: "row", alignItems: "center", gap: 10,
+              shadowColor: earn.terra, shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.25, shadowRadius: 12, elevation: 6,
+            }}
+          >
+            <Text style={{ fontFamily: FO, fontSize: 18, color: "#fff" }}>+</Text>
+            <Text style={{ fontFamily: FK, fontSize: 16, color: "#fff" }}>Add First Task</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -769,7 +645,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend }) {
         return (
           <TouchableOpacity
             key={t.id}
-            onPress={() => onComplete(t.id)}
+            onPress={() => handleTaskTap(t)}
             style={{
               flexDirection: "row", alignItems: "center",
               backgroundColor: paper.card, borderRadius: 16,
@@ -777,25 +653,42 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend }) {
               borderWidth: 0.5, borderColor: ink.border,
             }}
           >
-            <View style={{
-              width: 3, backgroundColor: cat.c,
-              height: t.effort === 1 ? 24 : t.effort === 2 ? 36 : 48,
-              borderRadius: 2, marginLeft: 12, marginRight: 12,
-              alignSelf: "center", flexShrink: 0,
-            }} />
+            {(() => {
+              const ratio = t.credits / Math.max(1, t.minutes);
+              const intensity = ratio >= 1.0 ? 3 : ratio >= 0.7 ? 2 : 1;
+              const h = intensity === 1 ? 24 : intensity === 2 ? 36 : 48;
+              return (
+                <View style={{
+                  width: 3, backgroundColor: cat.c, height: h,
+                  borderRadius: 2, marginLeft: 12, marginRight: 12,
+                  alignSelf: "center", flexShrink: 0,
+                }} />
+              );
+            })()}
             <View style={{ flex: 1, paddingVertical: 12 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
                 <Text style={{ fontFamily: FB, fontSize: 14, fontWeight: "500", color: ink.deep, lineHeight: 19, flex: 1 }}>{t.title}</Text>
-                <View style={{ backgroundColor: `${cat.c}16`, borderRadius: 6, paddingVertical: 2, paddingHorizontal: 6, marginLeft: 8 }}>
-                  <Text style={{ fontSize: 14 }}>{cat.e}</Text>
+                <View style={{ flexDirection: "row", gap: 5, alignItems: "center" }}>
+                  {t.aiCheck && (
+                    <View style={{ backgroundColor: earn.blueLo, borderRadius: 6, paddingVertical: 2, paddingHorizontal: 5 }}>
+                      <Text style={{ fontFamily: FOM, fontSize: 7, color: earn.blue, letterSpacing: 1 }}>AI</Text>
+                    </View>
+                  )}
+                  <View style={{ backgroundColor: `${cat.c}16`, borderRadius: 6, paddingVertical: 2, paddingHorizontal: 6 }}>
+                    <Text style={{ fontSize: 14 }}>{cat.e}</Text>
+                  </View>
                 </View>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <Text style={{ fontSize: 11, color: ink.mid }}>{t.minutes}m</Text>
                 <View style={{ flexDirection: "row", gap: 3 }}>
-                  {[1, 2, 3].map(d => (
-                    <View key={d} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: d <= t.effort ? cat.c : ink.ghost }} />
-                  ))}
+                  {(() => {
+                    const ratio = t.credits / Math.max(1, t.minutes);
+                    const intensity = ratio >= 1.0 ? 3 : ratio >= 0.7 ? 2 : 1;
+                    return [1, 2, 3].map(d => (
+                      <View key={d} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: d <= intensity ? cat.c : ink.ghost }} />
+                    ));
+                  })()}
                 </View>
                 <View style={{ flex: 1, alignItems: "flex-end" }}>
                   <Text style={{ fontSize: 11, fontWeight: "600", color: earn.green }}>+{fmtMins(t.credits)}</Text>
@@ -804,11 +697,13 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend }) {
             </View>
             <View style={{
               width: 28, height: 28, borderRadius: 14,
-              borderWidth: 1.5, borderColor: earn.green,
+              borderWidth: 1.5, borderColor: t.aiCheck ? earn.blue : earn.green,
               alignItems: "center", justifyContent: "center",
               marginRight: 14, flexShrink: 0,
             }}>
-              <Text style={{ color: earn.green, fontSize: 14 }}>✓</Text>
+              <Text style={{ color: t.aiCheck ? earn.blue : earn.green, fontSize: 12 }}>
+                {t.aiCheck ? "✦" : "✓"}
+              </Text>
             </View>
           </TouchableOpacity>
         );
@@ -832,11 +727,14 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend }) {
         </View>
       )}
     </ScrollView>
+    </>
   );
 }
 
 // ── Progress View ────────────────────────────────────────────
-function ProgressView({ tasks, totalXp, skips }) {
+function ProgressView({ tasks, totalXp, skips, dark }) {
+  const theme = getTheme(dark);
+  const { ink, paper, earn } = theme;
   const lv        = getLevel(totalXp);
   const prog      = xpProg(totalXp);
   const toNext    = xpToNext(totalXp);
@@ -845,13 +743,13 @@ function ProgressView({ tasks, totalXp, skips }) {
   const maxCat    = Math.max(...Object.values(catCounts), 1);
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 18, paddingBottom: 110 }}>
       {/* Level card */}
-      <View style={[s.card, { marginBottom: 12 }]}>
+      <View style={{ backgroundColor: paper.card, borderRadius: 16, padding: 20, borderWidth: 0.5, borderColor: ink.border, marginBottom: 12 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 14 }}>
           <Text style={{ fontSize: 36 }}>{lv.e}</Text>
           <View>
-            <Text style={{ fontFamily: FD, fontSize: 20, color: earn.terra, fontStyle: "italic" }}>{lv.name}</Text>
+            <Text style={{ fontFamily: FK, fontSize: 20, color: earn.green }}>{lv.name}</Text>
             <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid }}>{totalXp.toLocaleString()} XP total</Text>
           </View>
         </View>
@@ -871,8 +769,8 @@ function ProgressView({ tasks, totalXp, skips }) {
       {/* Stats */}
       <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
         {[["Earned", fmtMins(done.reduce((s, t) => s + t.credits, 0))], ["Done", `${done.length}`]].map(([l, v]) => (
-          <View key={l} style={[s.card, { flex: 1, alignItems: "center", paddingVertical: 12 }]}>
-            <Text style={{ fontFamily: FD, fontSize: 22, color: ink.deep, fontWeight: "300" }}>{v}</Text>
+          <View key={l} style={{ flex: 1, alignItems: "center", paddingVertical: 12, backgroundColor: paper.card, borderRadius: 16, padding: 20, borderWidth: 0.5, borderColor: ink.border }}>
+            <Text style={{ fontFamily: FO, fontSize: 18, color: ink.deep, letterSpacing: 0.5 }}>{v}</Text>
             <Text style={{ fontFamily: FB, fontSize: 10, color: ink.mid, marginTop: 2 }}>{l}</Text>
           </View>
         ))}
@@ -880,8 +778,8 @@ function ProgressView({ tasks, totalXp, skips }) {
 
       {/* Category chart */}
       {Object.keys(catCounts).length > 0 && (
-        <View style={[s.card, { marginBottom: 12 }]}>
-          <Text style={{ fontFamily: FD, fontSize: 16, color: ink.deep, fontStyle: "italic", marginBottom: 12 }}>Earned by type</Text>
+        <View style={{ backgroundColor: paper.card, borderRadius: 16, padding: 20, borderWidth: 0.5, borderColor: ink.border, marginBottom: 12 }}>
+          <Text style={{ fontFamily: FK, fontSize: 16, color: ink.deep, marginBottom: 12 }}>Earned by type</Text>
           {Object.entries(catCounts).sort((a, b) => b[1] - a[1]).map(([cat, mins]) => {
             const meta = CATS[cat];
             return (
@@ -897,27 +795,6 @@ function ProgressView({ tasks, totalXp, skips }) {
         </View>
       )}
 
-      {/* Skips */}
-      <View style={{
-        backgroundColor: paper.card, borderRadius: 16, padding: 20,
-        flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-        borderTopWidth: 0.5, borderRightWidth: 0.5, borderBottomWidth: 0.5,
-        borderLeftWidth: 3,
-        borderTopColor: ink.border, borderRightColor: ink.border,
-        borderBottomColor: ink.border, borderLeftColor: skips >= 5 ? "#A32D2D" : earn.terra,
-        borderRadius: 16,
-      }}>
-        <View>
-          <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid, marginBottom: 4 }}>Morning skips this week</Text>
-          <Text style={{ fontFamily: FD, fontSize: 32, color: skips >= 5 ? "#A32D2D" : earn.terra, fontWeight: "300" }}>
-            ${(skips * 0.25).toFixed(2)}
-          </Text>
-          <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 4 }}>
-            {skips === 0 ? "Zero skips. 🔥" : `${skips}× $0.25`}{skips >= 5 ? " — worth rethinking mornings." : ""}
-          </Text>
-        </View>
-        <Text style={{ fontSize: 36 }}>{skips === 0 ? "🔥" : skips >= 5 ? "🤔" : "💰"}</Text>
-      </View>
     </ScrollView>
   );
 }
@@ -942,164 +819,220 @@ const s = StyleSheet.create({
   },
 });
 
-// ── Root App ─────────────────────────────────────────────────
+
+// ── Bottom nav icons ─────────────────────────────────────────
+function IconHome({ color, size = 22 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+        stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M9 22V12h6v10" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconBolt({ color, size = 22 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+        stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function IconChart({ color, size = 22 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="3" y="12" width="4" height="9" rx="1" stroke={color} strokeWidth={2} />
+      <Rect x="10" y="7" width="4" height="14" rx="1" stroke={color} strokeWidth={2} />
+      <Rect x="17" y="3" width="4" height="18" rx="1" stroke={color} strokeWidth={2} />
+    </Svg>
+  );
+}
+function IconPeople({ color, size = 22 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <SvgCircle cx="9" cy="7" r="4" stroke={color} strokeWidth={2} />
+      <Path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M16 3.13a4 4 0 010 7.75" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M21 21v-2a4 4 0 00-3-3.87" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 const TABS = [
-  { id: "today",    label: "Today"    },
-  { id: "progress", label: "Progress" },
-  { id: "friends",  label: "Friends"  },
+  { id: "today",    label: "Today",    Icon: IconHome   },
+  { id: "driftin",  label: "Drift In", Icon: IconBolt   },
+  { id: "progress", label: "Stats",    Icon: IconChart  },
+  { id: "friends",  label: "Friends",  Icon: IconPeople },
 ];
 
+// ── Root App ─────────────────────────────────────────────────
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Orbitron_400Regular,
+    Orbitron_700Bold,
+    Oswald_400Regular,
+    Oswald_700Bold,
+  });
+
   const [screen,      setScreen]      = useState("loading");
   const [tab,         setTab]         = useState("today");
   const [tasks,       setTasks]       = useState([]);
   const [credits,     setCredits]     = useState({ balance: 0, earned: 0, spent: 0 });
   const [totalXp,     setTotalXp]     = useState(0);
-  const [skips,       setSkips]       = useState(0);
   const [overlay,     setOverlay]     = useState(null);
   const [popup,       setPopup]       = useState(null);
   const [secLeft,     setSecLeft]     = useState(0);
 
-  // ── Social + subscription state ──────────────────────────
-  const [userId,      setUserId]      = useState(null);
-  const [isPremium,   setIsPremium]   = useState(false);
-  const [trialDays,   setTrialDays]   = useState(7);
-  const [showPaywall, setShowPaywall] = useState(false);
+  const [userId,         setUserId]         = useState(null);
+  const [isPremium,      setIsPremium]      = useState(false);
+  const [trialDays,      setTrialDays]      = useState(7);
+  const [showPaywall,    setShowPaywall]    = useState(false);
+  const [onboarding,     setOnboarding]     = useState(false);
+  const [signInOnly,     setSignInOnly]     = useState(false); // returning user (skip questionnaire)
+  const [showAccount,        setShowAccount]        = useState(false);
+  const [showBlockedApps,    setShowBlockedApps]    = useState(false);
+  const [firstTimeBlockedApps, setFirstTimeBlockedApps] = useState(false);
+  const [userEmail,          setUserEmail]          = useState("");
 
-  // ── Onboarding ───────────────────────────────────────────
-  const [onboarding,  setOnboarding]  = useState(false); // shows onboarding overlay
+  // Subscription state (Stripe → Supabase) — server is source of truth
+  const { active: subActive } = useSubscription(userId);
+  const [driftInActive,  setDriftInActive]  = useState(false);
+  const [darkMode,       setDarkMode]       = useState(false);
 
-  // ── Countdown engine ─────────────────────────────────────────
-  const secRef   = useRef(0);   // source of truth for seconds remaining
-  const tickRef  = useRef(null);
-  const screenRef = useRef("loading");
+  const secRef          = useRef(0);
+  const tickRef         = useRef(null);
+  const tabRef          = useRef(tab);
+  const driftInActRef   = useRef(driftInActive);
+  useEffect(() => { tabRef.current = tab; }, [tab]);
+  useEffect(() => { driftInActRef.current = driftInActive; }, [driftInActive]);
 
   const stopTick = () => { if (tickRef.current) clearInterval(tickRef.current); };
+
+  // Swipe between tabs
+  const tabSwipe = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gs) =>
+        !driftInActRef.current &&
+        Math.abs(gs.dx) > Math.abs(gs.dy) * 1.8 && Math.abs(gs.dx) > 18,
+      onPanResponderRelease: (_, gs) => {
+        if (driftInActRef.current) return;
+        const idx = TABS.findIndex(t => t.id === tabRef.current);
+        if (gs.dx > 60 && idx > 0)                 setTab(TABS[idx - 1].id);
+        else if (gs.dx < -60 && idx < TABS.length - 1) setTab(TABS[idx + 1].id);
+      },
+    })
+  ).current;
+
+  // ── Screen time only drains when user could be on a blocked app ──
+  //
+  // Reality check: we cannot detect *which* other app the user is in from
+  // React Native. So we approximate: time drains ONLY when Drift is NOT
+  // in the foreground. When you're inside Drift itself you're not on a
+  // blocked app, so nothing is "consumed."
+  //
+  // When a native blocker (iOS Family Controls / Android UsageStats) is
+  // wired in, replace this with: only drain when blocker reports a
+  // blocked app is foregrounded.
 
   const startTick = (initialSec) => {
     stopTick();
     secRef.current = initialSec;
-    if (initialSec <= 0) return;
-    tickRef.current = setInterval(() => {
-      secRef.current = Math.max(0, secRef.current - 1);
-      const s = secRef.current;
-      setSecLeft(s);
-      // Keep credits.balance in sync (in whole minutes, rounded up so 1s remaining ≠ 0m)
-      setCredits(c => {
-        const newBal = s > 0 ? Math.ceil(s / 60) : 0;
-        return c.balance === newBal ? c : { ...c, balance: newBal };
-      });
-      if (s <= 0) {
-        stopTick();
-        if (screenRef.current === "app") setScreen("morning");
-      }
-    }, 1000);
+    // (We don't run a setInterval here anymore — drain is computed from
+    //  wall-clock delta when the app returns to the foreground.)
   };
 
-  // Track screen in a ref so AppState listener always sees latest value
-  useEffect(() => { screenRef.current = screen; }, [screen]);
-
-  // Start/stop tick when screen changes
+  // Keep `secLeft` visually fresh when the app IS active (read-only — no drain)
   useEffect(() => {
-    if (screen === "app" && secRef.current > 0) startTick(secRef.current);
-    else stopTick();
-    return stopTick;
+    if (screen !== "app") return;
+    const i = setInterval(() => setSecLeft(secRef.current), 1000);
+    return () => clearInterval(i);
   }, [screen]);
 
-  // Pause when backgrounded, recalculate elapsed when foregrounded
+  // Background → drain. Foreground → freeze.
   useEffect(() => {
     let bgTime = null;
-    const sub = AppState.addEventListener("change", nextState => {
-      if (nextState !== "active") {
+    const sub = AppState.addEventListener("change", next => {
+      if (next !== "active") {
+        // Going to background — start "drain clock"
         bgTime = Date.now();
         stopTick();
-      } else {
-        if (bgTime && screenRef.current === "app") {
-          const elapsedSec = Math.floor((Date.now() - bgTime) / 1000);
-          const remaining  = Math.max(0, secRef.current - elapsedSec);
-          secRef.current   = remaining;
-          setSecLeft(remaining);
-          setCredits(c => {
-            const nb = remaining > 0 ? Math.ceil(remaining / 60) : 0;
-            return c.balance === nb ? c : { ...c, balance: nb };
-          });
-          if (remaining > 0) startTick(remaining);
-          else setScreen("morning");
-        }
+      } else if (bgTime && screen === "app") {
+        // Returning to Drift — subtract the elapsed background time
+        const elapsedSec = Math.floor((Date.now() - bgTime) / 1000);
+        const rem = Math.max(0, secRef.current - elapsedSec);
+        secRef.current = rem;
+        setSecLeft(rem);
+        setCredits(c => {
+          const nb = rem > 0 ? Math.ceil(rem / 60) : 0;
+          const sp = c.spent + Math.min(elapsedSec, secRef.current + elapsedSec);
+          return { ...c, balance: nb, spent: Math.min(c.earned, c.spent + Math.floor(elapsedSec / 60)) };
+        });
         bgTime = null;
       }
     });
     return () => { sub.remove(); stopTick(); };
+  }, [screen]);
+
+  useEffect(() => {
+    AsyncStorage.getItem("drift_dark_mode").then(v => { if (v === "1") setDarkMode(true); });
   }, []);
+
+  const toggleDark = () => {
+    setDarkMode(d => {
+      const next = !d;
+      AsyncStorage.setItem("drift_dark_mode", next ? "1" : "0");
+      return next;
+    });
+  };
 
   useEffect(() => {
     (async () => {
       try {
-        // Init trial tracking
         await initTrial();
-
-        // Check Supabase auth session
         const { data: { session } } = await supabase.auth.getSession();
         const uid = session?.user?.id ?? null;
         setUserId(uid);
-
-        // Show onboarding if not logged in yet
-        if (!uid) { setOnboarding(true); return; }
-
-        // Trial / subscription status
-        const { isPremium: prem, daysLeft, trialActive } = await getTrialStatus(uid);
+        setUserEmail(session?.user?.email ?? "");
+        if (!uid) {
+          // Returning users who completed onboarding once just see sign-in
+          const hasOnboarded = await AsyncStorage.getItem("drift_onboarded");
+          setSignInOnly(hasOnboarded === "1");
+          setOnboarding(true);
+          return;
+        }
+        const { isPremium: prem, daysLeft } = await getTrialStatus(uid);
         setIsPremium(prem);
         setTrialDays(daysLeft);
-
         const d = await storage.get("drift_v4");
         if (d?.value) {
           const p = JSON.parse(d.value);
           if (p.date !== todayKey()) {
-            setTotalXp(p.totalXp || 0); setSkips(0); setScreen("morning");
-          } else {
-            const savedCredits = p.credits || { balance: 0, earned: 0, spent: 0 };
-            setTasks(p.tasks || []);
-            setCredits(savedCredits);
             setTotalXp(p.totalXp || 0);
-            setSkips(p.skips || 0);
-            const initSec = (savedCredits.balance || 0) * 60;
+          } else {
+            const sc = p.credits || { balance: 0, earned: 0, spent: 0 };
+            setTasks(p.tasks || []);
+            setCredits(sc);
+            setTotalXp(p.totalXp || 0);
+            const initSec = (sc.balance || 0) * 60;
             secRef.current = initSec;
             setSecLeft(initSec);
-            setScreen(p.morningDone ? "app" : "morning");
           }
-        } else setScreen("morning");
-      } catch { setScreen("morning"); }
+        }
+        setScreen("app");
+      } catch { setScreen("app"); }
     })();
   }, []);
 
   const persist = async upd => {
     try {
       await storage.set("drift_v4", JSON.stringify({
-        tasks:       upd.tasks       ?? tasks,
-        credits:     upd.credits     ?? credits,
-        totalXp:     upd.totalXp     ?? totalXp,
-        skips:       upd.skips       ?? skips,
-        morningDone: upd.morningDone ?? true,
-        date:        todayKey(),
+        tasks:   upd.tasks   ?? tasks,
+        credits: upd.credits ?? credits,
+        totalXp: upd.totalXp ?? totalXp,
+        date:    todayKey(),
       }));
     } catch {}
-  };
-
-  const unlock  = () => {
-    setScreen("app");
-    persist({ morningDone: true });
-    // Sync today's screen time to Supabase for friends to see
-    if (userId) syncScreenTime(userId, credits.earned + 30).catch(() => {});
-  };
-  const goToPay = () => { setScreen("payment"); };
-  const pay     = () => { const ns = skips + 1; setSkips(ns); setScreen("app"); persist({ morningDone: true, skips: ns }); };
-
-  const loadDemo = () => {
-    const dc = { balance: 90, earned: 180, spent: 90 };
-    secRef.current = 90 * 60;
-    setSecLeft(90 * 60);
-    setTasks(DEMO_TASKS); setCredits(dc); setTotalXp(340); setSkips(1); setScreen("app");
-    persist({ tasks: DEMO_TASKS, credits: dc, totalXp: 340, skips: 1, morningDone: true });
   };
 
   const completeTask = id => {
@@ -1107,138 +1040,265 @@ export default function App() {
     if (!task || task.done) return;
     const nt  = tasks.map(t => t.id === id ? { ...t, done: true } : t);
     const nx  = totalXp + task.xp;
-    // Add earned minutes to the live countdown
     const newSec = secRef.current + task.credits * 60;
     const nc  = { balance: Math.ceil(newSec / 60), earned: credits.earned + task.credits, spent: credits.spent };
     setTasks(nt); setCredits(nc); setTotalXp(nx);
     setPopup({ credits: task.credits, xp: task.xp });
     setTimeout(() => setPopup(null), 2000);
-    startTick(newSec); // restart countdown with new total
+    startTick(newSec);
     persist({ tasks: nt, credits: nc, totalXp: nx });
   };
 
   const addTask  = t => { const nt = [...tasks, t]; setTasks(nt); persist({ tasks: nt }); };
+
   const simSpend = () => {
     const useSec = Math.min(10 * 60, secRef.current);
     const newSec = Math.max(0, secRef.current - useSec);
-    const newBal = Math.ceil(newSec / 60);
-    const nc     = { ...credits, balance: newBal, spent: credits.spent + Math.floor(useSec / 60) };
+    const nc = { ...credits, balance: Math.ceil(newSec / 60), spent: credits.spent + Math.floor(useSec / 60) };
     startTick(newSec);
     setCredits(nc);
     persist({ credits: nc });
-    if (newSec <= 0) setScreen("morning");
   };
 
-  // ── Onboarding gate ──────────────────────────────────────
+  const handleDriftInStart  = async () => {
+    setDriftInActive(true);
+    try {
+      const list = await (await import("./blockedApps")).getBlockedApps();
+      if (list?.length) applyBlocking(list);
+    } catch {}
+  };
+  const handleDriftInEnd    = () => { setDriftInActive(false); clearBlocking(); };
+
+  const handleDriftInComplete = ({ credits: earned, xp }) => {
+    setDriftInActive(false);
+    const newSec = secRef.current + earned * 60;
+    const nx  = totalXp + xp;
+    const nc  = { balance: Math.ceil(newSec / 60), earned: credits.earned + earned, spent: credits.spent };
+    setCredits(nc); setTotalXp(nx);
+    setPopup({ credits: earned, xp });
+    setTimeout(() => setPopup(null), 2500);
+    startTick(newSec);
+    persist({ credits: nc, totalXp: nx });
+    setTimeout(() => setTab("today"), 400);
+  };
+
+  const signOut = async () => {
+    setShowAccount(false);
+    try { await supabase.auth.signOut(); } catch {}
+    stopTick();
+    setUserId(null);
+    setUserEmail("");
+    setTasks([]);
+    setCredits({ balance: 0, earned: 0, spent: 0 });
+    setTotalXp(0);
+    secRef.current = 0;
+    setSecLeft(0);
+    // Drop them straight into the sign-in screen
+    setSignInOnly(true);
+    setOnboarding(true);
+  };
+
   if (onboarding) return (
     <OnboardingScreen
+      signInOnly={signInOnly}
       onComplete={async ({ user }) => {
         setUserId(user?.id ?? null);
+        setUserEmail(user?.email ?? "");
         setOnboarding(false);
+        const hadOnboarded = await AsyncStorage.getItem("drift_onboarded");
+        await AsyncStorage.setItem("drift_onboarded", "1");
         await initTrial();
         const { isPremium: prem, daysLeft } = await getTrialStatus(user?.id);
         setIsPremium(prem);
         setTrialDays(daysLeft);
-        setScreen("morning");
+        setScreen("app");
+        // Show blocked-apps picker the very first time only
+        if (!hadOnboarded && !signInOnly) {
+          setFirstTimeBlockedApps(true);
+          setShowBlockedApps(true);
+        }
       }}
     />
   );
 
-  if (screen === "loading") return (
+  if (screen === "loading" || !fontsLoaded) return (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: ink.void }}>
       <StatusBar barStyle="light-content" />
-      <Text style={{ fontSize: 44 }}>🔒</Text>
-      <Text style={{ fontFamily: FD, fontSize: 22, color: "#F0E8D8", fontStyle: "italic", marginTop: 12 }}>Drift</Text>
+      <Text style={{ fontFamily: "Georgia", fontSize: 52, color: "#2FAB72" }}>D</Text>
+      <Text style={{ fontFamily: "Georgia", fontSize: 12, color: "#4A8060", letterSpacing: 5, marginTop: 4 }}>DRIFT</Text>
     </View>
   );
 
-  if (screen === "morning") return <MorningGate skips={skips} onUnlock={unlock} onPay={goToPay} />;
-  if (screen === "payment") return <PaymentScreen skips={skips} onPay={pay} />;
+  const activeTheme = getTheme(darkMode);
+  const { ink: th_ink, paper: th_paper, earn: th_earn } = activeTheme;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: paper.card }}>
-      <StatusBar barStyle="dark-content" />
+    <ThemeContext.Provider value={{ dark: darkMode, theme: activeTheme }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: driftInActive ? th_ink.void : th_paper.card }}>
+      <StatusBar barStyle={driftInActive || darkMode ? "light-content" : "dark-content"} />
 
       {/* XP / credit popup */}
       {popup && (
         <View style={{
-          position: "absolute", top: "20%", left: 0, right: 0,
+          position: "absolute", top: "18%", left: 0, right: 0,
           alignItems: "center", zIndex: 300,
           flexDirection: "row", justifyContent: "center", gap: 8,
           pointerEvents: "none",
         }}>
           <View style={{ backgroundColor: earn.green, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
-            <Text style={{ fontFamily: FB, fontWeight: "600", fontSize: 13, color: "#fff" }}>+{fmtMins(popup.credits)} earned</Text>
+            <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>+{fmtMins(popup.credits)}</Text>
           </View>
-          <View style={{ backgroundColor: earn.terra, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
-            <Text style={{ fontFamily: FB, fontWeight: "600", fontSize: 13, color: "#fff" }}>+{popup.xp} XP</Text>
+          <View style={{ backgroundColor: earn.blue, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
+            <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>+{popup.xp} XP</Text>
           </View>
         </View>
       )}
 
-      {/* Header */}
-      <View style={{
-        flexDirection: "row", alignItems: "center",
-        paddingHorizontal: 18, height: 52,
-        backgroundColor: paper.card,
-        borderBottomWidth: 0.5, borderBottomColor: ink.border,
-      }}>
+      {/* Header — hidden during active Drift In session */}
+      {!driftInActive && (
         <View style={{
-          width: 28, height: 28, borderRadius: 9,
-          backgroundColor: secLeft > 0 ? earn.green : "#1C1408",
-          alignItems: "center", justifyContent: "center", marginRight: 8,
+          flexDirection: "row", alignItems: "center",
+          paddingHorizontal: 18, height: 52,
+          backgroundColor: th_paper.card,
+          borderBottomWidth: 0.5, borderBottomColor: th_ink.border,
         }}>
-          <Text style={{ fontSize: 13 }}>{secLeft > 0 ? "🔓" : "🔒"}</Text>
+          <Text style={{ fontFamily: FO, fontSize: 16, color: th_ink.deep, letterSpacing: 3, flex: 1 }}>DRIFT</Text>
+          <View style={{
+            backgroundColor: secLeft > 0 ? (secLeft < 120 ? "#FDECEA" : th_earn.greenLo) : th_paper.warm,
+            borderRadius: 20, paddingVertical: 4, paddingHorizontal: 12, marginRight: 8,
+          }}>
+            <Text style={{
+              fontFamily: FO, fontSize: 10, letterSpacing: 1,
+              color: secLeft > 0 ? (secLeft < 120 ? "#C0392B" : th_earn.greenD) : th_ink.faint,
+            }}>
+              {secLeft > 0 ? fmtSecLeft(secLeft) : "no time"}
+            </Text>
+          </View>
+          {/* Account button */}
+          <TouchableOpacity onPress={() => setShowAccount(true)} style={{ marginRight: 10, padding: 4 }}>
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <SvgCircle cx="12" cy="8" r="4" stroke={th_earn.green} strokeWidth={2} />
+              <Path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"
+                stroke={th_earn.green} strokeWidth={2} strokeLinecap="round" />
+            </Svg>
+          </TouchableOpacity>
+          {/* Dark/light toggle — green-toned SVG icons */}
+          <TouchableOpacity onPress={toggleDark} style={{ marginRight: 10, padding: 4 }}>
+            {darkMode ? (
+              // Sun: switch to light
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <SvgCircle cx="12" cy="12" r="5" stroke={th_earn.green} strokeWidth={2} />
+                <Path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+                  stroke={th_earn.green} strokeWidth={2} strokeLinecap="round" />
+              </Svg>
+            ) : (
+              // Moon: switch to dark
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                  stroke={th_earn.green} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+            )}
+          </TouchableOpacity>
         </View>
-        <Text style={{ fontFamily: FD, fontSize: 17, color: ink.deep, fontStyle: "italic", flex: 1 }}>Drift</Text>
-        <View style={{
-          backgroundColor: secLeft > 0 ? (secLeft < 120 ? "#FDECEA" : earn.greenLo) : "#EDE7D8",
-          borderRadius: 20, paddingVertical: 3, paddingHorizontal: 10, marginRight: 10,
-        }}>
-          <Text style={{ fontFamily: FB, fontSize: 11, fontWeight: "600", color: secLeft > 0 ? (secLeft < 120 ? "#C0392B" : earn.greenD) : ink.faint }}>
-            {fmtSecLeft(secLeft)}
-          </Text>
+      )}
+
+      {/* Content — DriftIn always rendered so session persists across tab switches */}
+      <View style={{ flex: 1, backgroundColor: th_paper.warm }} {...tabSwipe.panHandlers}>
+        <View style={{ flex: 1, display: tab === "today" ? "flex" : "none" }}>
+          <TodayView tasks={tasks} credits={credits} totalXp={totalXp} onComplete={completeTask} onAdd={() => setOverlay("add")} onSimSpend={simSpend} dark={darkMode} />
         </View>
-        <TouchableOpacity onPress={loadDemo}>
-          <Text style={{ fontSize: 10, color: ink.faint }}>demo</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Tabs */}
-      <View style={{ flexDirection: "row", backgroundColor: paper.card, borderBottomWidth: 0.5, borderBottomColor: ink.border }}>
-        {TABS.map(t => {
-          const active = tab === t.id;
-          return (
-            <TouchableOpacity
-              key={t.id}
-              onPress={() => setTab(t.id)}
-              style={{ flex: 1, paddingVertical: 10, alignItems: "center", borderBottomWidth: 2, borderBottomColor: active ? earn.terra : "transparent" }}
-            >
-              <Text style={{ fontFamily: FB, fontSize: 13, fontWeight: active ? "600" : "400", color: active ? ink.deep : ink.mid }}>
-                {t.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* Content */}
-      <View style={{ flex: 1, backgroundColor: tab === "friends" ? "#16120E" : paper.warm }}>
-        {tab === "today"    && <TodayView    tasks={tasks} credits={credits} totalXp={totalXp} onComplete={completeTask} onAdd={() => setOverlay("add")} onSimSpend={simSpend} />}
-        {tab === "progress" && <ProgressView tasks={tasks} totalXp={totalXp} skips={skips} />}
-        {tab === "friends"  && (
-          <SocialScreen
-            userId={userId}
-            isPremium={isPremium}
-            onOpenPaywall={() => setShowPaywall(true)}
+        <View style={{ flex: 1, display: tab === "driftin" || driftInActive ? "flex" : "none", backgroundColor: driftInActive ? th_ink.void : th_paper.warm }}>
+          <DriftInScreen
+            onSessionComplete={handleDriftInComplete}
+            onSessionStart={handleDriftInStart}
+            onSessionEnd={handleDriftInEnd}
+            totalXp={totalXp}
+            dark={darkMode}
           />
-        )}
+        </View>
+        <View style={{ flex: 1, display: tab === "progress" && !driftInActive ? "flex" : "none" }}>
+          <ProgressView tasks={tasks} totalXp={totalXp} skips={0} dark={darkMode} />
+        </View>
+        <View style={{ flex: 1, display: tab === "friends" && !driftInActive ? "flex" : "none" }}>
+          <SocialScreen userId={userId} isPremium={isPremium} onOpenPaywall={() => setShowPaywall(true)} dark={darkMode} />
+        </View>
       </View>
 
-      {/* Overlay */}
+      {/* ── Floating bubble island ── */}
+      {!driftInActive && (
+        <View style={{
+          paddingHorizontal: 14,
+          paddingBottom: Platform.OS === "ios" ? 16 : 8,
+          paddingTop: 4,
+          backgroundColor: "transparent",
+          pointerEvents: "box-none",
+        }}>
+          <View style={{
+            flexDirection: "row",
+            backgroundColor: th_paper.card,
+            borderRadius: 30,
+            paddingVertical: 10,
+            paddingHorizontal: 6,
+            shadowColor: darkMode ? "#000" : th_ink.deep,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: darkMode ? 0.4 : 0.10,
+            shadowRadius: 16,
+            elevation: 10,
+          }}>
+            {TABS.map(t => {
+              const active    = tab === t.id;
+              const isDriftIn = t.id === "driftin";
+
+              if (isDriftIn) return (
+                <TouchableOpacity key={t.id} onPress={() => setTab(t.id)}
+                  style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                  <View style={{
+                    width: 52, height: 34, borderRadius: 17,
+                    backgroundColor: active ? th_earn.green : "transparent",
+                    alignItems: "center", justifyContent: "center",
+                  }}>
+                    <t.Icon color={active ? "#fff" : th_ink.mid} size={20} />
+                  </View>
+                  <Text style={{ fontFamily: FO, fontSize: 7, letterSpacing: 0.8, marginTop: 3,
+                    color: active ? th_earn.green : th_ink.mid }}>
+                    {t.label.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              );
+
+              return (
+                <TouchableOpacity key={t.id} onPress={() => setTab(t.id)}
+                  style={{ flex: 1, alignItems: "center", paddingVertical: 2 }}>
+                  <View style={{
+                    width: 40, height: 34, borderRadius: 14,
+                    backgroundColor: active ? th_earn.greenLo : "transparent",
+                    alignItems: "center", justifyContent: "center",
+                  }}>
+                    <t.Icon color={active ? th_earn.green : th_ink.mid} size={20} />
+                  </View>
+                  <Text style={{ fontFamily: FO, fontSize: 7, letterSpacing: 0.8, marginTop: 3,
+                    color: active ? th_earn.green : th_ink.mid }}>
+                    {t.label.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {/* Add task overlay */}
       {overlay && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 200 }]}>
-          {overlay === "add" && <AddTaskOverlay onSave={addTask} onClose={() => setOverlay(null)} />}
+          {overlay === "add" && (
+            <AddTaskOverlay
+              onSave={addTask}
+              onClose={() => setOverlay(null)}
+              userId={userId}
+              isSubActive={subActive}
+              onOpenPaywall={() => { setOverlay(null); setShowPaywall(true); }}
+            />
+          )}
         </View>
       )}
 
@@ -1248,11 +1308,149 @@ export default function App() {
           <PaywallScreen
             userId={userId}
             daysLeft={trialDays}
-            onSubscribe={() => { setIsPremium(true); setShowPaywall(false); }}
+            onSubscribe={async () => {
+              try {
+                const url = await createCheckoutSession();
+                if (!url) throw new Error("No checkout URL");
+                setShowPaywall(false);
+                await Linking.openURL(url);
+              } catch (e) {
+                const raw = (e?.message || "").toLowerCase();
+                const friendly = raw.includes("edge function") || raw.includes("send a request")
+                  ? "Payments aren't set up yet. Please try again later."
+                  : (e?.message || "Try again.");
+                Alert.alert("Checkout unavailable", friendly);
+              }
+            }}
             onClose={() => setShowPaywall(false)}
           />
         </Modal>
       )}
+
+      {/* Account sheet */}
+      <Modal visible={showAccount} transparent animationType="fade" onRequestClose={() => setShowAccount(false)}>
+        <TouchableOpacity activeOpacity={1} onPress={() => setShowAccount(false)}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{
+            backgroundColor: th_paper.card,
+            borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            padding: 24, paddingBottom: Platform.OS === "ios" ? 40 : 24,
+          }}>
+            {/* Handle */}
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: th_ink.ghost, alignSelf: "center", marginBottom: 18 }} />
+
+            <Text style={{ fontFamily: FOM, fontSize: 9, color: th_ink.faint, letterSpacing: 2, marginBottom: 6 }}>ACCOUNT</Text>
+
+            {userEmail ? (
+              <>
+                <Text style={{ fontFamily: FK, fontSize: 18, color: th_ink.deep, marginBottom: 2 }}>{userEmail}</Text>
+                <Text style={{ fontFamily: FB, fontSize: 12, color: th_ink.mid, marginBottom: 24 }}>
+                  {subActive ? "Pro · active" : "Free"}
+                </Text>
+
+                {/* Manage blocked apps */}
+                <TouchableOpacity
+                  onPress={() => { setShowAccount(false); setFirstTimeBlockedApps(false); setShowBlockedApps(true); }}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 10,
+                    paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, marginBottom: 10,
+                    borderWidth: 1, borderColor: th_ink.border, backgroundColor: th_paper.warm,
+                  }}
+                >
+                  <Text style={{ fontSize: 18 }}>🔐</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: FK, fontSize: 14, color: th_ink.deep }}>Blocked apps</Text>
+                    <Text style={{ fontFamily: FB, fontSize: 11, color: th_ink.mid }}>Apps to block during focus sessions</Text>
+                  </View>
+                  <Text style={{ color: th_ink.faint, fontSize: 18 }}>›</Text>
+                </TouchableOpacity>
+
+                {/* Manage subscription */}
+                {!subActive && (
+                  <TouchableOpacity
+                    onPress={async () => {
+                      setShowAccount(false);
+                      try {
+                        const url = await createCheckoutSession();
+                        if (url) await Linking.openURL(url);
+                      } catch (e) {
+                        const raw = (e?.message || "").toLowerCase();
+                        const friendly = raw.includes("edge function") || raw.includes("send a request")
+                          ? "Payments aren't set up yet. Please try again later."
+                          : (e?.message || "Try again.");
+                        Alert.alert("Checkout unavailable", friendly);
+                      }
+                    }}
+                    style={{
+                      flexDirection: "row", alignItems: "center", gap: 10,
+                      paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, marginBottom: 10,
+                      borderWidth: 1, borderColor: th_earn.terra, backgroundColor: th_earn.terraLo,
+                    }}
+                  >
+                    <Text style={{ fontSize: 18 }}>✦</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontFamily: FK, fontSize: 14, color: th_earn.terra }}>Upgrade to Pro</Text>
+                      <Text style={{ fontFamily: FB, fontSize: 11, color: th_ink.mid }}>AI evaluation + AI Check</Text>
+                    </View>
+                    <Text style={{ fontFamily: FO, fontSize: 9, color: th_earn.terra, letterSpacing: 1 }}>UPGRADE</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  onPress={() => {
+                    Alert.alert("Sign out?", "You'll need to sign back in to access your data.", [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "Sign out", style: "destructive", onPress: signOut },
+                    ]);
+                  }}
+                  style={{
+                    paddingVertical: 14, borderRadius: 12,
+                    backgroundColor: "rgba(224,80,80,0.1)",
+                    borderWidth: 1, borderColor: "rgba(224,80,80,0.2)",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ fontFamily: FK, fontSize: 14, color: "#A32D2D" }}>Sign out</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={{ fontFamily: FK, fontSize: 16, color: th_ink.deep, marginBottom: 4 }}>Not signed in</Text>
+                <Text style={{ fontFamily: FB, fontSize: 12, color: th_ink.mid, marginBottom: 24 }}>
+                  Sign in to sync progress and add friends.
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowAccount(false);
+                    setSignInOnly(true);
+                    setOnboarding(true);
+                  }}
+                  style={{
+                    paddingVertical: 14, borderRadius: 12,
+                    backgroundColor: th_earn.green, alignItems: "center",
+                  }}
+                >
+                  <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 2 }}>SIGN IN</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            <TouchableOpacity onPress={() => setShowAccount(false)} style={{ paddingVertical: 14, alignItems: "center", marginTop: 6 }}>
+              <Text style={{ fontFamily: FB, fontSize: 13, color: th_ink.mid }}>Close</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Blocked apps modal (onboarding + ongoing management) */}
+      <BlockedAppsModal
+        visible={showBlockedApps}
+        firstTime={firstTimeBlockedApps}
+        dark={darkMode}
+        onClose={() => { setShowBlockedApps(false); setFirstTimeBlockedApps(false); }}
+      />
     </SafeAreaView>
+    </ThemeContext.Provider>
   );
 }

@@ -1,0 +1,130 @@
+// Drift – AI Task Credit Evaluator
+// Returns AI-assigned credits + xp for a new task. Key stays on the server.
+// Rate-limited per user: 30/hour, 200/day.
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const MAX_PER_HOUR = 30;
+const MAX_PER_DAY  = 200;
+
+// Per-instance subscription cache
+const SUB_TTL_MS = 60_000;
+const subCache = new Map<string, { active: boolean; ts: number }>();
+function cachedSub(uid: string) {
+  const hit = subCache.get(uid);
+  return hit && Date.now() - hit.ts < SUB_TTL_MS ? hit.active : null;
+}
+function setCachedSub(uid: string, active: boolean) {
+  if (subCache.size > 5000) subCache.clear();
+  subCache.set(uid, { active, ts: Date.now() });
+}
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status, headers: { ...cors, "Content-Type": "application/json" },
+  });
+
+serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "Unauthorized" }, 401);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !user) return json({ error: "Unauthorized" }, 401);
+
+    // Subscription gate (cached + dev-bypass; graceful fallback if RPC missing)
+    let subActive: boolean | null = cachedSub(user.id);
+    if (subActive === null) {
+      const devPromise = supabase.rpc("is_dev_user", { uid: user.id })
+        .then(r => r.data === true).catch(() => false);
+      const profilePromise = supabase
+        .from("profiles").select("sub_active, sub_expires").eq("id", user.id).maybeSingle()
+        .then(r => r.data).catch(() => null);
+      const [isDev, profile] = await Promise.all([devPromise, profilePromise]);
+      subActive = isDev || (!!profile?.sub_active &&
+        (!profile.sub_expires || new Date(profile.sub_expires) > new Date()));
+      setCachedSub(user.id, subActive);
+    }
+    if (!subActive) return json({ error: "subscription_required" }, 402);
+
+    // Rate limiting (shared ai_check_usage table is fine here too)
+    const hourAgo  = new Date(Date.now() - 3_600_000).toISOString();
+    const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+
+    const [{ count: hourCount }, { count: dayCount }] = await Promise.all([
+      supabase.from("ai_check_usage").select("*", { count: "exact", head: true })
+        .eq("user_id", user.id).gte("created_at", hourAgo),
+      supabase.from("ai_check_usage").select("*", { count: "exact", head: true })
+        .eq("user_id", user.id).gte("created_at", midnight.toISOString()),
+    ]);
+    if ((hourCount ?? 0) >= MAX_PER_HOUR)
+      return json({ error: "rate_limit", message: "Hourly limit reached." }, 429);
+    if ((dayCount ?? 0) >= MAX_PER_DAY)
+      return json({ error: "rate_limit", message: "Daily limit reached." }, 429);
+
+    const body = await req.json().catch(() => ({}));
+    const title    = String(body.title || "").slice(0, 200);
+    const mins     = Math.max(1, Math.min(720, Number(body.mins) || 30));
+    const category = String(body.category || "life").slice(0, 30);
+    if (!title) return json({ error: "Title required" }, 400);
+
+    const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!openaiKey) return json({ error: "Service misconfigured" }, 500);
+
+    const prompt =
+      `You evaluate tasks for a productivity app called Drift. ` +
+      `Be fair but not generous — credits should match real effort.\n\n` +
+      `Guidelines:\n` +
+      `- Trivial: ~0.3-0.5 cr/min\n` +
+      `- Light: ~0.5-0.75 cr/min\n` +
+      `- Focused: ~0.75-1.0 cr/min\n` +
+      `- Hard: ~1.0-1.5 cr/min\n\n` +
+      `Task: "${title.replace(/"/g, "'")}"\n` +
+      `Duration: ${mins} min\nCategory: ${category}\n\n` +
+      `XP ≈ credits × 0.6 + 8 (round to integer)\n\n` +
+      `Reply ONLY this JSON (no markdown):\n` +
+      `{"credits":<int>,"xp":<int>,"reasoning":"one short sentence"}`;
+
+    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 150, temperature: 0.4,
+      }),
+    });
+
+    if (!resp.ok) {
+      const e = await resp.json().catch(() => ({}));
+      console.error("OpenAI:", resp.status, e);
+      return json({ error: "AI temporarily unavailable" }, 502);
+    }
+
+    const data = await resp.json();
+    const raw  = data.choices?.[0]?.message?.content || "{}";
+    const content = raw.replace(/^```[\w]*\n?/m, "").replace(/```$/m, "").trim();
+
+    let result: { credits: number; xp: number; reasoning: string };
+    try { result = JSON.parse(content); }
+    catch { return json({ error: "AI returned malformed response" }, 502); }
+
+    supabase.from("ai_check_usage").insert({ user_id: user.id }).then(() => {}, () => {});
+    return json(result);
+  } catch (err) {
+    console.error("evaluate-task error:", err);
+    return json({ error: "Internal server error" }, 500);
+  }
+});
