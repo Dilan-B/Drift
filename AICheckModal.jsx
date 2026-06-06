@@ -81,12 +81,16 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.4,
-      base64: true,
+      base64: false,
       exif: false,
     });
     if (!res.canceled && res.assets?.[0]) {
       const shrunk = await shrinkImage(res.assets[0].uri);
-      setPhoto({ uri: res.assets[0].uri, base64: shrunk || res.assets[0].base64 });
+      if (!shrunk) {
+        Alert.alert("Photo too large", "Image processing is not available. Try text proof or restart the app.");
+        return;
+      }
+      setPhoto({ uri: res.assets[0].uri, base64: shrunk });
     }
   };
 
@@ -97,10 +101,14 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
     }
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") { Alert.alert("Permission denied", "Allow camera in Settings."); return; }
-    const res = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true });
+    const res = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: false });
     if (!res.canceled && res.assets?.[0]) {
       const shrunk = await shrinkImage(res.assets[0].uri);
-      setPhoto({ uri: res.assets[0].uri, base64: shrunk || res.assets[0].base64 });
+      if (!shrunk) {
+        Alert.alert("Photo too large", "Image processing is not available. Try text proof or restart the app.");
+        return;
+      }
+      setPhoto({ uri: res.assets[0].uri, base64: shrunk });
     }
   };
 
@@ -127,10 +135,21 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
       type: "text",
       text:
         `You are an accountability coach for a productivity app called Drift. ` +
-        `Evaluate whether the user genuinely completed their task.\n\n` +
-        `Task: "${taskTitle}"\nTime claimed: ${durationMins ?? "?"} minutes` +
+        `Evaluate whether the user's submitted proof plausibly shows the task is complete.\n` +
+        `Do not judge or penalize based on how long ago the task/challenge was created, ` +
+        `how long the user took to submit proof, missing timestamps, or whether the elapsed time seems too long. ` +
+        `Only evaluate the content of the task and the submitted proof.\n` +
+        `Be reasonably understanding about the limits of single-photo evidence: the user usually cannot prove the entire action happened, ` +
+        `so accept plausible completion when the image contains concrete after-the-fact clues. Look carefully for small visual details such as ` +
+        `residue, stains, wetness, crumbs, changed object state, empty containers, disturbed surfaces, or other signs that the task likely occurred. ` +
+        `Do not reject just because the photo cannot prove the full before/during/after sequence.\n\n` +
+        `Task: "${taskTitle}"` +
+        (durationMins ? `\nEstimated duration: ${durationMins} minutes (context only, not a deadline)` : "") +
         (proofText ? `\nExplanation: "${proofText}"` : "\nNo written explanation.") +
         (imageBase64 ? "\nPhoto evidence provided." : "\nNo photo.") +
+        `\n\nExamples: an empty mug can verify a drink/chug-coffee challenge when it shows plausible coffee evidence, ` +
+        `such as brown residue, ring marks, stains, wetness, or leftover drops. Do not reject it merely because an empty mug alone ` +
+        `cannot mathematically prove the user personally chugged it.` +
         `\n\nBe encouraging but honest. Your entire response must be ONLY this JSON object with no markdown, no code fences, no extra text:\n` +
         `{"verified":true,"confidence":"high","message":"Your 1-2 sentence response here"}`,
     });

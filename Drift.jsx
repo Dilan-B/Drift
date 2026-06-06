@@ -31,11 +31,12 @@ import {
 import {
   isNativeBlockingAvailable, requestScreenTimeAuth, getScreenTimeAuthStatus,
 } from "./blockedApps";
-import { supabase, syncScreenTime } from "./supabase";
+import { supabase, syncScreenTime, safeGetSession } from "./supabase";
 import SocialScreen from "./SocialScreen";
 import PaywallScreen, { initTrial, getTrialStatus } from "./PaywallScreen";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
+import ProfileScreen from "./ProfileScreen";
 
 // ── Theme context ─────────────────────────────────────────────
 export const ThemeContext = createContext({ dark: false, theme: getTheme(false) });
@@ -97,18 +98,30 @@ const xpToNext  = xp => { const ni = LEVELS.findIndex(l => l.min > xp); return n
 const todayKey    = () => new Date().toISOString().slice(0, 10);
 const clockStr    = () => new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 const fmtSecLeft  = s => {
-  if (s <= 0)   return "locked";
+  if (s < 0)    return `-${fmtSecLeft(Math.abs(s))}`;
+  if (s === 0)  return "locked";
   if (s < 60)   return `0:${String(s).padStart(2, "0")}`;
   if (s < 3600) return `${Math.floor(s/60)}:${String(s%60).padStart(2, "0")}`;
   const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 };
+const mergeCompletedTasks = (...groups) => {
+  const seen = new Set();
+  return groups
+    .flat()
+    .filter(t => t?.done)
+    .filter(t => {
+      const key = String(t.id || `${t.title}-${t.completedAt || ""}`);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+};
 
 // ── Storage (in-memory) ──────────────────────────────────────
-const _store = {};
 const storage = {
-  get: async (key) => ({ value: _store[key] ?? null }),
-  set: async (key, value) => { _store[key] = value; },
+  get: async (key) => ({ value: await AsyncStorage.getItem(key) }),
+  set: async (key, value) => { await AsyncStorage.setItem(key, value); },
 };
 
 // ── Credit Ticker ────────────────────────────────────────────
@@ -544,7 +557,7 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
 }
 
 // ── Today View ───────────────────────────────────────────────
-function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend, dark }) {
+function TodayView({ tasks, credits, totalXp, onComplete, onAdd, dark }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
 
@@ -554,6 +567,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend, dar
   const pending       = tasks.filter(t => !t.done);
   const done          = tasks.filter(t => t.done);
   const unlocked      = credits.balance > 0;
+  const inDebt        = credits.balance < 0;
   const lv            = getLevel(totalXp);
   const stillEarnable = pending.reduce((s, t) => s + t.credits, 0);
 
@@ -595,11 +609,11 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend, dar
               color: unlocked ? "rgba(255,255,255,0.7)" : ink.faint,
               textTransform: "uppercase", letterSpacing: 1, marginBottom: 6,
             }}>
-              {unlocked ? "Screen time balance" : "No time earned yet"}
+              {unlocked ? "Screen time balance" : inDebt ? "Screen time debt" : "No time earned yet"}
             </Text>
-            <CreditTicker value={credits.balance} textColor={unlocked ? "#FFFFFF" : ink.deep} />
+            <CreditTicker value={credits.balance} textColor={unlocked ? "#FFFFFF" : inDebt ? "#C0392B" : ink.deep} />
             <Text style={{ fontFamily: FB, fontSize: 12, color: unlocked ? "rgba(255,255,255,0.6)" : ink.faint, marginTop: 4 }}>
-              {unlocked ? "Available now" : "Complete a task below"}
+              {unlocked ? "Available now" : inDebt ? "Earn this back to unlock time" : "Complete a task below"}
             </Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
@@ -628,24 +642,6 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, onSimSpend, dar
           </View>
         )}
       </View>
-
-      {unlocked && (
-        <TouchableOpacity
-          onPress={onSimSpend}
-          style={{
-            padding: 9, borderRadius: 10,
-            borderWidth: 1, borderColor: earn.blue,
-            backgroundColor: earn.blueLo, marginBottom: 12,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <PhoneIcon size={14} color={earn.blue} />
-            <Text style={{ fontFamily: FB, fontWeight: "500", fontSize: 12, color: earn.blue, textAlign: "center" }}>
-              Use 10 min of screen time (demo)
-            </Text>
-          </View>
-        </TouchableOpacity>
-      )}
 
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <Text style={{ fontFamily: FK, fontSize: 18, color: ink.deep, fontStyle: "italic" }}>Today's work</Text>
@@ -945,6 +941,7 @@ export default function App() {
   const [screen,      setScreen]      = useState("loading");
   const [tab,         setTab]         = useState("today");
   const [tasks,       setTasks]       = useState([]);
+  const [taskHistory, setTaskHistory] = useState([]);
   const [credits,     setCredits]     = useState({ balance: 0, earned: 0, spent: 0 });
   const [totalXp,     setTotalXp]     = useState(0);
   const [overlay,     setOverlay]     = useState(null);
@@ -961,11 +958,13 @@ export default function App() {
   const [showBlockedApps,    setShowBlockedApps]    = useState(false);
   const [firstTimeBlockedApps, setFirstTimeBlockedApps] = useState(false);
   const [userEmail,          setUserEmail]          = useState("");
-  const [userName,           setUserName]           = useState("");
+  const [myUsername,         setUserName]           = useState("");
   const [screenTimeStatus,   setScreenTimeStatus]   = useState("unknown");
+  const [childSwipeLocked,   setChildSwipeLocked]   = useState(false);
 
   // Subscription state (Stripe → Supabase) — server is source of truth
   const { active: subActive } = useSubscription(userId);
+  const proAccess = isPremium || subActive;
   const [driftInActive,  setDriftInActive]  = useState(false);
   const [darkMode,       setDarkMode]       = useState(false);
 
@@ -973,8 +972,21 @@ export default function App() {
   const tickRef         = useRef(null);
   const tabRef          = useRef(tab);
   const driftInActRef   = useRef(driftInActive);
+  const swipeBlockedRef = useRef(false);
   useEffect(() => { tabRef.current = tab; }, [tab]);
   useEffect(() => { driftInActRef.current = driftInActive; }, [driftInActive]);
+
+  // Block tab swipes whenever an overlay/popup/nested swipe UI is active.
+  useEffect(() => {
+    swipeBlockedRef.current =
+      driftInActive ||
+      !!overlay ||
+      !!popup ||
+      showAccount ||
+      showBlockedApps ||
+      showPaywall ||
+      (tab === "friends" && childSwipeLocked);
+  }, [driftInActive, overlay, popup, showAccount, showBlockedApps, showPaywall, tab, childSwipeLocked]);
 
   const stopTick = () => { if (tickRef.current) clearInterval(tickRef.current); };
 
@@ -982,14 +994,23 @@ export default function App() {
   const tabSwipe = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gs) =>
-        !driftInActRef.current &&
-        Math.abs(gs.dx) > Math.abs(gs.dy) * 1.8 && Math.abs(gs.dx) > 18,
+      onMoveShouldSetPanResponder: (_, gs) => {
+        if (swipeBlockedRef.current) return false;
+        // Require a clearly-horizontal gesture with enough travel.
+        // The high ratio prevents accidental triggers when a child component
+        // (e.g. a horizontal ScrollView of challenges) is being swiped.
+        if (tabRef.current === "friends") return false;
+        return Math.abs(gs.dx) > Math.abs(gs.dy) * 3 && Math.abs(gs.dx) > 42;
+      },
+      // If a child wants the gesture (any horizontal ScrollView/FlatList),
+      // let it have it — never wrest control back.
+      onPanResponderTerminationRequest: () => true,
+      onShouldBlockNativeResponder: () => false,
       onPanResponderRelease: (_, gs) => {
-        if (driftInActRef.current) return;
+        if (swipeBlockedRef.current) return;
         const idx = TABS.findIndex(t => t.id === tabRef.current);
-        if (gs.dx > 60 && idx > 0)                 setTab(TABS[idx - 1].id);
-        else if (gs.dx < -60 && idx < TABS.length - 1) setTab(TABS[idx + 1].id);
+        if (gs.dx > 80 && idx > 0)                       setTab(TABS[idx - 1].id);
+        else if (gs.dx < -80 && idx < TABS.length - 1)   setTab(TABS[idx + 1].id);
       },
     })
   ).current;
@@ -1064,7 +1085,7 @@ export default function App() {
         if (prof?.username) {
           setUserName(prof.username);
           AsyncStorage.setItem("drift_username", prof.username);
-        } else if (!userName) {
+        } else if (!myUsername) {
           const cached = await AsyncStorage.getItem("drift_username");
           if (cached) setUserName(cached);
         }
@@ -1084,7 +1105,7 @@ export default function App() {
     (async () => {
       try {
         await initTrial();
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await safeGetSession();
         const uid = session?.user?.id ?? null;
         setUserId(uid);
         setUserEmail(session?.user?.email ?? "");
@@ -1109,17 +1130,27 @@ export default function App() {
           setOnboarding(true);
           return;
         }
+        try { await supabase.functions.invoke("claim-trial", {}); } catch {}
         const { isPremium: prem, daysLeft } = await getTrialStatus(uid);
         setIsPremium(prem);
         setTrialDays(daysLeft);
         const d = await storage.get("drift_v4");
         if (d?.value) {
           const p = JSON.parse(d.value);
+          const savedTasks = p.tasks || [];
+          const savedHistory = p.taskHistory || [];
+          const completedFromSavedTasks = savedTasks
+            .filter(t => t.done)
+            .map(t => ({ ...t, completedAt: t.completedAt || p.date || todayKey() }));
+          const history = mergeCompletedTasks(savedHistory, completedFromSavedTasks);
+          setTaskHistory(history);
           if (p.date !== todayKey()) {
             setTotalXp(p.totalXp || 0);
+            setTasks([]);
+            persist({ tasks: [], taskHistory: history, totalXp: p.totalXp || 0 });
           } else {
             const sc = p.credits || { balance: 0, earned: 0, spent: 0 };
-            setTasks(p.tasks || []);
+            setTasks(savedTasks);
             setCredits(sc);
             setTotalXp(p.totalXp || 0);
             const initSec = (sc.balance || 0) * 60;
@@ -1135,10 +1166,11 @@ export default function App() {
   const persist = async upd => {
     try {
       await storage.set("drift_v4", JSON.stringify({
-        tasks:   upd.tasks   ?? tasks,
-        credits: upd.credits ?? credits,
-        totalXp: upd.totalXp ?? totalXp,
-        date:    todayKey(),
+        tasks:       upd.tasks       ?? tasks,
+        taskHistory: upd.taskHistory ?? taskHistory,
+        credits:     upd.credits     ?? credits,
+        totalXp:     upd.totalXp     ?? totalXp,
+        date:        todayKey(),
       }));
     } catch {}
   };
@@ -1146,27 +1178,20 @@ export default function App() {
   const completeTask = id => {
     const task = tasks.find(t => t.id === id);
     if (!task || task.done) return;
-    const nt  = tasks.map(t => t.id === id ? { ...t, done: true } : t);
+    const completedTask = { ...task, done: true, completedAt: new Date().toISOString(), completedDate: todayKey() };
+    const nt  = tasks.map(t => t.id === id ? completedTask : t);
+    const nh = mergeCompletedTasks(taskHistory, completedTask);
     const nx  = totalXp + task.xp;
     const newSec = secRef.current + task.credits * 60;
     const nc  = { balance: Math.ceil(newSec / 60), earned: credits.earned + task.credits, spent: credits.spent };
-    setTasks(nt); setCredits(nc); setTotalXp(nx);
+    setTasks(nt); setTaskHistory(nh); setCredits(nc); setTotalXp(nx);
     setPopup({ credits: task.credits, xp: task.xp });
     setTimeout(() => setPopup(null), 2000);
     startTick(newSec);
-    persist({ tasks: nt, credits: nc, totalXp: nx });
+    persist({ tasks: nt, taskHistory: nh, credits: nc, totalXp: nx });
   };
 
   const addTask  = t => { const nt = [...tasks, t]; setTasks(nt); persist({ tasks: nt }); };
-
-  const simSpend = () => {
-    const useSec = Math.min(10 * 60, secRef.current);
-    const newSec = Math.max(0, secRef.current - useSec);
-    const nc = { ...credits, balance: Math.ceil(newSec / 60), spent: credits.spent + Math.floor(useSec / 60) };
-    startTick(newSec);
-    setCredits(nc);
-    persist({ credits: nc });
-  };
 
   const handleDriftInStart  = async () => {
     setDriftInActive(true);
@@ -1190,6 +1215,30 @@ export default function App() {
     setTimeout(() => setTab("today"), 400);
   };
 
+  const handleChallengeResolved = ({ won, xp, penaltyMins }) => {
+    if (won) {
+      const nx = totalXp + xp;
+      setTotalXp(nx);
+      setPopup({ credits: 0, xp });
+      setTimeout(() => setPopup(null), 2200);
+      persist({ totalXp: nx });
+      return;
+    }
+
+    const penaltySec = Math.max(0, penaltyMins || 0) * 60;
+    const newSec = secRef.current - penaltySec;
+    const lostMins = penaltyMins || 0;
+    secRef.current = newSec;
+    setSecLeft(newSec);
+    const nc = {
+      ...credits,
+      balance: Math.ceil(newSec / 60),
+      spent: credits.spent + lostMins,
+    };
+    setCredits(nc);
+    persist({ credits: nc });
+  };
+
   const signOut = async () => {
     setShowAccount(false);
     try { await supabase.auth.signOut(); } catch {}
@@ -1199,6 +1248,7 @@ export default function App() {
     setUserName("");
     AsyncStorage.removeItem("drift_username");
     setTasks([]);
+    setTaskHistory([]);
     setCredits({ balance: 0, earned: 0, spent: 0 });
     setTotalXp(0);
     secRef.current = 0;
@@ -1228,6 +1278,7 @@ export default function App() {
         const hadOnboarded = await AsyncStorage.getItem("drift_onboarded");
         await AsyncStorage.setItem("drift_onboarded", "1");
         await initTrial();
+        try { await supabase.functions.invoke("claim-trial", {}); } catch {}
         const { isPremium: prem, daysLeft } = await getTrialStatus(user?.id);
         setIsPremium(prem);
         setTrialDays(daysLeft);
@@ -1251,6 +1302,7 @@ export default function App() {
 
   const activeTheme = getTheme(darkMode);
   const { ink: th_ink, paper: th_paper, earn: th_earn } = activeTheme;
+  const statsTasks = mergeCompletedTasks(taskHistory, tasks.filter(t => t.done));
 
   return (
     <ThemeContext.Provider value={{ dark: darkMode, theme: activeTheme }}>
@@ -1265,12 +1317,14 @@ export default function App() {
           flexDirection: "row", justifyContent: "center", gap: 8,
           pointerEvents: "none",
         }}>
-          <View style={{ backgroundColor: earn.green, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
-            <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>+{fmtMins(popup.credits)}</Text>
-          </View>
-          <View style={{ backgroundColor: earn.blue, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
+          {popup.credits > 0 && (
+            <View style={{ backgroundColor: earn.green, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
+              <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>+{fmtMins(popup.credits)}</Text>
+            </View>
+          )}
+          {popup.xp > 0 && <View style={{ backgroundColor: earn.blue, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
             <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>+{popup.xp} XP</Text>
-          </View>
+          </View>}
         </View>
       )}
 
@@ -1284,14 +1338,14 @@ export default function App() {
         }}>
           <Text style={{ fontFamily: FO, fontSize: 16, color: th_ink.deep, letterSpacing: 3, flex: 1 }}>DRIFT</Text>
           <View style={{
-            backgroundColor: secLeft > 0 ? (secLeft < 120 ? "#FDECEA" : th_earn.greenLo) : th_paper.warm,
+            backgroundColor: secLeft < 0 ? "rgba(224,80,80,0.12)" : secLeft > 0 ? (secLeft < 120 ? "#FDECEA" : th_earn.greenLo) : th_paper.warm,
             borderRadius: 20, paddingVertical: 4, paddingHorizontal: 12, marginRight: 8,
           }}>
             <Text style={{
               fontFamily: FO, fontSize: 10, letterSpacing: 1,
-              color: secLeft > 0 ? (secLeft < 120 ? "#C0392B" : th_earn.greenD) : th_ink.faint,
+              color: secLeft < 0 ? "#C0392B" : secLeft > 0 ? (secLeft < 120 ? "#C0392B" : th_earn.greenD) : th_ink.faint,
             }}>
-              {secLeft > 0 ? fmtSecLeft(secLeft) : "no time"}
+              {secLeft !== 0 ? fmtSecLeft(secLeft) : "no time"}
             </Text>
           </View>
           {/* Account button */}
@@ -1325,7 +1379,7 @@ export default function App() {
       {/* Content — DriftIn always rendered so session persists across tab switches */}
       <View style={{ flex: 1, backgroundColor: th_paper.warm }} {...tabSwipe.panHandlers}>
         <View style={{ flex: 1, display: tab === "today" ? "flex" : "none" }}>
-          <TodayView tasks={tasks} credits={credits} totalXp={totalXp} onComplete={completeTask} onAdd={() => setOverlay("add")} onSimSpend={simSpend} dark={darkMode} />
+          <TodayView tasks={tasks} credits={credits} totalXp={totalXp} onComplete={completeTask} onAdd={() => setOverlay("add")} dark={darkMode} />
         </View>
         <View style={{ flex: 1, display: tab === "driftin" || driftInActive ? "flex" : "none", backgroundColor: driftInActive ? th_ink.void : th_paper.warm }}>
           <DriftInScreen
@@ -1337,10 +1391,17 @@ export default function App() {
           />
         </View>
         <View style={{ flex: 1, display: tab === "progress" && !driftInActive ? "flex" : "none" }}>
-          <ProgressView tasks={tasks} totalXp={totalXp} skips={0} onAddTask={() => { setTab("today"); setTimeout(() => setOverlay("add"), 200); }} dark={darkMode} />
+          <ProgressView tasks={statsTasks} totalXp={totalXp} skips={0} onAddTask={() => { setTab("today"); setTimeout(() => setOverlay("add"), 200); }} dark={darkMode} />
         </View>
         <View style={{ flex: 1, display: tab === "friends" && !driftInActive ? "flex" : "none" }}>
-          <SocialScreen userId={userId} isPremium={isPremium} onOpenPaywall={() => setShowPaywall(true)} dark={darkMode} />
+          <SocialScreen
+            userId={userId}
+            isPremium={isPremium}
+            onOpenPaywall={() => setShowPaywall(true)}
+            onSwipeLockChange={setChildSwipeLocked}
+            onChallengeResolved={handleChallengeResolved}
+            dark={darkMode}
+          />
         </View>
       </View>
 
@@ -1415,7 +1476,7 @@ export default function App() {
               onSave={addTask}
               onClose={() => setOverlay(null)}
               userId={userId}
-              isSubActive={subActive}
+              isSubActive={proAccess}
               onOpenPaywall={() => { setOverlay(null); setShowPaywall(true); }}
             />
           )}
@@ -1447,155 +1508,47 @@ export default function App() {
         </Modal>
       )}
 
-      {/* Account sheet */}
-      <Modal visible={showAccount} transparent animationType="fade" onRequestClose={() => setShowAccount(false)}>
-        <TouchableOpacity activeOpacity={1} onPress={() => setShowAccount(false)}
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
-          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{
-            backgroundColor: th_paper.card,
-            borderTopLeftRadius: 24, borderTopRightRadius: 24,
-            padding: 24, paddingBottom: Platform.OS === "ios" ? 40 : 24,
-          }}>
-            {/* Handle */}
-            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: th_ink.ghost, alignSelf: "center", marginBottom: 18 }} />
-
-            <Text style={{ fontFamily: FOM, fontSize: 9, color: th_ink.faint, letterSpacing: 2, marginBottom: 6 }}>ACCOUNT</Text>
-
-            {userEmail ? (
-              <>
-                <Text style={{ fontFamily: FK, fontSize: 22, color: th_ink.deep, marginBottom: 2 }}>
-                  @{userName || (userEmail.split("@")[0] || "user")}
-                </Text>
-                <Text style={{ fontFamily: FB, fontSize: 13, color: th_ink.mid, marginBottom: 4 }}>{userEmail}</Text>
-                <Text style={{ fontFamily: FB, fontSize: 12, color: th_ink.mid, marginBottom: 24 }}>
-                  {subActive ? "Pro · active" : "Free"}
-                </Text>
-
-                {/* Manage blocked apps */}
-                <TouchableOpacity
-                  onPress={() => { setShowAccount(false); setFirstTimeBlockedApps(false); setShowBlockedApps(true); }}
-                  style={{
-                    flexDirection: "row", alignItems: "center", gap: 10,
-                    paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, marginBottom: 10,
-                    borderWidth: 1, borderColor: th_ink.border, backgroundColor: th_paper.warm,
-                  }}
-                >
-                  <ShieldKeyIcon size={20} color={th_earn.green} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontFamily: FK, fontSize: 14, color: th_ink.deep }}>Blocked apps</Text>
-                    <Text style={{ fontFamily: FB, fontSize: 11, color: th_ink.mid }}>Apps to block during focus sessions</Text>
-                  </View>
-                  <Text style={{ color: th_ink.faint, fontSize: 18 }}>›</Text>
-                </TouchableOpacity>
-
-                {/* Screen Time authorization row (iOS dev client only) */}
-                {isNativeBlockingAvailable() && (
-                  <TouchableOpacity
-                    onPress={async () => {
-                      const next = await requestScreenTimeAuth();
-                      setScreenTimeStatus(next);
-                      if (next !== "approved") {
-                        Alert.alert("Screen Time", `Status: ${next}. Open Settings → Screen Time to grant access.`);
-                      }
-                    }}
-                    style={{
-                      flexDirection: "row", alignItems: "center", gap: 10,
-                      paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, marginBottom: 10,
-                      borderWidth: 1, borderColor: th_ink.border, backgroundColor: th_paper.warm,
-                    }}
-                  >
-                    <PhoneIcon size={20} color={th_earn.green} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontFamily: FK, fontSize: 14, color: th_ink.deep }}>Screen Time access</Text>
-                      <Text style={{ fontFamily: FB, fontSize: 11, color: th_ink.mid }}>
-                        {screenTimeStatus === "approved" ? "Approved · ready to block apps" :
-                         screenTimeStatus === "denied"   ? "Denied — tap to retry" :
-                         screenTimeStatus === "notDetermined" ? "Tap to request access" :
-                         "Status: " + screenTimeStatus}
-                      </Text>
-                    </View>
-                    <Text style={{ color: th_ink.faint, fontSize: 18 }}>›</Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* Manage subscription */}
-                {!subActive && (
-                  <TouchableOpacity
-                    onPress={async () => {
-                      setShowAccount(false);
-                      try {
-                        const url = await createCheckoutSession();
-                        if (url) await Linking.openURL(url);
-                      } catch (e) {
-                        const raw = (e?.message || "").toLowerCase();
-                        const friendly = raw.includes("edge function") || raw.includes("send a request")
-                          ? "Payments aren't set up yet. Please try again later."
-                          : (e?.message || "Try again.");
-                        Alert.alert("Checkout unavailable", friendly);
-                      }
-                    }}
-                    style={{
-                      flexDirection: "row", alignItems: "center", gap: 10,
-                      paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, marginBottom: 10,
-                      borderWidth: 1, borderColor: th_earn.terra, backgroundColor: th_earn.terraLo,
-                    }}
-                  >
-                    <SparkleIcon size={20} color={th_earn.terra} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontFamily: FK, fontSize: 14, color: th_earn.terra }}>Upgrade to Pro</Text>
-                      <Text style={{ fontFamily: FB, fontSize: 11, color: th_ink.mid }}>AI evaluation + AI Check</Text>
-                    </View>
-                    <Text style={{ fontFamily: FO, fontSize: 9, color: th_earn.terra, letterSpacing: 1 }}>UPGRADE</Text>
-                  </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                  onPress={() => {
-                    Alert.alert("Sign out?", "You'll need to sign back in to access your data.", [
-                      { text: "Cancel", style: "cancel" },
-                      { text: "Sign out", style: "destructive", onPress: signOut },
-                    ]);
-                  }}
-                  style={{
-                    paddingVertical: 14, borderRadius: 12,
-                    backgroundColor: "rgba(224,80,80,0.1)",
-                    borderWidth: 1, borderColor: "rgba(224,80,80,0.2)",
-                    alignItems: "center",
-                  }}
-                >
-                  <Text style={{ fontFamily: FK, fontSize: 14, color: "#A32D2D" }}>Sign out</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text style={{ fontFamily: FK, fontSize: 16, color: th_ink.deep, marginBottom: 4 }}>Not signed in</Text>
-                <Text style={{ fontFamily: FB, fontSize: 12, color: th_ink.mid, marginBottom: 24 }}>
-                  Sign in to sync progress and add friends.
-                </Text>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowAccount(false);
-                    setSignInOnly(true);
-                    setOnboarding(true);
-                  }}
-                  style={{
-                    paddingVertical: 14, borderRadius: 12,
-                    backgroundColor: th_earn.green, alignItems: "center",
-                  }}
-                >
-                  <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 2 }}>SIGN IN</Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            <TouchableOpacity onPress={() => setShowAccount(false)} style={{ paddingVertical: 14, alignItems: "center", marginTop: 6 }}>
-              <Text style={{ fontFamily: FB, fontSize: 13, color: th_ink.mid }}>Close</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
+      {/* Profile page */}
+      <Modal visible={showAccount} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowAccount(false)}>
+        <ProfileScreen
+          userId={userId}
+          userEmail={userEmail}
+          username={myUsername}
+          subActive={proAccess}
+          trialDays={trialDays}
+          screenTimeStatus={screenTimeStatus}
+          dark={darkMode}
+          onClose={() => setShowAccount(false)}
+          onProfileChange={(profile) => {
+            if (profile?.username) {
+              setUserName(profile.username);
+              AsyncStorage.setItem("drift_username", profile.username);
+            }
+          }}
+          onOpenBlockedApps={() => { setShowAccount(false); setFirstTimeBlockedApps(false); setShowBlockedApps(true); }}
+          onRequestScreenTime={async () => {
+            const next = await requestScreenTimeAuth();
+            setScreenTimeStatus(next);
+            if (next !== "approved") {
+              Alert.alert("Screen Time", `Status: ${next}. Open Settings -> Screen Time to grant access.`);
+            }
+          }}
+          onUpgrade={async () => {
+            setShowAccount(false);
+            try {
+              const url = await createCheckoutSession();
+              if (url) await Linking.openURL(url);
+            } catch (e) {
+              const raw = (e?.message || "").toLowerCase();
+              const friendly = raw.includes("edge function") || raw.includes("send a request")
+                ? "Payments aren't set up yet. Please try again later."
+                : (e?.message || "Try again.");
+              Alert.alert("Checkout unavailable", friendly);
+            }
+          }}
+          onSignOut={signOut}
+        />
       </Modal>
-
       {/* Blocked apps modal (onboarding + ongoing management) */}
       <BlockedAppsModal
         visible={showBlockedApps}

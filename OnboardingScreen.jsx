@@ -214,20 +214,25 @@ function sanitizeName(n) {
   return n.replace(/[\x00-\x1F\x7F<>{}]/g, "").trim().slice(0, 50);
 }
 
-function generateUsername(/* email unused — kept ambiguous on purpose */) {
-  // Random username — does NOT derive from email, so dev accounts can't be
-  // identified by inspection. Format: drifter + 8 random alphanumerics.
-  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789"; // no 1/i/l/o/0 ambiguity
-  let rand = "";
-  for (let i = 0; i < 8; i++) rand += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return `drifter${rand}`;
+// Username rules: 3–20 chars, letters / digits / underscores, lowercase.
+function normalizeUsername(raw) {
+  return (raw || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
+}
+
+function validateUsername(raw) {
+  const u = normalizeUsername(raw);
+  if (!u) return "Pick a username.";
+  if (u.length < 3) return "Username must be at least 3 characters.";
+  if (u.length > 20) return "Username can be at most 20 characters.";
+  if (!/^[a-z0-9_]+$/.test(u)) return "Use letters, numbers, and underscores only.";
+  return null;
 }
 
 function AuthSlide({ onDone, defaultMode = "signup" }) {
   const [mode,     setMode]     = useState(defaultMode); // "signup" | "login"
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
-  const [name,     setName]     = useState("");
+  const [username, setUsername] = useState("");
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
 
@@ -246,11 +251,23 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
     const pwErr = validatePassword(password);
     if (pwErr) { setError(pwErr); return; }
 
-    // Validate name (signup only)
-    const cleanName = sanitizeName(name);
-    if (mode === "signup" && cleanName.length < 1) {
-      setError("Please enter your name.");
-      return;
+    // Validate username (signup only) + availability check
+    let cleanUsername = "";
+    if (mode === "signup") {
+      cleanUsername = normalizeUsername(username);
+      const uErr = validateUsername(cleanUsername);
+      if (uErr) { setError(uErr); return; }
+
+      // Availability — case-insensitive
+      try {
+        const { data: taken, error: lookupErr } = await supabase
+          .from("profiles").select("id").ilike("username", cleanUsername).maybeSingle();
+        if (lookupErr) throw lookupErr;
+        if (taken) { setError("That username is taken. Try another."); return; }
+      } catch {
+        setError("Could not check username availability. Try again.");
+        return;
+      }
     }
 
     // Client-side rate limit: max 5 attempts per 60s window
@@ -269,28 +286,53 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
           email: cleanEmail,
           password,
           options: {
-            data: { full_name: cleanName },
-            // Where Supabase sends the user after they click the confirmation email.
-            // Set Site URL + Redirect URLs in Supabase Auth settings to match.
+            data: {
+              username:  cleanUsername,
+              full_name: cleanUsername, // keep full_name for backwards-compat
+            },
             emailRedirectTo: "drift://auth-callback",
           },
         });
         if (err) throw err;
 
-        // Create profile (database trigger SHOULD do this; fallback for safety)
+        // Supabase quirk: if a user with this email already exists but is
+        // *unconfirmed*, signUp succeeds with no error and no session.
+        // We detect this and tell the user.
+        if (!data.session && !data.user?.identities?.length) {
+          setError("An account with that email already exists. Try signing in.");
+          setLoading(false);
+          setMode("login");
+          return;
+        }
+
+        // Profile row should be created by the auth.users trigger
+        // (handle_new_user). If this is an immediate-session signup and the
+        // trigger is missing, insert the row here so username uniqueness is
+        // still enforced before the account enters the app.
         if (data.user) {
-          const username = generateUsername();
-          const { error: profErr } = await supabase.from("profiles").upsert(
-            { id: data.user.id, username, full_name: cleanName },
-            { onConflict: "id" }
-          );
-          // Profile errors are non-fatal — RLS may already have created via trigger
-          if (profErr && !/duplicate|already exists/i.test(profErr.message || "")) {
-            console.warn("Profile upsert:", profErr.message);
+          let { data: prof, error: profLookupErr } = await supabase
+            .from("profiles").select("username").eq("id", data.user.id).maybeSingle();
+          if (profLookupErr) throw profLookupErr;
+
+          if (!prof && data.session) {
+            const { data: inserted, error: insertErr } = await supabase
+              .from("profiles")
+              .insert({ id: data.user.id, username: cleanUsername })
+              .select("username")
+              .single();
+            if (insertErr) throw insertErr;
+            prof = inserted;
+          }
+
+          if (prof && prof.username !== cleanUsername) {
+            try { await supabase.auth.signOut(); } catch {}
+            setError("That username was just taken. Please pick another.");
+            setLoading(false);
+            return;
           }
         }
 
-        // If email confirmations are on, no session is returned here
+        // Email confirmation flow (confirmed email setting ON)
         if (!data.session) {
           setError("Check your email to verify your account, then sign in.");
           setLoading(false);
@@ -318,8 +360,10 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
     } catch (e) {
       // Map generic Supabase errors to friendlier messages WITHOUT leaking enumeration info
       const raw = (e?.message || "").toLowerCase();
-      if (raw.includes("already") || raw.includes("registered")) {
-        setError("An account with that email may already exist. Try signing in.");
+      if (raw.includes("already") || raw.includes("registered") || raw.includes("exists")) {
+        setError("An account with that email already exists. Try signing in.");
+      } else if (raw.includes("duplicate") || (raw.includes("unique") && raw.includes("username"))) {
+        setError("That username is taken. Try another.");
       } else if (raw.includes("invalid") && raw.includes("credential")) {
         setError("Email or password is incorrect.");
       } else if (raw.includes("network") || raw.includes("fetch")) {
@@ -337,9 +381,14 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
   return (
     <KeyboardAvoidingView
       style={styles.slide}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "height" : undefined}
     >
-      <View style={{ flex: 1 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.stepEmoji}><WaveIcon size={48} color={ACCENT} /></View>
         <Text style={styles.question}>
           {mode === "signup" ? "Create your account" : "Welcome back"}
@@ -353,15 +402,17 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
         <View style={styles.authForm}>
           {mode === "signup" && (
             <View style={styles.inputWrap}>
-              <Text style={styles.inputLabel}>Name</Text>
+              <Text style={styles.inputLabel}>Username</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Your name"
+                placeholder="3–20 chars, letters/numbers/_"
                 placeholderTextColor={MUTED}
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
+                value={username}
+                onChangeText={(t) => setUsername(normalizeUsername(t))}
+                autoCapitalize="none"
+                autoCorrect={false}
                 returnKeyType="next"
+                maxLength={20}
               />
             </View>
           )}
@@ -385,7 +436,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
             <Text style={styles.inputLabel}>Password</Text>
             <TextInput
               style={styles.input}
-              placeholder="Min. 6 characters"
+              placeholder="Min. 8 characters"
               placeholderTextColor={MUTED}
               value={password}
               onChangeText={setPassword}
@@ -397,7 +448,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
-      </View>
+      </ScrollView>
 
       <TouchableOpacity
         style={[styles.ctaBtn, loading && styles.ctaBtnDisabled]}
@@ -415,7 +466,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
 
       <TouchableOpacity
         onPress={() => { setMode(mode === "signup" ? "login" : "signup"); setError(""); }}
-        style={{ marginTop: 16, marginBottom: 8, alignItems: "center" }}
+        style={{ marginTop: 14, marginBottom: 32, alignItems: "center" }}
       >
         <Text style={styles.switchMode}>
           {mode === "signup"
@@ -516,7 +567,7 @@ const styles = StyleSheet.create({
   slide: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingBottom: Platform.OS === "ios" ? 64 : 40,
+    paddingBottom: Platform.OS === "ios" ? 80 : 56,
   },
 
   // Welcome

@@ -14,6 +14,33 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   },
 });
 
+// Auto-recover from "Invalid Refresh Token" — a stale session in AsyncStorage
+// whose refresh token Supabase no longer recognizes. Sign the user out cleanly
+// so the app falls through to the login screen instead of crashing.
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === "TOKEN_REFRESHED" && !session) {
+    // Refresh failed — clear local session
+    supabase.auth.signOut().catch(() => {});
+  }
+});
+
+// Wrap getSession so a refresh failure during boot doesn't propagate as an
+// unhandled error.
+export async function safeGetSession() {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      // Stale refresh token — wipe and continue
+      await supabase.auth.signOut().catch(() => {});
+      return { data: { session: null }, error: null };
+    }
+    return { data, error: null };
+  } catch (e) {
+    await supabase.auth.signOut().catch(() => {});
+    return { data: { session: null }, error: null };
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // SUPABASE SETUP — run this SQL in your Supabase SQL editor once:
 // Dashboard → SQL Editor → New Query → paste below → Run
@@ -25,6 +52,7 @@ create table if not exists profiles (
   id          uuid primary key references auth.users on delete cascade,
   username    text unique not null,
   avatar_seed text default 'drift',
+  avatar_url  text,
   install_date timestamptz default now(),
   sub_active  boolean default false,
   sub_expires timestamptz,
@@ -34,6 +62,37 @@ alter table profiles enable row level security;
 create policy "Users can read all profiles"    on profiles for select using (true);
 create policy "Users can update own profile"   on profiles for update using (auth.uid() = id);
 create policy "Users can insert own profile"   on profiles for insert with check (auth.uid() = id);
+create unique index if not exists profiles_username_lower_key on profiles (lower(username));
+
+-- Auth already enforces one account per email. This trigger enforces one
+-- profile username per signup and fails signup if the username is missing
+-- or already taken.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  clean_username text;
+begin
+  clean_username := lower(regexp_replace(coalesce(new.raw_user_meta_data->>'username', ''), '[^a-z0-9_]', '', 'g'));
+
+  if length(clean_username) < 3 or length(clean_username) > 20 then
+    raise exception 'invalid_username';
+  end if;
+
+  insert into public.profiles (id, username)
+  values (new.id, clean_username);
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function public.handle_new_user();
 
 -- Screen time earned per day
 create table if not exists screen_time (
@@ -69,6 +128,10 @@ create table if not exists challenges (
   challenged_id uuid references profiles(id) on delete cascade not null,
   type          text not null check (type in ('dare','compete')),
   exercise      text not null,
+  title         text,
+  description   text,
+  duration_mins int,
+  ai_required   boolean default false,
   reps          int,
   secs          int,
   status        text not null default 'pending' check (status in ('pending','active','completed','declined')),
@@ -125,16 +188,31 @@ export async function getFriendsWithScreenTime(userId) {
 
   const friendIds = friends.map(f => f.user_id === userId ? f.friend_id : f.user_id);
 
-  // Get their profiles + today's screen time
-  const { data: profiles } = await supabase
+  // Get their profiles + today's screen time. Older live schemas may not have
+  // avatar_url yet, so fall back without it instead of clearing the list.
+  let { data: profiles, error: profileErr } = await supabase
     .from("profiles")
-    .select(`id, username, avatar_seed, screen_time(minutes, unlocks, date)`)
-    .in("id", friendIds);
+    .select(`id, username, avatar_seed, avatar_url, screen_time(minutes, unlocks, date)`)
+    .in("id", friendIds)
+    .eq("screen_time.date", today);
+
+  if (profileErr && /avatar_url|schema cache/i.test(profileErr.message || "")) {
+    const fallback = await supabase
+      .from("profiles")
+      .select(`id, username, avatar_seed, screen_time(minutes, unlocks, date)`)
+      .in("id", friendIds)
+      .eq("screen_time.date", today);
+    profiles = fallback.data;
+  }
+
+  const cleanAvatarUrl = (url) =>
+    typeof url === "string" && url.startsWith("data:image/") ? null : url;
 
   return (profiles || []).map(p => ({
     id:       p.id,
     username: p.username,
     seed:     p.avatar_seed,
+    avatar_url: cleanAvatarUrl(p.avatar_url),
     minutes:  p.screen_time?.find(s => s.date === today)?.minutes ?? 0,
     unlocks:  p.screen_time?.find(s => s.date === today)?.unlocks ?? 0,
   }));
