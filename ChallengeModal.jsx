@@ -10,20 +10,24 @@ import {
   StyleSheet, Text, TouchableOpacity, View,
 } from "react-native";
 import { supabase } from "./supabase";
+import {
+  DumbbellIcon, BoltIcon, FireIcon, LegIcon, SurfIcon, RunIcon,
+  SpeakerIcon, WarnIcon,
+} from "./Icons";
 
 const ink = { void: "#0B1A11", deep: "#1A2B1F", border: "rgba(255,255,255,0.1)" };
 const terra = "#2FAB72";
 const FD = "Georgia";
 
 const CHALLENGE_OPTIONS = [
-  { id: "pushups", label: "Push-ups",      emoji: "💪", reps: 20  },
-  { id: "squats",  label: "Squats",         emoji: "🏋️", reps: 30  },
-  { id: "jacks",   label: "Jumping Jacks",  emoji: "⚡", reps: 30  },
-  { id: "situps",  label: "Sit-ups",        emoji: "🤸", reps: 20  },
-  { id: "burpees", label: "Burpees",        emoji: "🔥", reps: 10  },
-  { id: "lunges",  label: "Lunges",         emoji: "🦵", reps: 20  },
-  { id: "plank",   label: "Plank",          emoji: "🏄", secs: 60  },
-  { id: "run",     label: "10 min jog",     emoji: "🏃", secs: 600 },
+  { id: "pushups", label: "Push-ups",      Icon: DumbbellIcon, reps: 20  },
+  { id: "squats",  label: "Squats",         Icon: DumbbellIcon, reps: 30  },
+  { id: "jacks",   label: "Jumping Jacks",  Icon: BoltIcon,     reps: 30  },
+  { id: "situps",  label: "Sit-ups",        Icon: LegIcon,      reps: 20  },
+  { id: "burpees", label: "Burpees",        Icon: FireIcon,     reps: 10  },
+  { id: "lunges",  label: "Lunges",         Icon: LegIcon,      reps: 20  },
+  { id: "plank",   label: "Plank",          Icon: SurfIcon,     secs: 60  },
+  { id: "run",     label: "10 min jog",     Icon: RunIcon,      secs: 600 },
 ];
 
 export default function ChallengeSheet({ userId, target, onClose }) {
@@ -48,7 +52,7 @@ export default function ChallengeSheet({ userId, target, onClose }) {
       Alert.alert("Error", error.message);
     } else {
       Alert.alert(
-        "Challenge sent! 🔥",
+        "Challenge sent",
         `${target.username} has been challenged to ${exercise.label}.`,
         [{ text: "OK", onPress: onClose }]
       );
@@ -89,7 +93,7 @@ export default function ChallengeSheet({ userId, target, onClose }) {
                 onPress={() => setExercise(opt)}
                 style={[s.exCard, exercise?.id === opt.id && s.exCardOn]}
               >
-                <Text style={{ fontSize: 28, marginBottom: 6 }}>{opt.emoji}</Text>
+                <View style={{ marginBottom: 6 }}><opt.Icon size={28} color={exercise?.id === opt.id ? terra : "#6B8A78"} /></View>
                 <Text style={[s.exLabel, exercise?.id === opt.id && { color: terra }]}>{opt.label}</Text>
                 <Text style={s.exSub}>
                   {opt.reps ? `${opt.reps} reps` : `${opt.secs}s`}
@@ -101,16 +105,22 @@ export default function ChallengeSheet({ userId, target, onClose }) {
           {/* Type explanation */}
           <View style={s.infoBox}>
             {type === "compete" ? (
-              <Text style={s.infoText}>
-                📢 Both of you get the same challenge.{"\n"}
-                First to complete it earns <Text style={{ color: terra }}>+20 min</Text> bonus screen time tomorrow.
-              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <SpeakerIcon size={18} color={terra} />
+                <Text style={[s.infoText, { flex: 1 }]}>
+                  Both of you get the same challenge.{"\n"}
+                  First to complete it earns <Text style={{ color: terra }}>+20 min</Text> bonus screen time tomorrow.
+                </Text>
+              </View>
             ) : (
-              <Text style={s.infoText}>
-                ⚠️ You dare @{target.username} to complete this.{"\n"}
-                If they don't finish by midnight, they lose <Text style={{ color: "#E05A5A" }}>30 min</Text> screen time tomorrow.{"\n"}
-                If you lose, same applies to you.
-              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <WarnIcon size={18} color="#E05A5A" />
+                <Text style={[s.infoText, { flex: 1 }]}>
+                  You dare @{target.username} to complete this.{"\n"}
+                  If they don't finish by midnight, they lose <Text style={{ color: "#E05A5A" }}>30 min</Text> screen time tomorrow.{"\n"}
+                  If you lose, same applies to you.
+                </Text>
+              </View>
             )}
           </View>
 
@@ -126,7 +136,7 @@ export default function ChallengeSheet({ userId, target, onClose }) {
             >
               {sending
                 ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={s.sendBtnText}>Send Challenge 🔥</Text>
+                : <Text style={s.sendBtnText}>Send Challenge</Text>
               }
             </TouchableOpacity>
           </View>

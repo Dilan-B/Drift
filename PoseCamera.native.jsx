@@ -5,6 +5,7 @@
  */
 import React from "react";
 import { View, Text } from "react-native";
+import { CameraIcon } from "./Icons";
 
 export const POSE_EXERCISE_IDS = new Set([
   "pushups", "dips", "squats", "lunges", "situps", "burpees", "jacks",
@@ -18,7 +19,7 @@ export default function PoseCamera({ exerciseId, repsLeft, onRepCounted }) {
       borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
       alignItems: "center", justifyContent: "center", padding: 12,
     }}>
-      <Text style={{ fontSize: 24, marginBottom: 8 }}>📷</Text>
+      <View style={{ marginBottom: 8 }}><CameraIcon size={28} color="#D4622A" /></View>
       <Text style={{ color: "#D4622A", fontWeight: "600", fontSize: 12, textAlign: "center" }}>
         Pose detection needs a dev build
       </Text>

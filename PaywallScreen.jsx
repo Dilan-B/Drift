@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
+import { TrophyIcon, ChartIcon, BoltIcon, BellIcon, CloseIcon } from "./Icons";
 
 const INSTALL_KEY    = "drift_install_date";
 const TRIAL_DAYS     = 7;
@@ -57,10 +58,10 @@ export async function getTrialStatus(userId) {
 // ── Paywall screen ───────────────────────────────────────────
 
 const FEATURES = [
-  { icon: "🏆", title: "Challenge friends",    sub: "Dare or compete — winner gets bonus time" },
-  { icon: "📊", title: "Full leaderboard",     sub: "See weekly rankings in your friend group"  },
-  { icon: "⚡", title: "Streak bonuses",       sub: "Complete 7 days straight → double screen time" },
-  { icon: "🔔", title: "Challenge alerts",     sub: "Push notifications when a friend dares you"  },
+  { Icon: TrophyIcon, title: "Challenge friends",    sub: "Dare or compete — winner gets bonus time" },
+  { Icon: ChartIcon,  title: "Full leaderboard",     sub: "See weekly rankings in your friend group"  },
+  { Icon: BoltIcon,   title: "Streak bonuses",       sub: "Complete 7 days straight for double screen time" },
+  { Icon: BellIcon,   title: "Challenge alerts",     sub: "Push notifications when a friend dares you"  },
 ];
 
 export default function PaywallScreen({ userId, daysLeft, onSubscribe, onClose }) {
@@ -98,13 +99,13 @@ export default function PaywallScreen({ userId, daysLeft, onSubscribe, onClose }
         {/* Close (only if trial still active — once expired, user must subscribe or use free tier) */}
         {!trialEnded && onClose && (
           <TouchableOpacity onPress={onClose} style={s.closeBtn}>
-            <Text style={s.closeBtnText}>✕</Text>
+            <CloseIcon size={16} color="#fff" />
           </TouchableOpacity>
         )}
 
         {/* Hero */}
         <View style={s.hero}>
-          <Text style={s.heroEmoji}>🏆</Text>
+          <View style={{ marginBottom: 14 }}><TrophyIcon size={64} color="#2FAB72" /></View>
           {trialEnded ? (
             <>
               <Text style={s.heroTitle}>Your free trial ended</Text>
@@ -128,7 +129,7 @@ export default function PaywallScreen({ userId, daysLeft, onSubscribe, onClose }
         <View style={s.features}>
           {FEATURES.map((f, i) => (
             <View key={i} style={s.featureRow}>
-              <Text style={{ fontSize: 22, width: 36, textAlign: "center" }}>{f.icon}</Text>
+              <View style={{ width: 36, alignItems: "center" }}><f.Icon size={22} color="#2FAB72" /></View>
               <View style={{ flex: 1 }}>
                 <Text style={s.featureTitle}>{f.title}</Text>
                 <Text style={s.featureSub}>{f.sub}</Text>

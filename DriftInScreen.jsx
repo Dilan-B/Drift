@@ -15,6 +15,7 @@ import { useFonts, Oswald_400Regular, Oswald_700Bold } from "@expo-google-fonts/
 import { Orbitron_700Bold, Orbitron_400Regular } from "@expo-google-fonts/orbitron";
 import { getTheme } from "./theme";
 import Slider from "@react-native-community/slider";
+import { SparkleIcon, CheckIcon } from "./Icons";
 
 const { width } = Dimensions.get("window");
 
@@ -284,7 +285,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
           s.ctaBtnText,
           !task.trim() && { color: dark ? "#6B9A7A" : "#fff" },
         ]}>
-          {task.trim() ? "DRIFT IN  →" : "ENTER A TASK ABOVE"}
+          {task.trim() ? "DRIFT IN" : "ENTER A TASK ABOVE"}
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -363,7 +364,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
     <View style={{ flex: 1, backgroundColor: BG, alignItems: "center", justifyContent: "center", padding: 32 }}>
       <StatusBar barStyle="light-content" />
 
-      <Text style={{ fontSize: 64, marginBottom: 16 }}>✦</Text>
+      <View style={{ marginBottom: 16 }}><SparkleIcon size={64} color={GREEN} /></View>
       <Text style={s.doneTitle}>SESSION COMPLETE</Text>
       <Text style={s.doneTask}>{task}</Text>
 
@@ -389,7 +390,10 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
         }}
         style={s.collectBtn}
       >
-        <Text style={s.collectBtnText}>COLLECT REWARDS  ✓</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Text style={s.collectBtnText}>COLLECT REWARDS</Text>
+          <CheckIcon size={16} color="#fff" />
+        </View>
       </TouchableOpacity>
     </View>
   );

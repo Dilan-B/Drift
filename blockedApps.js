@@ -53,20 +53,36 @@ export async function setBlockedApps(apps) {
   await AsyncStorage.setItem(KEY, JSON.stringify(apps));
 }
 
-// ── Native bridge (no-op in Expo Go) ─────────────────────────
-// Replace these once you wire in a real native blocker.
-let nativeBlocker = null;
-try {
-  // Example: nativeBlocker = require("react-native-screen-time-api");
-} catch { nativeBlocker = null; }
+// ── Native bridge ─────────────────────────────────────────────
+// iOS uses Apple's Screen Time API (Family Controls + ManagedSettings).
+// Requires the custom dev client (will NOT work in Expo Go).
+import {
+  applyShield as nativeApplyShield,
+  clearShield as nativeClearShield,
+  isAvailable as nativeIsAvailable,
+  requestAuthorization as nativeRequestAuth,
+  getAuthorizationStatus as nativeAuthStatus,
+  presentAppPicker as nativePresentPicker,
+} from "./screenTime";
 
-export async function applyBlocking(appsList) {
-  if (!nativeBlocker?.apply) return { applied: false, reason: "Native blocker not available in Expo Go" };
-  try { await nativeBlocker.apply(appsList); return { applied: true }; }
-  catch (e) { return { applied: false, reason: e?.message }; }
+export const isNativeBlockingAvailable = nativeIsAvailable;
+export const requestScreenTimeAuth     = nativeRequestAuth;
+export const getScreenTimeAuthStatus   = nativeAuthStatus;
+export const pickBlockedAppsNative     = nativePresentPicker;
+
+export async function applyBlocking(_appsList) {
+  if (!nativeIsAvailable()) {
+    return { applied: false, reason: "Screen Time API unavailable (Expo Go or non-iOS)" };
+  }
+  const status = await nativeAuthStatus();
+  if (status !== "approved") {
+    const next = await nativeRequestAuth();
+    if (next !== "approved") return { applied: false, reason: "Authorization not granted" };
+  }
+  const ok = await nativeApplyShield();
+  return ok ? { applied: true } : { applied: false, reason: "Failed to apply shield" };
 }
 
 export async function clearBlocking() {
-  if (!nativeBlocker?.clear) return;
-  try { await nativeBlocker.clear(); } catch {}
+  await nativeClearShield();
 }

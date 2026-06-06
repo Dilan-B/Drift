@@ -17,6 +17,9 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Drift uses your camera to track body position and count reps automatically.",
         "NSMotionUsageDescription": "Drift uses motion data to detect exercise movement."
+      },
+      "entitlements": {
+        "com.apple.developer.family-controls": true
       }
     },
     "android": {

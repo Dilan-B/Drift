@@ -9,6 +9,7 @@ import {
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
 import { supabase, getFriendsWithScreenTime } from "./supabase";
+import { LockIcon, UsersIcon } from "./Icons";
 
 const LIGHT_INK = { void: "#F4F9F6", deep: "#1A2B1F", mid: "#6B8A78", faint: "#A8BFB5", border: "rgba(26,43,31,0.09)" };
 const DARK_INK  = { void: "#0E1B17", deep: "#DFF2E7", mid: "#6B9A7A", faint: "#3D6650",  border: "rgba(255,255,255,0.09)" };
@@ -59,9 +60,9 @@ function FriendRow({ friend, onChallenge, isPremium }) {
         onPress={() => isPremium ? onChallenge(friend) : onChallenge(null)}
         style={[s.chalBtn, !isPremium && s.chalBtnLocked]}
       >
-        <Text style={[s.chalBtnText, !isPremium && { color: "#4A3828" }]}>
-          {isPremium ? "Challenge" : "🔒"}
-        </Text>
+        {isPremium
+          ? <Text style={s.chalBtnText}>Challenge</Text>
+          : <LockIcon size={14} color="#4A3828" />}
       </TouchableOpacity>
     </View>
   );
@@ -88,18 +89,23 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, dark = 
   useEffect(() => { load(); }, [load]);
 
   const addFriend = async () => {
-    const username = addUsername.trim().replace(/^@/, "");
+    const username = addUsername.trim().replace(/^@/, "").toLowerCase();
     if (!username) return;
     setAdding(true);
     try {
-      // Look up the user
+      // Case-insensitive exact match; maybeSingle so "no row" isn't a thrown error
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("id, username")
-        .eq("username", username)
-        .single();
+        .ilike("username", username)
+        .maybeSingle();
 
-      if (error || !profile) {
+      if (error) {
+        Alert.alert("Lookup failed", `${error.message}\n(code: ${error.code || "?"})`);
+        setAdding(false);
+        return;
+      }
+      if (!profile) {
         Alert.alert("Not found", `@${username} doesn't have a Drift account yet.`);
         setAdding(false);
         return;
@@ -213,7 +219,10 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, dark = 
       {/* Premium badge or trial notice */}
       {!isPremium && (
         <TouchableOpacity onPress={onOpenPaywall} style={s.trialBanner}>
-          <Text style={s.trialText}>🔒 Upgrade to challenge friends · from $2.99/mo</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <LockIcon size={12} color="#2A7FA0" />
+            <Text style={s.trialText}>Upgrade to challenge friends · from $2.99/mo</Text>
+          </View>
         </TouchableOpacity>
       )}
 
@@ -240,7 +249,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, dark = 
             }
             ListEmptyComponent={
               <View style={s.center}>
-                <Text style={{ fontSize: 56, marginBottom: 14 }}>👥</Text>
+                <View style={{ marginBottom: 14 }}><UsersIcon size={62} color={ink.faint} /></View>
                 <Text style={[s.emptyTitle, { color: ink.deep }]}>No friends yet</Text>
                 <Text style={[s.emptySub, { color: ink.mid, marginBottom: 28 }]}>
                   Add friends by username to{"\n"}see their screen time today.

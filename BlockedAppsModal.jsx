@@ -8,8 +8,13 @@ import {
   View, Text, TouchableOpacity, TextInput, Modal,
   ScrollView, StyleSheet, Alert, Platform,
 } from "react-native";
-import { getBlockedApps, setBlockedApps, SUGGESTED_APPS } from "./blockedApps";
+import {
+  getBlockedApps, setBlockedApps, SUGGESTED_APPS,
+  isNativeBlockingAvailable, requestScreenTimeAuth,
+  getScreenTimeAuthStatus, pickBlockedAppsNative,
+} from "./blockedApps";
 import { getTheme } from "./theme";
+import { CheckIcon } from "./Icons";
 
 const FO  = "Orbitron_700Bold";
 const FOM = "Orbitron_400Regular";
@@ -98,6 +103,36 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
             </Text>
           </View>
 
+          {/* Native picker (iOS Screen Time) */}
+          {isNativeBlockingAvailable() && (
+            <TouchableOpacity
+              onPress={async () => {
+                const status = await getScreenTimeAuthStatus();
+                if (status !== "approved") {
+                  const next = await requestScreenTimeAuth();
+                  if (next !== "approved") {
+                    Alert.alert("Screen Time access denied",
+                      "Enable Drift in Settings > Screen Time to pick apps to block.");
+                    return;
+                  }
+                }
+                await pickBlockedAppsNative();
+              }}
+              style={{
+                paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, marginBottom: 18,
+                borderWidth: 1.5, borderColor: earn.green, backgroundColor: earn.greenLo,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontFamily: FK, fontSize: 14, color: earn.green }}>
+                Pick apps with Apple Screen Time
+              </Text>
+              <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2 }}>
+                Uses Apple's secure picker — Drift never sees your app list
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* Suggested + selected */}
           <Text style={{ fontFamily: FOM, fontSize: 9, color: ink.faint, letterSpacing: 2, marginBottom: 10 }}>
             COMMON DISTRACTIONS
@@ -113,7 +148,7 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
                   backgroundColor: on ? earn.greenLo : paper.card,
                   flexDirection: "row", alignItems: "center", gap: 6,
                 }}>
-                  {on && <Text style={{ color: earn.green, fontSize: 12 }}>✓</Text>}
+                  {on && <CheckIcon size={12} color={earn.green} />}
                   <Text style={{ fontFamily: FB, fontSize: 13, fontWeight: on ? "600" : "400",
                     color: on ? earn.green : ink.deep }}>
                     {app.name}

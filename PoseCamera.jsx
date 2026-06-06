@@ -9,6 +9,7 @@ import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor } from 
 import { useTensorflowModel } from "react-native-fast-tflite";
 import { runOnJS } from "react-native-reanimated";
 import Svg, { Circle, Line } from "react-native-svg";
+import { CameraIcon } from "./Icons";
 
 // ── MoveNet keypoint indices ─────────────────────────────────
 const KP = {
@@ -178,7 +179,7 @@ export default function PoseCamera({ exerciseId, repsLeft, onRepCounted }) {
   // ── No permission ──
   if (!hasPermission) return (
     <TouchableOpacity onPress={requestPermission} style={s.permBox}>
-      <Text style={{ fontSize: 32, marginBottom: 8 }}>📷</Text>
+      <View style={{ marginBottom: 8 }}><CameraIcon size={36} color="#D4622A" /></View>
       <Text style={{ color: "#D4622A", fontWeight: "600", fontSize: 13 }}>Enable Camera</Text>
       <Text style={{ color: "#4A3020", fontSize: 11, marginTop: 4, textAlign: "center" }}>
         Required for pose{"\n"}detection

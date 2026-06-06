@@ -11,6 +11,25 @@ import {
   Platform, ActivityIndicator, Alert,
 } from "react-native";
 import { supabase } from "./supabase";
+import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon } from "./Icons";
+import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
+
+function ClockIcon({ size = 56, color = ACCENT }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <SvgCircle cx="12" cy="13" r="8" stroke={color} strokeWidth={2} />
+      <SvgPath d="M12 9v4l3 2 M9 3h6 M5 5l-1.5 1.5 M19 5l1.5 1.5" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+const STEP_ICONS = {
+  usage: PhoneIcon,
+  wakeup: ClockIcon,
+  distractions: HoleIcon,
+  age: CakeIcon,
+  goals: TargetIcon,
+};
 
 const { width, height } = Dimensions.get("window");
 const BG = "#F4F9F6";
@@ -27,7 +46,6 @@ const STEPS = [
   { id: "welcome" },
   {
     id: "usage",
-    emoji: "📱",
     question: "How much time do you\nspend on your phone?",
     subtitle: "Be honest — no judgment here.",
     type: "single",
@@ -40,7 +58,6 @@ const STEPS = [
   },
   {
     id: "wakeup",
-    emoji: "⏰",
     question: "When do you usually\nwake up?",
     subtitle: "Drift locks your phone until you earn it.",
     type: "single",
@@ -53,7 +70,6 @@ const STEPS = [
   },
   {
     id: "distractions",
-    emoji: "🕳️",
     question: "What pulls you in\nfirst thing?",
     subtitle: "Select all that apply.",
     type: "multi",
@@ -68,7 +84,6 @@ const STEPS = [
   },
   {
     id: "age",
-    emoji: "🎂",
     question: "How old are you?",
     subtitle: "Helps us tailor your challenges.",
     type: "single",
@@ -81,7 +96,6 @@ const STEPS = [
   },
   {
     id: "goals",
-    emoji: "🎯",
     question: "What do you want\nfrom Drift?",
     subtitle: "Pick everything that resonates.",
     type: "multi",
@@ -122,7 +136,12 @@ function QuestionSlide({ step, answers, onToggle, onNext, canContinue }) {
   return (
     <View style={styles.slide}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.stepEmoji}>{step.emoji}</Text>
+        <View style={styles.stepEmoji}>
+          {(() => {
+            const Icon = STEP_ICONS[step.id];
+            return Icon ? <Icon size={48} color={ACCENT} /> : null;
+          })()}
+        </View>
         <Text style={styles.question}>{step.question}</Text>
         <Text style={styles.questionSub}>{step.subtitle}</Text>
 
@@ -150,7 +169,7 @@ function QuestionSlide({ step, answers, onToggle, onNext, canContinue }) {
                   ) : null}
                 </View>
                 <View style={[styles.check, selected && styles.checkSelected]}>
-                  {selected && <Text style={styles.checkMark}>✓</Text>}
+                  {selected && <CheckIcon size={14} color="#fff" />}
                 </View>
               </TouchableOpacity>
             );
@@ -321,7 +340,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={{ flex: 1 }}>
-        <Text style={styles.stepEmoji}>👋</Text>
+        <View style={styles.stepEmoji}><WaveIcon size={48} color={ACCENT} /></View>
         <Text style={styles.question}>
           {mode === "signup" ? "Create your account" : "Welcome back"}
         </Text>
@@ -524,7 +543,7 @@ const styles = StyleSheet.create({
   },
 
   // Question
-  stepEmoji: { fontSize: 40, marginBottom: 20, marginTop: 8 },
+  stepEmoji: { marginBottom: 20, marginTop: 8 },
   question: {
     fontSize: 30,
     fontWeight: "800",

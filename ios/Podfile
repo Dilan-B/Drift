@@ -56,6 +56,15 @@ target 'Drift' do
   installer.pods_project.targets.each do |target|
     target.build_configurations.each do |config|
       config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
+      # Workaround for RN 0.81 + Reanimated: folly/coro/Coroutine.h is not
+      # shipped with the pinned folly version. Define FOLLY_CFG_NO_COROUTINES
+      # so folly's Portability.h sets FOLLY_HAS_COROUTINES=0 and the header
+      # is never included. folly is C++, so this must go in CPLUSPLUSFLAGS.
+      cxxflags = config.build_settings['OTHER_CPLUSPLUSFLAGS'] || '$(inherited)'
+      cxxflags = cxxflags.join(' ') if cxxflags.is_a?(Array)
+      unless cxxflags.include?('FOLLY_CFG_NO_COROUTINES')
+        config.build_settings['OTHER_CPLUSPLUSFLAGS'] = cxxflags + ' -DFOLLY_CFG_NO_COROUTINES=1'
+      end
     end
   end
     react_native_post_install(

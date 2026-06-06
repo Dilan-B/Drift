@@ -12,6 +12,7 @@ import {
 import { supabase } from "./supabase";
 import { getTheme } from "./theme";
 import { Spinner } from "./Skeleton";
+import { CloseIcon, CameraIcon, ImageIcon, SparkleIcon, CheckIcon } from "./Icons";
 
 const FO  = "Orbitron_700Bold";
 const FOM = "Orbitron_400Regular";
@@ -293,7 +294,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                 alignItems: "center", justifyContent: "center",
               }}
             >
-              <Text style={{ fontSize: 16, color: MID }}>✕</Text>
+              <CloseIcon size={14} color={MID} />
             </TouchableOpacity>
           </View>
 
@@ -351,7 +352,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                       borderWidth: 1, borderColor: BRD, backgroundColor: SURF, alignItems: "center",
                     }}
                   >
-                    <Text style={{ fontSize: 20, marginBottom: 4 }}>📷</Text>
+                    <View style={{ marginBottom: 4 }}><CameraIcon size={22} color={MID} /></View>
                     <Text style={{ fontFamily: FOM, fontSize: 9, color: MID, letterSpacing: 1 }}>
                       TAKE PHOTO
                     </Text>
@@ -363,7 +364,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                       borderWidth: 1, borderColor: BRD, backgroundColor: SURF, alignItems: "center",
                     }}
                   >
-                    <Text style={{ fontSize: 20, marginBottom: 4 }}>🖼️</Text>
+                    <View style={{ marginBottom: 4 }}><ImageIcon size={22} color={MID} /></View>
                     <Text style={{ fontFamily: FOM, fontSize: 9, color: MID, letterSpacing: 1 }}>
                       UPLOAD
                     </Text>
@@ -405,9 +406,11 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                 borderColor: result.verified ? "rgba(47,171,114,0.3)" : "rgba(224,80,80,0.2)",
                 marginBottom: 20,
               }}>
-                <Text style={{ fontSize: 40, textAlign: "center", marginBottom: 12 }}>
-                  {result.verified ? "✦" : "✕"}
-                </Text>
+                <View style={{ alignItems: "center", marginBottom: 12 }}>
+                  {result.verified
+                    ? <SparkleIcon size={44} color={GRN} />
+                    : <CloseIcon size={40} color={RED} />}
+                </View>
                 <Text style={{
                   fontFamily: FO, fontSize: 14, letterSpacing: 1.5,
                   textAlign: "center", marginBottom: 10,
@@ -434,9 +437,12 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                   onPress={onVerified}
                   style={{ paddingVertical: 15, borderRadius: 14, backgroundColor: GRN, alignItems: "center" }}
                 >
-                  <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 2 }}>
-                    CLAIM {task.credits}m CREDITS  ✓
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 2 }}>
+                      CLAIM {task.credits}m CREDITS
+                    </Text>
+                    <CheckIcon size={14} color="#fff" />
+                  </View>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
