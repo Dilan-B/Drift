@@ -15,7 +15,7 @@ import { NativeModules, Platform } from "react-native";
 const Native = NativeModules.ScreenTimeModule;
 
 export const isAvailable = () =>
-  Platform.OS === "ios" && !!Native && Native.available === true;
+  Platform.OS === "ios" && !!Native && typeof Native.applyShield === "function";
 
 export async function requestAuthorization() {
   if (!isAvailable()) return "unavailable";

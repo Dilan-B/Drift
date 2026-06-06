@@ -17,8 +17,10 @@
         "NSMotionUsageDescription": "Drift uses motion data to detect exercise movement."
       },
       "entitlements": {
-        "com.apple.developer.family-controls": true
-      }
+        "com.apple.developer.family-controls": true,
+        "com.apple.developer.applesignin": ["Default"]
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.drift.app",
@@ -31,7 +33,8 @@
           "cameraPermissionText": "Drift needs your camera to count reps automatically using pose detection."
         }
       ],
-      "react-native-fast-tflite"
+      "react-native-fast-tflite",
+      "expo-apple-authentication"
     ]
   }
 }

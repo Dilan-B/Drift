@@ -11,6 +11,8 @@ import {
   Platform, ActivityIndicator, Alert,
 } from "react-native";
 import { supabase } from "./supabase";
+let AppleAuthentication = null;
+try { AppleAuthentication = require("expo-apple-authentication"); } catch {}
 import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon } from "./Icons";
 import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
 
@@ -463,6 +465,68 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
           </Text>
         )}
       </TouchableOpacity>
+
+      {/* Sign in with Apple */}
+      {AppleAuthentication?.AppleAuthenticationButton && Platform.OS === "ios" && (
+        <>
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 16, marginBottom: 12, gap: 10 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: BORDER }} />
+            <Text style={{ color: MUTED, fontSize: 12 }}>or</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: BORDER }} />
+          </View>
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={mode === "signup"
+              ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
+              : AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+            cornerRadius={14}
+            style={{ height: 52, width: "100%" }}
+            onPress={async () => {
+              setError("");
+              try {
+                const cred = await AppleAuthentication.signInAsync({
+                  requestedScopes: [
+                    AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                    AppleAuthentication.AppleAuthenticationScope.EMAIL,
+                  ],
+                });
+                if (!cred.identityToken) throw new Error("No identity token from Apple");
+
+                setLoading(true);
+                const { data, error: err } = await supabase.auth.signInWithIdToken({
+                  provider: "apple",
+                  token: cred.identityToken,
+                });
+                if (err) throw err;
+
+                // First-time Apple sign-in: ensure a profile row with a username exists.
+                if (data?.user) {
+                  const { data: prof } = await supabase
+                    .from("profiles").select("username").eq("id", data.user.id).maybeSingle();
+                  if (!prof?.username) {
+                    // Generate a random username; user can rename later from account.
+                    const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+                    let rand = "";
+                    for (let i = 0; i < 8; i++) rand += alphabet[Math.floor(Math.random() * alphabet.length)];
+                    const newUsername = `drifter${rand}`;
+                    await supabase.from("profiles").upsert(
+                      { id: data.user.id, username: newUsername },
+                      { onConflict: "id" }
+                    );
+                  }
+                  try { await supabase.functions.invoke("claim-trial", {}); } catch {}
+                  onDone?.(data.user);
+                }
+              } catch (e) {
+                if (e?.code === "ERR_REQUEST_CANCELED") return;
+                setError(e?.message || "Sign in with Apple failed.");
+              } finally {
+                setLoading(false);
+              }
+            }}
+          />
+        </>
+      )}
 
       <TouchableOpacity
         onPress={() => { setMode(mode === "signup" ? "login" : "signup"); setError(""); }}

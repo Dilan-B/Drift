@@ -1041,25 +1041,34 @@ export default function App() {
   }, [screen]);
 
   // Background → drain. Foreground → freeze.
+  // When Drift is in the background and a Drift In session is NOT active,
+  // we assume the user is spending their earned screen time on other apps,
+  // so we drain the balance. The drained value is persisted so it survives
+  // close/reopen.
   useEffect(() => {
     let bgTime = null;
     const sub = AppState.addEventListener("change", next => {
       if (next !== "active") {
-        // Going to background — start "drain clock"
         bgTime = Date.now();
         stopTick();
       } else if (bgTime && screen === "app") {
-        // Returning to Drift — subtract the elapsed background time
         const elapsedSec = Math.floor((Date.now() - bgTime) / 1000);
-        const rem = Math.max(0, secRef.current - elapsedSec);
+        bgTime = null;
+        // Don't drain during an active focus session — the shield is up.
+        if (driftInActRef.current) return;
+        const prevSec = secRef.current;
+        const rem = Math.max(0, prevSec - elapsedSec);
+        const usedSec = prevSec - rem;
         secRef.current = rem;
         setSecLeft(rem);
         setCredits(c => {
           const nb = rem > 0 ? Math.ceil(rem / 60) : 0;
-          const sp = c.spent + Math.min(elapsedSec, secRef.current + elapsedSec);
-          return { ...c, balance: nb, spent: Math.min(c.earned, c.spent + Math.floor(elapsedSec / 60)) };
+          const usedMin = Math.floor(usedSec / 60);
+          const nc = { ...c, balance: nb, spent: Math.min(c.earned, c.spent + usedMin) };
+          // Persist so the drained balance survives close/reopen
+          persist({ credits: nc });
+          return nc;
         });
-        bgTime = null;
       }
     });
     return () => { sub.remove(); stopTick(); };
@@ -1068,6 +1077,52 @@ export default function App() {
   useEffect(() => {
     AsyncStorage.getItem("drift_dark_mode").then(v => { if (v === "1") setDarkMode(true); });
   }, []);
+
+  // Deep-link friend invites — drift://add-friend/[username]
+  useEffect(() => {
+    const handleUrl = async (url) => {
+      if (!url || !userId) return;
+      const m = url.match(/add-friend\/([A-Za-z0-9_]+)/);
+      if (!m) return;
+      const username = m[1].toLowerCase();
+      try {
+        const { data: profile } = await supabase
+          .from("profiles").select("id, username")
+          .ilike("username", username).maybeSingle();
+        if (!profile) { Alert.alert("Not found", `@${username} isn't on Drift yet.`); return; }
+        if (profile.id === userId) { Alert.alert("That's you", "You can't add yourself."); return; }
+        const { error } = await supabase.from("friendships").insert({
+          user_id: userId, friend_id: profile.id, status: "pending",
+        });
+        if (error && error.code !== "23505") {
+          Alert.alert("Couldn't send", error.message);
+        } else {
+          Alert.alert("Request sent", `Friend request sent to @${username}.`);
+        }
+      } catch (e) { Alert.alert("Error", e?.message || "Try again."); }
+    };
+    Linking.getInitialURL().then(handleUrl);
+    const sub = Linking.addEventListener("url", ({ url }) => handleUrl(url));
+    return () => sub.remove();
+  }, [userId]);
+
+  // Keep the Apple Screen Time shield in sync with balance.
+  // balance == 0 → shield ON (blocked apps shielded)
+  // balance > 0  → shield OFF (user has earned time to spend)
+  // The Drift In session shield is handled separately and overrides this.
+  const shieldStateRef = useRef(null); // "on" | "off" | null
+  useEffect(() => {
+    if (driftInActive) return; // session handler controls shield
+    const desired = credits.balance > 0 ? "off" : "on";
+    if (shieldStateRef.current === desired) return;
+    shieldStateRef.current = desired;
+    (async () => {
+      try {
+        if (desired === "on") await applyBlocking([]);
+        else                  await clearBlocking();
+      } catch {}
+    })();
+  }, [credits.balance, driftInActive]);
 
   // Refresh Screen Time auth status when the account sheet opens
   useEffect(() => {
@@ -1191,19 +1246,32 @@ export default function App() {
     persist({ tasks: nt, taskHistory: nh, credits: nc, totalXp: nx });
   };
 
-  const addTask  = t => { const nt = [...tasks, t]; setTasks(nt); persist({ tasks: nt }); };
+  const addTask  = t => {
+    // DEV: cap task reward at 1 minute while testing so we don't burn 15-min
+    // chunks of real earned time on every task. Revert when shipping.
+    const capped = { ...t, credits: 1 };
+    const nt = [...tasks, capped];
+    setTasks(nt); persist({ tasks: nt });
+  };
 
   const handleDriftInStart  = async () => {
     setDriftInActive(true);
     try {
-      const list = await (await import("./blockedApps")).getBlockedApps();
-      if (list?.length) applyBlocking(list);
-    } catch {}
+      // Always call applyBlocking — on iOS the native side reads the user's
+      // FamilyActivityPicker selection from UserDefaults, not AsyncStorage.
+      const res = await applyBlocking([]);
+      if (res && res.applied === false && res.reason) {
+        Alert.alert("Couldn't block apps", res.reason);
+      }
+    } catch (e) {
+      Alert.alert("Block error", e?.message || String(e));
+    }
   };
   const handleDriftInEnd    = () => { setDriftInActive(false); clearBlocking(); };
 
   const handleDriftInComplete = ({ credits: earned, xp }) => {
     setDriftInActive(false);
+    clearBlocking();
     const newSec = secRef.current + earned * 60;
     const nx  = totalXp + xp;
     const nc  = { balance: Math.ceil(newSec / 60), earned: credits.earned + earned, spent: credits.spent };

@@ -149,7 +149,7 @@ class ScreenTimeModule: NSObject {
     #if canImport(FamilyControls) && canImport(ManagedSettings)
     if #available(iOS 16.0, *) {
       let selection = ScreenTimeSelectionStore.shared.selection
-      let store = ManagedSettingsStore(named: .init("drift.focus"))
+      let store = ManagedSettingsStore(named: .init("driftFocus"))
       store.shield.applications = selection.applicationTokens.isEmpty
         ? nil : selection.applicationTokens
       store.shield.applicationCategories = selection.categoryTokens.isEmpty
@@ -168,7 +168,7 @@ class ScreenTimeModule: NSObject {
                    rejecter reject: RCTPromiseRejectBlock) {
     #if canImport(ManagedSettings)
     if #available(iOS 16.0, *) {
-      let store = ManagedSettingsStore(named: .init("drift.focus"))
+      let store = ManagedSettingsStore(named: .init("driftFocus"))
       store.shield.applications = nil
       store.shield.applicationCategories = nil
       store.shield.webDomains = nil

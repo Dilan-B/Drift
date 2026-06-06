@@ -697,17 +697,28 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
                     <Text style={[s.cardKicker, { color: terra }]}>YOUR USERNAME</Text>
                     <Text style={[s.usernameText, { color: th.ink }]} numberOfLines={1}>@{myProfile.username}</Text>
                   </View>
-                  <TouchableOpacity onPress={async () => {
-                    if (Clipboard?.setStringAsync) {
-                      await Clipboard.setStringAsync(`@${myProfile.username}`);
-                      setCopiedFlag(true);
-                      setTimeout(() => setCopiedFlag(false), 1400);
-                    } else {
-                      Share.share({ message: `@${myProfile.username}` }).catch(() => {});
-                    }
-                  }} style={s.compactSolid}>
-                    <Text style={s.compactSolidText}>{copiedFlag ? "Copied" : "Copy"}</Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: "row", gap: 6 }}>
+                    <TouchableOpacity onPress={async () => {
+                      if (Clipboard?.setStringAsync) {
+                        await Clipboard.setStringAsync(`@${myProfile.username}`);
+                        setCopiedFlag(true);
+                        setTimeout(() => setCopiedFlag(false), 1400);
+                      } else {
+                        Share.share({ message: `@${myProfile.username}` }).catch(() => {});
+                      }
+                    }} style={s.compactSolid}>
+                      <Text style={s.compactSolidText}>{copiedFlag ? "Copied" : "Copy"}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => {
+                      const link = `drift://add-friend/${myProfile.username}`;
+                      Share.share({
+                        message: `Add me on Drift: ${link}`,
+                        url: link,
+                      }).catch(() => {});
+                    }} style={s.compactSolid}>
+                      <Text style={s.compactSolidText}>Share</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
 
