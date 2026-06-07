@@ -33,6 +33,7 @@ import {
 import {
   isNativeBlockingAvailable, requestScreenTimeAuth, getScreenTimeAuthStatus,
 } from "./blockedApps";
+import { startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag } from "./screenTime";
 import { supabase, syncScreenTime, safeGetSession } from "./supabase";
 import SocialScreen from "./SocialScreen";
 import PaywallScreen, { initTrial, getTrialStatus } from "./PaywallScreen";
@@ -1093,7 +1094,7 @@ export default function App() {
         setCredits(c => {
           const nb = rem > 0 ? Math.ceil(rem / 60) : 0;
           const usedMin = Math.floor(usedSec / 60);
-          const nc = { ...c, balance: nb, spent: Math.min(c.earned, c.spent + usedMin) };
+          const nc = { ...c, balance: nb, balanceSec: rem, spent: Math.min(c.earned, c.spent + usedMin) };
           // Persist so the drained balance survives close/reopen
           persist({ credits: nc });
           return nc;
@@ -1135,23 +1136,89 @@ export default function App() {
     return () => sub.remove();
   }, [userId]);
 
+  // On app launch / foreground, check whether the DriftMonitor extension
+  // already drained the balance to zero while Drift was closed. If so, sync
+  // the JS state down to 0 so the UI matches what iOS has enforced.
+  useEffect(() => {
+    const sync = async () => {
+      const depleted = await consumeDepletedFlag();
+      if (!depleted) return;
+      secRef.current = 0;
+      setSecLeft(0);
+      setCredits(c => {
+        const nc = { ...c, balance: 0, balanceSec: 0,
+          spent: Math.min(c.earned, c.spent + (c.balance || 0)) };
+        persist({ credits: nc });
+        return nc;
+      });
+    };
+    sync();
+    const sub = AppState.addEventListener("change", n => { if (n === "active") sync(); });
+    return () => sub.remove();
+  }, []);
+
   // Keep the Apple Screen Time shield in sync with balance.
   // balance == 0 → shield ON (blocked apps shielded)
   // balance > 0  → shield OFF (user has earned time to spend)
   // The Drift In session shield is handled separately and overrides this.
-  const shieldStateRef = useRef(null); // "on" | "off" | null
+  //
+  // Critically: we ONLY re-arm the iOS DeviceActivity timer when balance
+  // increases (user just earned). Just opening the app shouldn't restart
+  // iOS's cumulative usage counter — that would let users "reset" their
+  // remaining time by reopening Drift.
+  const shieldStateRef = useRef(null);       // "on" | "off" | null
+  // null = not yet loaded; number = last value we armed iOS with; -1 = no current arming.
+  const [lastArmedBalance, setLastArmedBalance] = useState(null);
+  useEffect(() => {
+    AsyncStorage.getItem("drift_last_armed_balance").then(v => {
+      setLastArmedBalance(v != null ? Number(v) : -1);
+    });
+  }, []);
+
   useEffect(() => {
     if (driftInActive) return; // session handler controls shield
+    if (lastArmedBalance === null) return; // waiting for AsyncStorage
+
     const desired = credits.balance > 0 ? "off" : "on";
-    if (shieldStateRef.current === desired) return;
-    shieldStateRef.current = desired;
+    const prevState = shieldStateRef.current;
+
     (async () => {
       try {
-        if (desired === "on") await applyBlocking([]);
-        else                  await clearBlocking();
+        if (desired === "on") {
+          if (prevState !== "on") {
+            await stopBalanceMonitoring();
+            await applyBlocking([]);
+            if (lastArmedBalance !== -1) {
+              await AsyncStorage.removeItem("drift_last_armed_balance");
+              setLastArmedBalance(-1);
+            }
+          }
+        } else {
+          if (prevState !== "off") await clearBlocking();
+
+          // (Re)arm iOS only when balance went UP — never on launch with the
+          // same balance we previously armed for, because iOS already has a
+          // monitor running and re-arming would reset its cumulative counter.
+          const shouldArm = lastArmedBalance === -1 || credits.balance > lastArmedBalance;
+          if (shouldArm) {
+            // Pass exact seconds so iOS's threshold matches the displayed
+            // balance — passing minutes rounds the threshold up.
+            const seconds = typeof credits.balanceSec === "number"
+              ? credits.balanceSec
+              : credits.balance * 60;
+            const res = await startBalanceMonitoring(seconds);
+            if (res?.started === false) {
+              Alert.alert("Background timer not active", res.reason || "Unknown");
+            } else {
+              await AsyncStorage.setItem("drift_last_armed_balance", String(credits.balance));
+              setLastArmedBalance(credits.balance);
+            }
+          }
+        }
+        shieldStateRef.current = desired;
       } catch {}
     })();
-  }, [credits.balance, driftInActive]);
+  }, [credits.balance, driftInActive, lastArmedBalance]);
 
   // Refresh Screen Time auth status when the account sheet opens
   useEffect(() => {
@@ -1242,7 +1309,11 @@ export default function App() {
             setTasks(savedTasks);
             setCredits(sc);
             setTotalXp(p.totalXp || 0);
-            const initSec = (sc.balance || 0) * 60;
+            // Prefer the saved sub-minute precision so closing the app doesn't
+            // round you back up to the nearest minute.
+            const initSec = typeof sc.balanceSec === "number"
+              ? sc.balanceSec
+              : (sc.balance || 0) * 60;
             secRef.current = initSec;
             setSecLeft(initSec);
           }
@@ -1272,21 +1343,22 @@ export default function App() {
     const nh = mergeCompletedTasks(taskHistory, completedTask);
     const nx  = totalXp + task.xp;
     const newSec = secRef.current + task.credits * 60;
-    const nc  = { balance: Math.ceil(newSec / 60), earned: credits.earned + task.credits, spent: credits.spent };
+    const nc  = { balance: Math.ceil(newSec / 60), balanceSec: newSec, earned: credits.earned + task.credits, spent: credits.spent };
     setTasks(nt); setTaskHistory(nh); setCredits(nc); setTotalXp(nx);
     setPopup({ credits: task.credits, xp: task.xp });
     setTimeout(() => setPopup(null), 2000);
     startTick(newSec);
     persist({ tasks: nt, taskHistory: nh, credits: nc, totalXp: nx });
+    // Belt-and-suspenders: explicitly clear the Screen Time shield the
+    // moment we earn balance, instead of waiting on the useEffect to
+    // notice the credits change.
+    if (nc.balance > 0 && !driftInActive) {
+      shieldStateRef.current = "off";
+      clearBlocking();
+    }
   };
 
-  const addTask  = t => {
-    // DEV: cap task reward at 1 minute while testing so we don't burn 15-min
-    // chunks of real earned time on every task. Revert when shipping.
-    const capped = { ...t, credits: 1 };
-    const nt = [...tasks, capped];
-    setTasks(nt); persist({ tasks: nt });
-  };
+  const addTask  = t => { const nt = [...tasks, t]; setTasks(nt); persist({ tasks: nt }); };
 
   const deleteTask = id => {
     const target = tasks.find(t => t.id === id);
@@ -1318,7 +1390,7 @@ export default function App() {
     clearBlocking();
     const newSec = secRef.current + earned * 60;
     const nx  = totalXp + xp;
-    const nc  = { balance: Math.ceil(newSec / 60), earned: credits.earned + earned, spent: credits.spent };
+    const nc  = { balance: Math.ceil(newSec / 60), balanceSec: newSec, earned: credits.earned + earned, spent: credits.spent };
     setCredits(nc); setTotalXp(nx);
     setPopup({ credits: earned, xp });
     setTimeout(() => setPopup(null), 2500);

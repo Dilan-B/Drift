@@ -113,16 +113,20 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
   };
 
   // ── Submit to Supabase Edge Function ─────────────────────────
-  // ── OpenAI call (dev fallback when edge function isn't deployed) ─
+  // ── OpenAI call (DEV-ONLY fallback when edge function isn't deployed) ─
+  // This function is hard-gated behind __DEV__ — in any production build
+  // (TestFlight or App Store) the key isn't read, no call is made, and the
+  // function throws. We never want to ship an OpenAI key inside an .ipa.
   const callOpenAIDirect = async (taskTitle, durationMins, proofText, imageBase64) => {
-    // Key lives in .env as EXPO_PUBLIC_OPENAI_KEY — never hardcoded, never committed to git
+    if (!__DEV__) {
+      throw new Error("AI service unavailable. Please try again later.");
+    }
     const keyEnv = process.env.EXPO_PUBLIC_OPENAI_KEY || "";
-    const key = keyEnv.trim().replace(/^["']|["']$/g, ""); // strip any accidental quotes
+    const key = keyEnv.trim().replace(/^["']|["']$/g, "");
     if (!key) throw new Error("EXPO_PUBLIC_OPENAI_KEY not set in .env — create the file and restart with --clear");
     const skCount = (key.match(/sk-proj-/g) || []).length;
     if (skCount > 1) throw new Error(`Key has "sk-proj-" ${skCount} times — remove the duplicate prefix in your .env file`);
     if (!key.startsWith("sk-")) throw new Error(`Key should start with sk- but got: "${key.slice(0, 8)}..."`);
-    console.log("[AI Check] key prefix:", key.slice(0, 8), "| suffix:", key.slice(-4), "| length:", key.length);
 
     const messageContent = [];
     if (imageBase64) {

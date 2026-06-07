@@ -4,12 +4,13 @@
  */
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator, Alert, Image, Platform, ScrollView, StyleSheet,
+  ActivityIndicator, Alert, Image, Linking, Platform, ScrollView, StyleSheet,
   Text, TextInput, TouchableOpacity, View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { supabase } from "./supabase";
 import { getTheme } from "./theme";
+import FeedbackModal from "./FeedbackModal";
 import {
   CloseIcon, ShieldKeyIcon, PhoneIcon, SparkleIcon, CheckIcon,
 } from "./Icons";
@@ -82,6 +83,7 @@ export default function ProfileScreen({
   const [draftUsername, setDraftUsername] = useState(username || "");
   const [savingName, setSavingName] = useState(false);
   const [savingPhoto, setSavingPhoto] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -280,6 +282,28 @@ export default function ProfileScreen({
           )}
         </View>
 
+        {/* Feedback + legal */}
+        <View style={s.legalGroup}>
+          <TouchableOpacity onPress={() => setFeedbackOpen(true)} style={s.legalRow}>
+            <Text style={[s.legalText, { color: ink.deep }]}>Send feedback</Text>
+            <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => Linking.openURL("https://drift.app/privacy")}
+            style={s.legalRow}
+          >
+            <Text style={[s.legalText, { color: ink.deep }]}>Privacy policy</Text>
+            <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => Linking.openURL("https://drift.app/terms")}
+            style={s.legalRow}
+          >
+            <Text style={[s.legalText, { color: ink.deep }]}>Terms of use</Text>
+            <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity
           onPress={() => Alert.alert("Sign out?", "You'll need to sign back in to access your data.", [
             { text: "Cancel", style: "cancel" },
@@ -290,6 +314,14 @@ export default function ProfileScreen({
           <Text style={s.signOutText}>Sign out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <FeedbackModal
+        visible={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        userId={userId}
+        username={username}
+        dark={dark}
+      />
     </View>
   );
 }
@@ -326,6 +358,10 @@ const s = StyleSheet.create({
   rowTitle: { fontFamily: FK, fontSize: 15 },
   rowSub: { fontSize: 12, marginTop: 2 },
   rowCta: { fontFamily: FOM, fontSize: 9, letterSpacing: 1 },
+  legalGroup: { marginTop: 24, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.03)", overflow: "hidden" },
+  legalRow:   { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: "rgba(0,0,0,0.07)" },
+  legalText:  { fontSize: 14, fontWeight: "500" },
+  legalChevron: { fontSize: 18 },
   signOut: { marginTop: 22, padding: 15, borderRadius: 15, backgroundColor: "rgba(224,80,80,0.11)", alignItems: "center" },
   signOutText: { fontFamily: FK, fontSize: 15, color: "#E05050" },
 });

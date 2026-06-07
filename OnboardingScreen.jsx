@@ -572,6 +572,21 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
         onDone={onDone}
       />
 
+      {/* Terms + privacy disclosure shown to anyone creating an account */}
+      {mode === "signup" && (
+        <Text style={{ marginTop: 14, marginHorizontal: 24, textAlign: "center", color: MUTED, fontSize: 11, lineHeight: 16 }}>
+          By creating an account you agree to our{" "}
+          <Text style={{ color: ACCENT, textDecorationLine: "underline" }}
+            onPress={() => require("react-native").Linking.openURL("https://drift.app/terms")}>
+            Terms of Use
+          </Text>{" "}
+          and{" "}
+          <Text style={{ color: ACCENT, textDecorationLine: "underline" }}
+            onPress={() => require("react-native").Linking.openURL("https://drift.app/privacy")}>
+            Privacy Policy
+          </Text>.
+        </Text>
+      )}
 
       <TouchableOpacity
         onPress={() => { setMode(mode === "signup" ? "login" : "signup"); setError(""); }}

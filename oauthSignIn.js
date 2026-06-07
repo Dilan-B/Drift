@@ -56,6 +56,13 @@ export function useGoogleSignIn(onSignedIn) {
     path: "auth-callback",
   });
 
+  // If no client IDs are configured, short-circuit before calling the auth
+  // hook — passing undefined client IDs throws "iosClientId must be defined".
+  const configured = !!(GOOGLE_IOS_CLIENT_ID || GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID);
+  if (!configured) {
+    return { isReady: false, promptAsync: async () => {}, isConfigured: false };
+  }
+
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     iosClientId:     GOOGLE_IOS_CLIENT_ID || undefined,
     androidClientId: GOOGLE_ANDROID_CLIENT_ID || undefined,

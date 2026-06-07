@@ -1,6 +1,6 @@
 //
 // ScreenTimeModule.m
-// Objective-C interface bridging ScreenTimeModule (Swift) to React Native.
+// Obj-C bridge exposing ScreenTimeModule (Swift) to React Native.
 //
 #import <React/RCTBridgeModule.h>
 
@@ -19,6 +19,16 @@ RCT_EXTERN_METHOD(applyShield:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(clearShield:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(startBalanceMonitoring:(nonnull NSNumber *)minutes
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(stopBalanceMonitoring:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(consumeDepletedFlag:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
 @end

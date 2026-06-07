@@ -1,17 +1,19 @@
 //
 // ScreenTimeModule.swift
-// Drift — native bridge to Apple Screen Time (FamilyControls + ManagedSettings).
+// Drift — native bridge to Apple Screen Time (FamilyControls + ManagedSettings
+// + DeviceActivity). Methods exposed to JS:
 //
-// Exposes 4 methods to JS:
-//   requestAuthorization()                -> "approved" | "denied" | "notDetermined"
-//   getAuthorizationStatus()              -> string
-//   presentFamilyActivityPicker()         -> void (presents Apple's app picker)
-//   applyShield()                         -> void (shields the user's saved selection)
-//   clearShield()                         -> void
+//   requestAuthorization()              -> "approved" | "denied" | "notDetermined"
+//   getAuthorizationStatus()            -> string
+//   presentFamilyActivityPicker()       -> void (Apple's secure app picker)
+//   applyShield()                       -> void
+//   clearShield()                       -> void
+//   startBalanceMonitoring(minutes:N)   -> void  (NEW: iOS-enforced timer)
+//   stopBalanceMonitoring()             -> void
 //
-// The user's app/category/web-domain selection is persisted in UserDefaults as
-// an encoded `FamilyActivitySelection`. ManagedSettings then shields exactly
-// what the user picked — Apple never reveals the bundle IDs to us.
+// The user's selection (apps/categories/web domains) is persisted to the
+// shared App Group's UserDefaults, so the DriftMonitor extension can read it
+// even when the main app is force-quit.
 //
 import Foundation
 import UIKit
@@ -20,32 +22,51 @@ import React
 #if canImport(FamilyControls) && canImport(ManagedSettings)
 import FamilyControls
 import ManagedSettings
+import DeviceActivity
 import SwiftUI
 import Combine
+
+// Must match the extension exactly.
+let DRIFT_APP_GROUP    = "group.com.sanghani.drift.shared"
+let DRIFT_SELECTION_KEY = "drift_family_activity_selection"
+let DRIFT_STORE_NAME_RAW = "driftFocus"
+
+@available(iOS 16.0, *)
+func driftStoreName() -> ManagedSettingsStore.Name { ManagedSettingsStore.Name(DRIFT_STORE_NAME_RAW) }
+
+@available(iOS 16.0, *)
+extension DeviceActivityName {
+  static let driftBalance = Self("drift.balance")
+}
+
+@available(iOS 16.0, *)
+extension DeviceActivityEvent.Name {
+  static let balanceDepleted = Self("drift.balanceDepleted")
+}
 
 @available(iOS 16.0, *)
 final class ScreenTimeSelectionStore: ObservableObject {
   static let shared = ScreenTimeSelectionStore()
-  private let key = "drift_family_activity_selection"
+  private var groupDefaults: UserDefaults? {
+    UserDefaults(suiteName: DRIFT_APP_GROUP)
+  }
 
   @Published var selection: FamilyActivitySelection = FamilyActivitySelection() {
     didSet { persist() }
   }
 
-  init() {
-    load()
-  }
+  init() { load() }
 
   private func load() {
-    guard let data = UserDefaults.standard.data(forKey: key) else { return }
-    if let decoded = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) {
-      selection = decoded
-    }
+    guard let data = groupDefaults?.data(forKey: DRIFT_SELECTION_KEY),
+          let decoded = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
+    else { return }
+    selection = decoded
   }
 
   private func persist() {
     if let data = try? JSONEncoder().encode(selection) {
-      UserDefaults.standard.set(data, forKey: key)
+      groupDefaults?.set(data, forKey: DRIFT_SELECTION_KEY)
     }
   }
 }
@@ -94,8 +115,7 @@ class ScreenTimeModule: NSObject {
       Task {
         do {
           try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
-          let status = AuthorizationCenter.shared.authorizationStatus
-          resolve(statusString(status))
+          resolve(statusString(AuthorizationCenter.shared.authorizationStatus))
         } catch {
           reject("auth_error", error.localizedDescription, error)
         }
@@ -129,9 +149,7 @@ class ScreenTimeModule: NSObject {
           reject("no_vc", "No root view controller", nil); return
         }
         let host = UIHostingController(rootView: FamilyPickerView(onDone: {
-          root.dismiss(animated: true) {
-            resolve(nil)
-          }
+          root.dismiss(animated: true) { resolve(nil) }
         }))
         host.modalPresentationStyle = .formSheet
         root.present(host, animated: true, completion: nil)
@@ -149,7 +167,7 @@ class ScreenTimeModule: NSObject {
     #if canImport(FamilyControls) && canImport(ManagedSettings)
     if #available(iOS 16.0, *) {
       let selection = ScreenTimeSelectionStore.shared.selection
-      let store = ManagedSettingsStore(named: .init("driftFocus"))
+      let store = ManagedSettingsStore(named: driftStoreName())
       store.shield.applications = selection.applicationTokens.isEmpty
         ? nil : selection.applicationTokens
       store.shield.applicationCategories = selection.categoryTokens.isEmpty
@@ -168,7 +186,7 @@ class ScreenTimeModule: NSObject {
                    rejecter reject: RCTPromiseRejectBlock) {
     #if canImport(ManagedSettings)
     if #available(iOS 16.0, *) {
-      let store = ManagedSettingsStore(named: .init("driftFocus"))
+      let store = ManagedSettingsStore(named: driftStoreName())
       store.shield.applications = nil
       store.shield.applicationCategories = nil
       store.shield.webDomains = nil
@@ -177,6 +195,90 @@ class ScreenTimeModule: NSObject {
     }
     #endif
     resolve(nil)
+  }
+
+  // ── DeviceActivityMonitor: iOS-enforced balance timer ───────
+  // Tell iOS to count usage of the user's selected apps. After `minutes` of
+  // usage, the extension fires and re-applies the shield. This works even
+  // when Drift is force-quit.
+  @objc(startBalanceMonitoring:resolver:rejecter:)
+  func startBalanceMonitoring(_ seconds: NSNumber,
+                              resolver resolve: RCTPromiseResolveBlock,
+                              rejecter reject: RCTPromiseRejectBlock) {
+    #if canImport(DeviceActivity) && canImport(FamilyControls)
+    if #available(iOS 16.0, *) {
+      let selection = ScreenTimeSelectionStore.shared.selection
+      let appCount = selection.applicationTokens.count
+      let catCount = selection.categoryTokens.count
+      if appCount == 0 && catCount == 0 {
+        reject("no_selection", "No apps selected. Pick apps to block first.", nil)
+        return
+      }
+
+      // Daily schedule: midnight → 11:59pm, repeating.
+      let schedule = DeviceActivitySchedule(
+        intervalStart: DateComponents(hour: 0,  minute: 0),
+        intervalEnd:   DateComponents(hour: 23, minute: 59),
+        repeats: true
+      )
+
+      // Build the threshold from exact seconds so we don't round and end up
+      // firing 15-45 sec early relative to the user's real balance.
+      let totalSec = max(60, seconds.intValue)
+      let mins  = totalSec / 60
+      let secs  = totalSec % 60
+      let threshold = DateComponents(minute: mins, second: secs)
+
+      let event = DeviceActivityEvent(
+        applications: selection.applicationTokens,
+        categories:   selection.categoryTokens,
+        webDomains:   selection.webDomainTokens,
+        threshold:    threshold
+      )
+
+      let center = DeviceActivityCenter()
+      // Always stop any existing monitor before restarting — DeviceActivity
+      // doesn't replace events automatically.
+      center.stopMonitoring([.driftBalance])
+      do {
+        try center.startMonitoring(
+          .driftBalance,
+          during: schedule,
+          events: [.balanceDepleted: event]
+        )
+        resolve(nil)
+      } catch {
+        reject("schedule_error", error.localizedDescription, error)
+      }
+      return
+    }
+    #endif
+    reject("unavailable", "DeviceActivity requires iOS 16+", nil)
+  }
+
+  @objc(stopBalanceMonitoring:rejecter:)
+  func stopBalanceMonitoring(_ resolve: RCTPromiseResolveBlock,
+                             rejecter reject: RCTPromiseRejectBlock) {
+    #if canImport(DeviceActivity)
+    if #available(iOS 16.0, *) {
+      DeviceActivityCenter().stopMonitoring([.driftBalance])
+      resolve(nil)
+      return
+    }
+    #endif
+    resolve(nil)
+  }
+
+  // Returns true if the DriftMonitor extension fired its threshold callback
+  // (meaning iOS already drained the user's balance to zero while Drift was
+  // closed). Also clears the flag.
+  @objc(consumeDepletedFlag:rejecter:)
+  func consumeDepletedFlag(_ resolve: RCTPromiseResolveBlock,
+                           rejecter reject: RCTPromiseRejectBlock) {
+    let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
+    let depleted = defaults?.bool(forKey: "drift_balance_depleted") ?? false
+    if depleted { defaults?.set(false, forKey: "drift_balance_depleted") }
+    resolve(depleted)
   }
 
   // ── Helpers ─────────────────────────────────────────────────

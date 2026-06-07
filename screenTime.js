@@ -52,3 +52,37 @@ export async function clearShield() {
   if (!isAvailable()) return;
   try { await Native.clearShield(); } catch {}
 }
+
+/**
+ * Ask iOS to count usage of the user's blocked apps for `seconds` total.
+ * When usage hits that threshold the DriftMonitor extension fires and
+ * applies the shield — even if the main app has been force-quit.
+ *
+ * Call this whenever the user's balance becomes positive (they earned time).
+ * Pass the exact remaining seconds so iOS fires at the right moment.
+ */
+export async function startBalanceMonitoring(seconds) {
+  if (!isAvailable()) return { started: false, reason: "unavailable" };
+  try {
+    await Native.startBalanceMonitoring(Math.max(60, Math.floor(seconds)));
+    return { started: true };
+  } catch (e) {
+    return { started: false, reason: e?.message || "unknown" };
+  }
+}
+
+/** Cancel any pending DeviceActivity monitor. */
+export async function stopBalanceMonitoring() {
+  if (!isAvailable()) return;
+  try { await Native.stopBalanceMonitoring(); } catch {}
+}
+
+/**
+ * Returns true if iOS depleted the user's balance while Drift was closed
+ * (the DriftMonitor extension fired). Reading also clears the flag.
+ */
+export async function consumeDepletedFlag() {
+  if (!isAvailable()) return false;
+  try { return !!(await Native.consumeDepletedFlag()); }
+  catch { return false; }
+}
