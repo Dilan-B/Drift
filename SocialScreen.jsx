@@ -12,6 +12,7 @@ import AICheckModal from "./AICheckModal";
 import { supabase, getFriendsWithScreenTime } from "./supabase";
 import { CloseIcon, LockIcon, UsersIcon } from "./Icons";
 import ChallengeSheet from "./ChallengeModal";
+import Swipeable from "./Swipeable";
 
 let Clipboard = null;
 try { Clipboard = require("expo-clipboard"); } catch { Clipboard = null; }
@@ -640,6 +641,24 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
     loadChallenges();
   };
 
+  // Cancel a challenge YOU sent that hasn't been accepted yet.
+  // Optimistic: remove from list immediately, roll back if the delete fails.
+  const cancelOutgoingChallenge = async (id) => {
+    const before = challenges;
+    smoothUpdate(() => setChallenges(prev => prev.filter(c => c.id !== id)));
+    const { error } = await supabase
+      .from("challenges")
+      .delete()
+      .eq("id", id)
+      .eq("challenger_id", userId) // RLS will enforce this anyway
+      .eq("status", "pending");
+    if (error) {
+      // Roll back if the delete failed (e.g., they already accepted)
+      setChallenges(before);
+      Alert.alert("Couldn't cancel", error.message || "The other player may have already responded.");
+    }
+  };
+
   if (!userId) return (
     <View style={[s.center, { backgroundColor: th.bg }]}>
       <Text style={[s.emptyTitle, { color: th.ink }]}>Sign in to see friends</Text>
@@ -741,16 +760,32 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
 
               {visibleChallenges.length > 0 && (
                 <View style={{ marginBottom: 10 }}>
-                  {visibleChallenges.map(ch => (
-                    <ChallengeRow
-                      key={ch.id}
-                      item={ch}
-                      myId={userId}
-                      dark={dark}
-                      onPress={setSelectedChallenge}
-                      onVerify={setVerifyingChallenge}
-                    />
-                  ))}
+                  {visibleChallenges.map(ch => {
+                    const canCancel = ch.challenger_id === userId && ch.status === "pending";
+                    const row = (
+                      <ChallengeRow
+                        item={ch}
+                        myId={userId}
+                        dark={dark}
+                        onPress={setSelectedChallenge}
+                        onVerify={setVerifyingChallenge}
+                      />
+                    );
+                    if (!canCancel) {
+                      return <View key={ch.id} style={{ marginBottom: 8 }}>{row}</View>;
+                    }
+                    return (
+                      <View key={ch.id} style={{ marginBottom: 8 }}>
+                        <Swipeable
+                          onDelete={() => cancelOutgoingChallenge(ch.id)}
+                          confirmTitle="Cancel this challenge?"
+                          confirmMessage={`The challenge to @${ch.challenged?.username || "friend"} will be withdrawn.`}
+                        >
+                          {row}
+                        </Swipeable>
+                      </View>
+                    );
+                  })}
                 </View>
               )}
 

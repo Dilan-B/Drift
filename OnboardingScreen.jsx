@@ -11,8 +11,9 @@ import {
   Platform, ActivityIndicator, Alert,
 } from "react-native";
 import { supabase } from "./supabase";
-let AppleAuthentication = null;
-try { AppleAuthentication = require("expo-apple-authentication"); } catch {}
+import { useGoogleSignIn } from "./oauthSignIn";
+// Apple Sign-In is intentionally disabled for now — re-enable by restoring
+// the imports above and the Apple button block in OAuthButtons.
 import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon } from "./Icons";
 import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
 
@@ -228,6 +229,102 @@ function validateUsername(raw) {
   if (u.length > 20) return "Username can be at most 20 characters.";
   if (!/^[a-z0-9_]+$/.test(u)) return "Use letters, numbers, and underscores only.";
   return null;
+}
+
+// ─── OAuth provider buttons (Apple + Google) ─────────────────────────────────
+function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
+  // Google sign-in hook — handles PKCE under the hood
+  const google = useGoogleSignIn(async (res) => {
+    if (!res || res.cancelled) return;
+    if (res.error) {
+      setLoading(false);
+      setError(prettyAuthError(res.error.message) || "Google sign-in failed.");
+      return;
+    }
+    // Claim trial (best effort) and finish
+    try { await supabase.functions.invoke("claim-trial", {}); } catch {}
+    setLoading(false);
+    onDone?.(res.user);
+  });
+
+  const handleGoogle = async () => {
+    setError("");
+    if (!google.isConfigured) {
+      setError("Google sign-in isn't configured for this build.");
+      return;
+    }
+    // Detect Expo Go — Google's OAuth no longer accepts exp:// redirect URIs.
+    // Users must use a dev client / standalone build.
+    const Constants = require("expo-constants").default;
+    const isExpoGo = Constants?.appOwnership === "expo" ||
+                     Constants?.executionEnvironment === "storeClient";
+    if (isExpoGo) {
+      setError("Google sign-in requires a dev client build (won't work in Expo Go).");
+      return;
+    }
+    setLoading(true);
+    try {
+      await google.promptAsync();
+      // setLoading(false) happens in the onSignedIn callback
+    } catch (e) {
+      setLoading(false);
+      setError(e?.message || "Google sign-in failed.");
+    }
+  };
+
+  // No providers available — render nothing
+  if (!google.isConfigured) return null;
+
+  return (
+    <>
+      <View style={{ flexDirection: "row", alignItems: "center", marginTop: 16, marginBottom: 12, gap: 10 }}>
+        <View style={{ flex: 1, height: 1, backgroundColor: BORDER }} />
+        <Text style={{ color: MUTED, fontSize: 12 }}>or</Text>
+        <View style={{ flex: 1, height: 1, backgroundColor: BORDER }} />
+      </View>
+
+      {/* Google — Material-style button */}
+      <TouchableOpacity
+        onPress={handleGoogle}
+        disabled={loading || !google.isReady}
+        style={{
+          height: 52, borderRadius: 14, backgroundColor: "#fff",
+          borderWidth: 1, borderColor: "#dadce0",
+          alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10,
+        }}
+      >
+        <GoogleGlyph />
+        <Text style={{ color: "#3c4043", fontSize: 16, fontWeight: "600" }}>
+          {mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
+        </Text>
+      </TouchableOpacity>
+    </>
+  );
+}
+
+// Tiny inline "G" logo so we don't ship a PNG
+function GoogleGlyph() {
+  return (
+    <View style={{ width: 18, height: 18, alignItems: "center", justifyContent: "center" }}>
+      <Text style={{
+        fontSize: 16, fontWeight: "700", color: "#4285F4",
+        fontFamily: Platform.OS === "ios" ? "Helvetica-Bold" : undefined,
+      }}>
+        G
+      </Text>
+    </View>
+  );
+}
+
+function prettyAuthError(msg) {
+  const raw = (msg || "").toLowerCase();
+  if (raw.includes("invalid_grant") || raw.includes("nonce"))
+    return "Sign-in token couldn't be verified. Try again.";
+  if (raw.includes("network") || raw.includes("fetch"))
+    return "Network error. Check your connection.";
+  if (raw.includes("disabled") || raw.includes("provider not enabled"))
+    return "This sign-in method isn't enabled yet. Contact support.";
+  return msg || null;
 }
 
 function AuthSlide({ onDone, defaultMode = "signup" }) {
@@ -466,67 +563,15 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
         )}
       </TouchableOpacity>
 
-      {/* Sign in with Apple */}
-      {AppleAuthentication?.AppleAuthenticationButton && Platform.OS === "ios" && (
-        <>
-          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 16, marginBottom: 12, gap: 10 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: BORDER }} />
-            <Text style={{ color: MUTED, fontSize: 12 }}>or</Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: BORDER }} />
-          </View>
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={mode === "signup"
-              ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
-              : AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-            cornerRadius={14}
-            style={{ height: 52, width: "100%" }}
-            onPress={async () => {
-              setError("");
-              try {
-                const cred = await AppleAuthentication.signInAsync({
-                  requestedScopes: [
-                    AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-                    AppleAuthentication.AppleAuthenticationScope.EMAIL,
-                  ],
-                });
-                if (!cred.identityToken) throw new Error("No identity token from Apple");
+      {/* OAuth providers */}
+      <OAuthButtons
+        mode={mode}
+        loading={loading}
+        setLoading={setLoading}
+        setError={setError}
+        onDone={onDone}
+      />
 
-                setLoading(true);
-                const { data, error: err } = await supabase.auth.signInWithIdToken({
-                  provider: "apple",
-                  token: cred.identityToken,
-                });
-                if (err) throw err;
-
-                // First-time Apple sign-in: ensure a profile row with a username exists.
-                if (data?.user) {
-                  const { data: prof } = await supabase
-                    .from("profiles").select("username").eq("id", data.user.id).maybeSingle();
-                  if (!prof?.username) {
-                    // Generate a random username; user can rename later from account.
-                    const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
-                    let rand = "";
-                    for (let i = 0; i < 8; i++) rand += alphabet[Math.floor(Math.random() * alphabet.length)];
-                    const newUsername = `drifter${rand}`;
-                    await supabase.from("profiles").upsert(
-                      { id: data.user.id, username: newUsername },
-                      { onConflict: "id" }
-                    );
-                  }
-                  try { await supabase.functions.invoke("claim-trial", {}); } catch {}
-                  onDone?.(data.user);
-                }
-              } catch (e) {
-                if (e?.code === "ERR_REQUEST_CANCELED") return;
-                setError(e?.message || "Sign in with Apple failed.");
-              } finally {
-                setLoading(false);
-              }
-            }}
-          />
-        </>
-      )}
 
       <TouchableOpacity
         onPress={() => { setMode(mode === "signup" ? "login" : "signup"); setError(""); }}

@@ -10,7 +10,16 @@
 - ✅ Password requires 8+ chars, at least one letter and one digit, max 72 chars (bcrypt limit).
 - ✅ Generic error messages prevent account enumeration (we never confirm or deny whether an email is registered).
 - ✅ Client-side rate limit: 5 attempts per minute per device. Supabase enforces server-side limits too.
-- ✅ Username generated from email + 4 random digits (no PII leak via username collision search).
+- ✅ Username chosen by user at signup, validated for shape + uniqueness, enforced at DB level via unique index.
+
+### OAuth (Apple + Google)
+- ✅ **Apple Sign-In uses a cryptographic nonce** — random nonce generated client-side, SHA-256 hash sent to Apple, raw nonce sent to Supabase. Apple's signed token must contain hash(rawNonce). Blocks replay attacks.
+- ✅ **Google Sign-In uses PKCE** via `expo-auth-session`. Code verifier never leaves the device. No client secret in the app bundle.
+- ✅ **All ID tokens validated against provider public keys** by Supabase Auth before any session is issued.
+- ✅ **OAuth client secrets stay server-side** in Supabase config — never compiled into the app.
+- ✅ **OAuth account linking** only allowed when the email is verified (Supabase default).
+- ✅ **First-time OAuth users get a placeholder username** from the DB trigger, then are prompted to choose a real one. Cannot bypass the prompt by manipulating local state — the modal is driven by the actual `profiles.username` server value.
+- ✅ **No raw OAuth tokens persisted or logged** anywhere — only the Supabase session JWT is stored, via the official adapter.
 
 ### Database (Row Level Security)
 - ✅ RLS enabled on every table.

@@ -10,6 +10,8 @@ import AICheckModal from "./AICheckModal";
 import { evaluateTask } from "./aiEvaluate";
 import { useSubscription, createCheckoutSession } from "./useSubscription";
 import BlockedAppsModal from "./BlockedAppsModal";
+import UsernameSetupModal from "./UsernameSetupModal";
+import Swipeable from "./Swipeable";
 import { applyBlocking, clearBlocking } from "./blockedApps";
 import { Spinner } from "./Skeleton";
 import Slider from "@react-native-community/slider";
@@ -557,7 +559,7 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
 }
 
 // ── Today View ───────────────────────────────────────────────
-function TodayView({ tasks, credits, totalXp, onComplete, onAdd, dark }) {
+function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, dark }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
 
@@ -684,13 +686,18 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, dark }) {
       {pending.map(t => {
         const cat = CATS[t.cat] || CATS.life;
         return (
+          <View key={t.id} style={{ marginBottom: 8 }}>
+          <Swipeable
+            onDelete={() => onDelete?.(t.id)}
+            confirmTitle="Delete this task?"
+            confirmMessage={`"${t.title}" will be removed.`}
+          >
           <TouchableOpacity
-            key={t.id}
             onPress={() => handleTaskTap(t)}
             style={{
               flexDirection: "row", alignItems: "center",
               backgroundColor: paper.card, borderRadius: 16,
-              marginBottom: 8, overflow: "hidden",
+              overflow: "hidden",
               borderWidth: 0.5, borderColor: ink.border,
             }}
           >
@@ -740,13 +747,34 @@ function TodayView({ tasks, credits, totalXp, onComplete, onAdd, dark }) {
               width: 28, height: 28, borderRadius: 14,
               borderWidth: 1.5, borderColor: t.aiCheck ? earn.blue : earn.green,
               alignItems: "center", justifyContent: "center",
-              marginRight: 14, flexShrink: 0,
+              marginRight: 10, flexShrink: 0,
             }}>
               {t.aiCheck
                 ? <SparkleIcon size={14} color={earn.blue} />
                 : <CheckIcon size={14} color={earn.green} />}
             </View>
+            {/* Inline delete button — also revealable via swipe-left */}
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation?.();
+                Alert.alert("Delete this task?", `"${t.title}" will be removed.`, [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Delete", style: "destructive", onPress: () => onDelete?.(t.id) },
+                ]);
+              }}
+              hitSlop={{ top: 12, bottom: 12, left: 6, right: 12 }}
+              style={{
+                width: 22, height: 22, borderRadius: 11,
+                alignItems: "center", justifyContent: "center",
+                marginRight: 12, flexShrink: 0,
+                backgroundColor: ink.ghost,
+              }}
+            >
+              <Text style={{ fontSize: 13, color: ink.mid, lineHeight: 15, fontWeight: "600" }}>×</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
+          </Swipeable>
+          </View>
         );
       })}
 
@@ -957,6 +985,7 @@ export default function App() {
   const [showAccount,        setShowAccount]        = useState(false);
   const [showBlockedApps,    setShowBlockedApps]    = useState(false);
   const [firstTimeBlockedApps, setFirstTimeBlockedApps] = useState(false);
+  const [showUsernameSetup,  setShowUsernameSetup]  = useState(false);
   const [userEmail,          setUserEmail]          = useState("");
   const [myUsername,         setUserName]           = useState("");
   const [screenTimeStatus,   setScreenTimeStatus]   = useState("unknown");
@@ -1140,6 +1169,11 @@ export default function App() {
         if (prof?.username) {
           setUserName(prof.username);
           AsyncStorage.setItem("drift_username", prof.username);
+          // OAuth-created accounts may have a placeholder username from the
+          // DB trigger ("drifter" + random). Prompt them to pick a real one.
+          if (/^drifter[a-z0-9]{6,}$/i.test(prof.username)) {
+            setShowUsernameSetup(true);
+          }
         } else if (!myUsername) {
           const cached = await AsyncStorage.getItem("drift_username");
           if (cached) setUserName(cached);
@@ -1252,6 +1286,16 @@ export default function App() {
     const capped = { ...t, credits: 1 };
     const nt = [...tasks, capped];
     setTasks(nt); persist({ tasks: nt });
+  };
+
+  const deleteTask = id => {
+    const target = tasks.find(t => t.id === id);
+    if (!target) return;
+    // Completed tasks: we don't undo earned credits — only remove the row from
+    // the list. Pending tasks: just drop them.
+    const nt = tasks.filter(t => t.id !== id);
+    setTasks(nt);
+    persist({ tasks: nt });
   };
 
   const handleDriftInStart  = async () => {
@@ -1447,7 +1491,7 @@ export default function App() {
       {/* Content — DriftIn always rendered so session persists across tab switches */}
       <View style={{ flex: 1, backgroundColor: th_paper.warm }} {...tabSwipe.panHandlers}>
         <View style={{ flex: 1, display: tab === "today" ? "flex" : "none" }}>
-          <TodayView tasks={tasks} credits={credits} totalXp={totalXp} onComplete={completeTask} onAdd={() => setOverlay("add")} dark={darkMode} />
+          <TodayView tasks={tasks} credits={credits} totalXp={totalXp} onComplete={completeTask} onDelete={deleteTask} onAdd={() => setOverlay("add")} dark={darkMode} />
         </View>
         <View style={{ flex: 1, display: tab === "driftin" || driftInActive ? "flex" : "none", backgroundColor: driftInActive ? th_ink.void : th_paper.warm }}>
           <DriftInScreen
@@ -1459,7 +1503,7 @@ export default function App() {
           />
         </View>
         <View style={{ flex: 1, display: tab === "progress" && !driftInActive ? "flex" : "none" }}>
-          <ProgressView tasks={statsTasks} totalXp={totalXp} skips={0} onAddTask={() => { setTab("today"); setTimeout(() => setOverlay("add"), 200); }} dark={darkMode} />
+          <ProgressView tasks={statsTasks} totalXp={totalXp} skips={0} onAddTask={() => setOverlay("add")} dark={darkMode} />
         </View>
         <View style={{ flex: 1, display: tab === "friends" && !driftInActive ? "flex" : "none" }}>
           <SocialScreen
@@ -1623,6 +1667,17 @@ export default function App() {
         firstTime={firstTimeBlockedApps}
         dark={darkMode}
         onClose={() => { setShowBlockedApps(false); setFirstTimeBlockedApps(false); }}
+      />
+      {/* First-time username setup for OAuth users */}
+      <UsernameSetupModal
+        visible={showUsernameSetup}
+        userId={userId}
+        dark={darkMode}
+        onDone={(u) => {
+          setUserName(u);
+          AsyncStorage.setItem("drift_username", u);
+          setShowUsernameSetup(false);
+        }}
       />
     </SafeAreaView>
     </ThemeContext.Provider>
