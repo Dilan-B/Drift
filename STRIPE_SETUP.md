@@ -89,7 +89,12 @@ npx supabase functions deploy claim-trial
 npx supabase functions deploy stripe-webhook --no-verify-jwt
 ```
 
-Also run the v2 schema additions:
+Also run schema_v4 (authz hardening — RLS for challenges/friendships + Stripe idempotency table):
+```sql
+-- Paste from supabase/admin/schema_v4_authz_hardening.sql
+```
+
+And schema_v2 (legacy base):
 ```sql
 -- Paste from supabase/admin/schema_v2.sql
 -- (adds trial tracking, IP log, indexes)

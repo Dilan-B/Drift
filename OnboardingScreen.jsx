@@ -404,30 +404,23 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
           return;
         }
 
-        // Profile row should be created by the auth.users trigger
-        // (handle_new_user). If this is an immediate-session signup and the
-        // trigger is missing, insert the row here so username uniqueness is
-        // still enforced before the account enters the app.
+        // Profile row is created by the auth.users trigger (handle_new_user).
+        // The trigger handles username collisions automatically by suffixing
+        // _2, _3, etc. — so the user always ends up with SOME profile, even
+        // if a race occurred. We surface the actual username they got.
         if (data.user) {
-          let { data: prof, error: profLookupErr } = await supabase
+          const { data: prof } = await supabase
             .from("profiles").select("username").eq("id", data.user.id).maybeSingle();
-          if (profLookupErr) throw profLookupErr;
-
-          if (!prof && data.session) {
-            const { data: inserted, error: insertErr } = await supabase
-              .from("profiles")
-              .insert({ id: data.user.id, username: cleanUsername })
-              .select("username")
-              .single();
-            if (insertErr) throw insertErr;
-            prof = inserted;
-          }
 
           if (prof && prof.username !== cleanUsername) {
-            try { await supabase.auth.signOut(); } catch {}
-            setError("That username was just taken. Please pick another.");
-            setLoading(false);
-            return;
+            // The trigger had to suffix because another user grabbed the name
+            // in the same window. Don't sign them out — just inform them and
+            // let them keep the suffixed name (they can change it later).
+            setError(
+              `That username was just taken. You've been assigned @${prof.username} for now — ` +
+              `you can change it from your profile.`
+            );
+            // Continue with the rest of the flow — don't return early
           }
         }
 

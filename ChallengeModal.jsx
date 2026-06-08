@@ -85,12 +85,11 @@ export default function ChallengeSheet({
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("sub_active, sub_expires")
-        .eq("id", target.id)
-        .maybeSingle();
-      setTargetPremium(isSubActive(data));
+      // Use the can_user_ai RPC instead of reading raw sub_active/sub_expires.
+      // Friends shouldn't see each other's exact subscription state — the RPC
+      // returns just the boolean we need.
+      const { data } = await supabase.rpc("can_user_ai", { uid: target.id });
+      setTargetPremium(data === true);
     })();
   }, [target.id]);
 

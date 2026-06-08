@@ -67,7 +67,17 @@ serve(async (req: Request) => {
       return json({ granted: false, reason: "already_claimed", expiresAt: profile.sub_expires });
     }
 
-    // Hash the IP and check for abuse
+    // Per-user_id check (defense-in-depth — IP can be spoofed via XFF, but
+    // the JWT user_id is verified by Supabase Auth).
+    const { count: userPriorTrials } = await admin
+      .from("trial_ip_log")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    if ((userPriorTrials ?? 0) > 0) {
+      return json({ granted: false, reason: "already_claimed" });
+    }
+
+    // Hash the IP and check for cross-account abuse
     const ip      = extractIp(req);
     const ipHash  = await hashIp(ip);
     const cutoff  = new Date(Date.now() - IP_LOCKOUT_DAYS * 86_400_000).toISOString();

@@ -25,6 +25,8 @@
  * is a one-line change in `applyBlocking` / `clearBlocking`.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "./supabase";
+import { fetchBlockedApps, addBlockedApp, removeBlockedApp, cache } from "./sync";
 
 const KEY = "drift_blocked_apps";
 
@@ -42,7 +44,25 @@ export const SUGGESTED_APPS = [
   { id: "netflix",   name: "Netflix"   },
 ];
 
+async function currentUserId() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.user?.id || null;
+  } catch { return null; }
+}
+
 export async function getBlockedApps() {
+  // Source of truth: Supabase. AsyncStorage is a cache for offline boot.
+  const uid = await currentUserId();
+  if (uid) {
+    try {
+      const remote = await fetchBlockedApps(uid);
+      if (remote) {
+        await AsyncStorage.setItem(KEY, JSON.stringify(remote));
+        return remote;
+      }
+    } catch {}
+  }
   try {
     const raw = await AsyncStorage.getItem(KEY);
     return raw ? JSON.parse(raw) : [];
@@ -50,7 +70,25 @@ export async function getBlockedApps() {
 }
 
 export async function setBlockedApps(apps) {
+  // Diff against last cached set so we know what to add vs soft-remove.
   await AsyncStorage.setItem(KEY, JSON.stringify(apps));
+  const uid = await currentUserId();
+  if (!uid) return;
+  try {
+    const remote = await fetchBlockedApps(uid);
+    const remoteIds = new Set(remote.map(a => a.id));
+    const localIds  = new Set(apps.map(a => a.id));
+    // Add anything in local that's not in remote
+    for (const a of apps) {
+      if (!remoteIds.has(a.id)) await addBlockedApp(uid, a);
+    }
+    // Soft-remove anything in remote that's no longer in local
+    for (const a of remote) {
+      if (!localIds.has(a.id)) await removeBlockedApp(uid, a.id);
+    }
+  } catch (e) {
+    console.warn("setBlockedApps sync:", e?.message);
+  }
 }
 
 // ── Native bridge ─────────────────────────────────────────────

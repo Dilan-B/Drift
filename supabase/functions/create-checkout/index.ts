@@ -53,13 +53,21 @@ serve(async (req: Request) => {
         .update({ stripe_customer_id: customerId }).eq("id", user.id);
     }
 
+    // Whitelist of valid redirect base URLs — APP_URL must match one of these
+    // to prevent open-redirect attacks if the env var is ever misconfigured.
+    const ALLOWED_BASE_URLS = ["https://drift.app", "https://www.drift.app", "drift://"];
+    const configuredUrl = Deno.env.get("APP_URL") || "https://drift.app";
+    const baseUrl = ALLOWED_BASE_URLS.includes(configuredUrl)
+      ? configuredUrl
+      : "https://drift.app";
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
-      success_url: `${Deno.env.get("APP_URL") || "https://drift.app"}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:  `${Deno.env.get("APP_URL") || "https://drift.app"}/cancel`,
+      success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${baseUrl}/cancel`,
       subscription_data: { metadata: { supabase_user_id: user.id } },
     });
 

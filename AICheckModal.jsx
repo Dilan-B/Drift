@@ -113,81 +113,8 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
   };
 
   // ── Submit to Supabase Edge Function ─────────────────────────
-  // ── OpenAI call (DEV-ONLY fallback when edge function isn't deployed) ─
-  // This function is hard-gated behind __DEV__ — in any production build
-  // (TestFlight or App Store) the key isn't read, no call is made, and the
-  // function throws. We never want to ship an OpenAI key inside an .ipa.
-  const callOpenAIDirect = async (taskTitle, durationMins, proofText, imageBase64) => {
-    if (!__DEV__) {
-      throw new Error("AI service unavailable. Please try again later.");
-    }
-    const keyEnv = process.env.EXPO_PUBLIC_OPENAI_KEY || "";
-    const key = keyEnv.trim().replace(/^["']|["']$/g, "");
-    if (!key) throw new Error("EXPO_PUBLIC_OPENAI_KEY not set in .env — create the file and restart with --clear");
-    const skCount = (key.match(/sk-proj-/g) || []).length;
-    if (skCount > 1) throw new Error(`Key has "sk-proj-" ${skCount} times — remove the duplicate prefix in your .env file`);
-    if (!key.startsWith("sk-")) throw new Error(`Key should start with sk- but got: "${key.slice(0, 8)}..."`);
-
-    const messageContent = [];
-    if (imageBase64) {
-      messageContent.push({
-        type: "image_url",
-        image_url: { url: `data:image/jpeg;base64,${imageBase64}`, detail: "low" },
-      });
-    }
-    messageContent.push({
-      type: "text",
-      text:
-        `You are an accountability coach for a productivity app called Drift. ` +
-        `Evaluate whether the user's submitted proof plausibly shows the task is complete.\n` +
-        `Do not judge or penalize based on how long ago the task/challenge was created, ` +
-        `how long the user took to submit proof, missing timestamps, or whether the elapsed time seems too long. ` +
-        `Only evaluate the content of the task and the submitted proof.\n` +
-        `Be reasonably understanding about the limits of single-photo evidence: the user usually cannot prove the entire action happened, ` +
-        `so accept plausible completion when the image contains concrete after-the-fact clues. Look carefully for small visual details such as ` +
-        `residue, stains, wetness, crumbs, changed object state, empty containers, disturbed surfaces, or other signs that the task likely occurred. ` +
-        `Do not reject just because the photo cannot prove the full before/during/after sequence.\n\n` +
-        `Task: "${taskTitle}"` +
-        (durationMins ? `\nEstimated duration: ${durationMins} minutes (context only, not a deadline)` : "") +
-        (proofText ? `\nExplanation: "${proofText}"` : "\nNo written explanation.") +
-        (imageBase64 ? "\nPhoto evidence provided." : "\nNo photo.") +
-        `\n\nExamples: an empty mug can verify a drink/chug-coffee challenge when it shows plausible coffee evidence, ` +
-        `such as brown residue, ring marks, stains, wetness, or leftover drops. Do not reject it merely because an empty mug alone ` +
-        `cannot mathematically prove the user personally chugged it.` +
-        `\n\nBe encouraging but honest. Your entire response must be ONLY this JSON object with no markdown, no code fences, no extra text:\n` +
-        `{"verified":true,"confidence":"high","message":"Your 1-2 sentence response here"}`,
-    });
-
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: messageContent }],
-        max_tokens: 200,
-        temperature: 0.3,
-      }),
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `OpenAI error ${resp.status}`);
-    }
-
-    const data    = await resp.json();
-    const raw     = data.choices?.[0]?.message?.content || "{}";
-    // Strip markdown code fences (```json ... ``` or ``` ... ```)
-    const content = raw.replace(/^```[\w]*\n?/m, "").replace(/```$/m, "").trim();
-    try {
-      return JSON.parse(content);
-    } catch {
-      const verified = content.toLowerCase().includes('"verified":true') || content.toLowerCase().includes('"verified": true');
-      return { verified, confidence: "low", message: content.replace(/[`{}"]/g, "").trim().slice(0, 150) };
-    }
-  };
+  // All AI calls happen server-side in the verify-task edge function.
+  // There is no client-side OpenAI path in any build.
 
   const submit = async () => {
     if (!proofText.trim() && !photo) {
@@ -258,30 +185,24 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
         return;
       }
       if (invokeErr) {
-        // Log the full thing so terminal shows status + body
-        console.log("[AI Check] edge failure", { status, body, err: invokeErr?.message });
+        // Dev-only: log the bare minimum (no body, no PII)
+        if (__DEV__) console.warn("[AI Check] edge failure status", status);
         Alert.alert(
           "Verification failed",
-          `Status ${status || "?"}. ${invokeErr?.message || ""}`.trim()
+          "We couldn't reach the AI service. Please try again in a moment."
         );
         return;
       }
 
-      // Truly empty response → dev fallback for testing
-      const result = await callOpenAIDirect(
-        task.title,
-        task.minutes,
-        proofText.trim() || undefined,
-        photo?.base64 || undefined,
-      );
-      setResult(result);
+      // Truly empty response — surface a generic error (no direct call)
+      Alert.alert("Verification failed", "Unexpected response from the AI service.");
     } catch (e) {
       const raw = (e?.message || "").toLowerCase();
-      let msg = e?.message || "Could not reach the AI. Check your internet connection.";
-      if (raw.includes("openai_key") || raw.includes("api key")) {
-        msg = "AI service isn't configured. Contact support.";
-      } else if (raw.includes("aborted") || raw.includes("timeout")) {
+      let msg = "Could not reach the AI. Check your connection and try again.";
+      if (raw.includes("aborted") || raw.includes("timeout")) {
         msg = "AI took too long. Try a smaller photo.";
+      } else if (raw.includes("network") || raw.includes("fetch")) {
+        msg = "Network error. Check your connection.";
       }
       Alert.alert("Verification failed", msg);
     } finally {

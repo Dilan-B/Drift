@@ -41,7 +41,29 @@ serve(async (req: Request) => {
       .eq("id", userId);
   }
 
+  // ── IDEMPOTENCY GUARD ─────────────────────────────────────
+  // Stripe may retry the same event. We dedupe on event.id so we never
+  // double-credit or double-grant. Insert with primary-key collision check;
+  // if the row already exists, we silently 200-OK Stripe.
   try {
+    const { error: dupErr } = await supabaseAdmin
+      .from("webhook_events")
+      .insert({ id: event.id, event_type: event.type });
+    if (dupErr) {
+      if ((dupErr as any).code === "23505" /* unique_violation */) {
+        console.log("Duplicate webhook event ignored:", event.id);
+        return new Response("ok", { status: 200 });
+      }
+      // Some other DB error — log and continue (better to risk dupe than to
+      // drop a valid Stripe event and have inconsistent state)
+      console.error("Webhook dedupe insert failed:", dupErr.message);
+    }
+  } catch (e: any) {
+    console.error("Webhook dedupe exception:", e?.message);
+  }
+
+  try {
+    let processedUserId: string | undefined;
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -50,7 +72,7 @@ serve(async (req: Request) => {
             ? (await stripe.subscriptions.retrieve(session.subscription as string))
                 .metadata?.supabase_user_id
             : undefined);
-        if (userId) await setSubStatus(userId, true);
+        if (userId) { await setSubStatus(userId, true); processedUserId = userId; }
         break;
       }
       case "customer.subscription.updated":
@@ -60,17 +82,27 @@ serve(async (req: Request) => {
         if (userId) {
           const active = ["active", "trialing"].includes(sub.status);
           await setSubStatus(userId, active, sub.current_period_end);
+          processedUserId = userId;
         }
         break;
       }
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
         const userId = sub.metadata?.supabase_user_id;
-        if (userId) await setSubStatus(userId, false);
+        if (userId) { await setSubStatus(userId, false); processedUserId = userId; }
         break;
       }
     }
+
+    // Record which user the event affected (for audit)
+    if (processedUserId) {
+      await supabaseAdmin.from("webhook_events")
+        .update({ user_id: processedUserId })
+        .eq("id", event.id);
+    }
   } catch (err: any) {
+    // Log server-side only. Never echo the error to Stripe — they'll retry,
+    // which our idempotency guard handles cleanly.
     console.error("Webhook handler error:", err?.message || err);
     return new Response("Handler error", { status: 500 });
   }

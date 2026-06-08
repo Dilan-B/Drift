@@ -12,6 +12,11 @@ import { useSubscription, createCheckoutSession } from "./useSubscription";
 import BlockedAppsModal from "./BlockedAppsModal";
 import UsernameSetupModal from "./UsernameSetupModal";
 import Swipeable from "./Swipeable";
+import {
+  fetchTasks, insertTask, completeTaskRow, softDeleteTask,
+  appendLedgerEntry, syncProfileStats,
+  cache,
+} from "./sync";
 import { applyBlocking, clearBlocking } from "./blockedApps";
 import { Spinner } from "./Skeleton";
 import Slider from "@react-native-community/slider";
@@ -40,6 +45,7 @@ import PaywallScreen, { initTrial, getTrialStatus } from "./PaywallScreen";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
+import { useBetaMode } from "./useBetaMode";
 
 // ── Theme context ─────────────────────────────────────────────
 export const ThemeContext = createContext({ dark: false, theme: getTheme(false) });
@@ -993,8 +999,15 @@ export default function App() {
   const [childSwipeLocked,   setChildSwipeLocked]   = useState(false);
 
   // Subscription state (Stripe → Supabase) — server is source of truth
-  const { active: subActive } = useSubscription(userId);
-  const proAccess = isPremium || subActive;
+  const { active: subActive, refresh: refreshSub } = useSubscription(userId);
+  // Beta tester flow: code redemption grants REAL Pro access via the server
+  // (sets profiles.beta_unlocked_at). The previewAsFree toggle then lets the
+  // tester flip the UI between Pro and Free for testing — server-side they
+  // remain Pro the whole time, so AI features keep working even while
+  // previewing the Free UI (they'd just hit the paywall in-app).
+  const beta = useBetaMode(userId);
+  const rawProAccess = isPremium || subActive;
+  const proAccess = (beta.unlocked && beta.previewAsFree) ? false : rawProAccess;
   const [driftInActive,  setDriftInActive]  = useState(false);
   const [darkMode,       setDarkMode]       = useState(false);
 
@@ -1059,8 +1072,10 @@ export default function App() {
   const startTick = (initialSec) => {
     stopTick();
     secRef.current = initialSec;
-    // (We don't run a setInterval here anymore — drain is computed from
-    //  wall-clock delta when the app returns to the foreground.)
+    // Sync the displayed value immediately so the header doesn't show stale
+    // balance for up to a second after a task completes / session ends.
+    setSecLeft(initialSec);
+    // (No setInterval — drain is computed from wall-clock delta on foreground.)
   };
 
   // Keep `secLeft` visually fresh when the app IS active (read-only — no drain)
@@ -1084,6 +1099,8 @@ export default function App() {
       } else if (bgTime && screen === "app") {
         const elapsedSec = Math.floor((Date.now() - bgTime) / 1000);
         bgTime = null;
+        // Re-pull subscription state in case user just returned from Stripe Checkout
+        try { refreshSub?.(); } catch {}
         // Don't drain during an active focus session — the shield is up.
         if (driftInActRef.current) return;
         const prevSec = secRef.current;
@@ -1287,6 +1304,42 @@ export default function App() {
           return;
         }
         try { await supabase.functions.invoke("claim-trial", {}); } catch {}
+
+        // ── Server-authoritative state: tasks come from Supabase ──
+        // Boot order: show cached state instantly, then refresh from server.
+        try {
+          const cached = await cache.loadTasks(uid);
+          if (cached.length) setTasks(cached);
+          const cachedXp = await cache.loadXp(uid);
+          if (cachedXp) setTotalXp(cachedXp);
+        } catch {}
+        try {
+          const remote = await fetchTasks(uid);
+          if (remote) {
+            // Only show tasks from today (matches the existing "today's work" model)
+            const today = remote.filter(t => t.task_date === todayKey() || !t.task_date);
+
+            // Merge in any local-only tasks (created while offline and not yet synced).
+            // We identify local-only tasks by ID not appearing in the remote set.
+            const remoteIds = new Set(today.map(t => t.id));
+            const localOnly = (await cache.loadTasks(uid).catch(() => []))?.filter(
+              t => !remoteIds.has(t.id) && (t.task_date === todayKey() || !t.task_date)
+            ) || [];
+            const merged = [...today, ...localOnly];
+
+            setTasks(merged);
+            cache.saveTasks(uid, merged);
+            // Build history from completed tasks across all dates
+            const allDone = remote.filter(t => t.done);
+            setTaskHistory(prev => mergeCompletedTasks(prev, allDone));
+
+            // Retry-sync any local-only tasks now that we're online
+            for (const lt of localOnly) {
+              insertTask(uid, lt).catch(e => console.warn("retry insertTask:", e?.message));
+            }
+          }
+        } catch (e) { console.warn("fetchTasks at boot:", e?.message); }
+
         const { isPremium: prem, daysLeft } = await getTrialStatus(uid);
         setIsPremium(prem);
         setTrialDays(daysLeft);
@@ -1349,6 +1402,21 @@ export default function App() {
     setTimeout(() => setPopup(null), 2000);
     startTick(newSec);
     persist({ tasks: nt, taskHistory: nh, credits: nc, totalXp: nx });
+
+    // ── Server-of-truth writes ──
+    if (userId) {
+      completeTaskRow(userId, id).catch(e => console.warn("completeTaskRow:", e?.message));
+      appendLedgerEntry(userId, {
+        delta: task.credits,
+        reason: "task_complete",
+        refId: id,
+        balanceAfter: nc.balance,
+      }).catch(() => {});
+      syncProfileStats(userId, { totalXp: nx, balanceSeconds: newSec }).catch(() => {});
+      cache.saveTasks(userId, nt);
+      cache.saveXp(userId, nx);
+    }
+
     // Belt-and-suspenders: explicitly clear the Screen Time shield the
     // moment we earn balance, instead of waiting on the useEffect to
     // notice the credits change.
@@ -1358,26 +1426,57 @@ export default function App() {
     }
   };
 
-  const addTask  = t => { const nt = [...tasks, t]; setTasks(nt); persist({ tasks: nt }); };
+  const addTask  = t => {
+    const nt = [...tasks, t];
+    setTasks(nt); persist({ tasks: nt });
+    if (userId) {
+      // Sync to Supabase. If offline, the local cache + persisted state still
+      // shows the task, and the next foreground will re-sync via fetchTasks.
+      insertTask(userId, t).catch(e => {
+        console.warn("insertTask sync failed (will retry on next fetch):", e?.message);
+      });
+      cache.saveTasks(userId, nt);
+    }
+  };
 
+  // SOFT delete only — Supabase row stays for audit / recovery.
   const deleteTask = id => {
     const target = tasks.find(t => t.id === id);
     if (!target) return;
-    // Completed tasks: we don't undo earned credits — only remove the row from
-    // the list. Pending tasks: just drop them.
     const nt = tasks.filter(t => t.id !== id);
     setTasks(nt);
     persist({ tasks: nt });
+    if (userId) {
+      softDeleteTask(userId, id).catch(e => console.warn("softDeleteTask:", e?.message));
+      cache.saveTasks(userId, nt);
+    }
   };
 
   const handleDriftInStart  = async () => {
     setDriftInActive(true);
+
+    // Warn if no apps are blocked — common foot-gun where users skip the picker
+    // and assume the focus session is enforced. Beta testers will report this.
+    try {
+      const list = await (await import("./blockedApps")).getBlockedApps();
+      if (!list || list.length === 0) {
+        Alert.alert(
+          "No apps to block",
+          "You haven't picked any apps yet. Drift In will still run, but distracting apps won't be blocked. Open Profile → Blocked apps to pick some.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch {}
+
     try {
       // Always call applyBlocking — on iOS the native side reads the user's
       // FamilyActivityPicker selection from UserDefaults, not AsyncStorage.
       const res = await applyBlocking([]);
       if (res && res.applied === false && res.reason) {
-        Alert.alert("Couldn't block apps", res.reason);
+        // In Expo Go this always fails — don't bother the user with the alert.
+        if (!/Expo Go|unavailable/i.test(res.reason)) {
+          Alert.alert("Couldn't block apps", res.reason);
+        }
       }
     } catch (e) {
       Alert.alert("Block error", e?.message || String(e));
@@ -1430,7 +1529,15 @@ export default function App() {
     setUserId(null);
     setUserEmail("");
     setUserName("");
-    AsyncStorage.removeItem("drift_username");
+    // Clear ALL user-scoped local state so the next account on this device
+    // starts with a clean slate (no preview-toggle bleed, no stale balance, etc.).
+    await AsyncStorage.multiRemove([
+      "drift_username",
+      "drift_v4",
+      "drift_beta_preview_as_free",
+      "drift_blocked_apps",
+      "drift_last_armed_balance",
+    ]).catch(() => {});
     setTasks([]);
     setTaskHistory([]);
     setCredits({ balance: 0, earned: 0, spent: 0 });
@@ -1702,6 +1809,7 @@ export default function App() {
           trialDays={trialDays}
           screenTimeStatus={screenTimeStatus}
           dark={darkMode}
+          beta={beta}
           onClose={() => setShowAccount(false)}
           onProfileChange={(profile) => {
             if (profile?.username) {

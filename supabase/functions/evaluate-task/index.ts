@@ -50,11 +50,13 @@ serve(async (req: Request) => {
       const devPromise = supabase.rpc("is_dev_user", { uid: user.id })
         .then(r => r.data === true).catch(() => false);
       const profilePromise = supabase
-        .from("profiles").select("sub_active, sub_expires").eq("id", user.id).maybeSingle()
+        .from("profiles").select("sub_active, sub_expires, beta_unlocked_at").eq("id", user.id).maybeSingle()
         .then(r => r.data).catch(() => null);
       const [isDev, profile] = await Promise.all([devPromise, profilePromise]);
-      subActive = isDev || (!!profile?.sub_active &&
-        (!profile.sub_expires || new Date(profile.sub_expires) > new Date()));
+      const subOk  = !!profile?.sub_active &&
+        (!profile.sub_expires || new Date(profile.sub_expires) > new Date());
+      const betaOk = !!profile?.beta_unlocked_at;
+      subActive = isDev || subOk || betaOk;
       setCachedSub(user.id, subActive);
     }
     if (!subActive) return json({ error: "subscription_required" }, 402);
@@ -109,7 +111,8 @@ serve(async (req: Request) => {
 
     if (!resp.ok) {
       const e = await resp.json().catch(() => ({}));
-      console.error("OpenAI:", resp.status, e);
+      // Log only error type/code — never the full body (may include user input)
+      console.error("OpenAI:", resp.status, e?.error?.type || "unknown_type", e?.error?.code || "no_code");
       return json({ error: "AI temporarily unavailable" }, 502);
     }
 

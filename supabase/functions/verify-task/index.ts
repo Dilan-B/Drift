@@ -67,12 +67,14 @@ serve(async (req: Request) => {
         .then(r => r.data === true).catch(() => false);
 
       const profilePromise = supabase
-        .from("profiles").select("sub_active, sub_expires").eq("id", user.id).maybeSingle()
+        .from("profiles").select("sub_active, sub_expires, beta_unlocked_at").eq("id", user.id).maybeSingle()
         .then(r => r.data).catch(() => null);
 
       const [isDev, profile] = await Promise.all([devPromise, profilePromise]);
-      subActive = isDev || (!!profile?.sub_active &&
-        (!profile.sub_expires || new Date(profile.sub_expires) > new Date()));
+      const subOk  = !!profile?.sub_active &&
+        (!profile.sub_expires || new Date(profile.sub_expires) > new Date());
+      const betaOk = !!profile?.beta_unlocked_at;
+      subActive = isDev || subOk || betaOk;
       setCachedSub(user.id, subActive);
     }
     if (!subActive) {
@@ -213,13 +215,14 @@ serve(async (req: Request) => {
     }
 
     if (!openaiResp.ok) {
+      // Log only the bare minimum server-side. Never log the full errBody —
+      // OpenAI error responses can include partial prompt content / request
+      // metadata that might mirror user input.
       const errBody = await openaiResp.json().catch(() => ({}));
-      const openAiMsg = errBody?.error?.message || `status ${openaiResp.status}`;
-      console.error("OpenAI error:", openaiResp.status, JSON.stringify(errBody));
+      console.error("OpenAI error:", openaiResp.status, errBody?.error?.type || "unknown_type", errBody?.error?.code || "no_code");
       return json({
         error: "ai_error",
-        message: `AI rejected the request: ${openAiMsg}`,
-        debug: { status: openaiResp.status, openai: errBody?.error?.code || null },
+        message: "The AI service had trouble with this request. Please try again.",
       }, 502);
     }
 

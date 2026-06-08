@@ -70,7 +70,18 @@
 
 ---
 
-## Vulnerabilities fixed in this commit
+## Vulnerabilities fixed in the 2026-06 security audit
+
+10. **Client-side OpenAI key shipped via `EXPO_PUBLIC_OPENAI_KEY`.** Removed from `.env` and deleted the entire `callOpenAIDirect` function from both `aiEvaluate.js` and `AICheckModal.jsx`. All AI traffic now goes through Supabase Edge Functions — the API key never touches client bundles.
+11. **Supabase personal-access token (`sbp_…`)** left in `.env`. Removed. Use `npx supabase secrets set` for any server secret.
+12. **Edge function leaked OpenAI internal error metadata** via a `debug` field in `verify-task` 502 responses. Removed.
+13. **AICheckModal logged full edge-function response body** to console on failures (would leak AI content in dev). Replaced with status-only log gated by `__DEV__`.
+14. **Soft-deleted rows visible to users** — RLS policies on `tasks`, `blocked_apps` now filter `deleted_at is null` / `removed_at is null`.
+15. **Username enumeration via wildcard search** in `SocialScreen.jsx` (`.ilike("%q%")`) — removed. Only exact case-insensitive matches are allowed now.
+16. **Profiles exposing internal fields** — added a `public_profile` view that only projects `id`, `username`, `avatar_seed`, `full_name`. Sensitive columns (`sub_active`, `stripe_customer_id`, etc.) are not joinable by other users.
+17. **Dev email hardcoded in committed-pattern SQL** — `grant_premium.sql` now ships with the email commented out and a clear warning.
+
+## Vulnerabilities fixed in earlier work
 
 1. **`SUPABASE_URL` was `…/rest/v1/`** which broke every request with "invalid path specified in request URL". Now just the project host.
 2. **Sessions weren't persisted** — `AsyncStorage` adapter not configured. Sessions were lost on app close.

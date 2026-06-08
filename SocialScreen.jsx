@@ -491,22 +491,15 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
     if (!username) return;
     setAdding(true);
     try {
-      let profile = null;
-      let lookupErr = null;
-      const exact = await supabase.from("profiles").select("id, username").ilike("username", username).maybeSingle();
-      profile = exact.data;
-      lookupErr = exact.error;
+      // Exact (case-insensitive) match only. Wildcard `%q%` searches enable
+      // username enumeration — never enable them.
+      const { data: profile, error: lookupErr } = await supabase
+        .from("profiles")
+        .select("id, username")
+        .ilike("username", username)
+        .maybeSingle();
 
-      if (!profile && !lookupErr && username.length >= 3) {
-        const { data: rows } = await supabase.from("profiles").select("id, username").ilike("username", `%${username}%`).limit(2);
-        if (rows?.length === 1) profile = rows[0];
-        else if (rows?.length > 1) {
-          Alert.alert("Multiple matches", `Several usernames contain "${username}". Please type the full username.`);
-          return;
-        }
-      }
-
-      if (lookupErr) { Alert.alert("Lookup failed", lookupErr.message); return; }
+      if (lookupErr) { Alert.alert("Lookup failed", "Please try again."); return; }
       if (!profile) { Alert.alert("Not found", `@${username} doesn't have a Drift account.`); return; }
       if (profile.id === userId) { Alert.alert("That's you", "You can't add yourself."); return; }
 
@@ -642,18 +635,18 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
   };
 
   // Cancel a challenge YOU sent that hasn't been accepted yet.
-  // Optimistic: remove from list immediately, roll back if the delete fails.
+  // SOFT delete — the row stays in the DB with status='cancelled' for audit.
+  // Optimistic: remove from visible list immediately, roll back on failure.
   const cancelOutgoingChallenge = async (id) => {
     const before = challenges;
     smoothUpdate(() => setChallenges(prev => prev.filter(c => c.id !== id)));
     const { error } = await supabase
       .from("challenges")
-      .delete()
+      .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
       .eq("id", id)
-      .eq("challenger_id", userId) // RLS will enforce this anyway
+      .eq("challenger_id", userId) // RLS enforces this too
       .eq("status", "pending");
     if (error) {
-      // Roll back if the delete failed (e.g., they already accepted)
       setChallenges(before);
       Alert.alert("Couldn't cancel", error.message || "The other player may have already responded.");
     }
