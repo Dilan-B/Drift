@@ -160,17 +160,27 @@ function CreditTicker({ value, textColor }) {
   );
 }
 
-// Heuristic fallback when AI eval is unavailable (no sub)
-function heuristicCredits(title, mins, category) {
-  const t = (title || "").toLowerCase();
-  let mult = 0.6;
-  if (/deep work|study|exam|sprint|workout|gym|run|interview|writing|build|code/i.test(t)) mult = 1.0;
-  else if (/walk|read|cook|clean|chores|errand|practice/i.test(t)) mult = 0.75;
-  else if (/scroll|browse|chat|text|nap/i.test(t)) mult = 0.35;
-  if (category === "physical" || category === "learning") mult = Math.max(mult, 0.85);
-  const credits = Math.max(1, Math.round(mins * mult));
+// Free-tier credit formula.
+//
+// Free users don't get AI access, so we don't grade the task at all — credits
+// are a flat multiplier of the chosen duration. This is deliberate:
+//   - It's predictable: the user can see exactly what they'll earn before saving.
+//   - It avoids any title/category "review" that would feel like a lighter AI.
+//   - Upgrading to Pro unlocks the AI valuation, which is the actual value-add.
+//
+// FREE_TIER_MULTIPLIER tunes how generous the floor is — 0.6 matches the
+// existing default and keeps balance with paid users (whose AI typically lands
+// in the 0.5-1.0 range depending on task quality).
+const FREE_TIER_MULTIPLIER = 0.6;
+
+function freeTierCredits(mins) {
+  const credits = Math.max(1, Math.round(mins * FREE_TIER_MULTIPLIER));
   const xp      = Math.max(5, Math.round(credits * 0.6 + 8));
-  return { credits, xp, reasoning: "Estimated locally (no AI)." };
+  return {
+    credits,
+    xp,
+    reasoning: "Credits based on duration. Upgrade for AI-valued rewards.",
+  };
 }
 
 // ── Add Task Overlay ─────────────────────────────────────────
@@ -237,9 +247,10 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
       aiReasoning: reasoning || "",
     });
 
-    // Free user → heuristic credits, no AI eval call
+    // Free user → flat duration-based credits, no AI eval call.
+    // (Free tier doesn't get any AI grading — credits are purely mins × multiplier.)
     if (!isSubActive) {
-      const { credits, xp, reasoning } = heuristicCredits(title.trim(), mins, cat);
+      const { credits, xp, reasoning } = freeTierCredits(mins);
       onSave(buildTask({ credits, xp, reasoning, aiValued: false }));
       onClose();
       return;
@@ -256,7 +267,9 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
       onClose();
     } catch (e) {
       if (e?.code === "subscription_required") {
-        const { credits, xp, reasoning } = heuristicCredits(title.trim(), mins, cat);
+        // Server told us their sub lapsed mid-session — fall back to the
+        // free-tier duration formula (same path a free user would take).
+        const { credits, xp, reasoning } = freeTierCredits(mins);
         onSave(buildTask({ credits, xp, reasoning, aiValued: false }));
         onClose();
         return;
@@ -326,7 +339,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: FK, fontSize: 13, color: ink.deep, marginBottom: 2 }}>Unlock AI evaluation</Text>
                 <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, lineHeight: 16 }}>
-                  Tap to upgrade — credits are estimated locally until then.
+                  Tap to upgrade — credits are based on duration until then.
                 </Text>
               </View>
               <Text style={{ fontFamily: FO, fontSize: 9, color: earn.terra, letterSpacing: 1 }}>UPGRADE ›</Text>
