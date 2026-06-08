@@ -18,6 +18,7 @@
 import { useEffect, useState, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
+import { cached, invalidateCache, rateLimited } from "./apiGuards";
 
 const PREVIEW_KEY = "drift_beta_preview_as_free";
 
@@ -42,8 +43,10 @@ export function useBetaMode(userId) {
     if (!userId) { setUnlocked(false); return; }
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("profiles").select("beta_unlocked_at").eq("id", userId).maybeSingle();
+      const { data } = await cached(`beta_status_${userId}`, 30_000, () =>
+        supabase
+          .from("profiles").select("beta_unlocked_at").eq("id", userId).maybeSingle()
+      );
       if (!cancelled) setUnlocked(!!data?.beta_unlocked_at);
     })();
 
@@ -56,6 +59,7 @@ export function useBetaMode(userId) {
         table:  "profiles",
         filter: `id=eq.${userId}`,
       }, payload => {
+        invalidateCache(`beta_status_${userId}`);
         setUnlocked(!!payload.new?.beta_unlocked_at);
       })
       .subscribe();
@@ -69,17 +73,23 @@ export function useBetaMode(userId) {
     const code = String(codeAttempt || "").trim();
     if (!code) return { ok: false, reason: "empty" };
     try {
-      const { data, error } = await supabase.functions.invoke("redeem-beta-code", {
-        body: { code },
-      });
+      const { data, error } = await rateLimited(`redeem_beta_${userId || "anon"}`, { limit: 5, windowMs: 10 * 60_000 }, () =>
+        supabase.functions.invoke("redeem-beta-code", {
+          body: { code },
+        })
+      );
       if (error) return { ok: false, reason: "network" };
-      if (data?.ok) { setUnlocked(true); return { ok: true }; }
+      if (data?.ok) {
+        if (userId) invalidateCache(`beta_status_${userId}`);
+        setUnlocked(true);
+        return { ok: true };
+      }
       if (data?.error === "rate_limit") return { ok: false, reason: "rate_limit", message: data.message };
       return { ok: false, reason: data?.error || "invalid" };
     } catch (e) {
       return { ok: false, reason: "network" };
     }
-  }, []);
+  }, [userId]);
 
   const setPreviewAsFree = useCallback(async (val) => {
     setPreviewAsFreeState(val);

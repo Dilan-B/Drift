@@ -13,6 +13,7 @@ import { supabase, getFriendsWithScreenTime } from "./supabase";
 import { CloseIcon, LockIcon, UsersIcon } from "./Icons";
 import ChallengeSheet from "./ChallengeModal";
 import Swipeable from "./Swipeable";
+import { cached, invalidateCache, rateLimited } from "./apiGuards";
 
 let Clipboard = null;
 try { Clipboard = require("expo-clipboard"); } catch { Clipboard = null; }
@@ -360,11 +361,11 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
 
   const loadProfile = useCallback(async () => {
     if (!userId) return;
-    let { data, error } = await supabase
+    let { data, error } = await cached(`social_profile_${userId}`, 30_000, () => supabase
       .from("profiles")
       .select("id, username, avatar_url, sub_active, sub_expires")
       .eq("id", userId)
-      .maybeSingle();
+      .maybeSingle());
     if (error && /avatar_url|schema cache/i.test(error.message || "")) {
       const fallback = await supabase
         .from("profiles")
@@ -378,17 +379,23 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
       return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await cached(`auth_user_${userId}`, 60_000, () =>
+      rateLimited(`auth_user_${userId}`, { limit: 20, windowMs: 60_000 }, () =>
+        supabase.auth.getUser()
+      )
+    );
     const meta = user?.user_metadata || {};
     const base = cleanUsername(meta.username || meta.full_name);
     const candidate = base.length >= 3 ? base : ("drifter" + Math.random().toString(36).slice(2, 10));
       for (let i = 0; i < 5; i++) {
         const tryName = i === 0 ? candidate : `${candidate.slice(0, 18)}_${i + 1}`;
-      let { data: inserted, error } = await supabase
-        .from("profiles")
-        .insert({ id: userId, username: tryName })
-        .select("id, username, avatar_url, sub_active, sub_expires")
-        .single();
+      let { data: inserted, error } = await rateLimited(`profile_create_${userId}`, { limit: 5, windowMs: 10 * 60_000 }, () =>
+        supabase
+          .from("profiles")
+          .insert({ id: userId, username: tryName })
+          .select("id, username, avatar_url, sub_active, sub_expires")
+          .single()
+      );
       if (error && /avatar_url|schema cache/i.test(error.message || "")) {
         const fallback = await supabase
           .from("profiles")
@@ -493,11 +500,13 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
     try {
       // Exact (case-insensitive) match only. Wildcard `%q%` searches enable
       // username enumeration — never enable them.
-      const { data: profile, error: lookupErr } = await supabase
-        .from("profiles")
-        .select("id, username")
-        .ilike("username", username)
-        .maybeSingle();
+      const { data: profile, error: lookupErr } = await rateLimited(`friend_lookup_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
+        cached(`profile_lookup_${username}`, 30_000, () => supabase
+          .from("profiles")
+          .select("id, username")
+          .ilike("username", username)
+          .maybeSingle())
+      );
 
       if (lookupErr) { Alert.alert("Lookup failed", "Please try again."); return; }
       if (!profile) { Alert.alert("Not found", `@${username} doesn't have a Drift account.`); return; }
@@ -512,7 +521,10 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
         .maybeSingle();
 
       if (reverse?.id) {
-        await supabase.from("friendships").update({ status: "accepted" }).eq("id", reverse.id);
+        await rateLimited(`friend_accept_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
+          supabase.from("friendships").update({ status: "accepted" }).eq("id", reverse.id)
+        );
+        invalidateCache(`friends_screen_time_${userId}`);
         setToast(`You and @${profile.username} are now friends`);
         setTimeout(() => setToast(""), 2200);
         setAddUsername("");
@@ -521,7 +533,9 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
         return;
       }
 
-      const { error } = await supabase.from("friendships").insert({ user_id: userId, friend_id: profile.id, status: "pending" });
+      const { error } = await rateLimited(`friend_request_${userId}`, { limit: 20, windowMs: 60_000 }, () =>
+        supabase.from("friendships").insert({ user_id: userId, friend_id: profile.id, status: "pending" })
+      );
       if (error && error.code !== "23505") Alert.alert("Error", error.message);
       else {
         setAddUsername("");
@@ -536,7 +550,10 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
   };
 
   const acceptRequest = async (id) => {
-    await supabase.from("friendships").update({ status: "accepted" }).eq("id", id);
+    await rateLimited(`friend_accept_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
+      supabase.from("friendships").update({ status: "accepted" }).eq("id", id)
+    );
+    invalidateCache(`friends_screen_time_${userId}`);
     smoothUpdate(() => setFriendRequests(p => p.filter(r => r.id !== id)));
     loadAll();
   };
@@ -549,11 +566,11 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
   const markChallengeDone = async (challenge) => {
     const mine = challenge.challenger_id === userId ? "challenger_done" : "challenged_done";
     const winnerId = challenge.winner_id || userId;
-    await supabase.from("challenges").update({
+    await rateLimited(`challenge_done_${userId}`, { limit: 30, windowMs: 60_000 }, () => supabase.from("challenges").update({
       [mine]: true,
       status: "completed",
       winner_id: winnerId,
-    }).eq("id", challenge.id);
+    }).eq("id", challenge.id));
 
     setVerifyingChallenge(null);
     loadChallenges();
@@ -617,7 +634,9 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
 
   const acceptChallenge = async (id) => {
     setAcceptingChallenge(true);
-    await supabase.from("challenges").update({ status: "active" }).eq("id", id);
+    await rateLimited(`challenge_respond_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
+      supabase.from("challenges").update({ status: "active" }).eq("id", id)
+    );
     Vibration.vibrate(18);
     setAcceptedBurst(true);
     setTimeout(() => {
@@ -629,7 +648,9 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
   };
 
   const declineChallenge = async (id) => {
-    await supabase.from("challenges").update({ status: "declined" }).eq("id", id);
+    await rateLimited(`challenge_respond_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
+      supabase.from("challenges").update({ status: "declined" }).eq("id", id)
+    );
     setSelectedChallenge(null);
     loadChallenges();
   };
@@ -640,12 +661,14 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
   const cancelOutgoingChallenge = async (id) => {
     const before = challenges;
     smoothUpdate(() => setChallenges(prev => prev.filter(c => c.id !== id)));
-    const { error } = await supabase
-      .from("challenges")
-      .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-      .eq("id", id)
-      .eq("challenger_id", userId) // RLS enforces this too
-      .eq("status", "pending");
+    const { error } = await rateLimited(`challenge_cancel_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
+      supabase
+        .from("challenges")
+        .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("challenger_id", userId) // RLS enforces this too
+        .eq("status", "pending")
+    );
     if (error) {
       setChallenges(before);
       Alert.alert("Couldn't cancel", error.message || "The other player may have already responded.");

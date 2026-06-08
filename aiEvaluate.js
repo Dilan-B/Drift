@@ -8,8 +8,11 @@
  * Throws on failure — caller decides whether to retry.
  */
 import { supabase } from "./supabase";
+import { cached, rateLimited } from "./apiGuards";
 
 export async function evaluateTask({ title, mins, category }) {
+  const key = `ai_eval_${String(title || "").trim().toLowerCase()}_${mins}_${category}`;
+  return cached(key, 10 * 60_000, () => rateLimited("ai_evaluate", { limit: 10, windowMs: 60 * 60_000 }, async () => {
   let body = null;
   let status = 0;
   let invokeErr = null;
@@ -48,4 +51,5 @@ export async function evaluateTask({ title, mins, category }) {
 
   // Network / not-deployed / unknown — surface a generic error
   throw invokeErr || new Error("AI evaluation unavailable.");
+  }));
 }

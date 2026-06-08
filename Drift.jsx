@@ -45,6 +45,7 @@ import PaywallScreen, { initTrial, getTrialStatus } from "./PaywallScreen";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
+import { cached, rateLimited } from "./apiGuards";
 import { useBetaMode } from "./useBetaMode";
 
 // ── Theme context ─────────────────────────────────────────────
@@ -1085,41 +1086,100 @@ export default function App() {
     return () => clearInterval(i);
   }, [screen]);
 
-  // Background → drain. Foreground → freeze.
-  // When Drift is in the background and a Drift In session is NOT active,
-  // we assume the user is spending their earned screen time on other apps,
-  // so we drain the balance. The drained value is persisted so it survives
-  // close/reopen.
+  // ── Screen-time drain (works across background AND full kill) ──
+  //
+  // The model: whenever Drift is NOT in the foreground, we assume the user
+  // is spending their earned balance on other apps. To make this work even
+  // when the JS context is killed (swipe-up close), we persist a
+  // `drift_last_alive` timestamp constantly. On launch, we compare to wall
+  // clock to compute elapsed time.
+  //
+  // We update last_alive:
+  //   - every 15s while foregrounded ("I'm still alive")
+  //   - immediately when backgrounded
+  //   - immediately when returning to foreground (after draining)
+  //
+  // We DO drain when:
+  //   - user backgrounds (live foreground→background transition)
+  //   - app launches with credits > 0 and last_alive is older than now
+  //
+  // We DON'T drain when:
+  //   - a Drift In focus session is active (the shield is up)
+  //   - no credits to drain
+  const bgTimeRef = useRef(null);
+
+  const persistLastAlive = useCallback(() => {
+    AsyncStorage.setItem("drift_last_alive", String(Date.now())).catch(() => {});
+  }, []);
+
+  const drainBy = useCallback((elapsedSec) => {
+    if (isNativeBlockingAvailable()) return;
+    if (elapsedSec <= 0) return;
+    if (driftInActRef.current) return; // shield is up
+    const prevSec = secRef.current;
+    if (prevSec <= 0) return;
+    const rem = Math.max(0, prevSec - elapsedSec);
+    const usedSec = prevSec - rem;
+    secRef.current = rem;
+    setSecLeft(rem);
+    setCredits(c => {
+      const nb = rem > 0 ? Math.ceil(rem / 60) : 0;
+      const usedMin = Math.floor(usedSec / 60);
+      const nc = { ...c, balance: nb, balanceSec: rem, spent: Math.min(c.earned, c.spent + usedMin) };
+      persist({ credits: nc });
+      return nc;
+    });
+  }, []);
+
+  // 1. Heartbeat while foregrounded — every 15s, write "I'm alive" timestamp
   useEffect(() => {
-    let bgTime = null;
+    if (screen !== "app") return;
+    persistLastAlive();
+    const id = setInterval(persistLastAlive, 15_000);
+    return () => clearInterval(id);
+  }, [screen, persistLastAlive]);
+
+  // 2. AppState transitions: drain on foregrounding, stamp on backgrounding
+  useEffect(() => {
     const sub = AppState.addEventListener("change", next => {
       if (next !== "active") {
-        bgTime = Date.now();
+        bgTimeRef.current = Date.now();
+        persistLastAlive();   // stamp NOW so kill-while-bg still measures correctly
         stopTick();
-      } else if (bgTime && screen === "app") {
-        const elapsedSec = Math.floor((Date.now() - bgTime) / 1000);
-        bgTime = null;
-        // Re-pull subscription state in case user just returned from Stripe Checkout
+      } else if (bgTimeRef.current && screen === "app") {
+        const elapsedSec = Math.floor((Date.now() - bgTimeRef.current) / 1000);
+        bgTimeRef.current = null;
         try { refreshSub?.(); } catch {}
-        // Don't drain during an active focus session — the shield is up.
-        if (driftInActRef.current) return;
-        const prevSec = secRef.current;
-        const rem = Math.max(0, prevSec - elapsedSec);
-        const usedSec = prevSec - rem;
-        secRef.current = rem;
-        setSecLeft(rem);
-        setCredits(c => {
-          const nb = rem > 0 ? Math.ceil(rem / 60) : 0;
-          const usedMin = Math.floor(usedSec / 60);
-          const nc = { ...c, balance: nb, balanceSec: rem, spent: Math.min(c.earned, c.spent + usedMin) };
-          // Persist so the drained balance survives close/reopen
-          persist({ credits: nc });
-          return nc;
-        });
+        drainBy(elapsedSec);
+        persistLastAlive();
       }
     });
     return () => { sub.remove(); stopTick(); };
-  }, [screen]);
+  }, [screen, drainBy, persistLastAlive]);
+
+  // 3. Launch-time catch-up: app just opened — drain by (now - last_alive)
+  // Runs once when we transition into "app" screen (i.e. user is signed-in
+  // and ready). Compares wall clock to the persisted heartbeat, drains the
+  // delta. Handles the swipe-up-to-close case.
+  const launchDrainRanRef = useRef(false);
+  useEffect(() => {
+    if (screen !== "app" || launchDrainRanRef.current) return;
+    launchDrainRanRef.current = true;
+    (async () => {
+      try {
+        const lastStr = await AsyncStorage.getItem("drift_last_alive");
+        if (!lastStr) { persistLastAlive(); return; }
+        const last = parseInt(lastStr, 10);
+        if (!Number.isFinite(last)) { persistLastAlive(); return; }
+        const elapsedSec = Math.floor((Date.now() - last) / 1000);
+        // Cap absurd values (clock changes, multi-day kill) at 24h to avoid
+        // wiping a freshly-earned balance because of bad clock math.
+        const capped = Math.min(elapsedSec, 86_400);
+        if (capped > 0) drainBy(capped);
+        persistLastAlive();
+      } catch {}
+    })();
+  }, [screen, drainBy, persistLastAlive]);
 
   useEffect(() => {
     AsyncStorage.getItem("drift_dark_mode").then(v => { if (v === "1") setDarkMode(true); });
@@ -1133,14 +1193,20 @@ export default function App() {
       if (!m) return;
       const username = m[1].toLowerCase();
       try {
-        const { data: profile } = await supabase
-          .from("profiles").select("id, username")
-          .ilike("username", username).maybeSingle();
+        const { data: profile } = await rateLimited(`friend_lookup_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
+          cached(`profile_lookup_${username}`, 30_000, () =>
+            supabase
+              .from("profiles").select("id, username")
+              .ilike("username", username).maybeSingle()
+          )
+        );
         if (!profile) { Alert.alert("Not found", `@${username} isn't on Drift yet.`); return; }
         if (profile.id === userId) { Alert.alert("That's you", "You can't add yourself."); return; }
-        const { error } = await supabase.from("friendships").insert({
-          user_id: userId, friend_id: profile.id, status: "pending",
-        });
+        const { error } = await rateLimited(`friend_request_${userId}`, { limit: 20, windowMs: 60_000 }, () =>
+          supabase.from("friendships").insert({
+            user_id: userId, friend_id: profile.id, status: "pending",
+          })
+        );
         if (error && error.code !== "23505") {
           Alert.alert("Couldn't send", error.message);
         } else {
@@ -1162,6 +1228,8 @@ export default function App() {
       if (!depleted) return;
       secRef.current = 0;
       setSecLeft(0);
+      await AsyncStorage.removeItem("drift_last_armed_balance").catch(() => {});
+      setLastArmedBalance(-1);
       setCredits(c => {
         const nc = { ...c, balance: 0, balanceSec: 0,
           spent: Math.min(c.earned, c.spent + (c.balance || 0)) };
@@ -1248,8 +1316,10 @@ export default function App() {
     if (!showAccount || !userId) return;
     (async () => {
       try {
-        const { data: prof } = await supabase
-          .from("profiles").select("username").eq("id", userId).maybeSingle();
+        const { data: prof } = await cached(`drift_profile_${userId}`, 30_000, () =>
+          supabase
+            .from("profiles").select("username").eq("id", userId).maybeSingle()
+        );
         if (prof?.username) {
           setUserName(prof.username);
           AsyncStorage.setItem("drift_username", prof.username);
@@ -1259,8 +1329,8 @@ export default function App() {
             setShowUsernameSetup(true);
           }
         } else if (!myUsername) {
-          const cached = await AsyncStorage.getItem("drift_username");
-          if (cached) setUserName(cached);
+          const storedUsername = await AsyncStorage.getItem("drift_username");
+          if (storedUsername) setUserName(storedUsername);
         }
       } catch {}
     })();
@@ -1284,8 +1354,10 @@ export default function App() {
         setUserEmail(session?.user?.email ?? "");
         if (uid) {
           try {
-            const { data: prof, error: pErr } = await supabase
-              .from("profiles").select("username").eq("id", uid).maybeSingle();
+            const { data: prof, error: pErr } = await cached(`drift_profile_${uid}`, 30_000, () =>
+              supabase
+                .from("profiles").select("username").eq("id", uid).maybeSingle()
+            );
             if (pErr) console.warn("profile fetch:", pErr.message);
             if (prof?.username) {
               setUserName(prof.username);
@@ -1303,7 +1375,11 @@ export default function App() {
           setOnboarding(true);
           return;
         }
-        try { await supabase.functions.invoke("claim-trial", {}); } catch {}
+        try {
+          await rateLimited("claim_trial", { limit: 3, windowMs: 10 * 60_000 }, () =>
+            supabase.functions.invoke("claim-trial", {})
+          );
+        } catch {}
 
         // ── Server-authoritative state: tasks come from Supabase ──
         // Boot order: show cached state instantly, then refresh from server.
@@ -1454,6 +1530,9 @@ export default function App() {
 
   const handleDriftInStart  = async () => {
     setDriftInActive(true);
+    try { await stopBalanceMonitoring(); } catch {}
+    await AsyncStorage.removeItem("drift_last_armed_balance").catch(() => {});
+    setLastArmedBalance(-1);
 
     // Warn if no apps are blocked — common foot-gun where users skip the picker
     // and assume the focus session is enforced. Beta testers will report this.
@@ -1482,7 +1561,11 @@ export default function App() {
       Alert.alert("Block error", e?.message || String(e));
     }
   };
-  const handleDriftInEnd    = () => { setDriftInActive(false); clearBlocking(); };
+  const handleDriftInEnd    = () => {
+    setDriftInActive(false);
+    if (secRef.current > 0) clearBlocking();
+    else applyBlocking([]);
+  };
 
   const handleDriftInComplete = ({ credits: earned, xp }) => {
     setDriftInActive(false);
@@ -1513,9 +1596,12 @@ export default function App() {
     const lostMins = penaltyMins || 0;
     secRef.current = newSec;
     setSecLeft(newSec);
+    AsyncStorage.removeItem("drift_last_armed_balance").catch(() => {});
+    setLastArmedBalance(-1);
     const nc = {
       ...credits,
       balance: Math.ceil(newSec / 60),
+      balanceSec: newSec,
       spent: credits.spent + lostMins,
     };
     setCredits(nc);
@@ -1525,6 +1611,8 @@ export default function App() {
   const signOut = async () => {
     setShowAccount(false);
     try { await supabase.auth.signOut(); } catch {}
+    try { await stopBalanceMonitoring(); } catch {}
+    try { await clearBlocking(); } catch {}
     stopTick();
     setUserId(null);
     setUserEmail("");
@@ -1537,7 +1625,9 @@ export default function App() {
       "drift_beta_preview_as_free",
       "drift_blocked_apps",
       "drift_last_armed_balance",
+      "drift_last_alive",
     ]).catch(() => {});
+    launchDrainRanRef.current = false;
     setTasks([]);
     setTaskHistory([]);
     setCredits({ balance: 0, earned: 0, spent: 0 });
@@ -1557,8 +1647,10 @@ export default function App() {
         setUserEmail(user?.email ?? "");
         if (user?.id) {
           try {
-            const { data: prof } = await supabase
-              .from("profiles").select("username").eq("id", user.id).maybeSingle();
+            const { data: prof } = await cached(`drift_profile_${user.id}`, 30_000, () =>
+              supabase
+                .from("profiles").select("username").eq("id", user.id).maybeSingle()
+            );
             if (prof?.username) {
               setUserName(prof.username);
               AsyncStorage.setItem("drift_username", prof.username);
@@ -1569,7 +1661,11 @@ export default function App() {
         const hadOnboarded = await AsyncStorage.getItem("drift_onboarded");
         await AsyncStorage.setItem("drift_onboarded", "1");
         await initTrial();
-        try { await supabase.functions.invoke("claim-trial", {}); } catch {}
+        try {
+          await rateLimited("claim_trial", { limit: 3, windowMs: 10 * 60_000 }, () =>
+            supabase.functions.invoke("claim-trial", {})
+          );
+        } catch {}
         const { isPremium: prem, daysLeft } = await getTrialStatus(user?.id);
         setIsPremium(prem);
         setTrialDays(daysLeft);

@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { supabase } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
+import { cached, rateLimited } from "./apiGuards";
 // Apple Sign-In is intentionally disabled for now — re-enable by restoring
 // the imports above and the Apple button block in OAuthButtons.
 import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon } from "./Icons";
@@ -242,7 +243,11 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
       return;
     }
     // Claim trial (best effort) and finish
-    try { await supabase.functions.invoke("claim-trial", {}); } catch {}
+    try {
+      await rateLimited("claim_trial", { limit: 3, windowMs: 10 * 60_000 }, () =>
+        supabase.functions.invoke("claim-trial", {})
+      );
+    } catch {}
     setLoading(false);
     onDone?.(res.user);
   });
@@ -359,8 +364,11 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
 
       // Availability — case-insensitive
       try {
-        const { data: taken, error: lookupErr } = await supabase
-          .from("profiles").select("id").ilike("username", cleanUsername).maybeSingle();
+        const { data: taken, error: lookupErr } = await rateLimited("username_check", { limit: 40, windowMs: 60_000 }, () =>
+          cached(`username_${cleanUsername}`, 30_000, () =>
+            supabase.from("profiles").select("id").ilike("username", cleanUsername).maybeSingle()
+          )
+        );
         if (lookupErr) throw lookupErr;
         if (taken) { setError("That username is taken. Try another."); return; }
       } catch {
@@ -381,7 +389,8 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { data, error: err } = await supabase.auth.signUp({
+        const { data, error: err } = await rateLimited("auth_signup", { limit: 5, windowMs: 60_000 }, () =>
+          supabase.auth.signUp({
           email: cleanEmail,
           password,
           options: {
@@ -391,7 +400,8 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
             },
             emailRedirectTo: "drift://auth-callback",
           },
-        });
+          })
+        );
         if (err) throw err;
 
         // Supabase quirk: if a user with this email already exists but is
@@ -434,7 +444,9 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
 
         // Claim 7-day free trial (server tracks IP hash to prevent abuse)
         try {
-          await supabase.functions.invoke("claim-trial", {});
+          await rateLimited("claim_trial", { limit: 3, windowMs: 10 * 60_000 }, () =>
+            supabase.functions.invoke("claim-trial", {})
+          );
         } catch (e) {
           // Non-fatal — user just won't get the trial
           console.warn("Trial claim failed:", e?.message);
@@ -442,10 +454,12 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
 
         onDone(data.user);
       } else {
-        const { data, error: err } = await supabase.auth.signInWithPassword({
+        const { data, error: err } = await rateLimited("auth_signin", { limit: 8, windowMs: 60_000 }, () =>
+          supabase.auth.signInWithPassword({
           email: cleanEmail,
           password,
-        });
+          })
+        );
         if (err) throw err;
         onDone(data.user);
       }

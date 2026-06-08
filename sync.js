@@ -10,20 +10,29 @@
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
+import { cached, invalidateCache, rateLimited } from "./apiGuards";
+
+const TTL = {
+  tasks: 30_000,
+  blockedApps: 60_000,
+  ledger: 20_000,
+};
 
 // ── TASKS ────────────────────────────────────────────────────
 export async function fetchTasks(userId, { sinceDate } = {}) {
   if (!userId) return [];
-  let q = supabase
-    .from("tasks")
-    .select("*")
-    .eq("user_id", userId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
-  if (sinceDate) q = q.gte("task_date", sinceDate);
-  const { data, error } = await q;
-  if (error) { console.warn("fetchTasks:", error.message); return []; }
-  return (data || []).map(rowToTask);
+  return cached(`tasks_${userId}_${sinceDate || "all"}`, TTL.tasks, async () => {
+    let q = supabase
+      .from("tasks")
+      .select("*")
+      .eq("user_id", userId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+    if (sinceDate) q = q.gte("task_date", sinceDate);
+    const { data, error } = await q;
+    if (error) { console.warn("fetchTasks:", error.message); return []; }
+    return (data || []).map(rowToTask);
+  });
 }
 
 export async function insertTask(userId, task) {
@@ -42,30 +51,39 @@ export async function insertTask(userId, task) {
     ai_reasoning: task.aiReasoning || null,
     task_date:    task.task_date || todayDateStr(),
   };
-  const { data, error } = await supabase.from("tasks").insert(row).select().single();
+  const { data, error } = await rateLimited(`insert_task_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
+    supabase.from("tasks").insert(row).select().single()
+  );
   if (error) { console.warn("insertTask:", error.message); return null; }
+  invalidateCache(`tasks_${userId}`);
   return rowToTask(data);
 }
 
 export async function completeTaskRow(userId, taskId) {
   if (!userId || !taskId) return;
-  const { error } = await supabase
-    .from("tasks")
-    .update({ done: true, completed_at: new Date().toISOString() })
-    .eq("id", taskId)
-    .eq("user_id", userId);
+  const { error } = await rateLimited(`complete_task_${userId}`, { limit: 60, windowMs: 60_000 }, () =>
+    supabase
+      .from("tasks")
+      .update({ done: true, completed_at: new Date().toISOString() })
+      .eq("id", taskId)
+      .eq("user_id", userId)
+  );
   if (error) console.warn("completeTaskRow:", error.message);
+  invalidateCache(`tasks_${userId}`);
 }
 
 // SOFT delete — never .delete()
 export async function softDeleteTask(userId, taskId) {
   if (!userId || !taskId) return;
-  const { error } = await supabase
-    .from("tasks")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", taskId)
-    .eq("user_id", userId);
+  const { error } = await rateLimited(`delete_task_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
+    supabase
+      .from("tasks")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", taskId)
+      .eq("user_id", userId)
+  );
   if (error) console.warn("softDeleteTask:", error.message);
+  invalidateCache(`tasks_${userId}`);
 }
 
 function rowToTask(r) {
@@ -92,23 +110,28 @@ const todayDateStr = () => new Date().toISOString().slice(0, 10);
 // ── CREDIT LEDGER (append-only) ──────────────────────────────
 export async function appendLedgerEntry(userId, { delta, reason, refId, balanceAfter }) {
   if (!userId || !delta) return;
-  const { error } = await supabase.from("credit_ledger").insert({
-    user_id:       userId,
-    delta,
-    reason,
-    ref_id:        refId || null,
-    balance_after: balanceAfter ?? null,
-  });
+  const { error } = await rateLimited(`ledger_${userId}`, { limit: 80, windowMs: 60_000 }, () =>
+    supabase.from("credit_ledger").insert({
+      user_id:       userId,
+      delta,
+      reason,
+      ref_id:        refId || null,
+      balance_after: balanceAfter ?? null,
+    })
+  );
   if (error) console.warn("appendLedgerEntry:", error.message);
+  invalidateCache(`ledger_${userId}`);
 }
 
 /** Sum all ledger entries for the user — authoritative balance. */
 export async function fetchBalanceFromLedger(userId) {
   if (!userId) return 0;
-  const { data, error } = await supabase
-    .from("credit_ledger").select("delta").eq("user_id", userId);
-  if (error) { console.warn("fetchBalanceFromLedger:", error.message); return 0; }
-  return (data || []).reduce((s, r) => s + (r.delta || 0), 0);
+  return cached(`ledger_${userId}`, TTL.ledger, async () => {
+    const { data, error } = await supabase
+      .from("credit_ledger").select("delta").eq("user_id", userId);
+    if (error) { console.warn("fetchBalanceFromLedger:", error.message); return 0; }
+    return (data || []).reduce((s, r) => s + (r.delta || 0), 0);
+  });
 }
 
 
@@ -119,7 +142,9 @@ export async function syncProfileStats(userId, { totalXp, balanceSeconds }) {
   if (typeof totalXp === "number")        patch.total_xp        = Math.max(0, totalXp);
   if (typeof balanceSeconds === "number") patch.balance_seconds = Math.max(0, balanceSeconds);
   if (!Object.keys(patch).length) return;
-  const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
+  const { error } = await rateLimited(`profile_stats_${userId}`, { limit: 60, windowMs: 60_000 }, () =>
+    supabase.from("profiles").update(patch).eq("id", userId)
+  );
   if (error) console.warn("syncProfileStats:", error.message);
 }
 
@@ -127,16 +152,19 @@ export async function syncProfileStats(userId, { totalXp, balanceSeconds }) {
 // ── BLOCKED APPS ─────────────────────────────────────────────
 export async function fetchBlockedApps(userId) {
   if (!userId) return [];
-  const { data, error } = await supabase
-    .from("blocked_apps")
-    .select("*").eq("user_id", userId).is("removed_at", null)
-    .order("added_at", { ascending: false });
-  if (error) { console.warn("fetchBlockedApps:", error.message); return []; }
-  return (data || []).map(r => ({ id: r.app_id, name: r.app_name }));
+  return cached(`blocked_${userId}`, TTL.blockedApps, async () => {
+    const { data, error } = await supabase
+      .from("blocked_apps")
+      .select("*").eq("user_id", userId).is("removed_at", null)
+      .order("added_at", { ascending: false });
+    if (error) { console.warn("fetchBlockedApps:", error.message); return []; }
+    return (data || []).map(r => ({ id: r.app_id, name: r.app_name }));
+  });
 }
 
 export async function addBlockedApp(userId, app) {
   if (!userId || !app?.id) return;
+  await rateLimited(`blocked_write_${userId}`, { limit: 40, windowMs: 60_000 }, async () => {
   // Upsert: if a soft-deleted row exists, "re-add" by clearing removed_at.
   const { data: existing } = await supabase
     .from("blocked_apps").select("id, removed_at")
@@ -152,13 +180,18 @@ export async function addBlockedApp(userId, app) {
   await supabase.from("blocked_apps").insert({
     user_id: userId, app_id: app.id, app_name: app.name,
   });
+  });
+  invalidateCache(`blocked_${userId}`);
 }
 
 export async function removeBlockedApp(userId, appId) {
   if (!userId || !appId) return;
-  await supabase.from("blocked_apps")
-    .update({ removed_at: new Date().toISOString() })
-    .eq("user_id", userId).eq("app_id", appId).is("removed_at", null);
+  await rateLimited(`blocked_write_${userId}`, { limit: 40, windowMs: 60_000 }, () =>
+    supabase.from("blocked_apps")
+      .update({ removed_at: new Date().toISOString() })
+      .eq("user_id", userId).eq("app_id", appId).is("removed_at", null)
+  );
+  invalidateCache(`blocked_${userId}`);
 }
 
 

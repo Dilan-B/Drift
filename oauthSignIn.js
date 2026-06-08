@@ -20,6 +20,7 @@ import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import { supabase } from "./supabase";
+import { rateLimited } from "./apiGuards";
 
 // Apple Sign-In is intentionally not imported. To re-enable, restore:
 //   import * as AppleAuthentication from "expo-apple-authentication";
@@ -79,10 +80,12 @@ export function useGoogleSignIn(onSignedIn) {
       if (!idToken) return;
       (async () => {
         try {
-          const { data, error } = await supabase.auth.signInWithIdToken({
-            provider: "google",
-            token:    idToken,
-          });
+          const { data, error } = await rateLimited("auth_google", { limit: 5, windowMs: 10 * 60_000 }, () =>
+            supabase.auth.signInWithIdToken({
+              provider: "google",
+              token:    idToken,
+            })
+          );
           if (error) throw error;
           onSignedIn?.({ user: data.user, session: data.session });
         } catch (e) {

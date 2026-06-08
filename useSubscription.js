@@ -5,6 +5,7 @@
  */
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "./supabase";
+import { cached, invalidateCache, rateLimited } from "./apiGuards";
 
 export function useSubscription(userId) {
   const [active,  setActive]  = useState(false);
@@ -15,10 +16,10 @@ export function useSubscription(userId) {
     setLoading(true);
 
     // Run dev check + sub query in parallel
-    const [{ data: devOk }, { data }] = await Promise.all([
+    const [{ data: devOk }, { data }] = await cached(`sub_${userId}`, 20_000, () => Promise.all([
       supabase.rpc("is_dev_user", { uid: userId }).catch(() => ({ data: false })),
       supabase.from("profiles").select("sub_active, sub_expires, beta_unlocked_at").eq("id", userId).maybeSingle(),
-    ]);
+    ]));
 
     const notExpired = !data?.sub_expires || new Date(data.sub_expires) > new Date();
     const betaOk = !!data?.beta_unlocked_at;
@@ -42,6 +43,7 @@ export function useSubscription(userId) {
         const n = payload.new;
         const notExpired = !n.sub_expires || new Date(n.sub_expires) > new Date();
         const betaOk = !!n.beta_unlocked_at;
+        invalidateCache(`sub_${userId}`);
         setActive((!!n.sub_active && notExpired) || betaOk);
       })
       .subscribe();
@@ -54,7 +56,9 @@ export function useSubscription(userId) {
 
 // Start a Stripe Checkout session via the edge function and return the URL.
 export async function createCheckoutSession() {
-  const { data, error } = await supabase.functions.invoke("create-checkout", {});
+  const { data, error } = await rateLimited("checkout", { limit: 5, windowMs: 10 * 60_000 }, () =>
+    supabase.functions.invoke("create-checkout", {})
+  );
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
   return data?.url;

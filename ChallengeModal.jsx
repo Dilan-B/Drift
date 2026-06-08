@@ -8,6 +8,7 @@ import {
   Text, TextInput, TouchableOpacity, Vibration, View,
 } from "react-native";
 import { supabase } from "./supabase";
+import { cached, rateLimited } from "./apiGuards";
 import {
   DumbbellIcon, BoltIcon, FireIcon, LegIcon, SurfIcon, RunIcon,
   SpeakerIcon, WarnIcon, SparkleIcon,
@@ -88,7 +89,9 @@ export default function ChallengeSheet({
       // Use the can_user_ai RPC instead of reading raw sub_active/sub_expires.
       // Friends shouldn't see each other's exact subscription state — the RPC
       // returns just the boolean we need.
-      const { data } = await supabase.rpc("can_user_ai", { uid: target.id });
+      const { data } = await cached(`can_user_ai_${target.id}`, 60_000, () =>
+        supabase.rpc("can_user_ai", { uid: target.id })
+      );
       setTargetPremium(data === true);
     })();
   }, [target.id]);
@@ -122,7 +125,9 @@ export default function ChallengeSheet({
       ai_required: mode === "custom" && bothPremium,
       status: "pending",
     };
-    let { error } = await supabase.from("challenges").insert(insert);
+    let { error } = await rateLimited(`send_challenge_${userId}`, { limit: 20, windowMs: 60_000 }, () =>
+      supabase.from("challenges").insert(insert)
+    );
     if (error && mode === "exercise" && /title|description|duration_mins|ai_required|schema cache/i.test(error.message || "")) {
       const legacy = {
         challenger_id: userId,
@@ -133,7 +138,9 @@ export default function ChallengeSheet({
         secs: exercise.secs ?? null,
         status: "pending",
       };
-      const retry = await supabase.from("challenges").insert(legacy);
+      const retry = await rateLimited(`send_challenge_${userId}`, { limit: 20, windowMs: 60_000 }, () =>
+        supabase.from("challenges").insert(legacy)
+      );
       error = retry.error;
     }
     setSending(false);

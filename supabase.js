@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { cached, invalidateCache, rateLimited } from "./apiGuards";
 
 // ── Project values — anon key is safe to ship (RLS-bounded). ──
 export const SUPABASE_URL  = "https://kxsikaymdykepcniozlp.supabase.co";
@@ -158,23 +159,25 @@ create policy "Participants can update" on challenges for update using (
 export async function syncScreenTime(userId, minutesEarned) {
   if (!userId) return;
   const today = new Date().toISOString().slice(0, 10);
-  const { error } = await supabase.rpc("upsert_screen_time", {
+  const { error } = await rateLimited(`screen_time_${userId}`, { limit: 60, windowMs: 60_000 }, () => supabase.rpc("upsert_screen_time", {
     p_user_id: userId,
     p_date:    today,
     p_minutes: minutesEarned,
-  });
+  }));
   // If RPC doesn't exist yet, fall back to direct upsert:
   if (error) {
-    await supabase.from("screen_time").upsert(
+    await rateLimited(`screen_time_${userId}`, { limit: 60, windowMs: 60_000 }, () => supabase.from("screen_time").upsert(
       { user_id: userId, date: today, minutes: minutesEarned, unlocks: 1 },
       { onConflict: "user_id,date", ignoreDuplicates: false }
-    );
+    ));
   }
+  invalidateCache(`friends_screen_time_`);
 }
 
 // Helper: get friends with today's screen time
 export async function getFriendsWithScreenTime(userId) {
   if (!userId) return [];
+  return cached(`friends_screen_time_${userId}`, 15_000, async () => {
   const today = new Date().toISOString().slice(0, 10);
 
   // Get accepted friends
@@ -216,4 +219,5 @@ export async function getFriendsWithScreenTime(userId) {
     minutes:  p.screen_time?.find(s => s.date === today)?.minutes ?? 0,
     unlocks:  p.screen_time?.find(s => s.date === today)?.unlocks ?? 0,
   }));
+  });
 }

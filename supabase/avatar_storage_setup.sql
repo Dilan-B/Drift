@@ -14,6 +14,19 @@ on conflict (id) do update set
   file_size_limit = 524288,
   allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'];
 
+create or replace function public.can_upload_avatar()
+returns boolean
+language sql
+security definer
+set search_path = public, storage
+as $$
+  select count(*) < 6
+  from storage.objects
+  where bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+    and created_at > now() - interval '1 hour'
+$$;
+
 do $$
 begin
   if not exists (
@@ -41,6 +54,7 @@ begin
       with check (
         bucket_id = 'avatars'
         and auth.uid()::text = (storage.foldername(name))[1]
+        and public.can_upload_avatar()
       )
     $policy$;
   end if;

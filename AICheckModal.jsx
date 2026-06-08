@@ -13,6 +13,7 @@ import { supabase } from "./supabase";
 import { getTheme } from "./theme";
 import { Spinner } from "./Skeleton";
 import { CloseIcon, CameraIcon, ImageIcon, SparkleIcon, CheckIcon } from "./Icons";
+import { rateLimited } from "./apiGuards";
 
 const FO  = "Orbitron_700Bold";
 const FOM = "Orbitron_400Regular";
@@ -130,14 +131,16 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
       let status = 0;
       let invokeErr = null;
       try {
-        const res = await supabase.functions.invoke("verify-task", {
+        const res = await rateLimited("ai_verify", { limit: 8, windowMs: 60 * 60_000 }, () =>
+          supabase.functions.invoke("verify-task", {
           body: {
             taskTitle:    task.title,
             durationMins: task.minutes,
             proofText:    proofText.trim() || undefined,
             imageBase64:  photo?.base64 || undefined,
           },
-        });
+          })
+        );
         body = res.data;
         invokeErr = res.error;
         // FunctionsHttpError exposes status on its context

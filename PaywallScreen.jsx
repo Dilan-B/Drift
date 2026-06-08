@@ -13,6 +13,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
 import { TrophyIcon, ChartIcon, BoltIcon, BellIcon, CloseIcon } from "./Icons";
+import { cached, rateLimited } from "./apiGuards";
 
 const INSTALL_KEY    = "drift_install_date";
 const TRIAL_DAYS     = 7;
@@ -41,11 +42,13 @@ export async function getTrialStatus(userId) {
   // Check Supabase subscription status
   let subActive = false;
   if (userId) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("sub_active, sub_expires")
-      .eq("id", userId)
-      .single();
+    const { data } = await cached(`trial_status_${userId}`, 20_000, () =>
+      supabase
+        .from("profiles")
+        .select("sub_active, sub_expires")
+        .eq("id", userId)
+        .single()
+    );
     if (data?.sub_active) {
       const expires = data.sub_expires ? new Date(data.sub_expires) : null;
       subActive = !expires || expires > new Date();
@@ -77,10 +80,10 @@ export default function PaywallScreen({ userId, daysLeft, onSubscribe, onClose }
       // Mock: mark as subscribed in Supabase
       const expires = new Date();
       expires.setMonth(expires.getMonth() + 1);
-      await supabase.from("profiles").update({
+      await rateLimited(`mock_subscribe_${userId}`, { limit: 5, windowMs: 10 * 60_000 }, () => supabase.from("profiles").update({
         sub_active:  true,
         sub_expires: expires.toISOString(),
-      }).eq("id", userId);
+      }).eq("id", userId));
 
       onSubscribe?.();
     } catch (e) {

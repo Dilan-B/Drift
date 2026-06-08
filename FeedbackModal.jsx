@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { supabase } from "./supabase";
 import { getTheme } from "./theme";
+import { rateLimited } from "./apiGuards";
 
 const FK = "Oswald_700Bold";
 const FO = "Orbitron_700Bold";
@@ -29,13 +30,15 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
 
     setBusy(true);
     try {
-      const { error } = await supabase.from("feedback").insert({
-        user_id:     userId || null,
-        body:        clean,
-        app_version: "1.0",
-        platform:    Platform.OS,
-        os_version:  String(Platform.Version),
-      });
+      const { error } = await rateLimited(`feedback_${userId || "anon"}`, { limit: 5, windowMs: 60 * 60_000 }, () =>
+        supabase.from("feedback").insert({
+          user_id:     userId || null,
+          body:        clean,
+          app_version: "1.0",
+          platform:    Platform.OS,
+          os_version:  String(Platform.Version),
+        })
+      );
       if (error) throw error;
       setBody("");
       onClose?.();

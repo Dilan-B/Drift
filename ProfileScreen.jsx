@@ -10,6 +10,7 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { supabase } from "./supabase";
 import { getTheme } from "./theme";
+import { cached, invalidateCache, rateLimited } from "./apiGuards";
 import FeedbackModal from "./FeedbackModal";
 import {
   CloseIcon, ShieldKeyIcon, PhoneIcon, SparkleIcon, CheckIcon,
@@ -57,19 +58,21 @@ async function prepareAvatar(uri) {
 }
 
 async function uploadAvatar(userId, sourceUri) {
-  const optimizedUri = await prepareAvatar(sourceUri);
-  const bytes = await fetch(optimizedUri).then(r => r.arrayBuffer());
-  const path = `${userId}/avatar-${Date.now()}.jpg`;
-  const { error } = await supabase.storage
-    .from("avatars")
-    .upload(path, bytes, {
-      contentType: "image/jpeg",
-      cacheControl: "31536000",
-      upsert: false,
-    });
-  if (error) throw error;
-  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-  return data.publicUrl;
+  return rateLimited(`avatar_upload_${userId}`, { limit: 6, windowMs: 60 * 60_000 }, async () => {
+    const optimizedUri = await prepareAvatar(sourceUri);
+    const bytes = await fetch(optimizedUri).then(r => r.arrayBuffer());
+    const path = `${userId}/avatar-${Date.now()}.jpg`;
+    const { error } = await supabase.storage
+      .from("avatars")
+      .upload(path, bytes, {
+        contentType: "image/jpeg",
+        cacheControl: "31536000",
+        upsert: false,
+      });
+    if (error) throw error;
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    return data.publicUrl;
+  });
 }
 
 // ── Beta tester section ──
@@ -212,11 +215,11 @@ export default function ProfileScreen({
   useEffect(() => {
     if (!userId) return;
     (async () => {
-      let { data, error } = await supabase
+      let { data, error } = await cached(`profile_${userId}`, 30_000, () => supabase
         .from("profiles")
         .select("username, avatar_url, sub_active, sub_expires")
         .eq("id", userId)
-        .maybeSingle();
+        .maybeSingle());
       if (error && /avatar_url|schema cache/i.test(error.message || "")) {
         const fallback = await supabase
           .from("profiles")
@@ -257,13 +260,14 @@ export default function ProfileScreen({
     setSavingPhoto(true);
     try {
       const uri = await uploadAvatar(userId, res.assets[0].uri);
-      const { data, error } = await supabase
+      const { data, error } = await rateLimited(`profile_update_${userId}`, { limit: 20, windowMs: 60_000 }, () => supabase
         .from("profiles")
         .update({ avatar_url: uri, updated_at: new Date().toISOString() })
         .eq("id", userId)
         .select("username, avatar_url, sub_active, sub_expires")
-        .single();
+        .single());
       if (error) throw error;
+      invalidateCache(`profile_${userId}`);
       setProfile(data);
       onProfileChange?.(data);
     } catch (e) {
@@ -288,24 +292,27 @@ export default function ProfileScreen({
     if (clean === currentUsername) return;
     setSavingName(true);
     try {
-      const { data: taken, error: lookupErr } = await supabase
-        .from("profiles")
-        .select("id")
-        .ilike("username", clean)
-        .neq("id", userId)
-        .maybeSingle();
+      const { data: taken, error: lookupErr } = await rateLimited(`username_check_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
+        cached(`username_available_${clean}`, 30_000, () => supabase
+          .from("profiles")
+          .select("id")
+          .ilike("username", clean)
+          .neq("id", userId)
+          .maybeSingle())
+      );
       if (lookupErr) throw lookupErr;
       if (taken) {
         Alert.alert("Username taken", "Pick another username.");
         return;
       }
-      const { data, error } = await supabase
+      const { data, error } = await rateLimited(`profile_update_${userId}`, { limit: 20, windowMs: 60_000 }, () => supabase
         .from("profiles")
         .update({ username: clean, updated_at: new Date().toISOString() })
         .eq("id", userId)
         .select("username, sub_active, sub_expires")
-        .single();
+        .single());
       if (error) throw error;
+      invalidateCache(`profile_${userId}`);
       setProfile(data);
       setDraftUsername(data.username);
       onProfileChange?.(data);
