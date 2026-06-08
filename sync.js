@@ -194,6 +194,73 @@ export async function removeBlockedApp(userId, appId) {
   invalidateCache(`blocked_${userId}`);
 }
 
+/**
+ * Reconcile the user's entire blocklist in one batch.
+ *
+ * Replaces the old "await addBlockedApp/removeBlockedApp in a loop" pattern,
+ * which fired ~2 sequential round-trips per app (slow & no way to show a
+ * single coherent loading state). Here we diff once and collapse the work
+ * into at most a handful of queries that run in parallel:
+ *   - one lookup for existing rows among the apps being added
+ *   - one bulk INSERT for brand-new apps
+ *   - one bulk UPDATE to "re-add" soft-deleted apps
+ *   - one bulk UPDATE to soft-remove apps no longer selected
+ */
+export async function syncBlockedApps(userId, apps) {
+  if (!userId) return;
+  const remote = await fetchBlockedApps(userId); // warm cache from modal open
+  const remoteIds = new Set(remote.map(a => a.id));
+  const localIds  = new Set(apps.map(a => a.id));
+  const toAdd     = apps.filter(a => !remoteIds.has(a.id));
+  const toRemove  = remote.filter(a => !localIds.has(a.id));
+  if (!toAdd.length && !toRemove.length) return;
+
+  await rateLimited(`blocked_write_${userId}`, { limit: 40, windowMs: 60_000 }, async () => {
+    const nowIso = new Date().toISOString();
+
+    // Resolve adds against any existing rows (including soft-deleted ones) so
+    // re-adding clears removed_at instead of inserting a duplicate.
+    let toInsert = toAdd;
+    let reAddRowIds = [];
+    if (toAdd.length) {
+      const { data: existing } = await supabase
+        .from("blocked_apps").select("id, app_id, removed_at")
+        .eq("user_id", userId).in("app_id", toAdd.map(a => a.id));
+      const existingByApp = new Map((existing || []).map(r => [r.app_id, r]));
+      toInsert    = toAdd.filter(a => !existingByApp.has(a.id));
+      reAddRowIds = toAdd
+        .map(a => existingByApp.get(a.id))
+        .filter(r => r && r.removed_at)
+        .map(r => r.id);
+    }
+
+    const ops = [];
+    if (toInsert.length) {
+      ops.push(supabase.from("blocked_apps").insert(
+        toInsert.map(a => ({ user_id: userId, app_id: a.id, app_name: a.name }))
+      ));
+    }
+    if (reAddRowIds.length) {
+      ops.push(supabase.from("blocked_apps")
+        .update({ removed_at: null, added_at: nowIso })
+        .in("id", reAddRowIds));
+    }
+    if (toRemove.length) {
+      ops.push(supabase.from("blocked_apps")
+        .update({ removed_at: nowIso })
+        .eq("user_id", userId)
+        .in("app_id", toRemove.map(a => a.id))
+        .is("removed_at", null));
+    }
+
+    const results = await Promise.all(ops);
+    const failed = results.find(r => r?.error);
+    if (failed?.error) throw failed.error;
+  });
+
+  invalidateCache(`blocked_${userId}`);
+}
+
 
 // ── LOCAL CACHE (for offline + faster boot) ──────────────────
 const CACHE_KEYS = {

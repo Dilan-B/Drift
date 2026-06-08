@@ -26,7 +26,7 @@
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
-import { fetchBlockedApps, addBlockedApp, removeBlockedApp, cache } from "./sync";
+import { fetchBlockedApps, syncBlockedApps, cache } from "./sync";
 
 const KEY = "drift_blocked_apps";
 
@@ -70,25 +70,12 @@ export async function getBlockedApps() {
 }
 
 export async function setBlockedApps(apps) {
-  // Diff against last cached set so we know what to add vs soft-remove.
+  // Local cache first so the change is instant offline / on next boot.
   await AsyncStorage.setItem(KEY, JSON.stringify(apps));
   const uid = await currentUserId();
   if (!uid) return;
-  try {
-    const remote = await fetchBlockedApps(uid);
-    const remoteIds = new Set(remote.map(a => a.id));
-    const localIds  = new Set(apps.map(a => a.id));
-    // Add anything in local that's not in remote
-    for (const a of apps) {
-      if (!remoteIds.has(a.id)) await addBlockedApp(uid, a);
-    }
-    // Soft-remove anything in remote that's no longer in local
-    for (const a of remote) {
-      if (!localIds.has(a.id)) await removeBlockedApp(uid, a.id);
-    }
-  } catch (e) {
-    console.warn("setBlockedApps sync:", e?.message);
-  }
+  // One batched, parallel reconcile instead of a per-app sequential loop.
+  await syncBlockedApps(uid, apps);
 }
 
 // ── Native bridge ─────────────────────────────────────────────

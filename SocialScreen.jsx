@@ -178,9 +178,9 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, isPremium }) {
               onClose();
               isPremium ? onChallenge(friend) : onChallenge(null);
             }}
-            style={[s.detailSolid, { marginTop: 18 }]}
+            style={[s.detailSolid, s.continueBtn]}
           >
-            <Text style={{ color: "#fff", fontWeight: "900" }}>Challenge</Text>
+            <Text style={s.continueText}>Challenge</Text>
           </TouchableOpacity>
         </View>
       </View>

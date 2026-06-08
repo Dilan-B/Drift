@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, Modal,
-  ScrollView, StyleSheet, Alert, Platform,
+  ScrollView, StyleSheet, Alert, Platform, ActivityIndicator,
 } from "react-native";
 import {
   getBlockedApps, setBlockedApps, SUGGESTED_APPS,
@@ -27,6 +27,7 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
 
   const [selected, setSelected] = useState({}); // {id: {id, name}}
   const [custom,   setCustom]   = useState("");
+  const [saving,   setSaving]   = useState(false);
 
   useEffect(() => {
     if (!visible) return;
@@ -55,10 +56,22 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
     setCustom("");
   };
 
-  const save = async () => {
-    const list = Object.values(selected);
-    await setBlockedApps(list);
-    onClose?.();
+  const save = async (list = Object.values(selected)) => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await setBlockedApps(list);
+      onClose?.();
+    } catch (e) {
+      Alert.alert(
+        "Couldn't save",
+        e?.message?.includes("Too many")
+          ? e.message
+          : "We couldn't sync your blocked apps. Check your connection and try again."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const allOptions = [
@@ -185,17 +198,33 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
           </View>
 
           {/* Save */}
-          <TouchableOpacity onPress={save} style={{
-            paddingVertical: 14, borderRadius: 14,
-            backgroundColor: earn.green, alignItems: "center",
-          }}>
+          <TouchableOpacity
+            onPress={() => save()}
+            disabled={saving}
+            activeOpacity={0.8}
+            style={{
+              paddingVertical: 14, borderRadius: 14,
+              backgroundColor: earn.green, alignItems: "center",
+              flexDirection: "row", justifyContent: "center", gap: 10,
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            {saving && <ActivityIndicator size="small" color="#fff" />}
             <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 2 }}>
-              {firstTime ? `SAVE & CONTINUE  (${Object.keys(selected).length})` : `SAVE  (${Object.keys(selected).length})`}
+              {saving
+                ? "SAVING…"
+                : firstTime
+                  ? `SAVE & CONTINUE  (${Object.keys(selected).length})`
+                  : `SAVE  (${Object.keys(selected).length})`}
             </Text>
           </TouchableOpacity>
 
           {firstTime && (
-            <TouchableOpacity onPress={() => { setSelected({}); save(); }} style={{ paddingVertical: 14, alignItems: "center", marginTop: 6 }}>
+            <TouchableOpacity
+              onPress={() => { setSelected({}); save([]); }}
+              disabled={saving}
+              style={{ paddingVertical: 14, alignItems: "center", marginTop: 6, opacity: saving ? 0.4 : 1 }}
+            >
               <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid }}>Skip for now</Text>
             </TouchableOpacity>
           )}

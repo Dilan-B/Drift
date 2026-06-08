@@ -254,6 +254,7 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
 
   const handleGoogle = async () => {
     setError("");
+    if (loading) return;
     if (!google.isConfigured) {
       setError("Google sign-in isn't configured for this build.");
       return;
@@ -296,12 +297,19 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
           height: 52, borderRadius: 14, backgroundColor: "#fff",
           borderWidth: 1, borderColor: "#dadce0",
           alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10,
+          opacity: loading ? 0.6 : 1,
         }}
       >
-        <GoogleGlyph />
-        <Text style={{ color: "#3c4043", fontSize: 16, fontWeight: "600" }}>
-          {mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
-        </Text>
+        {loading ? (
+          <ActivityIndicator color="#3c4043" />
+        ) : (
+          <>
+            <GoogleGlyph />
+            <Text style={{ color: "#3c4043", fontSize: 16, fontWeight: "600" }}>
+              {mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
+            </Text>
+          </>
+        )}
       </TouchableOpacity>
     </>
   );
