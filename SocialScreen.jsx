@@ -427,42 +427,67 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
 
   const loadRequests = useCallback(async () => {
     if (!userId) return;
-    let { data, error } = await supabase
-      .from("friendships")
-      .select("id, user_id, profiles!friendships_user_id_fkey(username, avatar_url)")
-      .eq("friend_id", userId)
-      .eq("status", "pending");
-    if (error && /avatar_url|schema cache/i.test(error.message || "")) {
-      const fallback = await supabase
+    // 10s cache so a burst of friendship changes doesn't fan out into
+    // multiple identical queries (saves egress).
+    const data = await cached(`friend_reqs_${userId}`, 10_000, async () => {
+      let { data, error } = await supabase
         .from("friendships")
-        .select("id, user_id, profiles!friendships_user_id_fkey(username)")
+        .select("id, user_id, profiles!friendships_user_id_fkey(username, avatar_url)")
         .eq("friend_id", userId)
         .eq("status", "pending");
-      data = fallback.data;
-    }
+      if (error && /avatar_url|schema cache/i.test(error.message || "")) {
+        const fallback = await supabase
+          .from("friendships")
+          .select("id, user_id, profiles!friendships_user_id_fkey(username)")
+          .eq("friend_id", userId)
+          .eq("status", "pending");
+        data = fallback.data;
+      }
+      return data || [];
+    });
     smoothUpdate(() => setFriendRequests(data || []));
   }, [userId]);
 
   const loadChallenges = useCallback(async () => {
     if (!userId) return;
     const cutoffIso = new Date(Date.now() - SIX_MONTHS_MS).toISOString();
-    let { data, error } = await supabase
-      .from("challenges")
-      .select("*, challenger:profiles!challenges_challenger_id_fkey(username, avatar_url), challenged:profiles!challenges_challenged_id_fkey(username, avatar_url)")
-      .or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`)
-      .in("status", ["pending", "active", "completed", "declined"])
-      .gte("created_at", cutoffIso)
-      .order("created_at", { ascending: false });
-    if (error && /avatar_url|schema cache/i.test(error.message || "")) {
-      const fallback = await supabase
+    // Explicit column list — avoid select("*") to keep egress small. This
+    // query runs on every realtime change to the challenges table, so the
+    // payload size matters. Add columns here as the UI starts using them.
+    const COLS = [
+      "id", "type", "status", "title", "exercise", "description",
+      "secs", "duration_mins",
+      "challenger_id", "challenged_id", "winner_id",
+      "challenger_done", "challenged_done",
+      "created_at",
+    ].join(",");
+    const join = (withAvatar) => withAvatar
+      ? `${COLS}, challenger:profiles!challenges_challenger_id_fkey(username, avatar_url), challenged:profiles!challenges_challenged_id_fkey(username, avatar_url)`
+      : `${COLS}, challenger:profiles!challenges_challenger_id_fkey(username), challenged:profiles!challenges_challenged_id_fkey(username)`;
+    // Cache the result for 10s so back-to-back realtime events (e.g. an
+    // accept that updates challenges + creates a friendship in quick
+    // succession) don't fire two full refetches.
+    const fetcher = async () => {
+      let { data, error } = await supabase
         .from("challenges")
-        .select("*, challenger:profiles!challenges_challenger_id_fkey(username), challenged:profiles!challenges_challenged_id_fkey(username)")
+        .select(join(true))
         .or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`)
         .in("status", ["pending", "active", "completed", "declined"])
         .gte("created_at", cutoffIso)
         .order("created_at", { ascending: false });
-      data = fallback.data;
-    }
+      if (error && /avatar_url|schema cache/i.test(error.message || "")) {
+        const fallback = await supabase
+          .from("challenges")
+          .select(join(false))
+          .or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`)
+          .in("status", ["pending", "active", "completed", "declined"])
+          .gte("created_at", cutoffIso)
+          .order("created_at", { ascending: false });
+        data = fallback.data;
+      }
+      return data || [];
+    };
+    const data = await cached(`challenges_${userId}`, 10_000, fetcher);
     smoothUpdate(() => setChallenges(data || []));
   }, [userId]);
 
@@ -483,15 +508,12 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
     return () => { supabase.removeChannel(channel); };
   }, [userId, loadChallenges, loadFriends, loadRequests]);
 
-  useEffect(() => {
-    if (!userId) return;
-    const id = setInterval(() => {
-      loadFriends();
-      loadRequests();
-      loadChallenges();
-    }, 8000);
-    return () => clearInterval(id);
-  }, [userId, loadFriends, loadRequests, loadChallenges]);
+  // NOTE: we deliberately do NOT poll on an interval here. The realtime
+  // postgres_changes subscription above pushes any change to friendships /
+  // challenges / profiles within seconds, so polling every 8s was both
+  // redundant AND was the single largest source of Supabase egress (each
+  // tick re-ran loadChallenges with select("*") + two profile joins).
+  // Use pull-to-refresh or screen-focus to force a manual reload instead.
 
   const addFriend = async () => {
     const username = cleanUsername(addUsername);
@@ -554,6 +576,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
       supabase.from("friendships").update({ status: "accepted" }).eq("id", id)
     );
     invalidateCache(`friends_screen_time_${userId}`);
+    invalidateCache(`friend_reqs_${userId}`);
     smoothUpdate(() => setFriendRequests(p => p.filter(r => r.id !== id)));
     loadAll();
   };
@@ -573,6 +596,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
     }).eq("id", challenge.id));
 
     setVerifyingChallenge(null);
+    invalidateCache(`challenges_${userId}`);
     loadChallenges();
   };
 
@@ -643,6 +667,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
       setAcceptedBurst(false);
       setSelectedChallenge(null);
       setAcceptingChallenge(false);
+      invalidateCache(`challenges_${userId}`);
       loadChallenges();
     }, 680);
   };
@@ -652,6 +677,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
       supabase.from("challenges").update({ status: "declined" }).eq("id", id)
     );
     setSelectedChallenge(null);
+    invalidateCache(`challenges_${userId}`);
     loadChallenges();
   };
 
