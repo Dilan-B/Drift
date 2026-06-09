@@ -30,15 +30,18 @@ serve(async (req: Request) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  async function setSubStatus(userId: string, active: boolean, expiresAt?: number | null) {
-    await supabaseAdmin
+  async function setSubStatus(userId: string, active: boolean, expiresAt?: number | null, customerId?: string | null) {
+    const patch: Record<string, unknown> = {
+      sub_active:  active,
+      sub_expires: expiresAt ? new Date(expiresAt * 1000).toISOString() : null,
+      updated_at:  new Date().toISOString(),
+    };
+    if (customerId) patch.stripe_customer_id = customerId;
+    const { error } = await supabaseAdmin
       .from("profiles")
-      .update({
-        sub_active:  active,
-        sub_expires: expiresAt ? new Date(expiresAt * 1000).toISOString() : null,
-        updated_at:  new Date().toISOString(),
-      })
+      .update(patch)
       .eq("id", userId);
+    if (error) throw error;
   }
 
   // ── IDEMPOTENCY GUARD ─────────────────────────────────────
@@ -67,12 +70,23 @@ serve(async (req: Request) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        const userId  = session.metadata?.supabase_user_id ||
-          (session.subscription
-            ? (await stripe.subscriptions.retrieve(session.subscription as string))
-                .metadata?.supabase_user_id
-            : undefined);
-        if (userId) { await setSubStatus(userId, true); processedUserId = userId; }
+        const sub = session.subscription
+          ? await stripe.subscriptions.retrieve(session.subscription as string)
+          : null;
+        const userId = session.client_reference_id ||
+          session.metadata?.supabase_user_id ||
+          sub?.metadata?.supabase_user_id;
+        const active = !!sub && ["active", "trialing"].includes(sub.status);
+        const paid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
+        if (userId && (active || paid)) {
+          await setSubStatus(
+            userId,
+            true,
+            sub?.current_period_end ?? null,
+            typeof session.customer === "string" ? session.customer : session.customer?.id ?? null,
+          );
+          processedUserId = userId;
+        }
         break;
       }
       case "customer.subscription.updated":
@@ -81,7 +95,12 @@ serve(async (req: Request) => {
         const userId = sub.metadata?.supabase_user_id;
         if (userId) {
           const active = ["active", "trialing"].includes(sub.status);
-          await setSubStatus(userId, active, sub.current_period_end);
+          await setSubStatus(
+            userId,
+            active,
+            sub.current_period_end,
+            typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null,
+          );
           processedUserId = userId;
         }
         break;
@@ -89,7 +108,7 @@ serve(async (req: Request) => {
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
         const userId = sub.metadata?.supabase_user_id;
-        if (userId) { await setSubStatus(userId, false); processedUserId = userId; }
+        if (userId) { await setSubStatus(userId, false, null, typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null); processedUserId = userId; }
         break;
       }
     }

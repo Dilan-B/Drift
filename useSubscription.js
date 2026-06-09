@@ -11,7 +11,7 @@ export function useSubscription(userId) {
   const [active,  setActive]  = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ force = false } = {}) => {
     if (!userId) { setActive(false); setLoading(false); return; }
     setLoading(true);
 
@@ -19,7 +19,7 @@ export function useSubscription(userId) {
     const [{ data: devOk }, { data }] = await cached(`sub_${userId}`, 20_000, () => Promise.all([
       supabase.rpc("is_dev_user", { uid: userId }).catch(() => ({ data: false })),
       supabase.from("profiles").select("sub_active, sub_expires, beta_unlocked_at").eq("id", userId).maybeSingle(),
-    ]));
+    ]), { force });
 
     const notExpired = !data?.sub_expires || new Date(data.sub_expires) > new Date();
     const betaOk = !!data?.beta_unlocked_at;
@@ -51,7 +51,7 @@ export function useSubscription(userId) {
     return () => { cancelled = true; supabase.removeChannel(channel); };
   }, [userId, load]);
 
-  return { active, loading, refresh: load };
+  return { active, loading, refresh: () => load({ force: true }) };
 }
 
 // Start a Stripe Checkout session via the edge function and return the URL.
@@ -62,4 +62,17 @@ export async function createCheckoutSession() {
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
   return data?.url;
+}
+
+export async function confirmCheckoutSession(sessionId) {
+  const clean = String(sessionId || "").trim();
+  if (!clean) throw new Error("Missing checkout session.");
+  const { data, error } = await rateLimited("confirm_checkout", { limit: 10, windowMs: 10 * 60_000 }, () =>
+    supabase.functions.invoke("confirm-checkout-session", {
+      body: { sessionId: clean },
+    })
+  );
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
 }

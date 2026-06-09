@@ -85,6 +85,7 @@ npx supabase secrets set IP_HASH_SALT=$(openssl rand -hex 32)       # for trial-
 npx supabase functions deploy verify-task
 npx supabase functions deploy evaluate-task
 npx supabase functions deploy create-checkout
+npx supabase functions deploy confirm-checkout-session
 npx supabase functions deploy claim-trial
 npx supabase functions deploy stripe-webhook --no-verify-jwt
 ```

@@ -146,6 +146,26 @@ export async function syncProfileStats(userId, { totalXp, balanceSeconds }) {
     supabase.from("profiles").update(patch).eq("id", userId)
   );
   if (error) console.warn("syncProfileStats:", error.message);
+  else invalidateCache(`profile_stats_${userId}`);
+}
+
+export async function fetchProfileStats(userId) {
+  if (!userId) return { totalXp: 0, balanceSeconds: 0 };
+  return cached(`profile_stats_${userId}`, 20_000, async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("total_xp, balance_seconds")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) {
+      console.warn("fetchProfileStats:", error.message);
+      return { totalXp: 0, balanceSeconds: 0 };
+    }
+    return {
+      totalXp: Number(data?.total_xp || 0),
+      balanceSeconds: Number(data?.balance_seconds || 0),
+    };
+  });
 }
 
 

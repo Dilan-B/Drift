@@ -200,7 +200,7 @@ function BetaSection({ beta, theme }) {
 
 export default function ProfileScreen({
   userId, userEmail, username, subActive, trialDays, screenTimeStatus,
-  dark = false, onClose, onProfileChange, onOpenBlockedApps,
+  dark = false, onClose, onProfileChange, onOpenBlockedApps, onOpenBlockedHours, onOpenRecurringTasks,
   onRequestScreenTime, onUpgrade, onSignOut,
   // Beta-tester preview toggle (UX only — no real Pro grant)
   beta,
@@ -395,6 +395,20 @@ export default function ProfileScreen({
             sub="Apps Shielded during Drift In sessions"
             icon={(c) => <ShieldKeyIcon size={20} color={c} />}
             onPress={onOpenBlockedApps}
+          />
+          <Row
+            title="Blocked hours"
+            sub="Recurring hours where available screen time is forced to 0"
+            cta={subActive ? "OPEN" : "PRO"}
+            icon={(c) => <PhoneIcon size={20} color={c} />}
+            onPress={onOpenBlockedHours}
+          />
+          <Row
+            title="Recurring tasks"
+            sub="Manage tasks that reappear automatically each day"
+            cta={subActive ? "OPEN" : "PRO"}
+            icon={(c) => <CheckIcon size={20} color={c} />}
+            onPress={onOpenRecurringTasks}
           />
           <Row
             title="Screen Time access"

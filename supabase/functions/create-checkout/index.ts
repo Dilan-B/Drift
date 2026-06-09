@@ -55,15 +55,18 @@ serve(async (req: Request) => {
 
     // Whitelist of valid redirect base URLs — APP_URL must match one of these
     // to prevent open-redirect attacks if the env var is ever misconfigured.
-    const ALLOWED_BASE_URLS = ["https://drift.app", "https://www.drift.app", "drift://"];
-    const configuredUrl = Deno.env.get("APP_URL") || "https://drift.app";
-    const baseUrl = ALLOWED_BASE_URLS.includes(configuredUrl)
-      ? configuredUrl
-      : "https://drift.app";
+    const configuredUrl = (Deno.env.get("APP_URL") || "drift://checkout").replace(/\/+$/, "");
+    const allowedUrl =
+      configuredUrl === "https://drift.app" ||
+      configuredUrl === "https://www.drift.app" ||
+      configuredUrl.startsWith("drift://");
+    const baseUrl = allowedUrl ? configuredUrl : "drift://checkout";
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
+      client_reference_id: user.id,
+      metadata: { supabase_user_id: user.id },
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -74,6 +77,6 @@ serve(async (req: Request) => {
     return json({ url: session.url });
   } catch (err: any) {
     console.error("create-checkout:", err?.message || err);
-    return json({ error: "Could not start checkout" }, 500);
+    return json({ error: err?.message || "Could not start checkout" }, 500);
   }
 });
