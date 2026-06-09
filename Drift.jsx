@@ -8,13 +8,13 @@ import {
 import { getTheme } from "./theme";
 import AICheckModal from "./AICheckModal";
 import { evaluateTask } from "./aiEvaluate";
-import { useSubscription, createCheckoutSession } from "./useSubscription";
+import { useSubscription, createCheckoutSession, confirmCheckoutSession } from "./useSubscription";
 import BlockedAppsModal from "./BlockedAppsModal";
 import UsernameSetupModal from "./UsernameSetupModal";
 import Swipeable from "./Swipeable";
 import {
   fetchTasks, insertTask, completeTaskRow, softDeleteTask,
-  appendLedgerEntry, syncProfileStats,
+  appendLedgerEntry, syncProfileStats, fetchProfileStats,
   cache,
 } from "./sync";
 import { applyBlocking, clearBlocking } from "./blockedApps";
@@ -36,7 +36,7 @@ import {
   ShieldKeyIcon, ClipboardIcon, ChartIcon, PhoneIcon,
 } from "./Icons";
 import {
-  isNativeBlockingAvailable, requestScreenTimeAuth, getScreenTimeAuthStatus,
+  requestScreenTimeAuth, getScreenTimeAuthStatus,
 } from "./blockedApps";
 import { startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag } from "./screenTime";
 import { supabase, syncScreenTime, safeGetSession } from "./supabase";
@@ -45,6 +45,7 @@ import PaywallScreen, { initTrial, getTrialStatus } from "./PaywallScreen";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
+import StripeCheckoutModal from "./StripeCheckoutModal";
 import { cached, rateLimited } from "./apiGuards";
 import { useBetaMode } from "./useBetaMode";
 
@@ -107,6 +108,59 @@ const xpProg    = xp => { const lv = getLevel(xp); const ni = LEVELS.findIndex(l
 const xpToNext  = xp => { const ni = LEVELS.findIndex(l => l.min > xp); return ni === -1 ? 0 : LEVELS[ni].min - xp; };
 const todayKey    = () => new Date().toISOString().slice(0, 10);
 const clockStr    = () => new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+const pad2         = n => String(n).padStart(2, "0");
+const timeToMins   = t => {
+  const m = String(t || "").match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = Number(m[1]), min = Number(m[2]);
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return h * 60 + min;
+};
+const minsToTime   = mins => `${pad2(Math.floor((((mins % 1440) + 1440) % 1440) / 60))}:${pad2((((mins % 1440) + 1440) % 1440) % 60)}`;
+const prettyTime   = t => {
+  const mins = timeToMins(t);
+  if (mins == null) return t || "";
+  const h = Math.floor(mins / 60), m = mins % 60;
+  const hr = h % 12 || 12;
+  return `${hr}:${pad2(m)} ${h >= 12 ? "PM" : "AM"}`;
+};
+const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const recurrenceDaysFor = frequency => {
+  if (frequency === "weekdays") return [1, 2, 3, 4, 5];
+  if (frequency === "weekends") return [0, 6];
+  return null;
+};
+const recurrenceLabel = item => {
+  const frequency = item?.frequency || "daily";
+  if (frequency === "daily") return "Daily";
+  if (frequency === "weekdays") return "Weekdays";
+  if (frequency === "weekends") return "Weekends";
+  if (frequency === "custom") {
+    const days = (item.days || []).map(d => WEEKDAY_NAMES[d]).filter(Boolean);
+    return days.length ? days.join(", ") : "Custom";
+  }
+  return "Repeats";
+};
+const recurrenceMatchesDate = (item, date = new Date()) => {
+  const frequency = item?.frequency || "daily";
+  if (frequency === "daily") return true;
+  const day = date.getDay();
+  const preset = recurrenceDaysFor(frequency);
+  if (preset) return preset.includes(day);
+  if (frequency === "custom") return (item.days || []).includes(day);
+  return false;
+};
+const isBlockedHourNow = (rules) => {
+  const now = new Date();
+  const cur = now.getHours() * 60 + now.getMinutes();
+  return (rules || []).some(r => {
+    if (!r?.enabled) return false;
+    const start = timeToMins(r.start);
+    const end = timeToMins(r.end);
+    if (start == null || end == null || start === end) return false;
+    return start < end ? cur >= start && cur < end : cur >= start || cur < end;
+  });
+};
 const fmtSecLeft  = s => {
   if (s < 0)    return `-${fmtSecLeft(Math.abs(s))}`;
   if (s === 0)  return "locked";
@@ -194,6 +248,13 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
   const [aiCheck,  setAiCheck]  = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [evalError,  setEvalError]  = useState("");
+  const [recur,    setRecur]    = useState("none");
+  const [recurDays, setRecurDays] = useState([new Date().getDay()]);
+  const [recurTime, setRecurTime] = useState(() => {
+    const d = new Date();
+    d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0);
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  });
 
   // Swipe right to dismiss
   const slideX   = useRef(new Animated.Value(0)).current;
@@ -246,12 +307,15 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
       aiValued: !!aiValued,
       aiReasoning: reasoning || "",
     });
+    const recurrence = recur !== "none" && isSubActive
+      ? { frequency: recur, time: recurTime, days: recur === "custom" ? recurDays : recurrenceDaysFor(recur) }
+      : null;
 
     // Free user → flat duration-based credits, no AI eval call.
     // (Free tier doesn't get any AI grading — credits are purely mins × multiplier.)
     if (!isSubActive) {
       const { credits, xp, reasoning } = freeTierCredits(mins);
-      onSave(buildTask({ credits, xp, reasoning, aiValued: false }));
+      onSave(buildTask({ credits, xp, reasoning, aiValued: false }), recurrence);
       onClose();
       return;
     }
@@ -263,14 +327,14 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
         mins,
         category: cat,
       });
-      onSave(buildTask({ credits, xp, reasoning, aiValued: true }));
+      onSave(buildTask({ credits, xp, reasoning, aiValued: true }), recurrence);
       onClose();
     } catch (e) {
       if (e?.code === "subscription_required") {
         // Server told us their sub lapsed mid-session — fall back to the
         // free-tier duration formula (same path a free user would take).
         const { credits, xp, reasoning } = freeTierCredits(mins);
-        onSave(buildTask({ credits, xp, reasoning, aiValued: false }));
+        onSave(buildTask({ credits, xp, reasoning, aiValued: false }), recurrence);
         onClose();
         return;
       }
@@ -415,6 +479,140 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
           </View>
 
           {/* ── AI Check toggle ── */}
+          <View style={{ marginBottom: 14 }}>
+            <Text style={[s.label, { color: ink.faint }]}>Repeat</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: recur !== "none" && isSubActive ? 10 : 0 }}>
+              {[
+                ["none", "Once"],
+                ["daily", "Daily"],
+                ["weekdays", "Weekdays"],
+                ["weekends", "Weekends"],
+                ["custom", "Custom"],
+              ].map(([value, label]) => {
+                const active = recur === value;
+                return (
+                  <TouchableOpacity
+                    key={value}
+                    onPress={() => {
+                      if (value !== "none" && !isSubActive) {
+                        onOpenPaywall?.();
+                        return;
+                      }
+                      setRecur(value);
+                    }}
+                    style={{
+                      minWidth: value === "none" ? 82 : 96,
+                      flexGrow: 1,
+                      paddingVertical: 11,
+                      paddingHorizontal: 10,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: active ? earn.terra : ink.border,
+                      backgroundColor: active ? earn.terraLo : paper.card,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ fontFamily: FK, fontSize: 13, color: active ? earn.greenD : ink.mid }}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {!isSubActive && (
+              <TouchableOpacity
+                onPress={onOpenPaywall}
+                style={{
+                  marginTop: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: 12,
+                  borderRadius: 12,
+                  backgroundColor: ink.ghost,
+                  borderWidth: 1,
+                  borderColor: ink.border,
+                }}
+              >
+                <LockIcon size={16} color={ink.mid} />
+                <Text style={{ flex: 1, fontFamily: FB, fontSize: 12, color: ink.mid }}>
+                  Recurring task schedules are a Pro feature.
+                </Text>
+                <Text style={{ fontFamily: FOM, fontSize: 9, color: earn.terra, letterSpacing: 1 }}>UPGRADE</Text>
+              </TouchableOpacity>
+            )}
+            {recur !== "none" && isSubActive && (
+              <View style={{
+                gap: 10,
+                padding: 12,
+                borderRadius: 12,
+                backgroundColor: paper.card,
+                borderWidth: 1,
+                borderColor: ink.border,
+              }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, flex: 1 }}>
+                    Create this task at
+                  </Text>
+                  <TextInput
+                    value={recurTime}
+                    onChangeText={(t) => setRecurTime(t.replace(/[^\d:]/g, "").slice(0, 5))}
+                    onBlur={() => {
+                      const mins = timeToMins(recurTime);
+                      setRecurTime(mins == null ? "09:00" : minsToTime(mins));
+                    }}
+                    keyboardType="numbers-and-punctuation"
+                    placeholder="09:00"
+                    placeholderTextColor={ink.faint}
+                    style={{
+                      width: 78,
+                      paddingVertical: 8,
+                      paddingHorizontal: 10,
+                      borderRadius: 10,
+                      backgroundColor: paper.warm,
+                      borderWidth: 1,
+                      borderColor: ink.border,
+                      color: ink.deep,
+                      fontFamily: FO,
+                      fontSize: 12,
+                      textAlign: "center",
+                    }}
+                  />
+                </View>
+                {recur === "custom" && (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
+                    {WEEKDAY_NAMES.map((name, idx) => {
+                      const active = recurDays.includes(idx);
+                      return (
+                        <TouchableOpacity
+                          key={name}
+                          onPress={() => setRecurDays(days => {
+                            if (active && days.length <= 1) return days;
+                            return active ? days.filter(d => d !== idx) : [...days, idx].sort((a, b) => a - b);
+                          })}
+                          style={{
+                            minWidth: 40,
+                            paddingVertical: 8,
+                            paddingHorizontal: 9,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: active ? earn.terra : ink.border,
+                            backgroundColor: active ? earn.terraLo : paper.warm,
+                            alignItems: "center",
+                          }}
+                        >
+                          <Text style={{ fontFamily: FK, fontSize: 11, color: active ? earn.greenD : ink.mid }}>
+                            {name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
           <TouchableOpacity
             onPress={() => isSubActive ? setAiCheck(v => !v) : onOpenPaywall?.()}
             style={{
@@ -580,7 +778,275 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
 }
 
 // ── Today View ───────────────────────────────────────────────
-function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, dark }) {
+function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce }) {
+  const theme = getTheme(dark);
+  const { ink, paper, earn } = theme;
+  const maxMins = Math.floor(Math.max(0, balanceSec || 0) / 60);
+  const options = [5, 10, 15, 30, 60].filter(m => m <= maxMins);
+  const [selected, setSelected] = useState(null);
+
+  useEffect(() => {
+    if (visible) setSelected(options[0] || null);
+  }, [visible, maxMins]);
+
+  if (!visible) return null;
+
+  const confirm = () => {
+    if (!selected || selected > maxMins) return;
+    onReduce?.(selected);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={s2.backdrop}>
+        <View style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
+          <Text style={[s2.kicker, { color: earn.green }]}>SCREEN TIME</Text>
+          <Text style={[s2.panelTitle, { color: ink.deep }]}>Reduce your balance</Text>
+          <Text style={[s2.panelText, { color: ink.mid }]}>
+            Choose how much time to give back. This can only subtract from what you already have.
+          </Text>
+          {maxMins < 1 ? (
+            <Text style={[s2.emptyText, { color: ink.faint }]}>You do not have any screen time to reduce.</Text>
+          ) : (
+            <View style={s2.amountGrid}>
+              {options.map(m => (
+                <TouchableOpacity
+                  key={m}
+                  onPress={() => setSelected(m)}
+                  style={[
+                    s2.amountPill,
+                    { borderColor: ink.border, backgroundColor: paper.warm },
+                    selected === m && { borderColor: earn.green, backgroundColor: earn.greenLo },
+                  ]}
+                >
+                  <Text style={[s2.amountText, { color: selected === m ? earn.greenD : ink.deep }]}>{m}m</Text>
+                </TouchableOpacity>
+              ))}
+              {maxMins > 0 && !options.includes(maxMins) && (
+                <TouchableOpacity
+                  onPress={() => setSelected(maxMins)}
+                  style={[
+                    s2.amountPill,
+                    { borderColor: ink.border, backgroundColor: paper.warm },
+                    selected === maxMins && { borderColor: earn.green, backgroundColor: earn.greenLo },
+                  ]}
+                >
+                  <Text style={[s2.amountText, { color: selected === maxMins ? earn.greenD : ink.deep }]}>All</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+          <View style={s2.actions}>
+            <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, { borderColor: ink.border }]}>
+              <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={confirm} disabled={!selected} style={[s2.solidBtn, { backgroundColor: selected ? earn.green : ink.faint }]}>
+              <Text style={s2.solidText}>Reduce</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const QUICK_SLIDES = [
+  {
+    title: "Pause for a second.",
+    body: "This button is meant for real resets, not autopilot. A task will feel better if you can do one.",
+  },
+  {
+    title: "This is unearned time.",
+    body: "You can take it, but it will not give XP or progress. It is only a shortcut to more screen time.",
+  },
+  {
+    title: "Your future self still pays for it.",
+    body: "Fifteen minutes can disappear fast. Make sure this is worth giving away your attention.",
+  },
+  {
+    title: "You only get three today.",
+    body: "Using one now means having fewer emergency resets later when you may actually need it.",
+  },
+  {
+    title: "Try the smallest useful task first.",
+    body: "Two minutes of cleanup, stretching, water, or planning might unlock time without using a reset.",
+  },
+  {
+    title: "Check the urge.",
+    body: "Are you opening an app because you chose to, or because the app pulled you back in?",
+  },
+  {
+    title: "This will not solve avoidance.",
+    body: "If there is one thing you are dodging, name it before you continue.",
+  },
+  {
+    title: "Screen time is easier to spend than earn.",
+    body: "If you take this, spend it on purpose. Do not let it become background scrolling.",
+  },
+  {
+    title: "You can still back out.",
+    body: "Canceling now is a win if you were about to click through without thinking.",
+  },
+  {
+    title: "Final check.",
+    body: "Only continue if you intentionally want these 15 minutes more than you want to earn them.",
+  },
+];
+
+function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
+  const theme = getTheme(dark);
+  const { ink, paper, earn } = theme;
+  const [step, setStep] = useState(0);
+  const [breathing, setBreathing] = useState(false);
+  const [seconds, setSeconds] = useState(15);
+  const scale = useRef(new Animated.Value(0.96)).current;
+  const breath = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) return;
+    setStep(0);
+    setBreathing(false);
+    setSeconds(15);
+    scale.setValue(0.96);
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 80, friction: 10 }).start();
+  }, [visible, scale]);
+
+  useEffect(() => {
+    if (!breathing) return;
+    breath.setValue(0);
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(breath, { toValue: 1, duration: 3200, useNativeDriver: true }),
+      Animated.timing(breath, { toValue: 0, duration: 3200, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [breathing, breath]);
+
+  useEffect(() => {
+    if (!breathing || seconds <= 0) return;
+    const id = setTimeout(() => setSeconds(s => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [breathing, seconds]);
+
+  if (!visible) return null;
+
+  const next = () => {
+    if (step < QUICK_SLIDES.length - 1) {
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 0.985, duration: 120, useNativeDriver: true }),
+      ]).start();
+      setTimeout(() => {
+        setStep(s => s + 1);
+        Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 90, friction: 9 }).start();
+      }, 130);
+      return;
+    }
+    setBreathing(true);
+  };
+
+  const finish = () => {
+    if (seconds > 0) return;
+    onGrant?.();
+  };
+
+  const breathScale = breath.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1.1] });
+  const breathOpacity = breath.interpolate({ inputRange: [0, 1], outputRange: [0.28, 0.68] });
+  const progress = breathing ? 1 : (step + 1) / QUICK_SLIDES.length;
+  const primaryText = dark ? "#F4FFF8" : ink.deep;
+  const secondaryText = dark ? "#B8D8C5" : ink.mid;
+  const disabledBtn = dark ? "#31483F" : "#A8BFB5";
+  const disabledBtnText = dark ? "#DDEFE5" : "#FFFFFF";
+  const slide = QUICK_SLIDES[step] || QUICK_SLIDES[0];
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={s2.backdrop}>
+        <Animated.View style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border, transform: [{ scale }] }]}>
+          <Text style={[s2.kicker, { color: earn.green }]}>RESET MINUTES</Text>
+          <View style={[s2.progressTrack, { backgroundColor: ink.ghost }]}>
+            <Animated.View style={[s2.progressFill, { width: `${progress * 100}%`, backgroundColor: earn.green }]} />
+          </View>
+          {!breathing ? (
+            <View>
+              <Text style={[s2.panelTitle, { color: primaryText }]}>{slide.title}</Text>
+              <Text style={[s2.panelText, { color: secondaryText }]}>
+                {slide.body}
+              </Text>
+              <Text style={[s2.footerHint, { color: secondaryText, textAlign: "left", marginTop: -6, marginBottom: 12 }]}>
+                Step {step + 1} of {QUICK_SLIDES.length}
+              </Text>
+            </View>
+          ) : (
+            <View style={{ alignItems: "center", paddingVertical: 8 }}>
+              <Animated.View style={[s2.breathOrb, { backgroundColor: earn.green, opacity: breathOpacity, transform: [{ scale: breathScale }] }]} />
+              <Text style={[s2.panelTitle, { color: primaryText, textAlign: "center" }]}>Take deep breaths</Text>
+              <Text style={[s2.panelText, { color: secondaryText, textAlign: "center" }]}>
+                In through the nose. Out slowly. You can continue in {seconds}s.
+              </Text>
+            </View>
+          )}
+          <View style={s2.actions}>
+            <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, { borderColor: ink.border }]}>
+              <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={breathing ? finish : next} disabled={breathing && seconds > 0} style={[s2.solidBtn, { backgroundColor: breathing && seconds > 0 ? disabledBtn : earn.green }]}>
+              <Text style={[s2.solidText, { color: breathing && seconds > 0 ? disabledBtnText : "#FFFFFF" }]}>{breathing ? "Claim 15m" : "Continue"}</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={[s2.footerHint, { color: ink.faint }]}>{Math.max(0, 3 - usedToday)} left today</Text>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
+function FloatingFeedback({ popup }) {
+  const scale = useRef(new Animated.Value(0.88)).current;
+  const y = useRef(new Animated.Value(18)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!popup) return;
+    scale.setValue(0.88);
+    y.setValue(18);
+    opacity.setValue(0);
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 120, friction: 8 }),
+      Animated.spring(y, { toValue: 0, useNativeDriver: true, tension: 110, friction: 9 }),
+      Animated.timing(opacity, { toValue: 1, duration: 140, useNativeDriver: true }),
+    ]).start();
+  }, [popup, scale, y, opacity]);
+
+  if (!popup) return null;
+  return (
+    <Animated.View style={{
+      position: "absolute", top: "18%", left: 0, right: 0,
+      alignItems: "center", zIndex: 300,
+      flexDirection: "row", justifyContent: "center", gap: 8,
+      pointerEvents: "none",
+      opacity,
+      transform: [{ translateY: y }, { scale }],
+    }}>
+      {popup.credits > 0 && (
+        <View style={{ backgroundColor: earn.green, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
+          <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>+{fmtMins(popup.credits)}</Text>
+        </View>
+      )}
+      {popup.loss > 0 && (
+        <View style={{ backgroundColor: "#C0392B", borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
+          <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>-{fmtMins(popup.loss)}</Text>
+        </View>
+      )}
+      {popup.xp > 0 && (
+        <View style={{ backgroundColor: earn.blue, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
+          <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>+{popup.xp} XP</Text>
+        </View>
+      )}
+    </Animated.View>
+  );
+}
+
+function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onReduceScreenTime, onQuickGrant, quickGrantCount, dark }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
 
@@ -664,6 +1130,46 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, dark 
               ))}
           </View>
         )}
+      </View>
+
+      <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
+        <TouchableOpacity
+          onPress={onReduceScreenTime}
+          disabled={credits.balance <= 0}
+          activeOpacity={0.75}
+          style={{
+            flex: 1,
+            minHeight: 58,
+            paddingVertical: 13,
+            borderRadius: 16,
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: 1,
+            borderColor: credits.balance > 0 ? ink.border : "transparent",
+            backgroundColor: credits.balance > 0 ? paper.card : ink.ghost,
+          }}
+        >
+          <Text style={{ fontFamily: FK, fontSize: 14, textAlign: "center", color: credits.balance > 0 ? ink.deep : ink.faint }}>Reduce time</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onQuickGrant}
+          disabled={quickGrantCount >= 3}
+          activeOpacity={0.75}
+          style={{
+            flex: 1,
+            minHeight: 58,
+            paddingVertical: 13,
+            borderRadius: 16,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: quickGrantCount < 3 ? earn.greenLo : ink.ghost,
+            borderWidth: 1,
+            borderColor: quickGrantCount < 3 ? "rgba(47,171,114,0.22)" : "transparent",
+          }}
+        >
+          <Text style={{ fontFamily: FK, fontSize: 14, textAlign: "center", color: quickGrantCount < 3 ? earn.greenD : ink.faint }}>Take 15m</Text>
+          <Text style={{ fontFamily: FB, fontSize: 10, textAlign: "center", color: quickGrantCount < 3 ? ink.mid : ink.faint, marginTop: 2 }}>{Math.max(0, 3 - quickGrantCount)} left today</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -913,6 +1419,241 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
 }
 
 // ── Shared styles ────────────────────────────────────────────
+function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
+  const theme = getTheme(dark);
+  const { ink, paper, earn } = theme;
+  const [draft, setDraft] = useState(rules || []);
+  const [start, setStart] = useState("22:00");
+  const [end, setEnd] = useState("07:00");
+
+  useEffect(() => {
+    if (visible) setDraft(rules || []);
+  }, [visible, rules]);
+
+  const addRule = () => {
+    const sM = timeToMins(start);
+    const eM = timeToMins(end);
+    if (sM == null || eM == null || sM === eM) {
+      Alert.alert("Blocked hours", "Use valid 24-hour times like 22:00 and 07:00.");
+      return;
+    }
+    setDraft(list => [
+      ...list,
+      { id: `bh_${Date.now()}`, start: minsToTime(sM), end: minsToTime(eM), enabled: true },
+    ]);
+  };
+
+  const save = () => {
+    onSave(draft);
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={s2.backdrop}>
+        <View style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
+          <Text style={[s2.kicker, { color: ink.faint }]}>BLOCKED HOURS</Text>
+          <Text style={[s2.panelTitle, { color: ink.deep }]}>Recurring zero-time windows</Text>
+          <Text style={[s2.panelText, { color: ink.mid }]}>
+            During these hours Drift treats your available screen time as 0 and keeps blocked apps shielded.
+          </Text>
+
+          <View style={{ gap: 8, marginBottom: 14 }}>
+            {draft.length === 0 ? (
+              <Text style={[s2.emptyText, { color: ink.faint }]}>No blocked hours yet.</Text>
+            ) : draft.map(rule => (
+              <View
+                key={rule.id}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: 12,
+                  borderRadius: 14,
+                  backgroundColor: paper.warm,
+                  borderWidth: 1,
+                  borderColor: ink.border,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: FK, fontSize: 15, color: ink.deep }}>
+                    {prettyTime(rule.start)} - {prettyTime(rule.end)}
+                  </Text>
+                  <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2 }}>
+                    Repeats every day
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setDraft(list => list.map(r => r.id === rule.id ? { ...r, enabled: !r.enabled } : r))}
+                  style={{
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    borderRadius: 12,
+                    backgroundColor: rule.enabled ? earn.terraLo : ink.ghost,
+                  }}
+                >
+                  <Text style={{ fontFamily: FK, fontSize: 12, color: rule.enabled ? earn.greenD : ink.mid }}>
+                    {rule.enabled ? "On" : "Off"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setDraft(list => list.filter(r => r.id !== rule.id))}
+                  style={{ paddingVertical: 8, paddingHorizontal: 8 }}
+                >
+                  <Text style={{ fontFamily: FK, fontSize: 18, color: "#E05050" }}>x</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
+            {[
+              ["Start", start, setStart],
+              ["End", end, setEnd],
+            ].map(([label, value, setter]) => (
+              <View key={label} style={{ flex: 1 }}>
+                <Text style={[s.label, { color: ink.faint }]}>{label}</Text>
+                <TextInput
+                  value={value}
+                  onChangeText={(t) => setter(t.replace(/[^\d:]/g, "").slice(0, 5))}
+                  onBlur={() => {
+                    const mins = timeToMins(value);
+                    setter(mins == null ? (label === "Start" ? "22:00" : "07:00") : minsToTime(mins));
+                  }}
+                  keyboardType="numbers-and-punctuation"
+                  placeholder="22:00"
+                  placeholderTextColor={ink.faint}
+                  style={{
+                    paddingVertical: 12,
+                    paddingHorizontal: 12,
+                    borderRadius: 13,
+                    backgroundColor: paper.warm,
+                    borderWidth: 1,
+                    borderColor: ink.border,
+                    color: ink.deep,
+                    fontFamily: FO,
+                    fontSize: 13,
+                    textAlign: "center",
+                  }}
+                />
+              </View>
+            ))}
+            <TouchableOpacity
+              onPress={addRule}
+              style={{
+                alignSelf: "flex-end",
+                paddingHorizontal: 16,
+                height: 44,
+                borderRadius: 14,
+                backgroundColor: earn.green,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={{ fontFamily: FK, fontSize: 14, color: "#fff" }}>Add</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={s2.actions}>
+            <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, { borderColor: ink.border }]}>
+              <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={save} style={[s2.solidBtn, { backgroundColor: earn.green }]}>
+              <Text style={s2.solidText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function RecurringTasksModal({ visible, templates, dark, onClose, onSave }) {
+  const theme = getTheme(dark);
+  const { ink, paper, earn } = theme;
+  const [draft, setDraft] = useState(templates || []);
+
+  useEffect(() => {
+    if (visible) setDraft(templates || []);
+  }, [visible, templates]);
+
+  const save = () => {
+    onSave(draft);
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={s2.backdrop}>
+        <View style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
+          <Text style={[s2.kicker, { color: ink.faint }]}>RECURRING TASKS</Text>
+          <Text style={[s2.panelTitle, { color: ink.deep }]}>Task schedule</Text>
+          <Text style={[s2.panelText, { color: ink.mid }]}>
+            These tasks appear automatically on Today when their scheduled time and repeat pattern match.
+          </Text>
+
+          <View style={{ gap: 8, marginBottom: 16 }}>
+            {draft.length === 0 ? (
+              <Text style={[s2.emptyText, { color: ink.faint }]}>No recurring tasks yet.</Text>
+            ) : draft.map(item => (
+              <View
+                key={item.id}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: 12,
+                  borderRadius: 14,
+                  backgroundColor: paper.warm,
+                  borderWidth: 1,
+                  borderColor: ink.border,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: FK, fontSize: 15, color: ink.deep }} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2 }}>
+                    {recurrenceLabel(item)} at {prettyTime(item.time)} - {fmtMins(item.credits)} reward
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setDraft(list => list.map(t => t.id === item.id ? { ...t, enabled: t.enabled === false } : t))}
+                  style={{
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    borderRadius: 12,
+                    backgroundColor: item.enabled === false ? ink.ghost : earn.terraLo,
+                  }}
+                >
+                  <Text style={{ fontFamily: FK, fontSize: 12, color: item.enabled === false ? ink.mid : earn.greenD }}>
+                    {item.enabled === false ? "Off" : "On"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setDraft(list => list.filter(t => t.id !== item.id))}
+                  style={{ paddingVertical: 8, paddingHorizontal: 8 }}
+                >
+                  <Text style={{ fontFamily: FK, fontSize: 18, color: "#E05050" }}>x</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+
+          <View style={s2.actions}>
+            <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, { borderColor: ink.border }]}>
+              <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={save} style={[s2.solidBtn, { backgroundColor: earn.green }]}>
+              <Text style={s2.solidText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 const s = StyleSheet.create({
   card: {
     backgroundColor: paper.card,
@@ -930,6 +1671,57 @@ const s = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 8,
   },
+});
+
+const s2 = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.48)",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    padding: 16,
+  },
+  panel: {
+    width: "100%",
+    borderRadius: 26,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 22,
+    paddingBottom: Platform.OS === "ios" ? 30 : 22,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.18,
+    shadowRadius: 30,
+    elevation: 18,
+  },
+  kicker: { fontFamily: FO, fontSize: 9, letterSpacing: 2, marginBottom: 8 },
+  panelTitle: { fontFamily: FK, fontSize: 24, fontStyle: "italic", marginBottom: 8 },
+  panelText: { fontFamily: FB, fontSize: 14, lineHeight: 21, marginBottom: 18 },
+  emptyText: { fontFamily: FB, fontSize: 13, marginVertical: 14 },
+  amountGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 18 },
+  amountPill: {
+    minWidth: 72,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  amountText: { fontFamily: FO, fontSize: 13 },
+  actions: { flexDirection: "row", gap: 10, marginTop: 4 },
+  ghostBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 15,
+    alignItems: "center",
+  },
+  ghostText: { fontFamily: FK, fontSize: 15 },
+  solidBtn: { flex: 1, borderRadius: 16, paddingVertical: 15, alignItems: "center" },
+  solidText: { fontFamily: FK, fontSize: 15, color: "#fff" },
+  progressTrack: { height: 6, borderRadius: 3, overflow: "hidden", marginBottom: 20 },
+  progressFill: { height: "100%", borderRadius: 3 },
+  breathOrb: { width: 120, height: 120, borderRadius: 60, marginBottom: 22 },
+  footerHint: { marginTop: 14, textAlign: "center", fontSize: 11 },
 });
 
 
@@ -1005,12 +1797,23 @@ export default function App() {
   const [signInOnly,     setSignInOnly]     = useState(false); // returning user (skip questionnaire)
   const [showAccount,        setShowAccount]        = useState(false);
   const [showBlockedApps,    setShowBlockedApps]    = useState(false);
+  const [showBlockedHours,   setShowBlockedHours]   = useState(false);
+  const [showRecurringTasks, setShowRecurringTasks] = useState(false);
   const [firstTimeBlockedApps, setFirstTimeBlockedApps] = useState(false);
   const [showUsernameSetup,  setShowUsernameSetup]  = useState(false);
+  const [showReduceTime,     setShowReduceTime]     = useState(false);
+  const [showQuickGrant,     setShowQuickGrant]     = useState(false);
+  const [quickGrantCount,    setQuickGrantCount]    = useState(0);
+  const [checkoutUrl,        setCheckoutUrl]        = useState("");
+  const [showCheckout,       setShowCheckout]       = useState(false);
   const [userEmail,          setUserEmail]          = useState("");
   const [myUsername,         setUserName]           = useState("");
   const [screenTimeStatus,   setScreenTimeStatus]   = useState("unknown");
   const [childSwipeLocked,   setChildSwipeLocked]   = useState(false);
+  const [blockedHours,       setBlockedHours]       = useState([]);
+  const [blockedHoursActive, setBlockedHoursActive] = useState(false);
+  const [recurringTasks,     setRecurringTasks]     = useState([]);
+  const [minuteTick,         setMinuteTick]         = useState(0);
 
   // Subscription state (Stripe → Supabase) — server is source of truth
   const { active: subActive, refresh: refreshSub } = useSubscription(userId);
@@ -1041,9 +1844,14 @@ export default function App() {
       !!popup ||
       showAccount ||
       showBlockedApps ||
+      showBlockedHours ||
+      showRecurringTasks ||
       showPaywall ||
+      showReduceTime ||
+      showQuickGrant ||
+      showCheckout ||
       (tab === "friends" && childSwipeLocked);
-  }, [driftInActive, overlay, popup, showAccount, showBlockedApps, showPaywall, tab, childSwipeLocked]);
+  }, [driftInActive, overlay, popup, showAccount, showBlockedApps, showBlockedHours, showRecurringTasks, showPaywall, showReduceTime, showQuickGrant, showCheckout, tab, childSwipeLocked]);
 
   const stopTick = () => { if (tickRef.current) clearInterval(tickRef.current); };
 
@@ -1126,22 +1934,9 @@ export default function App() {
   }, []);
 
   const drainBy = useCallback((elapsedSec) => {
-    if (isNativeBlockingAvailable()) return;
-    if (elapsedSec <= 0) return;
-    if (driftInActRef.current) return; // shield is up
-    const prevSec = secRef.current;
-    if (prevSec <= 0) return;
-    const rem = Math.max(0, prevSec - elapsedSec);
-    const usedSec = prevSec - rem;
-    secRef.current = rem;
-    setSecLeft(rem);
-    setCredits(c => {
-      const nb = rem > 0 ? Math.ceil(rem / 60) : 0;
-      const usedMin = Math.floor(usedSec / 60);
-      const nc = { ...c, balance: nb, balanceSec: rem, spent: Math.min(c.earned, c.spent + usedMin) };
-      persist({ credits: nc });
-      return nc;
-    });
+    // JS cannot know which background app is foregrounded. Only Apple's
+    // DeviceActivity monitor can count selected restricted apps, so do not
+    // subtract balance from generic background/closed-app time.
   }, []);
 
   // 1. Heartbeat while foregrounded — every 15s, write "I'm alive" timestamp
@@ -1197,6 +1992,80 @@ export default function App() {
   useEffect(() => {
     AsyncStorage.getItem("drift_dark_mode").then(v => { if (v === "1") setDarkMode(true); });
   }, []);
+
+  useEffect(() => {
+    AsyncStorage.getItem(`drift_quick_grants_${todayKey()}`)
+      .then(v => setQuickGrantCount(Number(v || 0)))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    AsyncStorage.getItem(`drift_blocked_hours_${userId}`)
+      .then(v => {
+        const parsed = JSON.parse(v || "[]");
+        setBlockedHours(Array.isArray(parsed) ? parsed : []);
+      })
+      .catch(() => {});
+    AsyncStorage.getItem(`drift_recurring_tasks_${userId}`)
+      .then(v => {
+        const parsed = JSON.parse(v || "[]");
+        setRecurringTasks(Array.isArray(parsed) ? parsed : []);
+      })
+      .catch(() => {});
+  }, [userId]);
+
+  useEffect(() => {
+    const update = () => setBlockedHoursActive(isBlockedHourNow(blockedHours));
+    if (!proAccess) {
+      setBlockedHoursActive(false);
+      return;
+    }
+    update();
+    const id = setInterval(() => { update(); setMinuteTick(t => t + 1); }, 30_000);
+    return () => clearInterval(id);
+  }, [blockedHours, proAccess]);
+
+  useEffect(() => {
+    if (screen !== "app" || !userId || !proAccess || !recurringTasks.length) return;
+    const today = todayKey();
+    const existing = new Set(tasks.map(t => t.id));
+    const now = new Date();
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const due = recurringTasks
+      .filter(t => t?.enabled !== false)
+      .filter(t => t.createdDate !== today)
+      .filter(t => recurrenceMatchesDate(t, now))
+      .filter(t => {
+        const scheduled = timeToMins(t.time);
+        return scheduled == null || nowMins >= scheduled;
+      })
+      .filter(t => !existing.has(`rt_${t.id}_${today}`));
+    if (!due.length) return;
+
+    const created = due.map(t => ({
+      id: `rt_${t.id}_${today}`,
+      title: t.title,
+      cat: t.cat,
+      minutes: t.minutes,
+      credits: t.credits,
+      xp: t.xp,
+      done: false,
+      aiCheck: !!t.aiCheck,
+      aiValued: !!t.aiValued,
+      aiReasoning: t.aiReasoning || "",
+      task_date: today,
+      recurringTemplateId: t.id,
+      scheduledTime: t.time,
+    }));
+    const nt = [...created, ...tasks];
+    setTasks(nt);
+    persist({ tasks: nt });
+    cache.saveTasks(userId, nt);
+    created.forEach(t => insertTask(userId, t).catch(e => {
+      console.warn("recurring task sync failed:", e?.message);
+    }));
+  }, [screen, userId, proAccess, recurringTasks, tasks, minuteTick]);
 
   // Deep-link friend invites — drift://add-friend/[username]
   useEffect(() => {
@@ -1275,6 +2144,20 @@ export default function App() {
 
   useEffect(() => {
     if (driftInActive) return; // session handler controls shield
+    if (blockedHoursActive) {
+      (async () => {
+        try {
+          await stopBalanceMonitoring();
+          await applyBlocking([]);
+          if (lastArmedBalance !== -1) {
+            await AsyncStorage.removeItem("drift_last_armed_balance");
+            setLastArmedBalance(-1);
+          }
+          shieldStateRef.current = "on";
+        } catch {}
+      })();
+      return;
+    }
     if (lastArmedBalance === null) return; // waiting for AsyncStorage
 
     const desired = credits.balance > 0 ? "off" : "on";
@@ -1316,7 +2199,7 @@ export default function App() {
         shieldStateRef.current = desired;
       } catch {}
     })();
-  }, [credits.balance, driftInActive, lastArmedBalance]);
+  }, [credits.balance, driftInActive, blockedHoursActive, lastArmedBalance]);
 
   // Refresh Screen Time auth status when the account sheet opens
   useEffect(() => {
@@ -1396,6 +2279,7 @@ export default function App() {
 
         // ── Server-authoritative state: tasks come from Supabase ──
         // Boot order: show cached state instantly, then refresh from server.
+        let remoteTasksApplied = false;
         try {
           const cached = await cache.loadTasks(uid);
           if (cached.length) setTasks(cached);
@@ -1418,6 +2302,7 @@ export default function App() {
 
             setTasks(merged);
             cache.saveTasks(uid, merged);
+            remoteTasksApplied = true;
             // Build history from completed tasks across all dates
             const allDone = remote.filter(t => t.done);
             setTaskHistory(prev => mergeCompletedTasks(prev, allDone));
@@ -1428,6 +2313,28 @@ export default function App() {
             }
           }
         } catch (e) { console.warn("fetchTasks at boot:", e?.message); }
+
+        let remoteStatsApplied = false;
+        try {
+          const stats = await fetchProfileStats(uid);
+          if (stats.totalXp > 0) {
+            setTotalXp(stats.totalXp);
+            cache.saveXp(uid, stats.totalXp);
+            remoteStatsApplied = true;
+          }
+          if (stats.balanceSeconds > 0) {
+            const restoredCredits = {
+              balance: Math.ceil(stats.balanceSeconds / 60),
+              balanceSec: stats.balanceSeconds,
+              earned: Math.ceil(stats.balanceSeconds / 60),
+              spent: 0,
+            };
+            setCredits(restoredCredits);
+            secRef.current = stats.balanceSeconds;
+            setSecLeft(stats.balanceSeconds);
+            remoteStatsApplied = true;
+          }
+        } catch (e) { console.warn("fetchProfileStats at boot:", e?.message); }
 
         const { isPremium: prem, daysLeft } = await getTrialStatus(uid);
         setIsPremium(prem);
@@ -1441,23 +2348,29 @@ export default function App() {
             .filter(t => t.done)
             .map(t => ({ ...t, completedAt: t.completedAt || p.date || todayKey() }));
           const history = mergeCompletedTasks(savedHistory, completedFromSavedTasks);
-          setTaskHistory(history);
+          setTaskHistory(prev => mergeCompletedTasks(prev, history));
           if (p.date !== todayKey()) {
-            setTotalXp(p.totalXp || 0);
-            setTasks([]);
-            persist({ tasks: [], taskHistory: history, totalXp: p.totalXp || 0 });
+            if (!remoteStatsApplied) setTotalXp(p.totalXp || 0);
+            if (!remoteTasksApplied) {
+              setTasks([]);
+              persist({ tasks: [], taskHistory: history, totalXp: p.totalXp || 0 });
+            }
           } else {
             const sc = p.credits || { balance: 0, earned: 0, spent: 0 };
-            setTasks(savedTasks);
-            setCredits(sc);
-            setTotalXp(p.totalXp || 0);
+            if (!remoteTasksApplied) setTasks(savedTasks);
+            if (!remoteStatsApplied) {
+              setCredits(sc);
+              setTotalXp(p.totalXp || 0);
+            }
             // Prefer the saved sub-minute precision so closing the app doesn't
             // round you back up to the nearest minute.
             const initSec = typeof sc.balanceSec === "number"
               ? sc.balanceSec
               : (sc.balance || 0) * 60;
-            secRef.current = initSec;
-            setSecLeft(initSec);
+            if (!remoteStatsApplied) {
+              secRef.current = initSec;
+              setSecLeft(initSec);
+            }
           }
         }
         setScreen("app");
@@ -1515,7 +2428,7 @@ export default function App() {
     }
   };
 
-  const addTask  = t => {
+  const addTask  = (t, recurrence) => {
     const nt = [...tasks, t];
     setTasks(nt); persist({ tasks: nt });
     if (userId) {
@@ -1525,6 +2438,30 @@ export default function App() {
         console.warn("insertTask sync failed (will retry on next fetch):", e?.message);
       });
       cache.saveTasks(userId, nt);
+    }
+    if (userId && proAccess && recurrence?.frequency && recurrence.frequency !== "none") {
+      const template = {
+        id: `rt_${Date.now()}`,
+        title: t.title,
+        cat: t.cat,
+        minutes: t.minutes,
+        credits: t.credits,
+        xp: t.xp,
+        aiCheck: !!t.aiCheck,
+        aiValued: !!t.aiValued,
+        aiReasoning: t.aiReasoning || "",
+        frequency: recurrence.frequency || "daily",
+        time: recurrence.time || "09:00",
+        days: recurrence.days || recurrenceDaysFor(recurrence.frequency) || null,
+        enabled: true,
+        createdDate: todayKey(),
+        createdAt: new Date().toISOString(),
+      };
+      setRecurringTasks(prev => {
+        const next = [...prev, template];
+        AsyncStorage.setItem(`drift_recurring_tasks_${userId}`, JSON.stringify(next)).catch(() => {});
+        return next;
+      });
     }
   };
 
@@ -1621,6 +2558,105 @@ export default function App() {
     persist({ credits: nc });
   };
 
+  const applyBalanceSeconds = useCallback((newSec, nextCredits, popupData) => {
+    secRef.current = newSec;
+    setSecLeft(newSec);
+    setCredits(nextCredits);
+    if (popupData) {
+      setPopup(popupData);
+      setTimeout(() => setPopup(null), 2200);
+    }
+    startTick(newSec);
+    persist({ credits: nextCredits });
+    if (userId) {
+      syncProfileStats(userId, { totalXp, balanceSeconds: newSec }).catch(() => {});
+    }
+  }, [credits, totalXp, userId]);
+
+  const handleReduceScreenTime = (mins) => {
+    const requestedSec = Math.max(0, Math.floor(mins || 0) * 60);
+    const availableSec = Math.max(0, secRef.current);
+    if (!requestedSec || requestedSec > availableSec) return;
+    const newSec = availableSec - requestedSec;
+    const reducedMins = requestedSec / 60;
+    const nextCredits = {
+      ...credits,
+      balance: Math.ceil(newSec / 60),
+      balanceSec: newSec,
+      spent: credits.spent + reducedMins,
+    };
+    setShowReduceTime(false);
+    applyBalanceSeconds(newSec, nextCredits, { loss: reducedMins });
+    if (userId) {
+      appendLedgerEntry(userId, {
+        delta: -reducedMins,
+        reason: "self_reduce",
+        balanceAfter: nextCredits.balance,
+      }).catch(() => {});
+    }
+  };
+
+  const handleQuickGrant = async () => {
+    const key = `drift_quick_grants_${todayKey()}`;
+    const latest = Number((await AsyncStorage.getItem(key).catch(() => "0")) || 0);
+    if (latest >= 3) {
+      setQuickGrantCount(3);
+      setShowQuickGrant(false);
+      return;
+    }
+    const newCount = latest + 1;
+    await AsyncStorage.setItem(key, String(newCount)).catch(() => {});
+    setQuickGrantCount(newCount);
+    setShowQuickGrant(false);
+
+    const addedMins = 15;
+    const newSec = secRef.current + addedMins * 60;
+    const nextCredits = {
+      ...credits,
+      balance: Math.ceil(newSec / 60),
+      balanceSec: newSec,
+      earned: credits.earned + addedMins,
+    };
+    applyBalanceSeconds(newSec, nextCredits, { credits: addedMins, xp: 0 });
+    if (userId) {
+      appendLedgerEntry(userId, {
+        delta: addedMins,
+        reason: "daily_grant",
+        balanceAfter: nextCredits.balance,
+      }).catch(() => {});
+    }
+  };
+
+  const openCheckout = async () => {
+    const url = await createCheckoutSession();
+    if (!url) throw new Error("No checkout URL");
+    setCheckoutUrl(url);
+    setShowPaywall(false);
+    setShowCheckout(true);
+  };
+
+  const handleCheckoutSuccess = async (sessionId) => {
+    setShowCheckout(false);
+    setCheckoutUrl("");
+    try {
+      if (sessionId) {
+        const confirmed = await confirmCheckoutSession(sessionId);
+        if (confirmed?.active) setIsPremium(true);
+      }
+      await refreshSub?.();
+      if (userId) {
+        const { isPremium: prem, daysLeft } = await getTrialStatus(userId, { force: true });
+        setIsPremium(prem);
+        setTrialDays(daysLeft);
+      }
+    } catch (e) {
+      Alert.alert(
+        "Payment pending",
+        "Stripe received the checkout return, but Drift could not verify the subscription yet. If payment succeeded, access should unlock when Stripe's webhook arrives."
+      );
+    }
+  };
+
   const signOut = async () => {
     setShowAccount(false);
     try { await supabase.auth.signOut(); } catch {}
@@ -1645,6 +2681,9 @@ export default function App() {
     setTaskHistory([]);
     setCredits({ balance: 0, earned: 0, spent: 0 });
     setTotalXp(0);
+    setBlockedHours([]);
+    setBlockedHoursActive(false);
+    setRecurringTasks([]);
     secRef.current = 0;
     setSecLeft(0);
     // Drop them straight into the sign-in screen
@@ -1703,6 +2742,8 @@ export default function App() {
   const activeTheme = getTheme(darkMode);
   const { ink: th_ink, paper: th_paper, earn: th_earn } = activeTheme;
   const statsTasks = mergeCompletedTasks(taskHistory, tasks.filter(t => t.done));
+  const displaySecLeft = blockedHoursActive ? 0 : secLeft;
+  const displayCredits = blockedHoursActive ? { ...credits, balance: 0, balanceSec: 0 } : credits;
 
   return (
     <ThemeContext.Provider value={{ dark: darkMode, theme: activeTheme }}>
@@ -1710,23 +2751,7 @@ export default function App() {
       <StatusBar barStyle={driftInActive || darkMode ? "light-content" : "dark-content"} />
 
       {/* XP / credit popup */}
-      {popup && (
-        <View style={{
-          position: "absolute", top: "18%", left: 0, right: 0,
-          alignItems: "center", zIndex: 300,
-          flexDirection: "row", justifyContent: "center", gap: 8,
-          pointerEvents: "none",
-        }}>
-          {popup.credits > 0 && (
-            <View style={{ backgroundColor: earn.green, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
-              <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>+{fmtMins(popup.credits)}</Text>
-            </View>
-          )}
-          {popup.xp > 0 && <View style={{ backgroundColor: earn.blue, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
-            <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>+{popup.xp} XP</Text>
-          </View>}
-        </View>
-      )}
+      <FloatingFeedback popup={popup} />
 
       {/* Header — hidden during active Drift In session */}
       {!driftInActive && (
@@ -1738,18 +2763,23 @@ export default function App() {
         }}>
           <Text style={{ fontFamily: FO, fontSize: 16, color: th_ink.deep, letterSpacing: 3, flex: 1 }}>DRIFT</Text>
           <View style={{
-            backgroundColor: secLeft < 0 ? "rgba(224,80,80,0.12)" : secLeft > 0 ? (secLeft < 120 ? "#FDECEA" : th_earn.greenLo) : th_paper.warm,
+            backgroundColor: blockedHoursActive ? "rgba(224,80,80,0.12)" : displaySecLeft < 0 ? "rgba(224,80,80,0.12)" : displaySecLeft > 0 ? (displaySecLeft < 120 ? "#FDECEA" : th_earn.greenLo) : th_paper.warm,
             borderRadius: 20, paddingVertical: 4, paddingHorizontal: 12, marginRight: 8,
           }}>
             <Text style={{
               fontFamily: FO, fontSize: 10, letterSpacing: 1,
-              color: secLeft < 0 ? "#C0392B" : secLeft > 0 ? (secLeft < 120 ? "#C0392B" : th_earn.greenD) : th_ink.faint,
+              color: blockedHoursActive ? "#C0392B" : displaySecLeft < 0 ? "#C0392B" : displaySecLeft > 0 ? (displaySecLeft < 120 ? "#C0392B" : th_earn.greenD) : th_ink.faint,
             }}>
-              {secLeft !== 0 ? fmtSecLeft(secLeft) : "no time"}
+              {blockedHoursActive ? "blocked" : displaySecLeft !== 0 ? fmtSecLeft(displaySecLeft) : "no time"}
             </Text>
           </View>
           {/* Account button */}
-          <TouchableOpacity onPress={() => setShowAccount(true)} style={{ marginRight: 10, padding: 4 }}>
+          <TouchableOpacity
+            onPress={() => setShowAccount(true)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={{ marginRight: 6, width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 22 }}
+            activeOpacity={0.7}
+          >
             <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
               <SvgCircle cx="12" cy="8" r="4" stroke={th_earn.green} strokeWidth={2} />
               <Path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"
@@ -1757,7 +2787,12 @@ export default function App() {
             </Svg>
           </TouchableOpacity>
           {/* Dark/light toggle — green-toned SVG icons */}
-          <TouchableOpacity onPress={toggleDark} style={{ marginRight: 10, padding: 4 }}>
+          <TouchableOpacity
+            onPress={toggleDark}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={{ marginRight: 4, width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 22 }}
+            activeOpacity={0.7}
+          >
             {darkMode ? (
               // Sun: switch to light
               <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -1779,7 +2814,18 @@ export default function App() {
       {/* Content — DriftIn always rendered so session persists across tab switches */}
       <View style={{ flex: 1, backgroundColor: th_paper.warm }} {...tabSwipe.panHandlers}>
         <View style={{ flex: 1, display: tab === "today" ? "flex" : "none" }}>
-          <TodayView tasks={tasks} credits={credits} totalXp={totalXp} onComplete={completeTask} onDelete={deleteTask} onAdd={() => setOverlay("add")} dark={darkMode} />
+          <TodayView
+            tasks={tasks}
+            credits={displayCredits}
+            totalXp={totalXp}
+            onComplete={completeTask}
+            onDelete={deleteTask}
+            onAdd={() => setOverlay("add")}
+            onReduceScreenTime={() => setShowReduceTime(true)}
+            onQuickGrant={() => setShowQuickGrant(true)}
+            quickGrantCount={quickGrantCount}
+            dark={darkMode}
+          />
         </View>
         <View style={{ flex: 1, display: tab === "driftin" || driftInActive ? "flex" : "none", backgroundColor: driftInActive ? th_ink.void : th_paper.warm }}>
           <DriftInScreen
@@ -1891,10 +2937,7 @@ export default function App() {
             daysLeft={trialDays}
             onSubscribe={async () => {
               try {
-                const url = await createCheckoutSession();
-                if (!url) throw new Error("No checkout URL");
-                setShowPaywall(false);
-                await Linking.openURL(url);
+                await openCheckout();
               } catch (e) {
                 const raw = (e?.message || "").toLowerCase();
                 const friendly = raw.includes("edge function") || raw.includes("send a request")
@@ -1927,6 +2970,16 @@ export default function App() {
             }
           }}
           onOpenBlockedApps={() => { setShowAccount(false); setFirstTimeBlockedApps(false); setShowBlockedApps(true); }}
+          onOpenBlockedHours={() => {
+            setShowAccount(false);
+            if (!proAccess) setShowPaywall(true);
+            else setShowBlockedHours(true);
+          }}
+          onOpenRecurringTasks={() => {
+            setShowAccount(false);
+            if (!proAccess) setShowPaywall(true);
+            else setShowRecurringTasks(true);
+          }}
           onRequestScreenTime={async () => {
             const next = await requestScreenTimeAuth();
             setScreenTimeStatus(next);
@@ -1937,8 +2990,7 @@ export default function App() {
           onUpgrade={async () => {
             setShowAccount(false);
             try {
-              const url = await createCheckoutSession();
-              if (url) await Linking.openURL(url);
+              await openCheckout();
             } catch (e) {
               const raw = (e?.message || "").toLowerCase();
               const friendly = raw.includes("edge function") || raw.includes("send a request")
@@ -1957,6 +3009,26 @@ export default function App() {
         dark={darkMode}
         onClose={() => { setShowBlockedApps(false); setFirstTimeBlockedApps(false); }}
       />
+      <BlockedHoursModal
+        visible={showBlockedHours}
+        rules={blockedHours}
+        dark={darkMode}
+        onClose={() => setShowBlockedHours(false)}
+        onSave={(rules) => {
+          setBlockedHours(rules);
+          if (userId) AsyncStorage.setItem(`drift_blocked_hours_${userId}`, JSON.stringify(rules)).catch(() => {});
+        }}
+      />
+      <RecurringTasksModal
+        visible={showRecurringTasks}
+        templates={recurringTasks}
+        dark={darkMode}
+        onClose={() => setShowRecurringTasks(false)}
+        onSave={(templates) => {
+          setRecurringTasks(templates);
+          if (userId) AsyncStorage.setItem(`drift_recurring_tasks_${userId}`, JSON.stringify(templates)).catch(() => {});
+        }}
+      />
       {/* First-time username setup for OAuth users */}
       <UsernameSetupModal
         visible={showUsernameSetup}
@@ -1967,6 +3039,27 @@ export default function App() {
           AsyncStorage.setItem("drift_username", u);
           setShowUsernameSetup(false);
         }}
+      />
+      <ReduceScreenTimeModal
+        visible={showReduceTime}
+        balanceSec={Math.max(0, secRef.current)}
+        dark={darkMode}
+        onClose={() => setShowReduceTime(false)}
+        onReduce={handleReduceScreenTime}
+      />
+      <QuickGrantModal
+        visible={showQuickGrant}
+        usedToday={quickGrantCount}
+        dark={darkMode}
+        onClose={() => setShowQuickGrant(false)}
+        onGrant={handleQuickGrant}
+      />
+      <StripeCheckoutModal
+        visible={showCheckout}
+        checkoutUrl={checkoutUrl}
+        onClose={() => { setShowCheckout(false); setCheckoutUrl(""); }}
+        onCancel={() => { setShowCheckout(false); setCheckoutUrl(""); }}
+        onSuccess={handleCheckoutSuccess}
       />
     </SafeAreaView>
     </ThemeContext.Provider>

@@ -168,7 +168,7 @@ export default function ChallengeSheet({
       >
         <View style={[s.handle, { backgroundColor: th.border }]} />
         {sent && (
-          <Animated.View style={[s.sentPill, { transform: [{ scale: sentScale }] }]}>
+          <Animated.View pointerEvents="none" style={[s.sentPill, { transform: [{ scale: sentScale }] }]}>
             <Text style={s.sentText}>Sent</Text>
           </Animated.View>
         )}

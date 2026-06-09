@@ -13,11 +13,11 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
 import { TrophyIcon, ChartIcon, BoltIcon, BellIcon, CloseIcon } from "./Icons";
-import { cached, rateLimited } from "./apiGuards";
+import { cached } from "./apiGuards";
 
 const INSTALL_KEY    = "drift_install_date";
 const TRIAL_DAYS     = 7;
-const MONTHLY_PRICE  = "$2.99";
+const MONTHLY_PRICE  = "$5.99";
 
 const ink   = { void: "#0B1A11", deep: "#1A2B1F" };
 const terra = "#2FAB72";
@@ -32,7 +32,7 @@ export async function initTrial() {
   }
 }
 
-export async function getTrialStatus(userId) {
+export async function getTrialStatus(userId, { force = false } = {}) {
   const raw = await AsyncStorage.getItem(INSTALL_KEY);
   const installDate = raw ? new Date(raw) : new Date();
   const daysElapsed = (Date.now() - installDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -47,7 +47,8 @@ export async function getTrialStatus(userId) {
         .from("profiles")
         .select("sub_active, sub_expires")
         .eq("id", userId)
-        .single()
+        .single(),
+      { force }
     );
     if (data?.sub_active) {
       const expires = data.sub_expires ? new Date(data.sub_expires) : null;
@@ -77,15 +78,7 @@ export default function PaywallScreen({ userId, daysLeft, onSubscribe, onClose }
       // const { customerInfo } = await Purchases.purchasePackage(pkg);
       // if (customerInfo.entitlements.active['premium']) { ... }
 
-      // Mock: mark as subscribed in Supabase
-      const expires = new Date();
-      expires.setMonth(expires.getMonth() + 1);
-      await rateLimited(`mock_subscribe_${userId}`, { limit: 5, windowMs: 10 * 60_000 }, () => supabase.from("profiles").update({
-        sub_active:  true,
-        sub_expires: expires.toISOString(),
-      }).eq("id", userId));
-
-      onSubscribe?.();
+      await onSubscribe?.();
     } catch (e) {
       Alert.alert("Purchase failed", e.message || "Please try again.");
     } finally {

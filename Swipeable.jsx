@@ -59,6 +59,10 @@ export default function Swipeable({
   const responder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => {
+        if (opened.current) close();
+        return false;
+      },
       onMoveShouldSetPanResponder: (_, gs) => {
         if (disabled) return false;
         // Only leftward, clearly horizontal, with a small threshold.
@@ -68,8 +72,7 @@ export default function Swipeable({
         const isRight = gs.dx >  CAPTURE && opened.current;
         return horizontal && (isLeft || isRight);
       },
-      // Don't let the parent steal mid-gesture
-      onPanResponderTerminationRequest: () => false,
+      onPanResponderTerminationRequest: () => true,
       onPanResponderMove: (_, gs) => {
         const base = opened.current ? -REVEAL : 0;
         const next = Math.max(-REVEAL - 20, Math.min(0, base + gs.dx));
