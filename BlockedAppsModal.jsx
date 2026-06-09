@@ -2,19 +2,21 @@
  * BlockedAppsModal.jsx
  * Modal for picking apps to block during focus / locked tasks.
  * Used during onboarding ("first time") and from the account sheet (anytime).
+ *
+ * iOS only — selection happens entirely through Apple's secure
+ * FamilyActivityPicker. Drift never sees which apps the user picked; iOS
+ * stores the opaque tokens for us. No more in-app chip list.
  */
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
-  View, Text, TouchableOpacity, TextInput, Modal,
-  ScrollView, StyleSheet, Alert, Platform, ActivityIndicator,
+  View, Text, TouchableOpacity, Modal,
+  ScrollView, Alert, Platform,
 } from "react-native";
 import {
-  getBlockedApps, setBlockedApps, SUGGESTED_APPS,
   isNativeBlockingAvailable, requestScreenTimeAuth,
   getScreenTimeAuthStatus, pickBlockedAppsNative,
 } from "./blockedApps";
 import { getTheme } from "./theme";
-import { CheckIcon } from "./Icons";
 
 const FO  = "Orbitron_700Bold";
 const FOM = "Orbitron_400Regular";
@@ -25,59 +27,25 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
 
-  const [selected, setSelected] = useState({}); // {id: {id, name}}
-  const [custom,   setCustom]   = useState("");
-  const [saving,   setSaving]   = useState(false);
-
-  useEffect(() => {
-    if (!visible) return;
-    getBlockedApps().then(list => {
-      const map = {};
-      (list || []).forEach(a => { map[a.id] = a; });
-      setSelected(map);
-    });
-  }, [visible]);
-
-  const toggle = (app) => {
-    setSelected(prev => {
-      const next = { ...prev };
-      if (next[app.id]) delete next[app.id];
-      else next[app.id] = app;
-      return next;
-    });
-  };
-
-  const addCustom = () => {
-    const name = custom.trim();
-    if (!name) return;
-    const id = "custom_" + name.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 30);
-    if (selected[id]) { setCustom(""); return; }
-    setSelected(prev => ({ ...prev, [id]: { id, name } }));
-    setCustom("");
-  };
-
-  const save = async (list = Object.values(selected)) => {
-    if (saving) return;
-    setSaving(true);
-    try {
-      await setBlockedApps(list);
-      onClose?.();
-    } catch (e) {
-      Alert.alert(
-        "Couldn't save",
-        e?.message?.includes("Too many")
-          ? e.message
-          : "We couldn't sync your blocked apps. Check your connection and try again."
-      );
-    } finally {
-      setSaving(false);
+  const openPicker = async () => {
+    if (!isNativeBlockingAvailable()) {
+      Alert.alert("Not available",
+        Platform.OS === "ios"
+          ? "Apple Screen Time blocking requires a custom build of Drift. Update Drift and try again."
+          : "App blocking via Apple Screen Time is iOS-only.");
+      return;
     }
+    const status = await getScreenTimeAuthStatus();
+    if (status !== "approved") {
+      const next = await requestScreenTimeAuth();
+      if (next !== "approved") {
+        Alert.alert("Screen Time access denied",
+          "Enable Drift in Settings > Screen Time to pick apps to block.");
+        return;
+      }
+    }
+    await pickBlockedAppsNative();
   };
-
-  const allOptions = [
-    ...SUGGESTED_APPS,
-    ...Object.values(selected).filter(s => !SUGGESTED_APPS.find(x => x.id === s.id)),
-  ];
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -110,123 +78,57 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
               HOW THIS WORKS
             </Text>
             <Text style={{ fontFamily: FB, fontSize: 12, color: "#2A7FA0", lineHeight: 18 }}>
-              {Platform.OS === "ios"
-                ? "Drift will request Screen Time permission and block these apps during your Drift In focus sessions."
-                : "Drift will use Digital Wellbeing / accessibility to block these apps during your Drift In focus sessions."}
+              Pick the apps you want Drift to block when your screen-time balance hits zero.
+              Selection happens in Apple's secure picker — Drift itself never sees your app list.
+              iOS enforces the block even if Drift is closed.
             </Text>
           </View>
 
-          {/* Native picker (iOS Screen Time) */}
-          {isNativeBlockingAvailable() && (
-            <TouchableOpacity
-              onPress={async () => {
-                const status = await getScreenTimeAuthStatus();
-                if (status !== "approved") {
-                  const next = await requestScreenTimeAuth();
-                  if (next !== "approved") {
-                    Alert.alert("Screen Time access denied",
-                      "Enable Drift in Settings > Screen Time to pick apps to block.");
-                    return;
-                  }
-                }
-                await pickBlockedAppsNative();
-              }}
-              style={{
-                paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, marginBottom: 18,
-                borderWidth: 1.5, borderColor: earn.green, backgroundColor: earn.greenLo,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ fontFamily: FK, fontSize: 14, color: earn.green }}>
-                Pick apps with Apple Screen Time
-              </Text>
-              <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                Uses Apple's secure picker — Drift never sees your app list
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Suggested + selected */}
-          <Text style={{ fontFamily: FOM, fontSize: 9, color: ink.faint, letterSpacing: 2, marginBottom: 10 }}>
-            COMMON DISTRACTIONS
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 22 }}>
-            {allOptions.map(app => {
-              const on = !!selected[app.id];
-              return (
-                <TouchableOpacity key={app.id} onPress={() => toggle(app)} style={{
-                  paddingVertical: 8, paddingHorizontal: 14, borderRadius: 22,
-                  borderWidth: 1.5,
-                  borderColor: on ? earn.green : ink.border,
-                  backgroundColor: on ? earn.greenLo : paper.card,
-                  flexDirection: "row", alignItems: "center", gap: 6,
-                }}>
-                  {on && <CheckIcon size={12} color={earn.green} />}
-                  <Text style={{ fontFamily: FB, fontSize: 13, fontWeight: on ? "600" : "400",
-                    color: on ? earn.green : ink.deep }}>
-                    {app.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Custom add */}
-          <Text style={{ fontFamily: FOM, fontSize: 9, color: ink.faint, letterSpacing: 2, marginBottom: 10 }}>
-            ADD CUSTOM APP
-          </Text>
-          <View style={{ flexDirection: "row", gap: 8, marginBottom: 24 }}>
-            <TextInput
-              value={custom} onChangeText={setCustom}
-              placeholder="App name"
-              placeholderTextColor={ink.faint}
-              returnKeyType="done"
-              onSubmitEditing={addCustom}
-              style={{
-                flex: 1, padding: 11, paddingHorizontal: 14, borderRadius: 10,
-                borderWidth: 1, borderColor: ink.border,
-                fontFamily: FB, fontSize: 14, color: ink.deep,
-                backgroundColor: paper.card,
-              }}
-            />
-            <TouchableOpacity onPress={addCustom} style={{
-              paddingHorizontal: 18, borderRadius: 10,
-              backgroundColor: earn.terra, alignItems: "center", justifyContent: "center",
-            }}>
-              <Text style={{ fontFamily: FK, fontSize: 14, color: "#fff" }}>Add</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Save */}
+          {/* Native picker (iOS Screen Time) — the ONLY way to choose */}
           <TouchableOpacity
-            onPress={() => save()}
-            disabled={saving}
-            activeOpacity={0.8}
+            onPress={openPicker}
             style={{
-              paddingVertical: 14, borderRadius: 14,
-              backgroundColor: earn.green, alignItems: "center",
-              flexDirection: "row", justifyContent: "center", gap: 10,
-              opacity: saving ? 0.7 : 1,
+              paddingVertical: 18, paddingHorizontal: 16, borderRadius: 14, marginBottom: 12,
+              borderWidth: 1.5, borderColor: earn.green, backgroundColor: earn.greenLo,
+              alignItems: "center",
             }}
           >
-            {saving && <ActivityIndicator size="small" color="#fff" />}
-            <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 2 }}>
-              {saving
-                ? "SAVING…"
-                : firstTime
-                  ? `SAVE & CONTINUE  (${Object.keys(selected).length})`
-                  : `SAVE  (${Object.keys(selected).length})`}
+            <Text style={{ fontFamily: FK, fontSize: 16, color: earn.green }}>
+              Pick apps with Apple Screen Time
+            </Text>
+            <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4, textAlign: "center" }}>
+              Opens Apple's secure picker. You can pick individual apps,
+              whole categories (Social, Games), or web domains.
             </Text>
           </TouchableOpacity>
 
+          <Text style={{ fontFamily: FB, fontSize: 11, color: ink.faint, textAlign: "center", marginBottom: 24, lineHeight: 16 }}>
+            Tap the button above any time to change what's blocked.{"\n"}
+            Your selection is stored on your device only.
+          </Text>
+
+          {/* Done / Skip — first-time onboarding only */}
           {firstTime && (
-            <TouchableOpacity
-              onPress={() => { setSelected({}); save([]); }}
-              disabled={saving}
-              style={{ paddingVertical: 14, alignItems: "center", marginTop: 6, opacity: saving ? 0.4 : 1 }}
-            >
-              <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid }}>Skip for now</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                onPress={onClose}
+                activeOpacity={0.8}
+                style={{
+                  paddingVertical: 14, borderRadius: 14,
+                  backgroundColor: earn.green, alignItems: "center",
+                }}
+              >
+                <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 2 }}>
+                  DONE
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={onClose}
+                style={{ paddingVertical: 14, alignItems: "center", marginTop: 6 }}
+              >
+                <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid }}>Skip for now</Text>
+              </TouchableOpacity>
+            </>
           )}
         </ScrollView>
       </View>

@@ -31,15 +31,20 @@ class DriftMonitor: DeviceActivityMonitor {
   ) {
     super.eventDidReachThreshold(event, activity: activity)
     applyShieldFromSelection()
-    // Tell the main app's JS side that the OS already drained the balance to
-    // zero, so when Drift opens it can update its UI/saved balance to match.
-    UserDefaults(suiteName: APP_GROUP)?.set(true, forKey: "drift_balance_depleted")
+    let defaults = UserDefaults(suiteName: APP_GROUP)
+    defaults?.set(true, forKey: "drift_balance_depleted")
+    // Diagnostics: when did the extension actually fire?
+    defaults?.set(Date().timeIntervalSince1970, forKey: "drift_last_fired_at")
+    let count = (defaults?.integer(forKey: "drift_fire_count") ?? 0) + 1
+    defaults?.set(count, forKey: "drift_fire_count")
   }
 
   // Called when the monitoring window starts (a new day, in our schedule).
   // We don't shield here by default — the shield state is whatever Drift left it.
   override func intervalDidStart(for activity: DeviceActivityName) {
     super.intervalDidStart(for: activity)
+    UserDefaults(suiteName: APP_GROUP)?.set(Date().timeIntervalSince1970,
+                                            forKey: "drift_interval_start_at")
   }
 
   // Called at end of monitoring window (e.g. midnight). Reset for the new day.

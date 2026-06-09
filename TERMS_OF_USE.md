@@ -10,7 +10,7 @@ Drift is a mobile app that helps you trade real work for screen time. You earn m
 
 ## 2. Your account
 
-You must be at least 13 years old to use Drift. You're responsible for keeping your password secure and for everything done with your account. If you suspect unauthorized access, email **support@drift.app** immediately.
+You must be at least 13 years old to use Drift. You're responsible for keeping your password secure and for everything done with your account. If you suspect unauthorized access, email **driftappcontact@gmail.com** immediately.
 
 You agree not to:
 - Create accounts for someone else, impersonate anyone, or use someone else's email.
@@ -85,4 +85,4 @@ If you're in the EU, UK, or another jurisdiction with mandatory consumer-protect
 
 ## 12. Contact
 
-**support@drift.app**
+**driftappcontact@gmail.com**

@@ -2,7 +2,7 @@
 
 **Effective: June 7, 2026**
 
-This Privacy Policy describes how Drift ("we", "us") handles your data when you use the Drift mobile application. We've kept it short and human-readable. If something here isn't clear, email **support@drift.app** and we'll explain.
+This Privacy Policy describes how Drift ("we", "us") handles your data when you use the Drift mobile application. We've kept it short and human-readable. If something here isn't clear, email **driftappcontact@gmail.com** and we'll explain.
 
 ## What we collect
 
@@ -60,7 +60,7 @@ Drift is rated 12+ and not directed at children under 13. We don't knowingly col
 
 You can:
 - **View your data** by tapping the user icon in Drift.
-- **Delete your account and all associated data** by emailing **support@drift.app** with the subject "Delete my account" from the address you signed up with. We process deletions within 7 days.
+- **Delete your account and all associated data** by emailing **driftappcontact@gmail.com** with the subject "Delete my account" from the address you signed up with. We process deletions within 7 days.
 - **Export your data** — same email, subject "Export my data". You'll get a JSON file within 14 days.
 
 If you're in the EEA, UK, or California, you have additional rights under GDPR / UK GDPR / CCPA (access, correction, portability, right to object). The email above handles those requests too.
@@ -78,4 +78,4 @@ If we change anything material, we'll post the new version in the app and notify
 
 ## Contact
 
-**support@drift.app** — privacy, deletion, GDPR, anything.
+**driftappcontact@gmail.com** — privacy, deletion, GDPR, anything.

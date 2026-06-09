@@ -281,6 +281,39 @@ class ScreenTimeModule: NSObject {
     resolve(depleted)
   }
 
+  // Diagnostics — read every state we care about so we can debug why the
+  // extension isn't firing on a given device.
+  @objc(getDiagnostics:rejecter:)
+  func getDiagnostics(_ resolve: RCTPromiseResolveBlock,
+                      rejecter reject: RCTPromiseRejectBlock) {
+    let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
+    var info: [String: Any] = [:]
+    info["appGroupAvailable"]  = defaults != nil
+    info["selectionStored"]    = (defaults?.data(forKey: DRIFT_SELECTION_KEY)?.count ?? 0) > 0
+    info["selectionBytes"]     = defaults?.data(forKey: DRIFT_SELECTION_KEY)?.count ?? 0
+    info["intervalStartAt"]    = defaults?.double(forKey: "drift_interval_start_at") ?? 0
+    info["lastFiredAt"]        = defaults?.double(forKey: "drift_last_fired_at") ?? 0
+    info["fireCount"]          = defaults?.integer(forKey: "drift_fire_count") ?? 0
+    info["depletedFlag"]       = defaults?.bool(forKey: "drift_balance_depleted") ?? false
+
+    #if canImport(FamilyControls)
+    if #available(iOS 16.0, *) {
+      info["authStatus"] = statusString(AuthorizationCenter.shared.authorizationStatus)
+      let sel = ScreenTimeSelectionStore.shared.selection
+      info["pickedAppCount"]      = sel.applicationTokens.count
+      info["pickedCategoryCount"] = sel.categoryTokens.count
+      info["pickedWebCount"]      = sel.webDomainTokens.count
+    }
+    #endif
+    #if canImport(DeviceActivity)
+    if #available(iOS 16.0, *) {
+      let activeNames = DeviceActivityCenter().activities.map { $0.rawValue }
+      info["activeMonitors"] = activeNames
+    }
+    #endif
+    resolve(info)
+  }
+
   // ── Helpers ─────────────────────────────────────────────────
   #if canImport(FamilyControls)
   @available(iOS 16.0, *)

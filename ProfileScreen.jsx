@@ -12,6 +12,7 @@ import { supabase } from "./supabase";
 import { getTheme } from "./theme";
 import { cached, invalidateCache, rateLimited } from "./apiGuards";
 import FeedbackModal from "./FeedbackModal";
+import { getDiagnostics } from "./screenTime";
 import {
   CloseIcon, ShieldKeyIcon, PhoneIcon, SparkleIcon, CheckIcon,
 } from "./Icons";
@@ -422,6 +423,24 @@ export default function ProfileScreen({
         <View style={s.legalGroup}>
           <TouchableOpacity onPress={() => setFeedbackOpen(true)} style={s.legalRow}>
             <Text style={[s.legalText, { color: ink.deep }]}>Send feedback</Text>
+            <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={async () => {
+            const d = await getDiagnostics();
+            const fmt = (ts) => ts ? new Date(ts * 1000).toLocaleString() : "never";
+            Alert.alert("Screen Time diagnostics",
+              `Auth: ${d.authStatus || "?"}\n` +
+              `App Group OK: ${d.appGroupAvailable}\n` +
+              `Selection saved: ${d.selectionStored} (${d.selectionBytes}B)\n` +
+              `Picked: ${d.pickedAppCount ?? 0} apps, ${d.pickedCategoryCount ?? 0} cats\n` +
+              `Active monitors: ${(d.activeMonitors || []).join(",") || "none"}\n` +
+              `Interval start: ${fmt(d.intervalStartAt)}\n` +
+              `Last fired: ${fmt(d.lastFiredAt)}\n` +
+              `Fire count: ${d.fireCount ?? 0}\n` +
+              `Depleted flag: ${d.depletedFlag}`
+            );
+          }} style={s.legalRow}>
+            <Text style={[s.legalText, { color: ink.deep }]}>Debug: Screen Time</Text>
             <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity

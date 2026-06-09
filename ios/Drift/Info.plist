@@ -51,9 +51,15 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>Drift needs your camera to count reps automatically using pose detection.</string>
+    <string>Drift needs your camera to take proof photos for AI-verified tasks and to set your profile avatar.</string>
     <key>NSMotionUsageDescription</key>
-    <string>Drift uses motion data to detect exercise movement.</string>
+    <string>Drift uses motion data to detect exercise movement during workout challenges.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Drift needs access to your photos to attach a proof image to a task or to set your profile avatar.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Drift may save a screenshot to your photo library if you choose to share your progress.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Drift does not record audio. This permission is required by a camera component used for pose detection.</string>
     <key>RCTNewArchEnabled</key>
     <true/>
     <key>UILaunchStoryboardName</key>

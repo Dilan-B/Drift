@@ -31,4 +31,7 @@ RCT_EXTERN_METHOD(stopBalanceMonitoring:(RCTPromiseResolveBlock)resolve
 RCT_EXTERN_METHOD(consumeDepletedFlag:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(getDiagnostics:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end

@@ -55,8 +55,8 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
     const meta = encodeURIComponent(
       `\n\n— App version: 1.0\n— Device: ${Platform.OS} ${Platform.Version}\n— Username: @${username || "(none)"}`
     );
-    Linking.openURL(`mailto:support@drift.app?subject=${subject}&body=${meta}`).catch(() => {
-      Alert.alert("Mail not set up", "Email us at support@drift.app");
+    Linking.openURL(`mailto:driftappcontact@gmail.com?subject=${subject}&body=${meta}`).catch(() => {
+      Alert.alert("Mail not set up", "Email us at driftappcontact@gmail.com");
     });
   };
 
@@ -102,7 +102,7 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
 
           <TouchableOpacity onPress={openMail} style={{ marginTop: 24, padding: 14, alignItems: "center" }}>
             <Text style={{ color: ink.mid, fontSize: 13 }}>
-              Prefer email? Tap to open Mail to <Text style={{ color: earn.green }}>support@drift.app</Text>
+              Prefer email? Tap to open Mail to <Text style={{ color: earn.green }}>driftappcontact@gmail.com</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>

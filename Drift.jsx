@@ -105,10 +105,20 @@ const getLevel  = xp => [...LEVELS].reverse().find(l => xp >= l.min) || LEVELS[0
 const getLevelIdx = xp => { const i = LEVELS.findIndex(l => l.name === getLevel(xp).name); return i < 0 ? 0 : i; };
 const xpProg    = xp => { const lv = getLevel(xp); const ni = LEVELS.findIndex(l => l.min > xp); if (ni === -1) return 1; return (xp - lv.min) / (LEVELS[ni].min - lv.min); };
 const xpToNext  = xp => { const ni = LEVELS.findIndex(l => l.min > xp); return ni === -1 ? 0 : LEVELS[ni].min - xp; };
-const todayKey    = () => new Date().toISOString().slice(0, 10);
+// Use LOCAL date, not UTC. Using ISO/UTC caused tasks to disappear mid-day
+// for users in non-UTC timezones (the "day" would flip while they were still
+// awake, triggering the reset branch on next launch).
+const todayKey    = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
 const clockStr    = () => new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 const fmtSecLeft  = s => {
-  if (s < 0)    return `-${fmtSecLeft(Math.abs(s))}`;
+  // Negative balance is intentionally never shown — there is no "debt" model.
+  if (s < 0) s = 0;
   if (s === 0)  return "locked";
   if (s < 60)   return `0:${String(s).padStart(2, "0")}`;
   if (s < 3600) return `${Math.floor(s/60)}:${String(s%60).padStart(2, "0")}`;
@@ -1126,7 +1136,14 @@ export default function App() {
   }, []);
 
   const drainBy = useCallback((elapsedSec) => {
+    // When iOS native blocking is available AND we've actually armed a
+    // DeviceActivity monitor (i.e. the extension is counting real usage of
+    // restricted apps), JS must NOT also drain — otherwise we'd punish
+    // users for time spent on Maps, sleep, etc. iOS is the source of truth.
+    // The extension writes a "depleted" flag when the threshold hits, which
+    // our launch-sync converts to balance = 0.
     if (isNativeBlockingAvailable()) return;
+
     if (elapsedSec <= 0) return;
     if (driftInActRef.current) return; // shield is up
     const prevSec = secRef.current;
@@ -1447,7 +1464,16 @@ export default function App() {
             setTasks([]);
             persist({ tasks: [], taskHistory: history, totalXp: p.totalXp || 0 });
           } else {
-            const sc = p.credits || { balance: 0, earned: 0, spent: 0 };
+            const rawSc = p.credits || { balance: 0, earned: 0, spent: 0 };
+            // Floor all credit fields at zero — historical bug + challenge
+            // penalty could leave negatives in storage. We never want debt.
+            const sc = {
+              ...rawSc,
+              balance:    Math.max(0, rawSc.balance    || 0),
+              balanceSec: Math.max(0, rawSc.balanceSec || 0),
+              earned:     Math.max(0, rawSc.earned     || 0),
+              spent:      Math.max(0, rawSc.spent      || 0),
+            };
             setTasks(savedTasks);
             setCredits(sc);
             setTotalXp(p.totalXp || 0);
@@ -1604,9 +1630,12 @@ export default function App() {
       return;
     }
 
+    // Floor at zero — no negative balance / no "working out of debt".
+    // The penalty just consumes whatever balance was left.
     const penaltySec = Math.max(0, penaltyMins || 0) * 60;
-    const newSec = secRef.current - penaltySec;
-    const lostMins = penaltyMins || 0;
+    const prevSec    = Math.max(0, secRef.current);
+    const newSec     = Math.max(0, prevSec - penaltySec);
+    const lostMins   = Math.min(Math.ceil(prevSec / 60), penaltyMins || 0);
     secRef.current = newSec;
     setSecLeft(newSec);
     AsyncStorage.removeItem("drift_last_armed_balance").catch(() => {});
@@ -1615,7 +1644,7 @@ export default function App() {
       ...credits,
       balance: Math.ceil(newSec / 60),
       balanceSec: newSec,
-      spent: credits.spent + lostMins,
+      spent: Math.min(credits.earned, credits.spent + lostMins),
     };
     setCredits(nc);
     persist({ credits: nc });
@@ -1749,15 +1778,25 @@ export default function App() {
             </Text>
           </View>
           {/* Account button */}
-          <TouchableOpacity onPress={() => setShowAccount(true)} style={{ marginRight: 10, padding: 4 }}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+          <TouchableOpacity
+            onPress={() => setShowAccount(true)}
+            style={{ marginRight: 4, padding: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.6}
+          >
+            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
               <SvgCircle cx="12" cy="8" r="4" stroke={th_earn.green} strokeWidth={2} />
               <Path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"
                 stroke={th_earn.green} strokeWidth={2} strokeLinecap="round" />
             </Svg>
           </TouchableOpacity>
           {/* Dark/light toggle — green-toned SVG icons */}
-          <TouchableOpacity onPress={toggleDark} style={{ marginRight: 10, padding: 4 }}>
+          <TouchableOpacity
+            onPress={toggleDark}
+            style={{ marginRight: 4, padding: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.6}
+          >
             {darkMode ? (
               // Sun: switch to light
               <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">

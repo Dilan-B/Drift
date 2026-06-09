@@ -86,3 +86,10 @@ export async function consumeDepletedFlag() {
   try { return !!(await Native.consumeDepletedFlag()); }
   catch { return false; }
 }
+
+/** Return a diagnostics dump for debugging the DeviceActivity pipeline. */
+export async function getDiagnostics() {
+  if (!isAvailable()) return { available: false };
+  try { return await Native.getDiagnostics(); }
+  catch (e) { return { error: e?.message }; }
+}
