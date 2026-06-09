@@ -1449,7 +1449,7 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={s2.backdrop}>
         <View style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
           <Text style={[s2.kicker, { color: ink.faint }]}>BLOCKED HOURS</Text>
@@ -1583,7 +1583,7 @@ function RecurringTasksModal({ visible, templates, dark, onClose, onSave }) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={s2.backdrop}>
         <View style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
           <Text style={[s2.kicker, { color: ink.faint }]}>RECURRING TASKS</Text>
