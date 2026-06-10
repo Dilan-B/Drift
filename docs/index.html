@@ -4,55 +4,487 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Drift — Earn Your Screen Time</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #e0e0e0; line-height: 1.6; }
-  .container { max-width: 720px; margin: 0 auto; padding: 60px 24px; }
-  h1 { font-size: 2.5rem; color: #fff; margin-bottom: 8px; }
-  .tagline { font-size: 1.2rem; color: #888; margin-bottom: 40px; }
-  .section { margin-bottom: 40px; }
-  h2 { font-size: 1.3rem; color: #fff; margin-bottom: 12px; }
-  p { color: #aaa; margin-bottom: 16px; }
-  .features { list-style: none; }
-  .features li { padding: 8px 0; color: #ccc; }
-  .features li::before { content: "→ "; color: #4CAF50; }
-  .links { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 32px; }
-  .links a { color: #4CAF50; text-decoration: none; padding: 10px 20px; border: 1px solid #4CAF50; border-radius: 8px; transition: all 0.2s; }
-  .links a:hover { background: #4CAF50; color: #000; }
-  .footer { margin-top: 60px; padding-top: 24px; border-top: 1px solid #222; color: #555; font-size: 0.85rem; }
-  .footer a { color: #666; text-decoration: none; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'DM Sans', -apple-system, sans-serif; background: #050505; color: #e0e0e0; overflow-x: hidden; }
+
+  /* ── Hero ── */
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 40px 24px; position: relative;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    background: radial-gradient(ellipse 60% 50% at 50% 30%, rgba(76,175,80,.12) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 40% at 70% 60%, rgba(46,125,50,.08) 0%, transparent 60%);
+  }
+  .hero-content { position: relative; z-index: 1; }
+  .hero-badge {
+    display: inline-block; padding: 6px 16px; border: 1px solid rgba(76,175,80,.3); border-radius: 100px;
+    font-size: 0.8rem; color: #4CAF50; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 28px;
+    background: rgba(76,175,80,.06);
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif; font-size: clamp(3rem, 8vw, 6rem);
+    color: #fff; line-height: 1.05; margin-bottom: 20px;
+    background: linear-gradient(135deg, #fff 30%, #4CAF50 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero-sub { font-size: clamp(1.1rem, 2.5vw, 1.4rem); color: #777; max-width: 500px; line-height: 1.5; margin-bottom: 40px; }
+  .hero-cta {
+    display: inline-flex; align-items: center; gap: 10px; padding: 14px 32px;
+    background: #4CAF50; color: #000; font-weight: 600; font-size: 1rem;
+    border-radius: 12px; text-decoration: none; transition: transform .2s, box-shadow .2s;
+    box-shadow: 0 0 30px rgba(76,175,80,.25);
+  }
+  .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(76,175,80,.35); }
+  .hero-cta svg { width: 20px; height: 20px; }
+  .scroll-hint {
+    position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+    color: #333; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: .4; transform: translateX(-50%) translateY(0); } 50% { opacity: 1; transform: translateX(-50%) translateY(6px); } }
+
+  /* ── Phone Mockup ── */
+  .phone-section {
+    padding: 80px 24px 120px; display: flex; justify-content: center; position: relative;
+  }
+  .phone-frame {
+    width: 280px; height: 580px; border-radius: 40px; border: 3px solid #222;
+    background: #111; position: relative; overflow: hidden;
+    box-shadow: 0 40px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.05) inset;
+    opacity: 0; transform: translateY(60px);
+    transition: opacity .8s ease, transform .8s ease;
+  }
+  .phone-frame.visible { opacity: 1; transform: translateY(0); }
+  .phone-notch {
+    width: 120px; height: 28px; background: #050505; border-radius: 0 0 18px 18px;
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 10;
+  }
+  .phone-screen { padding: 44px 20px 20px; height: 100%; display: flex; flex-direction: column; }
+  .phone-header { text-align: center; margin-bottom: 20px; }
+  .phone-logo { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: #fff; margin-bottom: 4px; }
+  .phone-time { font-size: 2.4rem; font-weight: 700; color: #4CAF50; }
+  .phone-time-label { font-size: 0.7rem; color: #555; text-transform: uppercase; letter-spacing: .08em; }
+  .phone-tasks { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .phone-task {
+    display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+    background: rgba(255,255,255,.04); border-radius: 12px; border: 1px solid rgba(255,255,255,.06);
+    opacity: 0; transform: translateX(-20px);
+    transition: opacity .5s ease, transform .5s ease;
+  }
+  .phone-task.visible { opacity: 1; transform: translateX(0); }
+  .phone-task-check {
+    width: 22px; height: 22px; border-radius: 50%; border: 2px solid #333;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .phone-task.done .phone-task-check { border-color: #4CAF50; background: #4CAF50; }
+  .phone-task-info { flex: 1; }
+  .phone-task-name { font-size: 0.85rem; color: #ccc; }
+  .phone-task.done .phone-task-name { color: #666; text-decoration: line-through; }
+  .phone-task-mins { font-size: 0.7rem; color: #4CAF50; }
+  .phone-glow {
+    position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%);
+    width: 200px; height: 200px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(76,175,80,.15) 0%, transparent 70%);
+    filter: blur(40px);
+  }
+
+  /* ── How it Works ── */
+  .how-section { padding: 100px 24px; max-width: 1000px; margin: 0 auto; }
+  .section-label {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: .15em;
+    color: #4CAF50; margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif; font-size: clamp(2rem, 4vw, 3rem);
+    color: #fff; margin-bottom: 60px; line-height: 1.15;
+  }
+  .steps { display: grid; grid-template-columns: 1fr; gap: 0; position: relative; }
+  .steps::before {
+    content: ''; position: absolute; left: 32px; top: 0; bottom: 0; width: 2px;
+    background: linear-gradient(to bottom, #4CAF50 0%, rgba(76,175,80,.1) 100%);
+  }
+  .step {
+    display: flex; gap: 28px; padding: 40px 0;
+    opacity: 0; transform: translateY(30px);
+    transition: opacity .6s ease, transform .6s ease;
+  }
+  .step.visible { opacity: 1; transform: translateY(0); }
+  .step-icon {
+    width: 64px; height: 64px; border-radius: 20px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; position: relative; z-index: 1;
+  }
+  .step:nth-child(1) .step-icon { background: linear-gradient(135deg, #1a3a1a, #2e7d32); }
+  .step:nth-child(2) .step-icon { background: linear-gradient(135deg, #1a2a3a, #1565c0); }
+  .step:nth-child(3) .step-icon { background: linear-gradient(135deg, #3a1a3a, #7b1fa2); }
+  .step:nth-child(4) .step-icon { background: linear-gradient(135deg, #3a2a1a, #e65100); }
+  .step-content { padding-top: 4px; }
+  .step h3 { font-size: 1.2rem; color: #fff; margin-bottom: 6px; }
+  .step p { color: #777; font-size: 0.95rem; line-height: 1.6; max-width: 480px; }
+
+  /* ── Features Grid ── */
+  .features-section { padding: 100px 24px; max-width: 1000px; margin: 0 auto; }
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+  .feature-card {
+    padding: 32px 28px; border-radius: 20px; border: 1px solid rgba(255,255,255,.06);
+    background: rgba(255,255,255,.02); position: relative; overflow: hidden;
+    opacity: 0; transform: translateY(30px) scale(.97);
+    transition: opacity .6s ease, transform .6s ease;
+  }
+  .feature-card.visible { opacity: 1; transform: translateY(0) scale(1); }
+  .feature-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(76,175,80,.4), transparent);
+    opacity: 0; transition: opacity .3s;
+  }
+  .feature-card:hover::before { opacity: 1; }
+  .feature-icon { font-size: 2rem; margin-bottom: 16px; }
+  .feature-card h3 { font-size: 1.1rem; color: #fff; margin-bottom: 8px; }
+  .feature-card p { color: #666; font-size: 0.9rem; line-height: 1.6; }
+
+  /* ── Stats Bar ── */
+  .stats-section {
+    padding: 80px 24px; border-top: 1px solid #111; border-bottom: 1px solid #111;
+    background: rgba(76,175,80,.02);
+  }
+  .stats-inner { max-width: 900px; margin: 0 auto; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 40px; }
+  .stat {
+    text-align: center;
+    opacity: 0; transform: translateY(20px);
+    transition: opacity .6s ease, transform .6s ease;
+  }
+  .stat.visible { opacity: 1; transform: translateY(0); }
+  .stat-number {
+    font-family: 'Playfair Display', serif; font-size: clamp(2.5rem, 5vw, 3.5rem);
+    color: #4CAF50; line-height: 1;
+  }
+  .stat-label { font-size: 0.85rem; color: #555; margin-top: 8px; }
+
+  /* ── CTA Section ── */
+  .cta-section {
+    padding: 120px 24px; text-align: center; position: relative;
+  }
+  .cta-section::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse 50% 60% at 50% 80%, rgba(76,175,80,.1) 0%, transparent 70%);
+  }
+  .cta-content { position: relative; z-index: 1; }
+  .cta-section h2 {
+    font-family: 'Playfair Display', serif; font-size: clamp(2rem, 5vw, 3.5rem);
+    color: #fff; margin-bottom: 16px;
+  }
+  .cta-section p { color: #666; font-size: 1.1rem; margin-bottom: 36px; }
+
+  /* ── Footer ── */
+  footer {
+    padding: 40px 24px; border-top: 1px solid #111; text-align: center;
+  }
+  .footer-links { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; margin-bottom: 16px; }
+  .footer-links a { color: #555; text-decoration: none; font-size: 0.9rem; transition: color .2s; }
+  .footer-links a:hover { color: #4CAF50; }
+  .footer-copy { color: #333; font-size: 0.8rem; }
+
+  /* ── Floating Particles ── */
+  .particles { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+  .particle {
+    position: absolute; width: 3px; height: 3px; border-radius: 50%;
+    background: rgba(76,175,80,.15); animation: float linear infinite;
+  }
+  @keyframes float {
+    0% { transform: translateY(100vh) scale(0); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+  }
+
+  /* ── Progress Bar ── */
+  .progress-bar {
+    position: fixed; top: 0; left: 0; height: 3px; background: #4CAF50;
+    z-index: 100; width: 0%; transition: width .1s linear;
+    box-shadow: 0 0 10px rgba(76,175,80,.5);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .steps::before { left: 22px; }
+    .step { gap: 16px; }
+    .step-icon { width: 44px; height: 44px; font-size: 1.1rem; border-radius: 14px; }
+    .stats-inner { flex-direction: column; gap: 24px; }
+  }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>Drift</h1>
-  <p class="tagline">Earn your screen time by completing real tasks.</p>
 
-  <div class="section">
-    <h2>How it works</h2>
-    <ul class="features">
-      <li>Create tasks and complete them to earn screen time minutes</li>
-      <li>Pick which apps to block using Apple's Screen Time API</li>
-      <li>Apps stay blocked until you've put in the work</li>
-      <li>Challenge friends and hold each other accountable</li>
-      <li>Build productive habits without going cold turkey</li>
-    </ul>
+<div class="progress-bar" id="progressBar"></div>
+
+<div class="particles" id="particles"></div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">Now on the App Store</div>
+    <h1>Drift</h1>
+    <p class="hero-sub">Earn your screen time by completing real tasks. No willpower required — just put in the work first.</p>
+    <a href="https://apps.apple.com/app/drift-screentime/id6778215875" class="hero-cta">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+      Download for iOS
+    </a>
   </div>
-
-  <div class="section">
-    <h2>Support</h2>
-    <p>Questions, bugs, or feedback? Reach us at <a href="mailto:driftappcontact@gmail.com" style="color:#4CAF50">driftappcontact@gmail.com</a></p>
+  <div class="scroll-hint">
+    <span>Scroll to explore</span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
   </div>
+</section>
 
-  <div class="links">
+<!-- Phone Mockup -->
+<section class="phone-section">
+  <div class="phone-frame" id="phoneMock">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="phone-header">
+        <div class="phone-logo">DRIFT</div>
+        <div class="phone-time" id="phoneTime">53m</div>
+        <div class="phone-time-label">earned today</div>
+      </div>
+      <div class="phone-tasks">
+        <div class="phone-task done" data-delay="0">
+          <div class="phone-task-check">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <div class="phone-task-info">
+            <div class="phone-task-name">Morning run — 2 miles</div>
+            <div class="phone-task-mins">+15 min earned</div>
+          </div>
+        </div>
+        <div class="phone-task done" data-delay="100">
+          <div class="phone-task-check">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <div class="phone-task-info">
+            <div class="phone-task-name">Read for 20 minutes</div>
+            <div class="phone-task-mins">+20 min earned</div>
+          </div>
+        </div>
+        <div class="phone-task done" data-delay="200">
+          <div class="phone-task-check">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <div class="phone-task-info">
+            <div class="phone-task-name">Clean room</div>
+            <div class="phone-task-mins">+18 min earned</div>
+          </div>
+        </div>
+        <div class="phone-task" data-delay="300">
+          <div class="phone-task-check"></div>
+          <div class="phone-task-info">
+            <div class="phone-task-name">Study for exam — Ch. 4</div>
+            <div class="phone-task-mins">+30 min</div>
+          </div>
+        </div>
+        <div class="phone-task" data-delay="400">
+          <div class="phone-task-check"></div>
+          <div class="phone-task-info">
+            <div class="phone-task-name">Practice guitar</div>
+            <div class="phone-task-mins">+15 min</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-glow"></div>
+  </div>
+</section>
+
+<!-- How it Works -->
+<section class="how-section">
+  <div class="section-label">How it works</div>
+  <h2 class="section-title">Four steps to<br>guilt-free scrolling</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-icon">✏️</div>
+      <div class="step-content">
+        <h3>Create tasks</h3>
+        <p>Add the things you actually need to do — homework, chores, exercise, reading. Set how many minutes each one is worth.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-icon">✅</div>
+      <div class="step-content">
+        <h3>Complete them</h3>
+        <p>Do the work, mark it done. Optionally snap a photo for AI verification — prove it, don't just check it off.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-icon">⏱️</div>
+      <div class="step-content">
+        <h3>Earn minutes</h3>
+        <p>Each completed task adds screen time to your daily balance. The more you do, the more you unlock.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-icon">📱</div>
+      <div class="step-content">
+        <h3>Use your apps</h3>
+        <p>Your blocked apps unlock as you earn time. When your balance hits zero, they're blocked again — by iOS itself.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features-section">
+  <div class="section-label">Features</div>
+  <h2 class="section-title">Built for real life</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <h3>Apple Screen Time</h3>
+      <p>Native iOS blocking via FamilyControls. Apps are shielded by the OS — no workarounds, no cheating.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>AI Verification</h3>
+      <p>Snap a photo to prove you did the task. Our AI checks your proof so you can't just tap "done" on everything.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚔️</div>
+      <h3>Friend Challenges</h3>
+      <p>Compete with friends on push-ups, reading, or study sessions. Loser gives up screen time.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌱</div>
+      <h3>Your Grove</h3>
+      <p>Watch your garden grow as you build streaks. Every productive day adds to your digital grove.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔁</div>
+      <h3>Recurring Tasks</h3>
+      <p>Set up daily and weekly routines that auto-populate. Build habits on autopilot.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌙</div>
+      <h3>Dark Mode</h3>
+      <p>Easy on the eyes, day or night. Drift looks great in both light and dark themes.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<section class="stats-section">
+  <div class="stats-inner">
+    <div class="stat">
+      <div class="stat-number" data-target="53">0</div>
+      <div class="stat-label">Minutes earned per day (avg)</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number" data-target="4">0</div>
+      <div class="stat-label">Tasks completed daily</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number" data-target="87">0</div>
+      <div class="stat-label">% less mindless scrolling</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-content">
+    <h2>Ready to earn<br>your screen time?</h2>
+    <p>Free to download. No ads. No tracking.</p>
+    <a href="https://apps.apple.com/app/drift-screentime/id6778215875" class="hero-cta">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+      Download for iOS
+    </a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-links">
     <a href="/Drift/privacy">Privacy Policy</a>
     <a href="/Drift/terms">Terms of Use</a>
+    <a href="/Drift/support">Support</a>
     <a href="mailto:driftappcontact@gmail.com">Contact</a>
   </div>
+  <p class="footer-copy">&copy; 2025 Riaan Sanghani. All rights reserved.</p>
+</footer>
 
-  <div class="footer">
-    <p>&copy; 2025 Riaan Sanghani. All rights reserved.</p>
-  </div>
-</div>
+<script>
+// Scroll progress bar
+window.addEventListener('scroll', () => {
+  const h = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progressBar').style.width = (window.scrollY / h * 100) + '%';
+});
+
+// Intersection Observer for scroll-linked animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const delay = e.target.dataset.delay || 0;
+      setTimeout(() => e.target.classList.add('visible'), +delay);
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.phone-frame, .phone-task, .step, .feature-card, .stat').forEach(el => observer.observe(el));
+
+// Animated counter for stats
+const counted = new Set();
+const counterObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting && !counted.has(e.target)) {
+      counted.add(e.target);
+      const el = e.target.querySelector('.stat-number');
+      const target = +el.dataset.target;
+      const dur = 1500;
+      const start = performance.now();
+      const tick = (now) => {
+        const p = Math.min((now - start) / dur, 1);
+        const ease = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(target * ease);
+        if (p < 1) requestAnimationFrame(tick);
+        else el.textContent = target + (target === 87 ? '%' : '');
+      };
+      requestAnimationFrame(tick);
+    }
+  });
+}, { threshold: 0.5 });
+document.querySelectorAll('.stat').forEach(el => counterObs.observe(el));
+
+// Floating particles
+const pc = document.getElementById('particles');
+for (let i = 0; i < 30; i++) {
+  const p = document.createElement('div');
+  p.className = 'particle';
+  p.style.left = Math.random() * 100 + '%';
+  p.style.animationDuration = (8 + Math.random() * 12) + 's';
+  p.style.animationDelay = (Math.random() * 10) + 's';
+  p.style.width = p.style.height = (2 + Math.random() * 3) + 'px';
+  pc.appendChild(p);
+}
+
+// Phone time counter animation
+const phoneTimeEl = document.getElementById('phoneTime');
+const phoneObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      let mins = 0;
+      const iv = setInterval(() => {
+        mins += 1;
+        phoneTimeEl.textContent = mins + 'm';
+        if (mins >= 53) clearInterval(iv);
+      }, 25);
+      phoneObs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.3 });
+phoneObs.observe(document.getElementById('phoneMock'));
+</script>
 </body>
 </html>
