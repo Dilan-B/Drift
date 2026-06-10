@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
-  ActivityIndicator, Alert, Modal, SafeAreaView, StyleSheet,
+  ActivityIndicator, Alert, Modal, Platform, StatusBar, StyleSheet,
   Text, TouchableOpacity, View,
 } from "react-native";
 import { WebView } from "react-native-webview";
@@ -58,7 +58,7 @@ export default function StripeCheckoutModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <SafeAreaView style={s.root}>
+      <View style={s.root}>
         <View style={s.header}>
           <View>
             <Text style={s.kicker}>SECURE CHECKOUT</Text>
@@ -97,13 +97,17 @@ export default function StripeCheckoutModal({
             </View>
           )}
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#0B1A11" },
+  root: {
+    flex: 1,
+    backgroundColor: "#0B1A11",
+    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 0) : 44,
+  },
   header: {
     height: 64, paddingHorizontal: 18, flexDirection: "row",
     alignItems: "center", justifyContent: "space-between",

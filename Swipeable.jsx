@@ -16,8 +16,8 @@ import {
 } from "react-native";
 
 const REVEAL  = 96;   // how far the row slides to expose the delete action
-const COMMIT  = 80;   // dx threshold below which the row snaps back
-const CAPTURE = 8;    // small threshold so we claim before parent tabSwipe
+const COMMIT  = 44;   // shorter travel keeps the row open more reliably
+const CAPTURE = 4;    // claim early so the ScrollView/tab swipe does not steal it
 
 export default function Swipeable({
   children,
@@ -67,50 +67,74 @@ export default function Swipeable({
         if (opened.current) close();
         return false;
       },
-      onMoveShouldSetPanResponder: (_, gs) => {
+      onMoveShouldSetPanResponderCapture: (_, gs) => {
         if (disabled) return false;
-        // Only leftward, clearly horizontal, with a small threshold.
-        // If already open, allow rightward swipes too (to close).
-        const horizontal = Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5;
+        const horizontal = Math.abs(gs.dx) > Math.abs(gs.dy) * 1.05;
         const isLeft  = gs.dx < -CAPTURE;
         const isRight = gs.dx >  CAPTURE && opened.current;
         return horizontal && (isLeft || isRight);
       },
-      onPanResponderTerminationRequest: () => true,
+      onMoveShouldSetPanResponder: (_, gs) => {
+        if (disabled) return false;
+        // Only leftward, clearly horizontal, with a small threshold.
+        // If already open, allow rightward swipes too (to close).
+        const horizontal = Math.abs(gs.dx) > Math.abs(gs.dy) * 1.05;
+        const isLeft  = gs.dx < -CAPTURE;
+        const isRight = gs.dx >  CAPTURE && opened.current;
+        return horizontal && (isLeft || isRight);
+      },
+      onPanResponderGrant: () => {
+        onActiveChange?.(true);
+      },
+      onPanResponderTerminationRequest: () => false,
       onPanResponderMove: (_, gs) => {
         const base = opened.current ? -REVEAL : 0;
         const next = Math.max(-REVEAL - 20, Math.min(0, base + gs.dx));
         tx.setValue(next);
       },
       onPanResponderRelease: (_, gs) => {
+        onActiveChange?.(false);
         const base = opened.current ? -REVEAL : 0;
         const final = base + gs.dx;
-        if (final <= -COMMIT) open();
+        if (final <= -COMMIT || gs.vx < -0.25) open();
         else                  close();
       },
       onPanResponderTerminate: () => {
+        onActiveChange?.(false);
         if (opened.current) open(); else close();
       },
     })
   ).current;
 
   return (
-    <View style={[{ position: "relative", overflow: "hidden", borderRadius: 16 }, height ? { height } : null]}>
+    <View
+      onTouchStart={() => {
+        if (!disabled) onActiveChange?.(true);
+      }}
+      onTouchEnd={() => onActiveChange?.(false)}
+      onTouchCancel={() => onActiveChange?.(false)}
+      style={[{ position: "relative", overflow: "hidden", borderRadius: 18 }, height ? { height } : null]}
+    >
       {/* Underlay — visible behind the row when swiped open */}
-      <View
+      <Animated.View
         pointerEvents="box-none"
         style={{
           position: "absolute", top: 0, right: 0, bottom: 0,
           width: REVEAL,
           backgroundColor: "#E05050",
-          borderRadius: 16,
+          borderRadius: 18,
           alignItems: "center", justifyContent: "center",
+          opacity: tx.interpolate({
+            inputRange: [-12, -2, 0],
+            outputRange: [1, 0, 0],
+            extrapolate: "clamp",
+          }),
         }}
       >
         <TouchableOpacity onPress={askDelete} style={{ width: REVEAL, height: "100%", alignItems: "center", justifyContent: "center" }}>
           <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13, letterSpacing: 1 }}>DELETE</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       {/* The actual row */}
       <Animated.View

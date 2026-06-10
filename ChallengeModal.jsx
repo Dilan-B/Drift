@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator, Animated, PanResponder, ScrollView, StyleSheet,
-  Text, TextInput, TouchableOpacity, Vibration, View,
+  Pressable, Text, TextInput, TouchableOpacity, Vibration, View,
 } from "react-native";
 import { supabase } from "./supabase";
 import { cached, rateLimited } from "./apiGuards";
@@ -13,11 +13,10 @@ import {
   DumbbellIcon, BoltIcon, FireIcon, LegIcon, SurfIcon, RunIcon,
   SpeakerIcon, WarnIcon, SparkleIcon,
 } from "./Icons";
+import { FF } from "./theme";
+import { LeafGlyph } from "./SproutArt";
 
-const terra = "#2FAB72";
-const FD = "Georgia";
-const FK = "Oswald_700Bold";
-const FB = undefined;
+const terra = "#3E6B4E";
 
 const CHALLENGE_OPTIONS = [
   { id: "pushups", label: "Push-ups", Icon: DumbbellIcon, reps: 20, title: "20 push-ups", minutes: 5 },
@@ -32,24 +31,32 @@ const CHALLENGE_OPTIONS = [
 
 const palette = (dark) => dark ? {
   overlay: "rgba(0,0,0,0.62)",
-  sheet: "#14241E",
-  card: "#1B3027",
-  ink: "#E8F5EC",
-  mid: "#86A995",
-  faint: "#5E806C",
-  border: "rgba(255,255,255,0.11)",
-  wash: "rgba(47,171,114,0.13)",
-  input: "#102019",
+  sheet: "#171F18",
+  card: "#1A2320",
+  ink: "#E8EEDF",
+  mid: "#9DAE9A",
+  faint: "#566357",
+  border: "rgba(255,255,255,0.08)",
+  hairline: "rgba(255,255,255,0.06)",
+  wash: "rgba(168,201,154,0.13)",
+  washStrong: "rgba(168,201,154,0.22)",
+  input: "#1A2320",
+  deep: "#D8E8C5",
+  clay: "#CCA07E",
 } : {
   overlay: "rgba(11,26,17,0.35)",
   sheet: "#FFFFFF",
-  card: "#F4F9F6",
-  ink: "#1A2B1F",
-  mid: "#6B8A78",
-  faint: "#A8BFB5",
-  border: "rgba(26,43,31,0.10)",
-  wash: "#E4F5EE",
-  input: "#FFFFFF",
+  card: "#FBFBF9",
+  ink: "#1A2820",
+  mid: "#6B7A6E",
+  faint: "#A8B0A8",
+  border: "rgba(26,40,32,0.08)",
+  hairline: "rgba(26,40,32,0.06)",
+  wash: "#E4ECE0",
+  washStrong: "rgba(62,107,78,0.14)",
+  input: "#FAF6EE",
+  deep: "#1F3A2A",
+  clay: "#B0764E",
 };
 
 function isSubActive(profile) {
@@ -161,27 +168,38 @@ export default function ChallengeSheet({
   };
 
   return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: th.overlay, justifyContent: "flex-end", zIndex: 500 }]}>
+    <View style={[StyleSheet.absoluteFill, { zIndex: 500 }]}>
+      <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: th.overlay }]} onPress={onClose} />
       <Animated.View
         {...panResponder.panHandlers}
         style={[s.sheet, { backgroundColor: th.sheet, borderColor: th.border, transform: [{ translateY: slideY }] }]}
       >
         <View style={[s.handle, { backgroundColor: th.border }]} />
         {sent && (
-          <Animated.View pointerEvents="none" style={[s.sentPill, { transform: [{ scale: sentScale }] }]}>
+          <Animated.View pointerEvents="none" style={[s.sentPill, { backgroundColor: th.deep, transform: [{ scale: sentScale }] }]}>
             <Text style={s.sentText}>Sent</Text>
           </Animated.View>
         )}
 
-        <Text style={[s.title, { color: th.ink }]}>Challenge @{target.username}</Text>
+        <View style={s.hero}>
+          <View style={[s.leafBadge, { backgroundColor: th.wash }]}>
+            <LeafGlyph size={19} color={terra} />
+          </View>
+          <Text style={[s.kicker, { color: th.faint }]}>CHALLENGE</Text>
+          <Text style={[s.title, { color: th.ink }]}>@{target.username}</Text>
+        </View>
 
         <View style={[s.segment, { backgroundColor: th.card }]}>
           {[
             ["exercise", "Exercise"],
             ["custom", "Custom"],
           ].map(([id, label]) => (
-            <TouchableOpacity key={id} onPress={() => setMode(id)} style={[s.segmentItem, mode === id && { backgroundColor: terra }]}>
-              <Text style={{ color: mode === id ? "#fff" : th.mid, fontWeight: "800", fontSize: 12 }}>{label}</Text>
+            <TouchableOpacity key={id} onPress={() => setMode(id)} style={[s.segmentItem, mode === id && { backgroundColor: th.deep }]}>
+              <Text style={{
+                color: mode === id ? (dark ? "#1F3A2A" : "#FAF6EE") : th.mid,
+                fontFamily: FF.bodyMed,
+                fontSize: 12,
+              }}>{label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -191,22 +209,28 @@ export default function ChallengeSheet({
             { id: "compete", label: "Compete", sub: "first done wins" },
             { id: "dare", label: "Dare", sub: "finish before midnight" },
           ].map(m => (
-            <TouchableOpacity key={m.id} onPress={() => setType(m.id)} style={[s.modeCard, { backgroundColor: th.card, borderColor: th.border }, type === m.id && { borderColor: terra }]}>
-              <Text style={{ color: type === m.id ? terra : th.ink, fontWeight: "800" }}>{m.label}</Text>
-              <Text style={{ color: th.mid, fontSize: 11, marginTop: 2 }}>{m.sub}</Text>
+            <TouchableOpacity key={m.id} onPress={() => setType(m.id)} style={[s.modeCard, { backgroundColor: th.card, borderColor: th.border }, type === m.id && { borderColor: terra, backgroundColor: th.wash }]}>
+              <Text style={{ color: type === m.id ? terra : th.ink, fontFamily: FF.bodyMed, fontSize: 14 }}>{m.label}</Text>
+              <Text style={{ color: th.mid, fontFamily: FF.body, fontSize: 11, marginTop: 2 }}>{m.sub}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={s.bodyScroll}
+          contentContainerStyle={s.bodyContent}
+        >
         {mode === "exercise" ? (
           <>
-            <Text style={[s.pickLabel, { color: th.faint }]}>Choose exercise</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 18 }}>
+            <Text style={[s.pickLabel, { color: th.faint }]}>Choose challenge</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }} contentContainerStyle={{ paddingBottom: 4 }}>
               {CHALLENGE_OPTIONS.map(opt => (
-                <TouchableOpacity key={opt.id} onPress={() => setExercise(opt)} style={[s.exCard, { backgroundColor: th.card, borderColor: th.border }, exercise?.id === opt.id && { borderColor: terra, backgroundColor: th.wash }]}>
-                  <View style={{ marginBottom: 6 }}><opt.Icon size={26} color={exercise?.id === opt.id ? terra : th.mid} /></View>
-                  <Text style={{ color: exercise?.id === opt.id ? terra : th.ink, fontSize: 12, fontWeight: "800", textAlign: "center" }}>{opt.label}</Text>
-                  <Text style={{ color: th.mid, fontSize: 10, marginTop: 3 }}>{opt.reps ? `${opt.reps} reps` : `${opt.secs}s`}</Text>
+                <TouchableOpacity key={opt.id} onPress={() => setExercise(opt)} style={[s.exCard, { backgroundColor: th.card, borderColor: th.border }, exercise?.id === opt.id && { borderColor: terra, backgroundColor: th.washStrong }]}>
+                  <View style={s.exIconWrap}><opt.Icon size={24} color={exercise?.id === opt.id ? terra : th.mid} /></View>
+                  <Text numberOfLines={2} style={[s.exLabel, { color: exercise?.id === opt.id ? terra : th.ink }]}>{opt.label}</Text>
+                  <Text numberOfLines={1} style={[s.exMeta, { color: th.mid }]}>{opt.reps ? `${opt.reps} reps` : `${opt.secs}s`}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -252,17 +276,18 @@ export default function ChallengeSheet({
               : type === "compete"
                 ? "Both of you get the same challenge. First completion is tracked."
                 : "They need to complete this before it expires."}
-          </Text>
+            </Text>
         </View>
+        </ScrollView>
 
         {!!errorMsg && <Text style={s.errorText}>{errorMsg}</Text>}
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <TouchableOpacity onPress={onClose} style={[s.cancelBtn, { borderColor: th.border }]}>
-            <Text style={{ color: th.mid, fontWeight: "700" }}>Cancel</Text>
+            <Text style={{ color: th.mid, fontFamily: FF.bodyMed, fontSize: 14 }}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={send} disabled={!canSend} style={[s.sendBtn, (!canSend || sending) && { opacity: 0.45 }]}>
-            {sending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.sendBtnText}>Send</Text>}
+          <TouchableOpacity onPress={send} disabled={!canSend} style={[s.sendBtn, { backgroundColor: th.deep }, (!canSend || sending) && { opacity: 0.45 }]}>
+            {sending ? <ActivityIndicator color={dark ? "#1F3A2A" : "#FAF6EE"} size="small" /> : <Text style={[s.sendBtnText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Send</Text>}
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -272,24 +297,71 @@ export default function ChallengeSheet({
 
 const s = StyleSheet.create({
   sheet: {
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 22, paddingBottom: 34, borderTopWidth: 1,
+    position: "absolute",
+    left: 18,
+    right: 18,
+    bottom: 18,
+    maxHeight: "90%",
+    borderRadius: 28,
+    padding: 22,
+    paddingBottom: 24,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 18,
   },
-  handle: { width: 38, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 16 },
-  sentPill: { position: "absolute", top: 18, right: 20, borderRadius: 16, backgroundColor: terra, paddingHorizontal: 13, paddingVertical: 7 },
-  sentText: { color: "#fff", fontWeight: "800", fontSize: 12 },
-  title: { fontFamily: FD, fontSize: 24, fontStyle: "italic", fontWeight: "300", marginBottom: 16 },
-  segment: { flexDirection: "row", padding: 4, borderRadius: 14, marginBottom: 12 },
+  handle: { width: 38, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 14 },
+  sentPill: { position: "absolute", top: 18, right: 20, borderRadius: 16, paddingHorizontal: 13, paddingVertical: 7 },
+  sentText: { color: "#1F3A2A", fontFamily: FF.bodyBold, fontSize: 12 },
+  hero: { alignItems: "center", marginBottom: 16 },
+  leafBadge: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", marginBottom: 8 },
+  kicker: { fontFamily: FF.kicker, fontSize: 9, letterSpacing: 2.4, marginBottom: 4 },
+  title: { fontFamily: FF.display, fontSize: 32, letterSpacing: -0.4 },
+  segment: { flexDirection: "row", padding: 4, borderRadius: 16, marginBottom: 12 },
   segmentItem: { flex: 1, alignItems: "center", paddingVertical: 9, borderRadius: 11 },
   modeRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
-  modeCard: { flex: 1, padding: 13, borderRadius: 14, borderWidth: 1 },
-  pickLabel: { fontFamily: FK, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 10 },
-  exCard: { width: 94, padding: 12, marginRight: 8, borderRadius: 14, alignItems: "center", borderWidth: 1 },
-  input: { borderWidth: 1, borderRadius: 13, paddingVertical: 12, paddingHorizontal: 13, fontSize: 14 },
-  infoBox: { flexDirection: "row", gap: 9, padding: 13, borderRadius: 14, borderWidth: 1, marginBottom: 16 },
-  infoText: { flex: 1, fontSize: 12, lineHeight: 18 },
-  errorText: { color: "#E05050", fontSize: 12, marginBottom: 12, textAlign: "center" },
+  modeCard: { flex: 1, padding: 13, borderRadius: 16, borderWidth: 1 },
+  bodyScroll: { maxHeight: 260, marginBottom: 12 },
+  bodyContent: { paddingBottom: 2 },
+  pickLabel: { fontFamily: FF.kicker, fontSize: 9, textTransform: "uppercase", letterSpacing: 1.8, marginBottom: 10 },
+  exCard: {
+    width: 106,
+    minHeight: 118,
+    paddingVertical: 13,
+    paddingHorizontal: 10,
+    marginRight: 8,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+  },
+  exIconWrap: {
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  exLabel: {
+    fontFamily: FF.bodyMed,
+    fontSize: 12,
+    lineHeight: 15,
+    minHeight: 30,
+    textAlign: "center",
+    marginTop: 5,
+  },
+  exMeta: {
+    fontFamily: FF.body,
+    fontSize: 10,
+    lineHeight: 13,
+    marginTop: 5,
+    textAlign: "center",
+  },
+  input: { borderWidth: 1, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 13, fontFamily: FF.body, fontSize: 14 },
+  infoBox: { flexDirection: "row", gap: 9, padding: 13, borderRadius: 16, borderWidth: 1, marginBottom: 16 },
+  infoText: { flex: 1, fontFamily: FF.body, fontSize: 12, lineHeight: 18 },
+  errorText: { color: "#E05050", fontFamily: FF.body, fontSize: 12, marginBottom: 12, textAlign: "center" },
   cancelBtn: { flex: 1, padding: 14, borderRadius: 14, borderWidth: 1, alignItems: "center" },
-  sendBtn: { flex: 2, padding: 14, borderRadius: 14, backgroundColor: terra, alignItems: "center" },
-  sendBtnText: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  sendBtn: { flex: 2, padding: 14, borderRadius: 14, alignItems: "center" },
+  sendBtnText: { fontFamily: FF.bodyMed, fontSize: 15 },
 });

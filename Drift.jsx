@@ -3,9 +3,10 @@ import {
   View, Text, TouchableOpacity, TextInput, ScrollView,
   StyleSheet, KeyboardAvoidingView,
   StatusBar, Platform, Alert, AppState, Modal, PanResponder, Animated,
-  ActivityIndicator, Linking, Dimensions,
+  ActivityIndicator, Linking, Dimensions, Pressable,
 } from "react-native";
 import Constants from "expo-constants";
+import * as Crypto from "expo-crypto";
 import { getTheme } from "./theme";
 import AICheckModal from "./AICheckModal";
 import { evaluateTask } from "./aiEvaluate";
@@ -129,6 +130,14 @@ const todayKey    = () => {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 };
+const makeUuid = () => {
+  if (typeof Crypto.randomUUID === "function") return Crypto.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+    const r = Math.floor(Math.random() * 16);
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
 const clockStr    = () => new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 const pad2         = n => String(n).padStart(2, "0");
 const timeToMins   = t => {
@@ -206,6 +215,24 @@ const mergeCompletedTasks = (...groups) => {
 };
 
 // ── Storage (in-memory) ──────────────────────────────────────
+const isTodayTask = (task, day = todayKey()) => {
+  const taskDay = task?.task_date || task?.createdAt?.slice?.(0, 10);
+  return taskDay ? taskDay === day : true;
+};
+const mergeTaskRecords = (...groups) => {
+  const byId = new Map();
+  groups.flat().filter(Boolean).forEach(task => {
+    const key = String(task.id || `${task.title}-${task.createdAt || task.task_date || ""}`);
+    byId.set(key, { ...(byId.get(key) || {}), ...task });
+  });
+  return [...byId.values()];
+};
+const cacheFullTasks = async (uid, nextVisibleTasks, knownTasks = []) => {
+  if (!uid) return;
+  const existing = knownTasks.length ? knownTasks : await cache.loadTasks(uid).catch(() => []);
+  return cache.saveTasks(uid, mergeTaskRecords(existing, nextVisibleTasks));
+};
+
 const storage = {
   get: async (key) => ({ value: await AsyncStorage.getItem(key) }),
   set: async (key, value) => { await AsyncStorage.setItem(key, value); },
@@ -230,16 +257,41 @@ function CreditTicker({ value, textColor }) {
     }, 40);
     return () => { if (animRef.current) clearInterval(animRef.current); };
   }, [value]);
+  const color = textColor || "#1A2820";
+  const mins = Math.max(0, Math.round(show || 0));
+  const hrs = Math.floor(mins / 60);
+  const rem = mins % 60;
+  const primary = hrs > 0 ? `${hrs}h` : `${mins}m`;
+  const secondary = hrs > 0 && rem > 0 ? `${rem}m` : "";
   return (
-    <Text style={{
-      fontFamily: FF.serif,
-      fontSize: 72,
-      lineHeight: 76,
-      color: textColor || "#1A2820",
-      letterSpacing: -2.4,
-    }}>
-      {fmtMins(show)}
-    </Text>
+    <View style={{ flexDirection: "row", alignItems: "baseline", flexWrap: "nowrap" }}>
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.78}
+        style={{
+          fontFamily: FF.serif,
+          fontSize: 72,
+          lineHeight: 76,
+          color,
+          letterSpacing: -2.4,
+        }}
+      >
+        {primary}
+      </Text>
+      {!!secondary && (
+        <Text style={{
+          fontFamily: FF.serif,
+          fontSize: 38,
+          lineHeight: 44,
+          color,
+          marginLeft: 8,
+          letterSpacing: -0.4,
+        }}>
+          {secondary}
+        </Text>
+      )}
+    </View>
   );
 }
 
@@ -267,6 +319,90 @@ function freeTierCredits(mins) {
 }
 
 // ── Add Task Overlay ─────────────────────────────────────────
+function PlantSlider({
+  value,
+  onValueChange,
+  minimumValue,
+  maximumValue,
+  step,
+  accent,
+  track,
+  soil,
+  textColor,
+  leftLabel,
+  rightLabel,
+}) {
+  const pct = Math.max(0, Math.min(1, (value - minimumValue) / (maximumValue - minimumValue)));
+  const leaves = [0.2, 0.4, 0.6, 0.8];
+
+  return (
+    <View style={{ marginTop: 2 }}>
+      <View style={{ height: 34, justifyContent: "center", marginHorizontal: 2 }}>
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: 4,
+            right: 4,
+            height: 8,
+            borderRadius: 8,
+            backgroundColor: track,
+            borderWidth: 1,
+            borderColor: soil,
+            overflow: "hidden",
+          }}
+        >
+          <View style={{
+            width: `${pct * 100}%`,
+            height: "100%",
+            backgroundColor: accent,
+            borderRadius: 8,
+          }} />
+        </View>
+        {leaves.map((stop, i) => {
+          const grown = pct >= stop;
+          return (
+            <View
+              key={stop}
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                left: `${stop * 100}%`,
+                top: i % 2 === 0 ? 6 : 18,
+                width: 13,
+                height: 7,
+                borderTopLeftRadius: 9,
+                borderBottomRightRadius: 9,
+                backgroundColor: grown ? accent : soil,
+                opacity: grown ? 0.74 : 0.4,
+                transform: [
+                  { translateX: -6 },
+                  { rotate: i % 2 === 0 ? "-28deg" : "28deg" },
+                ],
+              }}
+            />
+          );
+        })}
+        <Slider
+          minimumValue={minimumValue}
+          maximumValue={maximumValue}
+          step={step}
+          value={value}
+          onValueChange={onValueChange}
+          minimumTrackTintColor="transparent"
+          maximumTrackTintColor="transparent"
+          thumbTintColor={accent}
+          style={{ width: "100%", height: 34 }}
+        />
+      </View>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -2 }}>
+        <Text style={{ fontFamily: FB, fontSize: 10, color: textColor }}>{leftLabel}</Text>
+        <Text style={{ fontFamily: FB, fontSize: 10, color: textColor }}>{rightLabel}</Text>
+      </View>
+    </View>
+  );
+}
+
 function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall }) {
   const { dark, theme } = useTheme();
   const { ink, paper, earn } = theme;
@@ -325,7 +461,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
     setEvalError("");
 
     const buildTask = ({ credits, xp, reasoning, aiValued }) => ({
-      id: `t_${Date.now()}`,
+      id: makeUuid(),
       title:   title.trim(),
       cat,
       minutes: mins,
@@ -335,6 +471,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
       aiCheck:  aiCheck && isSubActive, // can't claim AI check if not subscribed
       aiValued: !!aiValued,
       aiReasoning: reasoning || "",
+      task_date: todayKey(),
     });
     const recurrence = recur !== "none" && isSubActive
       ? { frequency: recur, time: recurTime, days: recur === "custom" ? recurDays : recurrenceDaysFor(recur) }
@@ -458,21 +595,19 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
                 {mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60 ? `${mins%60}m` : ""}`.trim() : `${mins}m`}
               </Text>
             </View>
-            <Slider
+            <PlantSlider
               minimumValue={15}
               maximumValue={300}
               step={15}
               value={mins}
               onValueChange={setMins}
-              minimumTrackTintColor={earn.terra}
-              maximumTrackTintColor={ink.ghost}
-              thumbTintColor={earn.terra}
-              style={{ width: "100%", height: 36 }}
+              accent={earn.terra}
+              track={dark ? "rgba(235,246,238,0.08)" : "rgba(60,48,36,0.08)"}
+              soil={dark ? "rgba(168,191,181,0.16)" : "rgba(94,76,54,0.12)"}
+              textColor={ink.faint}
+              leftLabel="15m"
+              rightLabel="5h"
             />
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -4 }}>
-              <Text style={{ fontFamily: FB, fontSize: 10, color: ink.faint }}>15m</Text>
-              <Text style={{ fontFamily: FB, fontSize: 10, color: ink.faint }}>5h</Text>
-            </View>
           </View>
 
           {/* ── AI Check toggle ── */}
@@ -734,8 +869,8 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
 
   return (
     <Modal visible={!!task} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "flex-end" }}>
-        <View style={{
+      <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "flex-end" }}>
+        <Pressable onPress={(e) => e.stopPropagation?.()} style={{
           width: "100%", backgroundColor: paper.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
           padding: 28, paddingBottom: Platform.OS === "ios" ? 44 : 28,
         }}>
@@ -768,8 +903,8 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
               {step === 0 ? "Not really, cancel" : "No, cancel"}
             </Text>
           </TouchableOpacity>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -795,9 +930,9 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={s2.backdrop}>
-        <View style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
-          <Text style={[s2.kicker, { color: earn.green }]}>SCREEN TIME</Text>
+      <Pressable onPress={onClose} style={s2.backdrop}>
+        <Pressable onPress={(e) => e.stopPropagation?.()} style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
+          <Text style={[s2.kicker, { color: ink.faint }]}>SCREEN TIME</Text>
           <Text style={[s2.panelTitle, { color: ink.deep }]}>Reduce your balance</Text>
           <Text style={[s2.panelText, { color: ink.mid }]}>
             Choose how much time to give back. This can only subtract from what you already have.
@@ -812,11 +947,11 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
                   onPress={() => setSelected(m)}
                   style={[
                     s2.amountPill,
-                    { borderColor: ink.border, backgroundColor: paper.warm },
-                    selected === m && { borderColor: earn.green, backgroundColor: earn.greenLo },
+                    { borderColor: ink.border, backgroundColor: paper.sand },
+                    selected === m && { borderColor: earn.sage, backgroundColor: earn.sageLo },
                   ]}
                 >
-                  <Text style={[s2.amountText, { color: selected === m ? earn.greenD : ink.deep }]}>{m}m</Text>
+                  <Text style={[s2.amountText, { color: selected === m ? earn.sage : ink.deep }]}>{m}m</Text>
                 </TouchableOpacity>
               ))}
               {maxMins > 0 && !options.includes(maxMins) && (
@@ -824,11 +959,11 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
                   onPress={() => setSelected(maxMins)}
                   style={[
                     s2.amountPill,
-                    { borderColor: ink.border, backgroundColor: paper.warm },
-                    selected === maxMins && { borderColor: earn.green, backgroundColor: earn.greenLo },
+                    { borderColor: ink.border, backgroundColor: paper.sand },
+                    selected === maxMins && { borderColor: earn.sage, backgroundColor: earn.sageLo },
                   ]}
                 >
-                  <Text style={[s2.amountText, { color: selected === maxMins ? earn.greenD : ink.deep }]}>All</Text>
+                  <Text style={[s2.amountText, { color: selected === maxMins ? earn.sage : ink.deep }]}>All</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -837,12 +972,12 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
             <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, { borderColor: ink.border }]}>
               <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={confirm} disabled={!selected} style={[s2.solidBtn, { backgroundColor: selected ? earn.green : ink.faint }]}>
-              <Text style={[s2.solidText, { color: dark ? "#16261C" : "#fff" }]}>Reduce</Text>
+            <TouchableOpacity onPress={confirm} disabled={!selected} style={[s2.solidBtn, { backgroundColor: selected ? earn.deep : ink.faint }]}>
+              <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Reduce</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -897,7 +1032,7 @@ function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
   const [breathing, setBreathing] = useState(false);
   const [seconds, setSeconds] = useState(15);
   const scale = useRef(new Animated.Value(0.96)).current;
-  const breath = useRef(new Animated.Value(0)).current;
+  const plant = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!visible) return;
@@ -910,14 +1045,14 @@ function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
 
   useEffect(() => {
     if (!breathing) return;
-    breath.setValue(0);
+    plant.setValue(0);
     const loop = Animated.loop(Animated.sequence([
-      Animated.timing(breath, { toValue: 1, duration: 3200, useNativeDriver: true }),
-      Animated.timing(breath, { toValue: 0, duration: 3200, useNativeDriver: true }),
+      Animated.timing(plant, { toValue: 1, duration: 3200, useNativeDriver: true }),
+      Animated.timing(plant, { toValue: 0, duration: 3200, useNativeDriver: true }),
     ]));
     loop.start();
     return () => loop.stop();
-  }, [breathing, breath]);
+  }, [breathing, plant]);
 
   useEffect(() => {
     if (!breathing || seconds <= 0) return;
@@ -946,22 +1081,26 @@ function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
     onGrant?.();
   };
 
-  const breathScale = breath.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1.1] });
-  const breathOpacity = breath.interpolate({ inputRange: [0, 1], outputRange: [0.28, 0.68] });
+  const plantScale = plant.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.04] });
+  const stemScale = plant.interpolate({ inputRange: [0, 1], outputRange: [0.82, 1] });
+  const leafScale = plant.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.08] });
+  const leftLeafTilt = plant.interpolate({ inputRange: [0, 1], outputRange: ["-34deg", "-18deg"] });
+  const rightLeafTilt = plant.interpolate({ inputRange: [0, 1], outputRange: ["34deg", "18deg"] });
+  const plantGlow = plant.interpolate({ inputRange: [0, 1], outputRange: [0.18, 0.34] });
   const progress = breathing ? 1 : (step + 1) / QUICK_SLIDES.length;
-  const primaryText = dark ? "#F4FFF8" : ink.deep;
-  const secondaryText = dark ? "#B8D8C5" : ink.mid;
-  const disabledBtn = dark ? "#31483F" : "#A8BFB5";
-  const disabledBtnText = dark ? "#DDEFE5" : "#FFFFFF";
+  const primaryText = ink.deep;
+  const secondaryText = ink.mid;
+  const disabledBtn = ink.ghost;
+  const disabledBtnText = ink.faint;
   const slide = QUICK_SLIDES[step] || QUICK_SLIDES[0];
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={s2.backdrop}>
-        <Animated.View style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border, transform: [{ scale }] }]}>
-          <Text style={[s2.kicker, { color: earn.green }]}>RESET MINUTES</Text>
+      <Pressable onPress={onClose} style={s2.backdrop}>
+        <Animated.View onTouchStart={(e) => e.stopPropagation?.()} style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border, transform: [{ scale }] }]}>
+          <Text style={[s2.kicker, { color: ink.faint }]}>RESET MINUTES</Text>
           <View style={[s2.progressTrack, { backgroundColor: ink.ghost }]}>
-            <Animated.View style={[s2.progressFill, { width: `${progress * 100}%`, backgroundColor: earn.green }]} />
+            <Animated.View style={[s2.progressFill, { width: `${progress * 100}%`, backgroundColor: earn.sage }]} />
           </View>
           {!breathing ? (
             <View>
@@ -975,7 +1114,17 @@ function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
             </View>
           ) : (
             <View style={{ alignItems: "center", paddingVertical: 8 }}>
-              <Animated.View style={[s2.breathOrb, { backgroundColor: earn.green, opacity: breathOpacity, transform: [{ scale: breathScale }] }]} />
+              <Animated.View style={[s2.plantStage, { backgroundColor: paper.sand, borderColor: ink.border, transform: [{ scale: plantScale }] }]}>
+                <Animated.View style={[s2.plantGlow, { backgroundColor: earn.sage, opacity: plantGlow }]} />
+                <View style={[s2.plantSoil, { backgroundColor: dark ? "rgba(70,55,39,0.72)" : "rgba(116,88,58,0.28)" }]} />
+                <View style={[s2.plantPot, { backgroundColor: earn.clay, borderColor: dark ? "rgba(250,246,238,0.14)" : "rgba(71,51,31,0.12)" }]}>
+                  <View style={[s2.plantPotLip, { backgroundColor: dark ? "rgba(250,246,238,0.12)" : "rgba(255,255,255,0.22)" }]} />
+                </View>
+                <Animated.View style={[s2.plantStem, { backgroundColor: earn.sage, transform: [{ scaleY: stemScale }] }]} />
+                <Animated.View style={[s2.plantLeaf, s2.plantLeafLeft, { backgroundColor: earn.sage, transform: [{ rotate: leftLeafTilt }, { scale: leafScale }] }]} />
+                <Animated.View style={[s2.plantLeaf, s2.plantLeafRight, { backgroundColor: earn.sage, transform: [{ rotate: rightLeafTilt }, { scale: leafScale }] }]} />
+                <Animated.View style={[s2.plantLeaf, s2.plantTopLeaf, { backgroundColor: earn.green, transform: [{ scale: leafScale }] }]} />
+              </Animated.View>
               <Text style={[s2.panelTitle, { color: primaryText, textAlign: "center" }]}>Take deep breaths</Text>
               <Text style={[s2.panelText, { color: secondaryText, textAlign: "center" }]}>
                 In through the nose. Out slowly. You can continue in {seconds}s.
@@ -986,13 +1135,13 @@ function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
             <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, { borderColor: ink.border }]}>
               <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={breathing ? finish : next} disabled={breathing && seconds > 0} style={[s2.solidBtn, { backgroundColor: breathing && seconds > 0 ? disabledBtn : earn.green }]}>
-              <Text style={[s2.solidText, { color: breathing && seconds > 0 ? disabledBtnText : (dark ? "#16261C" : "#FFFFFF") }]}>{breathing ? "Claim 15m" : "Continue"}</Text>
+            <TouchableOpacity onPress={breathing ? finish : next} disabled={breathing && seconds > 0} style={[s2.solidBtn, { backgroundColor: breathing && seconds > 0 ? disabledBtn : earn.deep }]}>
+              <Text style={[s2.solidText, { color: breathing && seconds > 0 ? disabledBtnText : (dark ? "#1F3A2A" : "#FAF6EE") }]}>{breathing ? "Claim 15m" : "Continue"}</Text>
             </TouchableOpacity>
           </View>
           <Text style={[s2.footerHint, { color: ink.faint }]}>{Math.max(0, 3 - usedToday)} left today</Text>
         </Animated.View>
-      </View>
+      </Pressable>
     </Modal>
   );
 }
@@ -1043,7 +1192,100 @@ function FloatingFeedback({ popup }) {
   );
 }
 
-function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onReduceScreenTime, onQuickGrant, quickGrantCount, dark }) {
+function LevelUpModal({ level, dark, onClose }) {
+  const theme = getTheme(dark);
+  const { ink, paper, earn } = theme;
+  const scale = useRef(new Animated.Value(0.82)).current;
+  const y = useRef(new Animated.Value(18)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const burst = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!level) return;
+    scale.setValue(0.82);
+    y.setValue(18);
+    opacity.setValue(0);
+    burst.setValue(0);
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 90, friction: 9 }),
+      Animated.spring(y, { toValue: 0, useNativeDriver: true, tension: 90, friction: 9 }),
+      Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.timing(burst, { toValue: 1, duration: 720, useNativeDriver: true }),
+    ]).start();
+  }, [level, scale, y, opacity, burst]);
+
+  if (!level) return null;
+  const levelIdx = LEVELS.findIndex(l => l.name === level.name);
+  const dots = [
+    [-78, -52, earn.sage], [74, -48, earn.clay], [-92, 12, earn.terra],
+    [88, 18, earn.sageDot], [-44, 70, earn.clay], [46, 74, earn.terra],
+  ];
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable onPress={onClose} style={[s2.backdrop, { justifyContent: "center" }]}>
+        <Animated.View
+          onTouchStart={(e) => e.stopPropagation?.()}
+          style={[s2.panel, {
+            maxWidth: 360,
+            alignSelf: "center",
+            backgroundColor: paper.card,
+            borderColor: ink.border,
+            alignItems: "center",
+            opacity,
+            transform: [{ translateY: y }, { scale }],
+          }]}
+        >
+          <View style={{ width: 156, height: 124, alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
+            {dots.map(([dx, dy, color], i) => (
+              <Animated.View
+                key={i}
+                style={{
+                  position: "absolute",
+                  width: 9,
+                  height: 9,
+                  borderRadius: 5,
+                  backgroundColor: color,
+                  opacity: burst.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 1, 0.78] }),
+                  transform: [
+                    { translateX: burst.interpolate({ inputRange: [0, 1], outputRange: [0, dx] }) },
+                    { translateY: burst.interpolate({ inputRange: [0, 1], outputRange: [0, dy] }) },
+                    { scale: burst.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0.4, 1.18, 0.9] }) },
+                  ],
+                }}
+              />
+            ))}
+            <View style={{
+              width: 92,
+              height: 92,
+              borderRadius: 46,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: earn.sageLo,
+              borderWidth: 1,
+              borderColor: ink.hairline,
+            }}>
+              <LevelIcon index={levelIdx} size={44} color={earn.sage} strokeWidth={1.8} />
+            </View>
+          </View>
+
+          <Text style={[s2.kicker, { color: ink.faint, textAlign: "center" }]}>LEVEL UP</Text>
+          <Text style={[s2.panelTitle, { color: ink.deep, textAlign: "center", marginBottom: 4 }]}>
+            {level.name}
+          </Text>
+          <Text style={[s2.panelText, { color: ink.mid, textAlign: "center", marginBottom: 20 }]}>
+            Nice work. Your progress grew into a new tier.
+          </Text>
+          <TouchableOpacity onPress={onClose} activeOpacity={0.86} style={[s2.solidBtn, { width: "100%", backgroundColor: earn.deep }]}>
+            <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Continue</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onReduceScreenTime, onQuickGrant, quickGrantCount, onSwipeLockChange, onDemoLevelUp, dark }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Text color that sits on a `deep` (primary) button. In dark mode the deep
@@ -1058,7 +1300,10 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
   const unlocked      = credits.balance > 0;
   const inDebt        = credits.balance < 0;
   const lv            = getLevel(totalXp);
+  const lvIdx         = getLevelIdx(totalXp);
   const stillEarnable = pending.reduce((s, t) => s + t.credits, 0);
+  const subtleActionBg = dark ? "rgba(232,245,236,0.085)" : paper.sand;
+  const subtleActionBorder = dark ? "rgba(232,245,236,0.13)" : "transparent";
 
   const handleTaskTap = (t) => {
     if (t.aiCheck) setAiCheckTask(t);
@@ -1067,6 +1312,14 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
 
   // Staggered entrance — runs once per mount. Sets a "delight" tone without
   // being noisy: card fades up first, then heading, then the list rows.
+  const askDeleteTask = (t) => {
+    if (!t) return;
+    Alert.alert(`Delete ${t.title} task?`, `"${t.title}" will be removed from today.`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => onDelete?.(t.id) },
+    ]);
+  };
+
   const heroOp = useRef(new Animated.Value(0)).current;
   const heroY  = useRef(new Animated.Value(14)).current;
   const headOp = useRef(new Animated.Value(0)).current;
@@ -1169,7 +1422,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
             borderRadius: 18,
             backgroundColor: earn.sageLo,
           }}>
-            <LeafGlyph size={12} color={earn.sage} />
+            <LevelIcon index={lvIdx} size={13} color={earn.sage} strokeWidth={2.1} />
             <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: earn.sage }}>
               {lv.name}
             </Text>
@@ -1233,7 +1486,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
         </View>
 
         {/* ── In-card action zone (matches reference image) ──────── */}
-        {!unlocked ? (
+        {!unlocked && (
           <TouchableOpacity
             onPress={onAdd}
             activeOpacity={0.8}
@@ -1241,7 +1494,9 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
               flexDirection: "row",
               alignItems: "center",
               gap: 14,
-              backgroundColor: paper.sand,
+              backgroundColor: subtleActionBg,
+              borderWidth: dark ? StyleSheet.hairlineWidth : 0,
+              borderColor: subtleActionBorder,
               borderRadius: 16,
               paddingVertical: 14,
               paddingHorizontal: 16,
@@ -1255,17 +1510,17 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
             }}>
               <LockIcon size={18} color={earn.clay} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: FF.bodyBold, fontSize: 14, color: ink.deep, marginBottom: 2 }}>
-                Complete a task to start earning
-              </Text>
-              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid }}>
-                Finish focused work sessions to grow your time balance.
-              </Text>
-            </View>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.88}
+              style={{ flex: 1, fontFamily: FF.bodyBold, fontSize: 14, color: ink.deep }}
+            >
+              Complete a task to start earning
+            </Text>
             <Text style={{ fontFamily: FF.serifReg, fontSize: 22, color: ink.faint, marginTop: -2 }}>›</Text>
           </TouchableOpacity>
-        ) : (
+        )}
           <View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
             <TouchableOpacity
               onPress={onReduceScreenTime}
@@ -1274,12 +1529,23 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
               style={{
                 flex: 1,
                 paddingVertical: 13,
+                paddingHorizontal: 8,
                 borderRadius: 14,
                 alignItems: "center",
-                backgroundColor: paper.sand,
+                backgroundColor: subtleActionBg,
+                borderWidth: dark ? StyleSheet.hairlineWidth : 0,
+                borderColor: subtleActionBorder,
+                opacity: credits.balance > 0 ? 1 : 0.55,
               }}
             >
-              <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.deep }}>Reduce time</Text>
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+                style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.deep, textAlign: "center" }}
+              >
+                Remove time
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onQuickGrant}
@@ -1288,17 +1554,22 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
               style={{
                 flex: 1,
                 paddingVertical: 13,
+                paddingHorizontal: 8,
                 borderRadius: 14,
                 alignItems: "center",
                 backgroundColor: quickGrantCount < 3 ? earn.sageLo : ink.ghost,
               }}
             >
-              <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: quickGrantCount < 3 ? earn.sage : ink.faint }}>
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.82}
+                style={{ fontFamily: FF.bodyMed, fontSize: 13, color: quickGrantCount < 3 ? earn.sage : ink.faint, textAlign: "center" }}
+              >
                 Take 15m · {Math.max(0, 3 - quickGrantCount)} left
               </Text>
             </TouchableOpacity>
           </View>
-        )}
       </Animated.View>
 
       {/* ── ADD TASK ROW (cursive heading removed per request) ───── */}
@@ -1334,6 +1605,26 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
           <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: onDeep }}>Add task</Text>
         </TouchableOpacity>
       </Animated.View>
+
+      <TouchableOpacity
+        onPress={onDemoLevelUp}
+        activeOpacity={0.82}
+        style={{
+          alignSelf: "flex-start",
+          marginTop: -8,
+          marginBottom: 14,
+          paddingVertical: 8,
+          paddingHorizontal: 12,
+          borderRadius: 999,
+          backgroundColor: earn.sageLo,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: ink.hairline,
+        }}
+      >
+        <Text style={{ fontFamily: FF.bodyMed, fontSize: 11, color: earn.sage }}>
+          Demo level up
+        </Text>
+      </TouchableOpacity>
 
       {tasks.length === 0 && (
         <Animated.View style={{
@@ -1413,8 +1704,9 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
           <View key={t.id} style={{ marginBottom: 10 }}>
           <Swipeable
             onDelete={() => onDelete?.(t.id)}
-            confirmTitle="Delete this task?"
+            confirmTitle={`Delete ${t.title} task?`}
             confirmMessage={`"${t.title}" will be removed.`}
+            onActiveChange={onSwipeLockChange}
           >
           <TouchableOpacity
             onPress={() => handleTaskTap(t)}
@@ -1424,9 +1716,40 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
               backgroundColor: paper.card, borderRadius: 18,
               overflow: "hidden",
               borderWidth: 1, borderColor: ink.hairline,
-              paddingVertical: 14, paddingHorizontal: 16,
+              paddingVertical: 14, paddingLeft: 16, paddingRight: 34,
             }}
           >
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation?.();
+                askDeleteTask(t);
+              }}
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              style={{
+                position: "absolute",
+                top: 7,
+                right: 7,
+                zIndex: 3,
+                width: 18,
+                height: 18,
+                borderRadius: 9,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: dark ? "rgba(255,134,134,0.16)" : "rgba(224,80,80,0.10)",
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: dark ? "rgba(255,154,154,0.26)" : "rgba(224,80,80,0.18)",
+              }}
+            >
+              <Text style={{
+                fontFamily: FF.bodyBold,
+                fontSize: 12,
+                lineHeight: 13,
+                color: dark ? "#F0A0A0" : "#C96A6A",
+                marginTop: -1,
+              }}>
+                x
+              </Text>
+            </Pressable>
             {/* Vertical category mark — slim and tall */}
             <View style={{
               width: 3,
@@ -1562,6 +1885,7 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
   // Dark text for the light-green `deep` button in dark mode (see TodayView).
   const onDeep = dark ? "#16261C" : "#FAF6EE";
   const lv        = getLevel(totalXp);
+  const lvIdx     = getLevelIdx(totalXp);
   const prog      = xpProg(totalXp);
   const toNext    = xpToNext(totalXp);
   const done      = tasks.filter(t => t.done);
@@ -1661,7 +1985,7 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
             alignItems: "center", justifyContent: "center",
             backgroundColor: earn.sageLo,
           }}>
-            <LeafGlyph size={26} color={earn.sage} />
+            <LevelIcon index={lvIdx} size={27} color={earn.sage} strokeWidth={1.9} />
           </View>
         </View>
         {toNext > 0 && (
@@ -1790,8 +2114,8 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={s2.backdrop}>
-        <View style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
+      <Pressable onPress={onClose} style={s2.backdrop}>
+        <Pressable onPress={(e) => e.stopPropagation?.()} style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
           <Text style={[s2.kicker, { color: ink.faint }]}>BLOCKED HOURS</Text>
           <Text style={[s2.panelTitle, { color: ink.deep }]}>Recurring zero-time windows</Text>
           <Text style={[s2.panelText, { color: ink.mid }]}>
@@ -1899,11 +2223,11 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
               <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={save} style={[s2.solidBtn, { backgroundColor: earn.green }]}>
-              <Text style={[s2.solidText, { color: dark ? "#16261C" : "#fff" }]}>Save</Text>
+              <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Save</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -1924,8 +2248,8 @@ function RecurringTasksModal({ visible, templates, dark, onClose, onSave }) {
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={s2.backdrop}>
-        <View style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
+      <Pressable onPress={onClose} style={s2.backdrop}>
+        <Pressable onPress={(e) => e.stopPropagation?.()} style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
           <Text style={[s2.kicker, { color: ink.faint }]}>RECURRING TASKS</Text>
           <Text style={[s2.panelTitle, { color: ink.deep }]}>Task schedule</Text>
           <Text style={[s2.panelText, { color: ink.mid }]}>
@@ -1985,11 +2309,11 @@ function RecurringTasksModal({ visible, templates, dark, onClose, onSave }) {
               <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={save} style={[s2.solidBtn, { backgroundColor: earn.green }]}>
-              <Text style={[s2.solidText, { color: dark ? "#16261C" : "#fff" }]}>Save</Text>
+              <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Save</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -2016,27 +2340,27 @@ const s = StyleSheet.create({
 const s2 = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.48)",
+    backgroundColor: "rgba(11,26,17,0.55)",
     alignItems: "center",
     justifyContent: "flex-end",
     padding: 16,
   },
   panel: {
     width: "100%",
-    borderRadius: 26,
+    borderRadius: 28,
     borderWidth: StyleSheet.hairlineWidth,
-    padding: 22,
-    paddingBottom: Platform.OS === "ios" ? 30 : 22,
+    padding: 24,
+    paddingBottom: Platform.OS === "ios" ? 32 : 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 18 },
     shadowOpacity: 0.18,
     shadowRadius: 30,
     elevation: 18,
   },
-  kicker: { fontFamily: FO, fontSize: 9, letterSpacing: 2, marginBottom: 8 },
-  panelTitle: { fontFamily: FK, fontSize: 24, fontStyle: "italic", marginBottom: 8 },
-  panelText: { fontFamily: FB, fontSize: 14, lineHeight: 21, marginBottom: 18 },
-  emptyText: { fontFamily: FB, fontSize: 13, marginVertical: 14 },
+  kicker: { fontFamily: FF.kicker, fontSize: 9, letterSpacing: 2.4, marginBottom: 6 },
+  panelTitle: { fontFamily: FF.display, fontSize: 30, letterSpacing: -0.4, marginBottom: 8 },
+  panelText: { fontFamily: FF.body, fontSize: 13, lineHeight: 20, marginBottom: 18 },
+  emptyText: { fontFamily: FF.body, fontSize: 13, marginVertical: 14 },
   amountGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 18 },
   amountPill: {
     minWidth: 72,
@@ -2046,7 +2370,7 @@ const s2 = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
   },
-  amountText: { fontFamily: FO, fontSize: 13 },
+  amountText: { fontFamily: FF.bodyMed, fontSize: 13 },
   actions: { flexDirection: "row", gap: 10, marginTop: 4 },
   ghostBtn: {
     flex: 1,
@@ -2055,13 +2379,82 @@ const s2 = StyleSheet.create({
     paddingVertical: 15,
     alignItems: "center",
   },
-  ghostText: { fontFamily: FK, fontSize: 15 },
+  ghostText: { fontFamily: FF.bodyMed, fontSize: 14 },
   solidBtn: { flex: 1, borderRadius: 16, paddingVertical: 15, alignItems: "center" },
-  solidText: { fontFamily: FK, fontSize: 15, color: "#fff" },
+  solidText: { fontFamily: FF.bodyMed, fontSize: 14, color: "#fff" },
   progressTrack: { height: 6, borderRadius: 3, overflow: "hidden", marginBottom: 20 },
   progressFill: { height: "100%", borderRadius: 3 },
-  breathOrb: { width: 120, height: 120, borderRadius: 60, marginBottom: 22 },
-  footerHint: { marginTop: 14, textAlign: "center", fontSize: 11 },
+  plantStage: {
+    width: 136,
+    height: 136,
+    borderRadius: 68,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 22,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    overflow: "hidden",
+  },
+  plantGlow: {
+    position: "absolute",
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    bottom: 26,
+  },
+  plantSoil: {
+    position: "absolute",
+    width: 82,
+    height: 14,
+    borderRadius: 999,
+    bottom: 23,
+  },
+  plantPot: {
+    width: 54,
+    height: 34,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 20,
+    overflow: "hidden",
+  },
+  plantPotLip: {
+    height: 9,
+    width: "100%",
+  },
+  plantStem: {
+    position: "absolute",
+    width: 6,
+    height: 58,
+    borderRadius: 6,
+    bottom: 50,
+  },
+  plantLeaf: {
+    position: "absolute",
+    width: 34,
+    height: 18,
+    borderTopLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  plantLeafLeft: {
+    bottom: 78,
+    left: 42,
+  },
+  plantLeafRight: {
+    bottom: 88,
+    right: 42,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 0,
+  },
+  plantTopLeaf: {
+    width: 22,
+    height: 24,
+    bottom: 106,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderBottomRightRadius: 18,
+  },
+  footerHint: { fontFamily: FF.body, marginTop: 14, textAlign: "center", fontSize: 11 },
 });
 
 
@@ -2149,6 +2542,7 @@ export default function App() {
   const [totalXp,     setTotalXp]     = useState(0);
   const [overlay,     setOverlay]     = useState(null);
   const [popup,       setPopup]       = useState(null);
+  const [levelUp,     setLevelUp]     = useState(null);
   const [secLeft,     setSecLeft]     = useState(0);
 
   const [userId,         setUserId]         = useState(null);
@@ -2176,6 +2570,8 @@ export default function App() {
   const [blockedHoursActive, setBlockedHoursActive] = useState(false);
   const [recurringTasks,     setRecurringTasks]     = useState([]);
   const [minuteTick,         setMinuteTick]         = useState(0);
+  const quickGrantDayRef = useRef(todayKey());
+  const visibleTaskDayRef = useRef(todayKey());
 
   // Subscription state (Stripe → Supabase) — server is source of truth
   const { active: subActive, refresh: refreshSub } = useSubscription(userId);
@@ -2195,8 +2591,29 @@ export default function App() {
   const tabRef          = useRef(tab);
   const driftInActRef   = useRef(driftInActive);
   const swipeBlockedRef = useRef(false);
+  const levelIdxRef     = useRef(null);
   useEffect(() => { tabRef.current = tab; }, [tab]);
   useEffect(() => { driftInActRef.current = driftInActive; }, [driftInActive]);
+  useEffect(() => {
+    const idx = getLevelIdx(totalXp);
+    if (screen !== "app") {
+      levelIdxRef.current = idx;
+      return;
+    }
+    if (levelIdxRef.current == null) {
+      levelIdxRef.current = idx;
+      return;
+    }
+    if (idx > levelIdxRef.current) {
+      setLevelUp(LEVELS[idx]);
+    }
+    levelIdxRef.current = idx;
+  }, [totalXp, screen]);
+  const setChildSwipeLockedNow = useCallback((locked) => {
+    const next = !!locked;
+    swipeBlockedRef.current = next;
+    setChildSwipeLocked(next);
+  }, []);
 
   // ── Tab filmstrip animation ──────────────────────────────────
   // All four tabs live in a horizontal row that translates. translateX follows
@@ -2232,7 +2649,7 @@ export default function App() {
       showReduceTime ||
       showQuickGrant ||
       showCheckout ||
-      (tab === "friends" && childSwipeLocked);
+      childSwipeLocked;
   }, [driftInActive, overlay, popup, showAccount, showBlockedApps, showBlockedHours, showRecurringTasks, showPaywall, showReduceTime, showQuickGrant, showCheckout, tab, childSwipeLocked]);
 
   const stopTick = () => { if (tickRef.current) clearInterval(tickRef.current); };
@@ -2426,11 +2843,44 @@ export default function App() {
     AsyncStorage.getItem("drift_dark_mode").then(v => { if (v === "1") setDarkMode(true); });
   }, []);
 
-  useEffect(() => {
-    AsyncStorage.getItem(`drift_quick_grants_${todayKey()}`)
-      .then(v => setQuickGrantCount(Number(v || 0)))
-      .catch(() => {});
+  const refreshQuickGrantCount = useCallback(async () => {
+    const day = todayKey();
+    quickGrantDayRef.current = day;
+    const raw = await AsyncStorage.getItem(`drift_quick_grants_${day}`).catch(() => "0");
+    const count = Number(raw || 0);
+    setQuickGrantCount(Number.isFinite(count) ? Math.max(0, Math.min(3, count)) : 0);
   }, []);
+
+  useEffect(() => {
+    refreshQuickGrantCount();
+
+    const checkForNewDay = () => {
+      if (todayKey() !== quickGrantDayRef.current) refreshQuickGrantCount();
+    };
+
+    const id = setInterval(checkForNewDay, 60_000);
+    const sub = AppState.addEventListener("change", state => {
+      if (state === "active") refreshQuickGrantCount();
+    });
+
+    return () => {
+      clearInterval(id);
+      sub.remove();
+    };
+  }, [refreshQuickGrantCount]);
+
+  useEffect(() => {
+    if (screen !== "app") return;
+    const refreshVisibleTasksForDay = async () => {
+      const day = todayKey();
+      if (day === visibleTaskDayRef.current) return;
+      visibleTaskDayRef.current = day;
+      const allCached = userId ? await cache.loadTasks(userId).catch(() => []) : tasks;
+      setTasks((allCached || []).filter(t => isTodayTask(t, day)));
+    };
+    const id = setInterval(refreshVisibleTasksForDay, 60_000);
+    return () => clearInterval(id);
+  }, [screen, userId, tasks]);
 
   useEffect(() => {
     if (!userId) return;
@@ -2462,7 +2912,11 @@ export default function App() {
   useEffect(() => {
     if (screen !== "app" || !userId || !proAccess || !recurringTasks.length) return;
     const today = todayKey();
-    const existing = new Set(tasks.map(t => t.id));
+    const existingRecurring = new Set(
+      tasks
+        .filter(t => t.recurringTemplateId && t.task_date === today)
+        .map(t => `${t.recurringTemplateId}_${t.task_date}`)
+    );
     const now = new Date();
     const nowMins = now.getHours() * 60 + now.getMinutes();
     const due = recurringTasks
@@ -2473,11 +2927,11 @@ export default function App() {
         const scheduled = timeToMins(t.time);
         return scheduled == null || nowMins >= scheduled;
       })
-      .filter(t => !existing.has(`rt_${t.id}_${today}`));
+      .filter(t => !existingRecurring.has(`${t.id}_${today}`));
     if (!due.length) return;
 
     const created = due.map(t => ({
-      id: `rt_${t.id}_${today}`,
+      id: makeUuid(),
       title: t.title,
       cat: t.cat,
       minutes: t.minutes,
@@ -2494,7 +2948,7 @@ export default function App() {
     const nt = [...created, ...tasks];
     setTasks(nt);
     persist({ tasks: nt });
-    cache.saveTasks(userId, nt);
+    cacheFullTasks(userId, nt);
     created.forEach(t => insertTask(userId, t).catch(e => {
       console.warn("recurring task sync failed:", e?.message);
     }));
@@ -2713,28 +3167,31 @@ export default function App() {
         // ── Server-authoritative state: tasks come from Supabase ──
         // Boot order: show cached state instantly, then refresh from server.
         let remoteTasksApplied = false;
+        let cachedTasks = [];
+        let cachedXp = 0;
         try {
-          const cached = await cache.loadTasks(uid);
-          if (cached.length) setTasks(cached);
-          const cachedXp = await cache.loadXp(uid);
-          if (cachedXp) setTotalXp(cachedXp);
+          cachedTasks = await cache.loadTasks(uid);
+          const cachedToday = cachedTasks.filter(t => isTodayTask(t));
+          if (cachedToday.length) setTasks(cachedToday);
+          cachedXp = await cache.loadXp(uid);
+          if (cachedXp) setTotalXp(prev => Math.max(prev, cachedXp));
         } catch {}
         try {
           const remote = await fetchTasks(uid);
           if (remote) {
             // Only show tasks from today (matches the existing "today's work" model)
-            const today = remote.filter(t => t.task_date === todayKey() || !t.task_date);
+            const today = remote.filter(t => isTodayTask(t));
 
             // Merge in any local-only tasks (created while offline and not yet synced).
             // We identify local-only tasks by ID not appearing in the remote set.
-            const remoteIds = new Set(today.map(t => t.id));
-            const localOnly = (await cache.loadTasks(uid).catch(() => []))?.filter(
-              t => !remoteIds.has(t.id) && (t.task_date === todayKey() || !t.task_date)
+            const remoteIds = new Set(remote.map(t => t.id));
+            const localOnly = (cachedTasks.length ? cachedTasks : await cache.loadTasks(uid).catch(() => []))?.filter(
+              t => !remoteIds.has(t.id) && isTodayTask(t)
             ) || [];
             const merged = [...today, ...localOnly];
 
             setTasks(merged);
-            cache.saveTasks(uid, merged);
+            cache.saveTasks(uid, mergeTaskRecords(remote, localOnly));
             remoteTasksApplied = true;
             // Build history from completed tasks across all dates
             const allDone = remote.filter(t => t.done);
@@ -2742,7 +3199,15 @@ export default function App() {
 
             // Retry-sync any local-only tasks now that we're online
             for (const lt of localOnly) {
-              insertTask(uid, lt).catch(e => console.warn("retry insertTask:", e?.message));
+              try {
+                const saved = await insertTask(uid, lt);
+                if (saved?.id && saved.id !== lt.id) {
+                  setTasks(prev => prev.map(t => t.id === lt.id ? { ...t, id: saved.id } : t));
+                  cache.saveTasks(uid, mergeTaskRecords(remote, localOnly.map(t => t.id === lt.id ? { ...t, id: saved.id } : t)));
+                }
+              } catch (e) {
+                console.warn("retry insertTask:", e?.message);
+              }
             }
           }
         } catch (e) { console.warn("fetchTasks at boot:", e?.message); }
@@ -2751,8 +3216,8 @@ export default function App() {
         try {
           const stats = await fetchProfileStats(uid);
           if (stats.totalXp > 0) {
-            setTotalXp(stats.totalXp);
-            cache.saveXp(uid, stats.totalXp);
+            setTotalXp(prev => Math.max(prev, stats.totalXp));
+            cache.saveXp(uid, Math.max(cachedXp || 0, stats.totalXp));
             remoteStatsApplied = true;
           }
           if (stats.balanceSeconds > 0) {
@@ -2783,10 +3248,10 @@ export default function App() {
           const history = mergeCompletedTasks(savedHistory, completedFromSavedTasks);
           setTaskHistory(prev => mergeCompletedTasks(prev, history));
           if (p.date !== todayKey()) {
-            if (!remoteStatsApplied) setTotalXp(p.totalXp || 0);
+            if (!remoteStatsApplied) setTotalXp(prev => Math.max(prev, p.totalXp || 0));
             if (!remoteTasksApplied) {
-              setTasks([]);
-              persist({ tasks: [], taskHistory: history, totalXp: p.totalXp || 0 });
+              setTasks(savedTasks.filter(t => isTodayTask(t)));
+              persist({ tasks: savedTasks, taskHistory: history, totalXp: p.totalXp || 0 });
             }
           } else {
             const rawSc = p.credits || { balance: 0, earned: 0, spent: 0 };
@@ -2799,10 +3264,10 @@ export default function App() {
               earned:     Math.max(0, rawSc.earned     || 0),
               spent:      Math.max(0, rawSc.spent      || 0),
             };
-            if (!remoteTasksApplied) setTasks(savedTasks);
+            if (!remoteTasksApplied) setTasks(savedTasks.filter(t => isTodayTask(t)));
             if (!remoteStatsApplied) {
               setCredits(sc);
-              setTotalXp(p.totalXp || 0);
+              setTotalXp(prev => Math.max(prev, p.totalXp || 0));
             }
             // Prefer the saved sub-minute precision so closing the app doesn't
             // round you back up to the nearest minute.
@@ -2857,7 +3322,7 @@ export default function App() {
         balanceAfter: nc.balance,
       }).catch(() => {});
       syncProfileStats(userId, { totalXp: nx, balanceSeconds: newSec }).catch(() => {});
-      cache.saveTasks(userId, nt);
+      cacheFullTasks(userId, nt);
       cache.saveXp(userId, nx);
     }
 
@@ -2879,11 +3344,11 @@ export default function App() {
       insertTask(userId, t).catch(e => {
         console.warn("insertTask sync failed (will retry on next fetch):", e?.message);
       });
-      cache.saveTasks(userId, nt);
+      cacheFullTasks(userId, nt);
     }
     if (userId && proAccess && recurrence?.frequency && recurrence.frequency !== "none") {
       const template = {
-        id: `rt_${Date.now()}`,
+        id: makeUuid(),
         title: t.title,
         cat: t.cat,
         minutes: t.minutes,
@@ -2916,7 +3381,9 @@ export default function App() {
     persist({ tasks: nt });
     if (userId) {
       softDeleteTask(userId, id).catch(e => console.warn("softDeleteTask:", e?.message));
-      cache.saveTasks(userId, nt);
+      cache.loadTasks(userId)
+        .then(all => cache.saveTasks(userId, (all || []).filter(t => t.id !== id)))
+        .catch(() => cache.saveTasks(userId, nt));
     }
   };
 
@@ -2970,6 +3437,10 @@ export default function App() {
     setTimeout(() => setPopup(null), 2500);
     startTick(newSec);
     persist({ credits: nc, totalXp: nx });
+    if (userId) {
+      syncProfileStats(userId, { totalXp: nx, balanceSeconds: newSec }).catch(() => {});
+      cache.saveXp(userId, nx);
+    }
     setTimeout(() => setTab("today"), 400);
   };
 
@@ -2980,6 +3451,10 @@ export default function App() {
       setPopup({ credits: 0, xp });
       setTimeout(() => setPopup(null), 2200);
       persist({ totalXp: nx });
+      if (userId) {
+        syncProfileStats(userId, { totalXp: nx, balanceSeconds: secRef.current }).catch(() => {});
+        cache.saveXp(userId, nx);
+      }
       return;
     }
 
@@ -3042,8 +3517,11 @@ export default function App() {
   };
 
   const handleQuickGrant = async () => {
-    const key = `drift_quick_grants_${todayKey()}`;
-    const latest = Number((await AsyncStorage.getItem(key).catch(() => "0")) || 0);
+    const day = todayKey();
+    quickGrantDayRef.current = day;
+    const key = `drift_quick_grants_${day}`;
+    const stored = Number((await AsyncStorage.getItem(key).catch(() => "0")) || 0);
+    const latest = Number.isFinite(stored) ? Math.max(0, Math.min(3, stored)) : 0;
     if (latest >= 3) {
       setQuickGrantCount(3);
       setShowQuickGrant(false);
@@ -3201,6 +3679,11 @@ export default function App() {
 
       {/* XP / credit popup */}
       <FloatingFeedback popup={popup} />
+      <LevelUpModal
+        level={levelUp}
+        dark={darkMode}
+        onClose={() => setLevelUp(null)}
+      />
 
       {/* Header — hidden during active Drift In session */}
       {!driftInActive && (
@@ -3314,6 +3797,8 @@ export default function App() {
               onReduceScreenTime={() => setShowReduceTime(true)}
               onQuickGrant={() => setShowQuickGrant(true)}
               quickGrantCount={quickGrantCount}
+              onSwipeLockChange={setChildSwipeLockedNow}
+              onDemoLevelUp={() => setLevelUp(LEVELS[Math.min(LEVELS.length - 1, getLevelIdx(totalXp) + 1)])}
               dark={darkMode}
             />
           </View>
@@ -3334,7 +3819,7 @@ export default function App() {
               userId={userId}
               isPremium={isPremium}
               onOpenPaywall={() => setShowPaywall(true)}
-              onSwipeLockChange={setChildSwipeLocked}
+              onSwipeLockChange={setChildSwipeLockedNow}
               onChallengeResolved={handleChallengeResolved}
               dark={darkMode}
             />

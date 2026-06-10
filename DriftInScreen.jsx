@@ -126,6 +126,90 @@ function RewardCard({ theme, accent, value, label, suffix, dark }) {
   );
 }
 
+function PlantSlider({
+  value,
+  onValueChange,
+  minimumValue,
+  maximumValue,
+  step,
+  accent,
+  track,
+  soil,
+  textColor,
+  leftLabel,
+  rightLabel,
+}) {
+  const pct = Math.max(0, Math.min(1, (value - minimumValue) / (maximumValue - minimumValue)));
+  const leaves = [0.2, 0.4, 0.6, 0.8];
+
+  return (
+    <View style={{ marginTop: 2 }}>
+      <View style={{ height: 34, justifyContent: "center", marginHorizontal: 2 }}>
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: 4,
+            right: 4,
+            height: 8,
+            borderRadius: 8,
+            backgroundColor: track,
+            borderWidth: 1,
+            borderColor: soil,
+            overflow: "hidden",
+          }}
+        >
+          <View style={{
+            width: `${pct * 100}%`,
+            height: "100%",
+            backgroundColor: accent,
+            borderRadius: 8,
+          }} />
+        </View>
+        {leaves.map((stop, i) => {
+          const grown = pct >= stop;
+          return (
+            <View
+              key={stop}
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                left: `${stop * 100}%`,
+                top: i % 2 === 0 ? 6 : 18,
+                width: 13,
+                height: 7,
+                borderTopLeftRadius: 9,
+                borderBottomRightRadius: 9,
+                backgroundColor: grown ? accent : soil,
+                opacity: grown ? 0.74 : 0.4,
+                transform: [
+                  { translateX: -6 },
+                  { rotate: i % 2 === 0 ? "-28deg" : "28deg" },
+                ],
+              }}
+            />
+          );
+        })}
+        <Slider
+          minimumValue={minimumValue}
+          maximumValue={maximumValue}
+          step={step}
+          value={value}
+          onValueChange={onValueChange}
+          minimumTrackTintColor="transparent"
+          maximumTrackTintColor="transparent"
+          thumbTintColor={accent}
+          style={{ width: "100%", height: 34 }}
+        />
+      </View>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -2 }}>
+        <Text style={{ fontFamily: FB, fontSize: 10, color: textColor }}>{leftLabel}</Text>
+        <Text style={{ fontFamily: FB, fontSize: 10, color: textColor }}>{rightLabel}</Text>
+      </View>
+    </View>
+  );
+}
+
 export default function DriftInScreen({ onSessionComplete, onSessionStart, onSessionEnd, dark = false }) {
   const theme = getTheme(dark);
   // Setup-phase colors follow the app theme; active/done always use dark forest
@@ -282,21 +366,19 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
             {dur >= 60 ? `${Math.floor(dur/60)}h ${dur%60 ? `${dur%60}m` : ""}`.trim() : `${dur}m`}
           </Text>
         </View>
-        <Slider
+        <PlantSlider
           minimumValue={15}
           maximumValue={300}
           step={15}
           value={dur}
           onValueChange={setDur}
-          minimumTrackTintColor={theme.earn.sage}
-          maximumTrackTintColor={dark ? "rgba(255,255,255,0.1)" : "rgba(60,48,36,0.08)"}
-          thumbTintColor={theme.earn.sage}
-          style={{ width: "100%", height: 36 }}
+          accent={theme.earn.sage}
+          track={dark ? "rgba(255,255,255,0.08)" : "rgba(60,48,36,0.08)"}
+          soil={dark ? "rgba(232,245,236,0.14)" : "rgba(94,76,54,0.12)"}
+          textColor={setupFnt}
+          leftLabel="15m"
+          rightLabel="5h"
         />
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -4 }}>
-          <Text style={{ fontFamily: FB, fontSize: 10, color: setupFnt }}>15m</Text>
-          <Text style={{ fontFamily: FB, fontSize: 10, color: setupFnt }}>5h</Text>
-        </View>
       </View>
 
       {/* Reward preview — warm cards with a low-opacity plant tucked in each */}

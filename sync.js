@@ -17,6 +17,7 @@ const TTL = {
   blockedApps: 60_000,
   ledger: 20_000,
 };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // ── TASKS ────────────────────────────────────────────────────
 export async function fetchTasks(userId, { sinceDate } = {}) {
@@ -38,7 +39,6 @@ export async function fetchTasks(userId, { sinceDate } = {}) {
 export async function insertTask(userId, task) {
   if (!userId) return null;
   const row = {
-    id:           task.id,
     user_id:      userId,
     title:        task.title,
     category:     task.cat,
@@ -51,6 +51,7 @@ export async function insertTask(userId, task) {
     ai_reasoning: task.aiReasoning || null,
     task_date:    task.task_date || todayDateStr(),
   };
+  if (UUID_RE.test(String(task.id || ""))) row.id = task.id;
   const { data, error } = await rateLimited(`insert_task_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
     supabase.from("tasks").insert(row).select().single()
   );
@@ -100,7 +101,8 @@ function rowToTask(r) {
     aiReasoning: r.ai_reasoning,
     completedAt: r.completed_at,
     completedDate: r.completed_at ? r.completed_at.slice(0, 10) : null,
-    task_date:   r.task_date,
+    createdAt:   r.created_at,
+    task_date:   r.task_date || (r.created_at ? r.created_at.slice(0, 10) : null),
   };
 }
 
@@ -139,7 +141,14 @@ export async function fetchBalanceFromLedger(userId) {
 export async function syncProfileStats(userId, { totalXp, balanceSeconds }) {
   if (!userId) return;
   const patch = {};
-  if (typeof totalXp === "number")        patch.total_xp        = Math.max(0, totalXp);
+  if (typeof totalXp === "number") {
+    const { data } = await supabase
+      .from("profiles")
+      .select("total_xp")
+      .eq("id", userId)
+      .maybeSingle();
+    patch.total_xp = Math.max(Number(data?.total_xp || 0), Math.max(0, totalXp));
+  }
   if (typeof balanceSeconds === "number") patch.balance_seconds = Math.max(0, balanceSeconds);
   if (!Object.keys(patch).length) return;
   const { error } = await rateLimited(`profile_stats_${userId}`, { limit: 60, windowMs: 60_000 }, () =>

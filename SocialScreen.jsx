@@ -5,7 +5,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert, FlatList, Image, LayoutAnimation, Modal, Platform, RefreshControl, Share,
-  StyleSheet, Text, TextInput, TouchableOpacity, UIManager, View, Vibration,
+  Pressable, StyleSheet, Text, TextInput, TouchableOpacity, UIManager, View, Vibration,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Path, Circle as SvgCircle, Ellipse, Defs, RadialGradient, Stop } from "react-native-svg";
@@ -245,14 +245,14 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, isPremium }) {
   const g = growthState(friend.minutes || 0);
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
-      <View style={{
+      <Pressable onPress={onClose} style={{
         flex: 1,
         backgroundColor: "rgba(11,26,17,0.55)",
         alignItems: "center",
         justifyContent: "center",
         padding: 24,
       }}>
-        <View style={{
+        <Pressable onPress={(e) => e.stopPropagation?.()} style={{
           width: "100%",
           maxWidth: 420,
           borderRadius: 28,
@@ -359,8 +359,8 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, isPremium }) {
               {isPremium ? "Challenge" : "Upgrade to challenge"}
             </Text>
           </TouchableOpacity>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -437,11 +437,11 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
   const canRespond = challenge.status === "pending" && challenge.challenged_id === myId;
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
-      <View style={{
+      <Pressable onPress={onClose} style={{
         flex: 1, backgroundColor: "rgba(11,26,17,0.55)",
         alignItems: "center", justifyContent: "center", padding: 24,
       }}>
-        <View style={{
+        <Pressable onPress={(e) => e.stopPropagation?.()} style={{
           width: "100%", maxWidth: 420,
           backgroundColor: th.card, borderRadius: 28, padding: 26,
           borderWidth: 1, borderColor: th.hairline,
@@ -553,8 +553,8 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
               </Text>
             </TouchableOpacity>
           )}
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -564,11 +564,11 @@ function ChallengeOutcomeModal({ outcome, dark, onClose }) {
   if (!outcome) return null;
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
-      <View style={{
+      <Pressable onPress={onClose} style={{
         flex: 1, backgroundColor: "rgba(11,26,17,0.55)",
         alignItems: "center", justifyContent: "center", padding: 24,
       }}>
-        <View style={{
+        <Pressable onPress={(e) => e.stopPropagation?.()} style={{
           width: "100%", maxWidth: 420,
           backgroundColor: th.card, borderRadius: 28, padding: 28,
           borderWidth: 1, borderColor: th.hairline,
@@ -618,8 +618,8 @@ function ChallengeOutcomeModal({ outcome, dark, onClose }) {
               Continue
             </Text>
           </TouchableOpacity>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
