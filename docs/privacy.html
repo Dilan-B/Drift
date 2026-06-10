@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drift — Privacy Policy</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #e0e0e0; line-height: 1.7; }
+  .container { max-width: 720px; margin: 0 auto; padding: 60px 24px; }
+  h1 { font-size: 2rem; color: #fff; margin-bottom: 4px; }
+  .date { color: #666; margin-bottom: 32px; }
+  h2 { font-size: 1.15rem; color: #fff; margin: 28px 0 10px; }
+  p { color: #bbb; margin-bottom: 14px; }
+  ul { margin: 0 0 14px 20px; color: #bbb; }
+  li { margin-bottom: 4px; }
+  a { color: #4CAF50; text-decoration: none; }
+  .back { display: inline-block; margin-bottom: 24px; color: #666; font-size: 0.9rem; }
+  strong { color: #ddd; }
+</style>
+</head>
+<body>
+<div class="container">
+  <a class="back" href="/Drift/">&larr; Back to Drift</a>
+  <h1>Privacy Policy</h1>
+  <p class="date">Effective: June 7, 2026</p>
+
+  <p>This Privacy Policy describes how Drift ("we", "us") handles your data when you use the Drift mobile application. We've kept it short and human-readable. If something here isn't clear, email <strong>driftappcontact@gmail.com</strong> and we'll explain.</p>
+
+  <h2>What we collect</h2>
+  <p><strong>Account data</strong> — when you sign up, we store:</p>
+  <ul>
+    <li>Your email address (used for sign-in and account recovery).</li>
+    <li>A username you pick.</li>
+    <li>A salted password hash (we never see your password — Supabase manages this).</li>
+    <li>The date you installed the app.</li>
+  </ul>
+
+  <p><strong>Activity data</strong> — to make the app work, we store:</p>
+  <ul>
+    <li>Tasks you create, mark complete, or delete (titles, durations, categories).</li>
+    <li>Earned screen-time credits and XP totals.</li>
+    <li>Friendships you've initiated or accepted, by user ID.</li>
+    <li>Challenges you send or receive, including status, type, and exercise picked.</li>
+  </ul>
+
+  <p><strong>Optional data</strong> — only collected if you opt in:</p>
+  <ul>
+    <li>An avatar image you upload (Supabase Storage).</li>
+    <li>Photos or text you submit for AI verification (processed by OpenAI via our server, then discarded — not stored).</li>
+    <li>App selections you make in Apple's Screen Time picker (stored on your device only — see "Apple Screen Time" below).</li>
+  </ul>
+
+  <p><strong>Crash diagnostics</strong> — none. We don't include third-party analytics, crash reporters, advertising SDKs, or trackers.</p>
+
+  <h2>What we don't collect</h2>
+  <ul>
+    <li>We don't read your contacts, calendar, photos library (beyond a photo you explicitly pick for proof), location, or Health data.</li>
+    <li>We don't track which apps you actually use on your phone. Apple's Screen Time API gives us <em>opaque tokens</em> representing your selection — even we can't see which apps you picked.</li>
+    <li>We don't sell, rent, or share your personal data with advertisers or data brokers. Ever.</li>
+  </ul>
+
+  <h2>Where your data lives</h2>
+  <ul>
+    <li><strong>Account, tasks, friendships, screen-time history</strong>: Supabase (PostgreSQL, hosted in the US). Encrypted at rest and in transit.</li>
+    <li><strong>AI verification proofs</strong>: sent over HTTPS to OpenAI through our Supabase Edge Function, used for one evaluation, then discarded. Neither we nor OpenAI retain training data from these submissions.</li>
+    <li><strong>Apple Screen Time selection</strong>: stored <em>only on your device</em> (iOS UserDefaults). Never uploaded to our servers.</li>
+    <li><strong>Local app state</strong> (current day's balance, dark mode preference): stored on your device only.</li>
+  </ul>
+
+  <h2>Who can see your data</h2>
+  <ul>
+    <li><strong>You</strong> — full access via the app.</li>
+    <li><strong>Your friends</strong> — only your username and total screen-time minutes earned today. Not the underlying tasks.</li>
+    <li><strong>Drift staff</strong> — only with your explicit support request, and only the minimum needed to debug your issue.</li>
+    <li><strong>No one else.</strong> We do not share, sell, or hand over data to third parties except as required by law (e.g., a valid US court order).</li>
+  </ul>
+
+  <h2>Apple Screen Time</h2>
+  <p>Drift uses Apple's Family Controls and Device Activity frameworks to optionally block apps you select during focus sessions or when your earned balance hits zero. Per Apple's design:</p>
+  <ul>
+    <li>The list of apps you pick is <strong>never visible to us</strong> — we receive only opaque tokens.</li>
+    <li>The shield is applied and enforced by iOS itself, not by Drift's servers.</li>
+    <li>All Screen Time activity stays on your device.</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>Drift is rated 12+ and not directed at children under 13. We don't knowingly collect data from anyone under 13. If you believe a minor has signed up, email us and we'll delete the account.</p>
+
+  <h2>Your rights</h2>
+  <p>You can:</p>
+  <ul>
+    <li><strong>View your data</strong> by tapping the user icon in Drift.</li>
+    <li><strong>Delete your account and all associated data</strong> by emailing <strong>driftappcontact@gmail.com</strong> with the subject "Delete my account" from the address you signed up with. We process deletions within 7 days.</li>
+    <li><strong>Export your data</strong> — same email, subject "Export my data". You'll get a JSON file within 14 days.</li>
+  </ul>
+  <p>If you're in the EEA, UK, or California, you have additional rights under GDPR / UK GDPR / CCPA (access, correction, portability, right to object). The email above handles those requests too.</p>
+
+  <h2>Security</h2>
+  <ul>
+    <li>All network traffic uses HTTPS / TLS 1.2+. Plain HTTP is disabled in our iOS build.</li>
+    <li>Passwords are hashed and salted by Supabase Auth (bcrypt-equivalent).</li>
+    <li>The Supabase anon key shipped with the app is restricted by Row Level Security — it can't read or modify another user's data.</li>
+    <li>We do not store payment card details — Stripe handles those directly.</li>
+  </ul>
+
+  <h2>Changes to this policy</h2>
+  <p>If we change anything material, we'll post the new version in the app and notify you on next launch. The effective date at the top reflects the most recent revision.</p>
+
+  <h2>Contact</h2>
+  <p><strong>driftappcontact@gmail.com</strong> — privacy, deletion, GDPR, anything.</p>
+</div>
+</body>
+</html>
