@@ -8,12 +8,15 @@ import {
   StyleSheet, Text, TextInput, TouchableOpacity, UIManager, View, Vibration,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Svg, { Path, Circle as SvgCircle, Ellipse, Defs, RadialGradient, Stop } from "react-native-svg";
 import AICheckModal from "./AICheckModal";
 import { supabase, getFriendsWithScreenTime } from "./supabase";
 import { CloseIcon, LockIcon, UsersIcon } from "./Icons";
 import ChallengeSheet from "./ChallengeModal";
 import Swipeable from "./Swipeable";
 import { cached, invalidateCache, rateLimited } from "./apiGuards";
+import { FF } from "./theme";
+import Sprout, { LeafGlyph, Sprig } from "./SproutArt";
 
 let Clipboard = null;
 try { Clipboard = require("expo-clipboard"); } catch { Clipboard = null; }
@@ -22,33 +25,104 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const terra = "#2FAB72";
-const FD = "Georgia";
-const FB = undefined;
+const terra = "#2D7A52";
+const FD = "PlayfairDisplay_700Bold_Italic";
+const FB = "DMSans_400Regular";
 const FO = "Orbitron_700Bold";
 const FK = "Oswald_700Bold";
 
 const palette = (dark) => dark ? {
-  bg: "#0E1B17",
-  card: "#16261F",
-  card2: "#102019",
-  ink: "#E8F5EC",
-  mid: "#8FB49F",
-  faint: "#5E806C",
-  border: "rgba(255,255,255,0.10)",
-  wash: "rgba(47,171,114,0.12)",
-  input: "#102019",
+  bg: "#0F1611",
+  card: "#171F18",
+  card2: "#1A2320",
+  ink: "#E8EEDF",
+  mid: "#9DAE9A",
+  faint: "#566357",
+  border: "rgba(255,255,255,0.08)",
+  hairline: "rgba(255,255,255,0.06)",
+  wash: "rgba(127,190,150,0.13)",
+  washStrong: "rgba(127,190,150,0.22)",
+  input: "#171F18",
+  sage:    "#A8C99A",
+  sageInk: "#A8C99A",
+  deep:    "#D8E8C5",
+  clay:    "#CCA07E",
+  clayLo:  "rgba(204,160,126,0.14)",
 } : {
-  bg: "#F4F9F6",
+  bg: "#F7F7F4",
   card: "#FFFFFF",
-  card2: "#EAF7F0",
-  ink: "#1A2B1F",
-  mid: "#6B8A78",
-  faint: "#A8BFB5",
-  border: "rgba(26,43,31,0.10)",
-  wash: "#E4F5EE",
-  input: "#FFFFFF",
+  card2: "#FBFBF9",
+  ink: "#1A2820",
+  mid: "#6B7A6E",
+  faint: "#A8B0A8",
+  border: "rgba(26,40,32,0.08)",
+  hairline: "rgba(26,40,32,0.06)",
+  wash: "#E4ECE0",
+  washStrong: "rgba(62,107,78,0.14)",
+  input: "#FAF6EE",
+  sage:    "#3E6B4E",
+  sageInk: "#3E6B4E",
+  deep:    "#1F3A2A",
+  clay:    "#B0764E",
+  clayLo:  "#EEE0CF",
 };
+
+/**
+ * GrowthState — translates a friend's screen-time today into a "plant health"
+ * stage. Less screen time = thriving (vibrant, upright). More = wilting.
+ * This is the engine that turns numbers into emotion.
+ */
+function growthState(minutes) {
+  // <30m = thriving, 30-90 = good, 90-180 = ok, 180+ = wilting
+  if (minutes < 30)  return { stage: 4, label: "Thriving",  hue: "#5C9670" };
+  if (minutes < 90)  return { stage: 3, label: "Growing",   hue: "#7FB58A" };
+  if (minutes < 180) return { stage: 2, label: "Holding",   hue: "#B79A5C" };
+  return                    { stage: 1, label: "Wilting",   hue: "#B7714A" };
+}
+
+/**
+ * PlantGlyph — a small SVG plant whose form reflects a growth stage (1-4).
+ * Stage 4: upright with two full leaves and a bud.
+ * Stage 3: upright with one full leaf, one budding.
+ * Stage 2: leaning, smaller leaves.
+ * Stage 1: drooping, wilted.
+ *
+ * All three are drawn from the same skeleton so plants in the grove look
+ * like siblings, just at different points in their day.
+ */
+function PlantGlyph({ stage = 4, hue = "#5C9670", size = 90 }) {
+  // Stems and leaves are described as percentages of viewBox so size scales cleanly.
+  const stems = {
+    4: { stem: "M50 80 C 50 64, 50 48, 50 34", leafR: "M50 50 C 62 44, 76 36, 84 22 C 78 38, 66 50, 56 56 Z", leafL: "M50 58 C 38 52, 24 44, 16 30 C 22 46, 34 58, 44 64 Z", bud: true },
+    3: { stem: "M50 80 C 50 66, 50 52, 50 40", leafR: "M50 55 C 60 50, 72 44, 78 32 C 74 46, 64 55, 56 60 Z", leafL: "M50 62 C 42 58, 32 52, 28 44 C 32 54, 40 62, 46 66 Z", bud: false },
+    2: { stem: "M50 82 C 50 70, 56 58, 60 48", leafR: "M58 58 C 70 56, 78 50, 82 42 C 76 52, 68 60, 62 62 Z", leafL: "M52 70 C 44 66, 38 60, 36 54 C 40 62, 46 68, 50 72 Z", bud: false },
+    1: { stem: "M50 82 C 52 72, 62 64, 70 60", leafR: "M68 62 C 76 64, 82 62, 86 56 C 80 64, 74 66, 70 65 Z", leafL: "M48 76 C 42 76, 36 74, 32 70 C 38 76, 44 78, 50 78 Z", bud: false },
+  }[stage] || { stem: "M50 80 L 50 40", leafR: "", leafL: "", bud: false };
+
+  const soft = `${hue}AA`;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+      <Defs>
+        <RadialGradient id={`pgrad-${stage}-${hue.replace("#", "")}`} cx="50" cy="80" rx="38" ry="14">
+          <Stop offset="0" stopColor={hue} stopOpacity={0.20} />
+          <Stop offset="1" stopColor={hue} stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Ellipse cx="50" cy="86" rx="38" ry="6" fill={`url(#pgrad-${stage}-${hue.replace("#", "")})`} />
+      {/* soil */}
+      <Path d="M22 84 C 35 78, 65 78, 78 84 C 78 90, 22 90, 22 84 Z" fill={stage === 1 ? "#C8B8A0" : "#D8E2D2"} />
+      {/* stem */}
+      <Path d={stems.stem} stroke={hue} strokeWidth={2.6} strokeLinecap="round" fill="none" />
+      {/* leaves */}
+      {stems.leafR && <Path d={stems.leafR} fill={hue} />}
+      {stems.leafL && <Path d={stems.leafL} fill={soft} />}
+      {/* bud (only stage 4) */}
+      {stems.bud && (
+        <Path d="M47 34 C 47 30, 53 30, 53 34 C 53 38, 47 38, 47 34 Z" fill={hue} />
+      )}
+    </Svg>
+  );
+}
 
 const cleanUsername = (raw) =>
   (raw || "").trim().replace(/^@/, "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
@@ -90,57 +164,76 @@ function Avatar({ username = "?", uri, size = 42 }) {
   );
 }
 
-function FriendRow({ friend, onChallenge, onViewStats, isPremium, dark }) {
+/**
+ * FriendPlant — a single tile in the grove. Replaces the old row-style
+ * FriendRow. Each plant's growth state visually reflects the friend's
+ * focus today. Tap to open stats; the challenge action lives there.
+ */
+function FriendPlant({ friend, onPress, dark }) {
   const th = palette(dark);
-  const bar = Math.min(friend.minutes / 120, 1);
-  const fmtMins = m => m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60 ? `${m % 60}m` : ""}`.trim();
-  const hasMinutes = friend.minutes > 0;
+  const minutes = friend.minutes || 0;
+  const g = growthState(minutes);
+  const fmt = m => !m ? "0m" : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60 ? `${m % 60}m` : ""}`.trim();
 
   return (
-    <View style={[s.row, { backgroundColor: th.card, borderColor: th.border }]}>
-      <View style={s.friendIdentity}>
-        <Avatar username={friend.username} uri={friend.avatar_url} size={46} />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[s.name, { color: th.ink }]} numberOfLines={1}>@{friend.username}</Text>
-          {hasMinutes && <Text style={[s.friendMeta, { color: th.mid }]}>{fmtMins(friend.minutes)} screen time today</Text>}
-        </View>
+    <TouchableOpacity
+      onPress={() => onPress(friend)}
+      activeOpacity={0.85}
+      style={{
+        backgroundColor: th.card,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: th.hairline,
+        paddingTop: 14,
+        paddingBottom: 16,
+        paddingHorizontal: 14,
+        alignItems: "center",
+        // Slight asymmetric shift per friend gives the grove its organic feel.
+        // Derived deterministically from username so it doesn't jitter between renders.
+        transform: [{
+          translateY: (friend.username || "").charCodeAt(0) % 2 === 0 ? 0 : 8,
+        }],
+      }}
+    >
+      <PlantGlyph stage={g.stage} hue={g.hue} size={92} />
+      <Text
+        numberOfLines={1}
+        style={{
+          fontFamily: FF.bodyMed,
+          fontSize: 14,
+          color: th.ink,
+          marginTop: 6,
+          maxWidth: "100%",
+        }}
+      >
+        @{friend.username}
+      </Text>
+      <View style={{
+        flexDirection: "row", alignItems: "center", gap: 5,
+        marginTop: 4,
+      }}>
+        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: g.hue }} />
+        <Text style={{ fontFamily: FF.body, fontSize: 11, color: th.mid }}>
+          {fmt(minutes)} today
+        </Text>
       </View>
-      {hasMinutes && (
-        <View style={[s.barBg, { backgroundColor: dark ? "rgba(255,255,255,0.08)" : "rgba(26,43,31,0.07)" }]}>
-          <View style={[s.barFill, { width: `${bar * 100}%`, backgroundColor: terra }]} />
-        </View>
-      )}
-      <View style={s.friendActions}>
-        <TouchableOpacity
-          onPress={() => onViewStats(friend)}
-          style={[s.statsBtn, { backgroundColor: dark ? "rgba(255,255,255,0.05)" : "#F5FAF7", borderColor: th.border }]}
-        >
-          <Text style={[s.statsBtnText, { color: th.ink }]}>View stats</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => isPremium ? onChallenge(friend) : onChallenge(null)}
-          style={[s.chalBtn, { backgroundColor: th.wash, borderColor: isPremium ? terra : th.border }]}
-        >
-          {isPremium ? <Text style={s.chalBtnText}>Challenge</Text> : <LockIcon size={16} color={th.mid} />}
-        </TouchableOpacity>
-      </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
 function LoadingState({ elapsedMs, dark }) {
   const th = palette(dark);
-  if (elapsedMs < 2000) return <View style={s.loadingSpace} />;
+  if (elapsedMs < 2000) return <View style={{ minHeight: 96 }} />;
   if (elapsedMs < 4000) {
-    return <ActivityIndicator color={terra} style={{ marginTop: 40 }} />;
+    return <ActivityIndicator color={th.sage} style={{ marginTop: 40 }} />;
   }
   const dynamic = elapsedMs >= 5000;
   const text = dynamic
     ? LOADING_MESSAGES[Math.floor(elapsedMs / 1100) % LOADING_MESSAGES.length]
-    : "Loading friends";
+    : "Tending the grove";
   return (
-    <View style={s.loadingTextWrap}>
-      <Text style={[s.loadingText, { color: th.mid }]}>{text}</Text>
+    <View style={{ minHeight: 120, alignItems: "center", justifyContent: "center" }}>
+      <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid }}>{text}</Text>
     </View>
   );
 }
@@ -148,39 +241,123 @@ function LoadingState({ elapsedMs, dark }) {
 function FriendStatsModal({ friend, dark, onClose, onChallenge, isPremium }) {
   const th = palette(dark);
   if (!friend) return null;
-  const fmtMins = m => m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60 ? `${m % 60}m` : ""}`.trim();
+  const fmt = m => !m ? "0m" : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60 ? `${m % 60}m` : ""}`.trim();
+  const g = growthState(friend.minutes || 0);
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
-      <View style={s.modalShade}>
-        <View style={[s.detailCard, { backgroundColor: th.card, borderColor: th.border }]}>
-          <TouchableOpacity onPress={onClose} style={[s.detailClose, { backgroundColor: th.card2, borderColor: th.border }]}>
-            <CloseIcon size={16} color={th.mid} />
+      <View style={{
+        flex: 1,
+        backgroundColor: "rgba(11,26,17,0.55)",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}>
+        <View style={{
+          width: "100%",
+          maxWidth: 420,
+          borderRadius: 28,
+          backgroundColor: th.card,
+          padding: 26,
+          paddingTop: 22,
+          borderWidth: 1,
+          borderColor: th.hairline,
+          overflow: "hidden",
+        }}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={{
+              position: "absolute", top: 14, right: 14, zIndex: 2,
+              width: 32, height: 32, borderRadius: 16,
+              alignItems: "center", justifyContent: "center",
+              backgroundColor: th.card2,
+            }}
+          >
+            <CloseIcon size={14} color={th.mid} />
           </TouchableOpacity>
-          <View style={s.statsProfileHead}>
-            <Avatar username={friend.username} uri={friend.avatar_url} size={64} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[s.challengeKicker, { color: terra }]}>FRIEND PROFILE</Text>
-              <Text style={[s.detailTitle, { color: th.ink }]} numberOfLines={1}>@{friend.username}</Text>
+
+          {/* Plant glyph centered */}
+          <View style={{ alignItems: "center", marginBottom: 8 }}>
+            <PlantGlyph stage={g.stage} hue={g.hue} size={110} />
+          </View>
+
+          <Text style={{
+            fontFamily: FF.kicker, fontSize: 9, color: th.faint,
+            letterSpacing: 2.4, textAlign: "center", marginBottom: 4,
+          }}>
+            FRIEND IN THE GROVE
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={{
+              fontFamily: FF.display, fontSize: 32, color: th.ink,
+              letterSpacing: -0.4, textAlign: "center", marginBottom: 8,
+            }}
+          >
+            @{friend.username}
+          </Text>
+          <View style={{
+            flexDirection: "row", alignItems: "center", justifyContent: "center",
+            gap: 6, marginBottom: 22,
+          }}>
+            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: g.hue }} />
+            <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: th.mid }}>
+              {g.label}
+            </Text>
+          </View>
+
+          {/* Stat tiles */}
+          <View style={{ flexDirection: "row", gap: 10, marginBottom: 18 }}>
+            <View style={{
+              flex: 1, borderRadius: 18, padding: 16,
+              backgroundColor: th.card2,
+              borderWidth: 1, borderColor: th.hairline,
+            }}>
+              <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: th.faint, letterSpacing: 1.6, marginBottom: 4 }}>
+                SCREEN TIME
+              </Text>
+              <Text style={{ fontFamily: FF.display, fontSize: 26, color: th.ink, letterSpacing: -0.4 }}>
+                {fmt(friend.minutes || 0)}
+              </Text>
+            </View>
+            <View style={{
+              flex: 1, borderRadius: 18, padding: 16,
+              backgroundColor: th.card2,
+              borderWidth: 1, borderColor: th.hairline,
+            }}>
+              <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: th.faint, letterSpacing: 1.6, marginBottom: 4 }}>
+                SESSIONS
+              </Text>
+              <Text style={{ fontFamily: FF.display, fontSize: 26, color: th.ink, letterSpacing: -0.4 }}>
+                {friend.unlocks || 0}
+              </Text>
             </View>
           </View>
-          <View style={[s.statsGrid, { borderColor: th.border }]}>
-            <View style={[s.statTile, { backgroundColor: th.card2 }]}>
-              <Text style={[s.statValue, { color: th.ink }]}>{fmtMins(friend.minutes || 0)}</Text>
-              <Text style={[s.statLabel, { color: th.mid }]}>Screen time today</Text>
-            </View>
-            <View style={[s.statTile, { backgroundColor: th.card2 }]}>
-              <Text style={[s.statValue, { color: th.ink }]}>{friend.unlocks || 0}</Text>
-              <Text style={[s.statLabel, { color: th.mid }]}>Completed sessions</Text>
-            </View>
-          </View>
+
           <TouchableOpacity
             onPress={() => {
               onClose();
               isPremium ? onChallenge(friend) : onChallenge(null);
             }}
-            style={[s.detailSolid, s.continueBtn]}
+            activeOpacity={0.85}
+            style={{
+              paddingVertical: 14,
+              borderRadius: 16,
+              backgroundColor: th.deep,
+              alignItems: "center",
+              flexDirection: "row",
+              justifyContent: "center",
+              gap: 8,
+            }}
           >
-            <Text style={s.continueText}>Challenge</Text>
+            {!isPremium && <LockIcon size={14} color={dark ? "#1F3A2A" : "#FAF6EE"} />}
+            <Text style={{
+              fontFamily: FF.bodyMed,
+              fontSize: 14,
+              color: dark ? "#1F3A2A" : "#FAF6EE",
+              letterSpacing: 0.2,
+            }}>
+              {isPremium ? "Challenge" : "Upgrade to challenge"}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -197,27 +374,55 @@ function ChallengeRow({ item, myId, dark, onPress, onVerify }) {
   const fromName = item.challenger?.username || item.challenger_username || "friend";
   const toName = item.challenged?.username || "friend";
   const stake = getStake(item);
+  const kicker = incoming ? "NEW" : outgoingPending ? "AWAITING REPLY" : item.status === "active" ? "ACTIVE" : "CHALLENGE";
 
   return (
     <TouchableOpacity
-      activeOpacity={0.84}
+      activeOpacity={0.85}
       onPress={() => incoming || outgoingPending ? onPress(item) : (!mineDone && item.status === "active" ? onVerify(item) : onPress(item))}
-      style={[s.challengeBox, { backgroundColor: th.card2, borderColor: th.border }]}
+      style={{
+        flexDirection: "row", alignItems: "center", gap: 12,
+        padding: 16,
+        borderRadius: 18,
+        backgroundColor: th.card,
+        borderWidth: 1, borderColor: th.hairline,
+      }}
     >
-      <View style={{ flex: 1 }}>
-        <Text style={[s.challengeKicker, { color: terra }]}>
-          {incoming ? "NEW CHALLENGE" : outgoingPending ? "AWAITING REPLY" : item.status === "active" ? "ACTIVE CHALLENGE" : "CHALLENGE"}
+      <View style={{
+        width: 40, height: 40, borderRadius: 20,
+        alignItems: "center", justifyContent: "center",
+        backgroundColor: incoming ? th.washStrong : th.wash,
+      }}>
+        <LeafGlyph size={18} color={th.sage} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: th.sage, letterSpacing: 1.6, marginBottom: 2 }}>
+          {kicker}
         </Text>
-        <Text style={[s.challengeTitle, { color: th.ink }]} numberOfLines={1}>
+        <Text
+          numberOfLines={1}
+          style={{ fontFamily: FF.bodyMed, fontSize: 14, color: th.ink, textTransform: "capitalize" }}
+        >
           {incoming ? `@${fromName}` : outgoingPending ? `To @${toName}` : label}
         </Text>
-        <Text style={[s.challengeSub, { color: th.mid }]} numberOfLines={1}>
-          {incoming ? label : outgoingPending ? "Waiting for them to accept or deny" : mineDone ? "Waiting for result" : "Tap to verify"}
+        <Text
+          numberOfLines={1}
+          style={{ fontFamily: FF.body, fontSize: 11, color: th.mid, marginTop: 2 }}
+        >
+          {incoming ? label : outgoingPending ? "Waiting for them to accept" : mineDone ? "Waiting for result" : "Tap to verify"}
         </Text>
       </View>
-      <View style={[s.stakePill, { backgroundColor: th.card, borderColor: th.border }]}>
-        <Text style={[s.stakePillText, { color: terra }]}>+{stake.xp} XP</Text>
-        <Text style={[s.stakePillSub, { color: th.mid }]}>-{stake.penaltyMins}m</Text>
+      <View style={{
+        alignItems: "flex-end",
+        paddingLeft: 8,
+        borderLeftWidth: 0.5, borderLeftColor: th.hairline,
+      }}>
+        <Text style={{ fontFamily: FF.bodyBold, fontSize: 13, color: th.sage }}>
+          +{stake.xp} XP
+        </Text>
+        <Text style={{ fontFamily: FF.body, fontSize: 11, color: th.clay, marginTop: 1 }}>
+          -{stake.penaltyMins}m
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -232,35 +437,120 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
   const canRespond = challenge.status === "pending" && challenge.challenged_id === myId;
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
-      <View style={s.modalShade}>
-        <View style={[s.detailCard, { backgroundColor: th.card, borderColor: th.border }]}>
-          <TouchableOpacity onPress={onClose} style={[s.detailClose, { backgroundColor: th.card2, borderColor: th.border }]}>
-            <CloseIcon size={16} color={th.mid} />
+      <View style={{
+        flex: 1, backgroundColor: "rgba(11,26,17,0.55)",
+        alignItems: "center", justifyContent: "center", padding: 24,
+      }}>
+        <View style={{
+          width: "100%", maxWidth: 420,
+          backgroundColor: th.card, borderRadius: 28, padding: 26,
+          borderWidth: 1, borderColor: th.hairline,
+          overflow: "hidden",
+        }}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={{
+              position: "absolute", top: 14, right: 14, zIndex: 2,
+              width: 32, height: 32, borderRadius: 16,
+              alignItems: "center", justifyContent: "center",
+              backgroundColor: th.card2,
+            }}
+          >
+            <CloseIcon size={14} color={th.mid} />
           </TouchableOpacity>
-          <Text style={[s.challengeKicker, { color: terra }]}>CHALLENGE FROM @{fromName}</Text>
-          <Text style={[s.detailTitle, { color: th.ink }]}>{label}</Text>
-          {!!challenge.description && <Text style={[s.detailBody, { color: th.mid }]}>{challenge.description}</Text>}
-          <View style={[s.detailStake, { backgroundColor: th.card2, borderColor: th.border }]}>
-            <Text style={[s.detailStakeText, { color: th.ink }]}>First verified wins +{stake.xp} XP</Text>
-            <Text style={[s.detailBody, { color: th.mid }]}>The other person loses {stake.penaltyMins} minutes of screen time.</Text>
+
+          <Text style={{
+            fontFamily: FF.kicker, fontSize: 9, color: th.sage,
+            letterSpacing: 2.4, marginBottom: 8,
+          }}>
+            CHALLENGE FROM @{fromName.toUpperCase()}
+          </Text>
+          <Text style={{
+            fontFamily: FF.display, fontSize: 30, color: th.ink,
+            letterSpacing: -0.4, textTransform: "capitalize",
+            marginBottom: 10,
+          }}>
+            {label}
+          </Text>
+          {!!challenge.description && (
+            <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid, lineHeight: 20 }}>
+              {challenge.description}
+            </Text>
+          )}
+
+          <View style={{
+            backgroundColor: th.card2,
+            borderRadius: 18, padding: 16, marginTop: 16,
+            borderWidth: 1, borderColor: th.hairline,
+          }}>
+            <Text style={{ fontFamily: FF.bodyBold, fontSize: 14, color: th.ink, marginBottom: 4 }}>
+              First verified wins +{stake.xp} XP
+            </Text>
+            <Text style={{ fontFamily: FF.body, fontSize: 12, color: th.mid, lineHeight: 18 }}>
+              The other person loses {stake.penaltyMins} minutes of screen time.
+            </Text>
           </View>
+
           {acceptedBurst && (
-            <View style={s.burstWrap} pointerEvents="none">
-              {[0, 1, 2, 3, 4, 5].map(i => <View key={i} style={[s.burstDot, { transform: [{ rotate: `${i * 60}deg` }, { translateY: -34 }] }]} />)}
+            <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" }} pointerEvents="none">
+              {[0, 1, 2, 3, 4, 5].map(i => (
+                <View
+                  key={i}
+                  style={{
+                    position: "absolute",
+                    width: 7, height: 7, borderRadius: 4,
+                    backgroundColor: th.sage, opacity: 0.55,
+                    transform: [{ rotate: `${i * 60}deg` }, { translateY: -34 }],
+                  }}
+                />
+              ))}
             </View>
           )}
+
           {canRespond ? (
-            <View style={s.detailActions}>
-              <TouchableOpacity onPress={() => onDecline(challenge.id)} disabled={accepting} style={[s.detailGhost, { borderColor: th.border }]}>
-                <Text style={{ color: th.mid, fontWeight: "800" }}>Deny</Text>
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 18 }}>
+              <TouchableOpacity
+                onPress={() => onDecline(challenge.id)}
+                disabled={accepting}
+                style={{
+                  flex: 1, paddingVertical: 14, borderRadius: 14,
+                  borderWidth: 1, borderColor: th.hairline,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: th.mid }}>Deny</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => onAccept(challenge.id)} disabled={accepting} style={s.detailSolid}>
-                <Text style={{ color: "#fff", fontWeight: "900" }}>{accepting ? "Accepting" : "Accept"}</Text>
+              <TouchableOpacity
+                onPress={() => onAccept(challenge.id)}
+                disabled={accepting}
+                style={{
+                  flex: 1, paddingVertical: 14, borderRadius: 14,
+                  backgroundColor: th.deep,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{
+                  fontFamily: FF.bodyMed, fontSize: 14,
+                  color: dark ? "#1F3A2A" : "#FAF6EE",
+                }}>
+                  {accepting ? "Accepting…" : "Accept"}
+                </Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity onPress={onClose} style={[s.detailSolid, { marginTop: 18 }]}>
-              <Text style={{ color: "#fff", fontWeight: "900" }}>Close</Text>
+            <TouchableOpacity
+              onPress={onClose}
+              style={{
+                marginTop: 18, paddingVertical: 14, borderRadius: 14,
+                backgroundColor: th.deep, alignItems: "center",
+              }}
+            >
+              <Text style={{
+                fontFamily: FF.bodyMed, fontSize: 14,
+                color: dark ? "#1F3A2A" : "#FAF6EE",
+              }}>
+                Close
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -274,21 +564,59 @@ function ChallengeOutcomeModal({ outcome, dark, onClose }) {
   if (!outcome) return null;
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
-      <View style={s.modalShade}>
-        <View style={[s.detailCard, { backgroundColor: th.card, borderColor: th.border }]}>
-          <Text style={[s.challengeKicker, { color: outcome.won ? terra : "#E05050" }]}>
+      <View style={{
+        flex: 1, backgroundColor: "rgba(11,26,17,0.55)",
+        alignItems: "center", justifyContent: "center", padding: 24,
+      }}>
+        <View style={{
+          width: "100%", maxWidth: 420,
+          backgroundColor: th.card, borderRadius: 28, padding: 28,
+          borderWidth: 1, borderColor: th.hairline,
+          alignItems: "center",
+        }}>
+          <View style={{ marginBottom: 8 }}>
+            <PlantGlyph
+              stage={outcome.won ? 4 : 1}
+              hue={outcome.won ? "#5C9670" : "#B7714A"}
+              size={100}
+            />
+          </View>
+          <Text style={{
+            fontFamily: FF.kicker, fontSize: 10,
+            color: outcome.won ? th.sage : th.clay,
+            letterSpacing: 2.4, marginBottom: 4,
+          }}>
             {outcome.won ? "CHALLENGE WON" : "CHALLENGE LOST"}
           </Text>
-          <Text style={[s.detailTitle, { color: th.ink }]}>
-            {outcome.won ? `+${outcome.xp} XP` : `-${outcome.penaltyMins} minutes`}
+          <Text style={{
+            fontFamily: FF.display, fontSize: 36, color: th.ink,
+            letterSpacing: -0.5, marginBottom: 10,
+          }}>
+            {outcome.won ? `+${outcome.xp} XP` : `-${outcome.penaltyMins}m`}
           </Text>
-          <Text style={[s.detailBody, { color: th.mid }]}>
+          <Text style={{
+            fontFamily: FF.body, fontSize: 13, color: th.mid,
+            textAlign: "center", lineHeight: 20, marginBottom: 22,
+          }}>
             {outcome.won
               ? "You verified first and claimed the reward."
               : "Your friend verified first, so the stake was applied."}
           </Text>
-          <TouchableOpacity onPress={onClose} style={[s.detailSolid, s.continueBtn]}>
-            <Text style={s.continueText}>Continue</Text>
+          <TouchableOpacity
+            onPress={onClose}
+            style={{
+              paddingVertical: 14, paddingHorizontal: 28,
+              borderRadius: 14,
+              backgroundColor: th.deep,
+              width: "100%", alignItems: "center",
+            }}
+          >
+            <Text style={{
+              fontFamily: FF.bodyMed, fontSize: 14,
+              color: dark ? "#1F3A2A" : "#FAF6EE",
+            }}>
+              Continue
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -305,12 +633,31 @@ function PastChallengeRow({ item, myId, dark }) {
     item.winner_id === item.challenger_id ? (item.challenger?.username || "friend") :
     item.winner_id === item.challenged_id ? (item.challenged?.username || "friend") :
     item.status === "declined" ? "declined" : "not set";
+  const youWon = item.winner_id === myId;
   return (
-    <View style={[s.pastRow, { backgroundColor: th.card, borderColor: th.border }]}>
-      <Text style={[s.challengeTitle, { color: th.ink }]} numberOfLines={1}>{label}</Text>
-      <Text style={[s.challengeSub, { color: th.mid }]}>
-        {item.status === "declined" ? "Declined" : `First finished: ${winnerName} · +${stake.xp} XP / -${stake.penaltyMins}m`}
-      </Text>
+    <View style={{
+      backgroundColor: th.card,
+      borderRadius: 16, padding: 14, marginBottom: 8,
+      borderWidth: 1, borderColor: th.hairline,
+      flexDirection: "row", alignItems: "center", gap: 12,
+    }}>
+      <View style={{
+        width: 36, height: 36, borderRadius: 18,
+        alignItems: "center", justifyContent: "center",
+        backgroundColor: youWon ? th.wash : th.card2,
+      }}>
+        <LeafGlyph size={15} color={youWon ? th.sage : th.mid} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: th.ink, textTransform: "capitalize" }} numberOfLines={1}>
+          {label}
+        </Text>
+        <Text style={{ fontFamily: FF.body, fontSize: 11, color: th.mid, marginTop: 2 }}>
+          {item.status === "declined"
+            ? "Declined"
+            : `${winnerName === "you" ? "You won" : `${winnerName} won`} · +${stake.xp} XP`}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -702,31 +1049,105 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
   };
 
   if (!userId) return (
-    <View style={[s.center, { backgroundColor: th.bg }]}>
-      <Text style={[s.emptyTitle, { color: th.ink }]}>Sign in to see friends</Text>
-      <Text style={[s.emptySub, { color: th.mid }]}>Create an account to compare screen time with friends.</Text>
+    <View style={{
+      flex: 1, alignItems: "center", justifyContent: "center",
+      padding: 32, backgroundColor: th.bg,
+    }}>
+      <Sprout size={120} tone={dark ? "night" : "fresh"} />
+      <Text style={{ fontFamily: FF.display, fontSize: 30, color: th.ink, letterSpacing: -0.3, marginTop: 12, marginBottom: 6 }}>
+        Sign in to see the grove
+      </Text>
+      <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid, textAlign: "center", lineHeight: 20 }}>
+        Create an account to share your focus{"\n"}with friends.
+      </Text>
     </View>
   );
+
+  // Pair friends into rows of two for the asymmetric grove grid.
+  const friendPairs = [];
+  for (let i = 0; i < friends.length; i += 2) {
+    friendPairs.push(friends.slice(i, i + 2));
+  }
+
+  const myGrowth = growthState(0); // self always shown thriving — we don't track our own screen time on this screen
 
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
       {!!toast && (
-        <View style={s.toast} pointerEvents="none">
-          <Text style={s.toastText}>{toast}</Text>
+        <View style={{
+          position: "absolute", top: 14, left: 18, right: 18, zIndex: 50,
+          backgroundColor: th.deep, borderRadius: 16,
+          paddingVertical: 12, paddingHorizontal: 16, alignItems: "center",
+          shadowColor: "#1F3A2A", shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.12, shadowRadius: 14, elevation: 4,
+        }} pointerEvents="none">
+          <Text style={{
+            fontFamily: FF.bodyMed, color: dark ? "#1F3A2A" : "#FAF6EE", fontSize: 13,
+          }}>
+            {toast}
+          </Text>
         </View>
       )}
 
-      <View style={[s.header, { borderColor: th.border }]}>
-        <Text style={[s.headerTitle, { color: th.ink }]}>Friends</Text>
-        <TouchableOpacity onPress={() => setShowAdd(v => !v)} style={[s.addBtn, { backgroundColor: th.wash }]}>
-          <Text style={s.addBtnText}>{showAdd ? "Cancel" : "+ Add"}</Text>
-        </TouchableOpacity>
+      {/* Editorial page header */}
+      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 6 }}>
+        <Text style={{
+          fontFamily: FF.kicker, fontSize: 10, color: th.faint,
+          letterSpacing: 2.4, marginBottom: 6,
+        }}>
+          THE GROVE · {friends.length} {friends.length === 1 ? "PLANT" : "PLANTS"}
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
+          <Text style={{
+            fontFamily: FF.display, fontSize: 38, color: th.ink, letterSpacing: -0.5,
+          }}>
+            Your grove
+          </Text>
+          <TouchableOpacity
+            onPress={() => setShowAdd(v => !v)}
+            activeOpacity={0.85}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 6,
+              paddingVertical: 10, paddingHorizontal: 14,
+              borderRadius: 14, backgroundColor: th.deep,
+            }}
+          >
+            <Text style={{
+              fontFamily: FF.body, fontSize: 16,
+              color: dark ? "#1F3A2A" : "#FAF6EE", marginTop: -2,
+            }}>
+              {showAdd ? "×" : "+"}
+            </Text>
+            <Text style={{
+              fontFamily: FF.bodyMed, fontSize: 13,
+              color: dark ? "#1F3A2A" : "#FAF6EE",
+            }}>
+              {showAdd ? "Close" : "Plant"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid, marginTop: 4 }}>
+          {friends.length === 0
+            ? "Add a friend by username — their plant grows with their focus."
+            : "Each plant grows with focus and wilts with screen time."}
+        </Text>
       </View>
 
+      {/* Inline add-friend row — appears under the header */}
       {showAdd && (
-        <View style={[s.addRow, { borderColor: th.border }]}>
+        <View style={{
+          flexDirection: "row", gap: 8,
+          paddingHorizontal: 22, paddingTop: 14, paddingBottom: 4,
+        }}>
           <TextInput
-            style={[s.input, { backgroundColor: th.input, borderColor: th.border, color: th.ink }]}
+            style={{
+              flex: 1,
+              backgroundColor: th.card, color: th.ink,
+              fontFamily: FF.body, fontSize: 14,
+              paddingVertical: 13, paddingHorizontal: 14,
+              borderRadius: 14,
+              borderWidth: 1, borderColor: th.hairline,
+            }}
             placeholder="@username"
             placeholderTextColor={th.faint}
             value={addUsername}
@@ -736,8 +1157,25 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
             returnKeyType="send"
             onSubmitEditing={addFriend}
           />
-          <TouchableOpacity onPress={addFriend} disabled={adding} style={s.sendBtn}>
-            {adding ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.sendBtnText}>Send</Text>}
+          <TouchableOpacity
+            onPress={addFriend}
+            disabled={adding}
+            activeOpacity={0.85}
+            style={{
+              paddingHorizontal: 18,
+              borderRadius: 14,
+              backgroundColor: th.deep,
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            {adding ? <ActivityIndicator color={dark ? "#1F3A2A" : "#FAF6EE"} size="small" /> : (
+              <Text style={{
+                fontFamily: FF.bodyMed, fontSize: 13,
+                color: dark ? "#1F3A2A" : "#FAF6EE",
+              }}>
+                Send
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       )}
@@ -746,62 +1184,150 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
         <LoadingState elapsedMs={loadingElapsed} dark={dark} />
       ) : (
         <FlatList
-          data={friends}
-          keyExtractor={f => f.id}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadAll(); }} tintColor={terra} />}
+          data={friendPairs}
+          keyExtractor={(_, idx) => `pair_${idx}`}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadAll(); }} tintColor={th.sage} />}
+          showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             <>
+              {/* Your username card — editorial, with leaf glyph */}
               {!!myProfile?.username && (
-                <View style={[s.usernameCard, { backgroundColor: th.card2, borderColor: dark ? "rgba(47,171,114,0.28)" : "rgba(47,171,114,0.2)" }]}>
-                  <Avatar username={myProfile.username} uri={myProfile.avatar_url} size={48} />
+                <View style={{
+                  flexDirection: "row", alignItems: "center", gap: 14,
+                  backgroundColor: th.card,
+                  borderRadius: 22,
+                  padding: 16,
+                  borderWidth: 1,
+                  borderColor: th.hairline,
+                  marginBottom: 14,
+                  overflow: "hidden",
+                }}>
+                  {/* faint clay sprig watermark */}
+                  <View style={{ position: "absolute", right: -16, bottom: -20, pointerEvents: "none" }}>
+                    <Sprig size={104} color={th.clay} opacity={dark ? 0.07 : 0.05} />
+                  </View>
+
+                  <View style={{
+                    width: 48, height: 48, borderRadius: 24,
+                    alignItems: "center", justifyContent: "center",
+                    backgroundColor: th.wash,
+                  }}>
+                    <LeafGlyph size={22} color={th.sage} />
+                  </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={[s.cardKicker, { color: terra }]}>YOUR USERNAME</Text>
-                    <Text style={[s.usernameText, { color: th.ink }]} numberOfLines={1}>@{myProfile.username}</Text>
+                    <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: th.faint, letterSpacing: 1.6, marginBottom: 2 }}>
+                      YOU
+                    </Text>
+                    <Text style={{ fontFamily: FF.display, fontSize: 22, color: th.ink, letterSpacing: -0.3 }} numberOfLines={1}>
+                      @{myProfile.username}
+                    </Text>
                   </View>
                   <View style={{ flexDirection: "row", gap: 6 }}>
-                    <TouchableOpacity onPress={async () => {
-                      if (Clipboard?.setStringAsync) {
-                        await Clipboard.setStringAsync(`@${myProfile.username}`);
-                        setCopiedFlag(true);
-                        setTimeout(() => setCopiedFlag(false), 1400);
-                      } else {
-                        Share.share({ message: `@${myProfile.username}` }).catch(() => {});
-                      }
-                    }} style={s.compactSolid}>
-                      <Text style={s.compactSolidText}>{copiedFlag ? "Copied" : "Copy"}</Text>
+                    <TouchableOpacity
+                      onPress={async () => {
+                        if (Clipboard?.setStringAsync) {
+                          await Clipboard.setStringAsync(`@${myProfile.username}`);
+                          setCopiedFlag(true);
+                          setTimeout(() => setCopiedFlag(false), 1400);
+                        } else {
+                          Share.share({ message: `@${myProfile.username}` }).catch(() => {});
+                        }
+                      }}
+                      style={{
+                        paddingVertical: 8, paddingHorizontal: 12, borderRadius: 11,
+                        backgroundColor: th.wash,
+                      }}
+                    >
+                      <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: th.sage }}>
+                        {copiedFlag ? "Copied" : "Copy"}
+                      </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => {
-                      const link = `drift://add-friend/${myProfile.username}`;
-                      Share.share({
-                        message: `Add me on Drift: ${link}`,
-                        url: link,
-                      }).catch(() => {});
-                    }} style={s.compactSolid}>
-                      <Text style={s.compactSolidText}>Share</Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        const link = `drift://add-friend/${myProfile.username}`;
+                        Share.share({
+                          message: `Add me on Drift: ${link}`,
+                          url: link,
+                        }).catch(() => {});
+                      }}
+                      style={{
+                        paddingVertical: 8, paddingHorizontal: 12, borderRadius: 11,
+                        backgroundColor: th.deep,
+                      }}
+                    >
+                      <Text style={{
+                        fontFamily: FF.bodyMed, fontSize: 12,
+                        color: dark ? "#1F3A2A" : "#FAF6EE",
+                      }}>
+                        Share
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               )}
 
+              {/* Friend requests — "seed packets" waiting to be planted */}
               {friendRequests.length > 0 && (
-                <View style={[s.pendingBox, { backgroundColor: th.card, borderColor: th.border }]}>
-                  <Text style={[s.cardKicker, { color: terra }]}>FRIEND REQUESTS</Text>
-                  {friendRequests.map(r => (
-                    <View key={r.id} style={s.pendingRow}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                        <Avatar username={r.profiles?.username} uri={r.profiles?.avatar_url} size={34} />
-                        <Text style={[s.pendingName, { color: th.ink }]}>@{r.profiles?.username}</Text>
+                <View style={{
+                  marginBottom: 14, padding: 16,
+                  borderRadius: 22,
+                  backgroundColor: th.card2,
+                  borderWidth: 1, borderColor: th.hairline,
+                }}>
+                  <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: th.faint, letterSpacing: 1.6, marginBottom: 10 }}>
+                    SEEDS TO PLANT · {friendRequests.length}
+                  </Text>
+                  {friendRequests.map((r, idx) => (
+                    <View key={r.id} style={{
+                      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                      paddingVertical: 10,
+                      borderTopWidth: idx === 0 ? 0 : 0.5, borderTopColor: th.hairline,
+                    }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                        <View style={{
+                          width: 30, height: 30, borderRadius: 15,
+                          alignItems: "center", justifyContent: "center",
+                          backgroundColor: th.wash,
+                        }}>
+                          <LeafGlyph size={14} color={th.sage} />
+                        </View>
+                        <Text
+                          style={{ fontFamily: FF.bodyMed, fontSize: 14, color: th.ink }}
+                          numberOfLines={1}
+                        >
+                          @{r.profiles?.username}
+                        </Text>
                       </View>
-                      <TouchableOpacity onPress={() => acceptRequest(r.id)} style={s.smallSolid}>
-                        <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>Accept</Text>
+                      <TouchableOpacity
+                        onPress={() => acceptRequest(r.id)}
+                        activeOpacity={0.85}
+                        style={{
+                          paddingVertical: 8, paddingHorizontal: 14,
+                          borderRadius: 12,
+                          backgroundColor: th.deep,
+                        }}
+                      >
+                        <Text style={{
+                          fontFamily: FF.bodyMed, fontSize: 12,
+                          color: dark ? "#1F3A2A" : "#FAF6EE",
+                        }}>
+                          Plant
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   ))}
                 </View>
               )}
 
+              {/* Active / pending challenges */}
               {visibleChallenges.length > 0 && (
-                <View style={{ marginBottom: 10 }}>
+                <View style={{ marginBottom: 14 }}>
+                  <Text style={{
+                    fontFamily: FF.kicker, fontSize: 9, color: th.faint, letterSpacing: 1.6,
+                    marginBottom: 10, paddingLeft: 4,
+                  }}>
+                    LIVE CHALLENGES · {visibleChallenges.length}
+                  </Text>
                   {visibleChallenges.map(ch => {
                     const canCancel = ch.challenger_id === userId && ch.status === "pending";
                     const row = (
@@ -832,41 +1358,124 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
               )}
 
               {!isPremium && (
-                <TouchableOpacity onPress={onOpenPaywall} style={[s.trialBanner, { backgroundColor: dark ? "rgba(90,180,212,0.13)" : "#E6F4FB" }]}>
-                  <LockIcon size={12} color="#5AB4D4" />
-                  <Text style={[s.trialText, { color: dark ? "#8DD4EA" : "#2A7FA0" }]}>Upgrade to challenge friends</Text>
+                <TouchableOpacity
+                  onPress={onOpenPaywall}
+                  activeOpacity={0.85}
+                  style={{
+                    marginBottom: 16,
+                    paddingVertical: 12, paddingHorizontal: 14,
+                    borderRadius: 14,
+                    backgroundColor: th.card,
+                    borderWidth: 1, borderColor: th.hairline,
+                    flexDirection: "row", alignItems: "center", gap: 10,
+                  }}
+                >
+                  <View style={{
+                    width: 28, height: 28, borderRadius: 14,
+                    alignItems: "center", justifyContent: "center",
+                    backgroundColor: th.wash,
+                  }}>
+                    <LockIcon size={13} color={th.sage} />
+                  </View>
+                  <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.ink, flex: 1 }}>
+                    Upgrade to challenge friends
+                  </Text>
+                  <Text style={{ fontFamily: FF.serifReg, fontSize: 20, color: th.faint }}>›</Text>
                 </TouchableOpacity>
+              )}
+
+              {/* Section heading right above the grove */}
+              {friends.length > 0 && (
+                <Text style={{
+                  fontFamily: FF.kicker, fontSize: 9, color: th.faint,
+                  letterSpacing: 1.6, marginBottom: 12, paddingLeft: 4,
+                }}>
+                  THE GROVE
+                </Text>
               )}
             </>
           }
           ListFooterComponent={
             <TouchableOpacity
               onPress={() => setShowPast(true)}
-              style={[s.pastButton, { backgroundColor: th.card, borderColor: th.border }]}
+              activeOpacity={0.85}
+              style={{
+                marginTop: 20,
+                paddingVertical: 16,
+                borderRadius: 18,
+                backgroundColor: th.card,
+                borderWidth: 1, borderColor: th.hairline,
+                alignItems: "center",
+              }}
             >
-              <Text style={[s.pastButtonText, { color: terra }]}>Past challenges</Text>
-              <Text style={[s.challengeSub, { color: th.mid }]}>
+              <Text style={{ fontFamily: FF.display, fontSize: 18, color: th.ink, letterSpacing: -0.2 }}>
+                Past challenges
+              </Text>
+              <Text style={{ fontFamily: FF.body, fontSize: 12, color: th.mid, marginTop: 2 }}>
                 {pastChallenges.length} stored from the last 6 months
               </Text>
             </TouchableOpacity>
           }
-          renderItem={({ item }) => (
-            <FriendRow
-              friend={item}
-              onChallenge={handleChallenge}
-              onViewStats={setStatsFriend}
-              isPremium={isPremium}
-              dark={dark}
-            />
+          renderItem={({ item: pair }) => (
+            <View style={{ flexDirection: "row", gap: 12, marginBottom: 14, alignItems: "flex-start" }}>
+              {pair.map(f => (
+                <View key={f.id} style={{ flex: 1 }}>
+                  <FriendPlant friend={f} onPress={setStatsFriend} dark={dark} />
+                </View>
+              ))}
+              {/* If the row only has one friend, pad with an empty cell so it stays left */}
+              {pair.length === 1 && <View style={{ flex: 1 }} />}
+            </View>
           )}
           ListEmptyComponent={
-            <View style={s.center}>
-              <View style={{ marginBottom: 14 }}><UsersIcon size={62} color={th.faint} /></View>
-              <Text style={[s.emptyTitle, { color: th.ink }]}>No friends yet</Text>
-              <Text style={[s.emptySub, { color: th.mid, marginBottom: 28 }]}>Add friends by username to{"\n"}see their screen time today.</Text>
+            <View style={{ alignItems: "center", paddingVertical: 40, paddingHorizontal: 24 }}>
+              <View style={{
+                paddingVertical: 28, paddingHorizontal: 22,
+                borderRadius: 24,
+                borderWidth: 1.4, borderColor: dark ? "rgba(255,255,255,0.18)" : "rgba(26,40,32,0.18)",
+                borderStyle: "dashed",
+                alignItems: "center",
+                width: "100%",
+              }}>
+                <Sprout size={120} tone={dark ? "night" : "fresh"} />
+                <Text style={{
+                  fontFamily: FF.display, fontSize: 28, color: th.ink,
+                  letterSpacing: -0.3, marginTop: 4, marginBottom: 6,
+                }}>
+                  An empty grove
+                </Text>
+                <Text style={{
+                  fontFamily: FF.body, fontSize: 13, color: th.mid,
+                  textAlign: "center", lineHeight: 20, marginBottom: 18,
+                }}>
+                  Add a friend by username — their plant{"\n"}grows with focus, wilts with scrolling.
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowAdd(true)}
+                  activeOpacity={0.85}
+                  style={{
+                    paddingVertical: 12, paddingHorizontal: 18, borderRadius: 13,
+                    backgroundColor: th.deep,
+                    flexDirection: "row", alignItems: "center", gap: 8,
+                  }}
+                >
+                  <Text style={{
+                    fontFamily: FF.body, fontSize: 15,
+                    color: dark ? "#1F3A2A" : "#FAF6EE", marginTop: -1,
+                  }}>
+                    +
+                  </Text>
+                  <Text style={{
+                    fontFamily: FF.bodyMed, fontSize: 13,
+                    color: dark ? "#1F3A2A" : "#FAF6EE",
+                  }}>
+                    Plant your first friend
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           }
-          contentContainerStyle={{ padding: 16, paddingBottom: 96, flexGrow: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 16, paddingBottom: 130, flexGrow: 1 }}
         />
       )}
 
@@ -920,10 +1529,36 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
 
       <Modal visible={showPast} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPast(false)}>
         <View style={{ flex: 1, backgroundColor: th.bg }}>
-          <View style={[s.pastHeader, { borderColor: th.border }]}>
-            <Text style={[s.headerTitle, { color: th.ink }]}>Past Challenges</Text>
-            <TouchableOpacity onPress={() => setShowPast(false)} style={s.smallSolid}>
-              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>Close</Text>
+          <View style={{
+            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+            paddingHorizontal: 22, paddingTop: 54, paddingBottom: 16,
+          }}>
+            <View>
+              <Text style={{
+                fontFamily: FF.kicker, fontSize: 10, color: th.faint, letterSpacing: 2.4, marginBottom: 4,
+              }}>
+                ARCHIVE
+              </Text>
+              <Text style={{
+                fontFamily: FF.display, fontSize: 28, color: th.ink, letterSpacing: -0.4,
+              }}>
+                Past challenges
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setShowPast(false)}
+              style={{
+                paddingHorizontal: 14, paddingVertical: 9,
+                borderRadius: 12,
+                backgroundColor: th.deep,
+              }}
+            >
+              <Text style={{
+                fontFamily: FF.bodyMed, fontSize: 12,
+                color: dark ? "#1F3A2A" : "#FAF6EE",
+              }}>
+                Close
+              </Text>
             </TouchableOpacity>
           </View>
           <FlatList
@@ -931,12 +1566,20 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
             keyExtractor={item => String(item.id)}
             renderItem={({ item }) => <PastChallengeRow item={item} myId={userId} dark={dark} />}
             ListEmptyComponent={
-              <View style={s.center}>
-                <Text style={[s.emptyTitle, { color: th.ink }]}>No past challenges</Text>
-                <Text style={[s.emptySub, { color: th.mid }]}>Resolved challenges live here for 6 months.</Text>
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
+                <Sprout size={100} tone={dark ? "night" : "fresh"} />
+                <Text style={{
+                  fontFamily: FF.display, fontSize: 24, color: th.ink, letterSpacing: -0.3,
+                  marginTop: 6, marginBottom: 6,
+                }}>
+                  No past challenges
+                </Text>
+                <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid, textAlign: "center" }}>
+                  Resolved challenges live here for 6 months.
+                </Text>
               </View>
             }
-            contentContainerStyle={{ padding: 16, paddingBottom: 40, flexGrow: 1 }}
+            contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 40, flexGrow: 1 }}
           />
         </View>
       </Modal>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useContext, createContext } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, ScrollView,
-  StyleSheet, SafeAreaView, KeyboardAvoidingView,
+  StyleSheet, KeyboardAvoidingView,
   StatusBar, Platform, Alert, AppState, Modal, PanResponder, Animated,
-  ActivityIndicator, Linking,
+  ActivityIndicator, Linking, Dimensions,
 } from "react-native";
+import Constants from "expo-constants";
 import { getTheme } from "./theme";
 import AICheckModal from "./AICheckModal";
 import { evaluateTask } from "./aiEvaluate";
@@ -29,6 +30,18 @@ import {
   Oswald_400Regular,
   Oswald_700Bold,
 } from "@expo-google-fonts/oswald";
+import {
+  PlayfairDisplay_400Regular,
+  PlayfairDisplay_700Bold,
+  PlayfairDisplay_700Bold_Italic,
+} from "@expo-google-fonts/playfair-display";
+import {
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_700Bold,
+} from "@expo-google-fonts/dm-sans";
+import Sprout, { LeafGlyph, Sprig, SeedDots } from "./SproutArt";
+import { FF } from "./theme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Path, Circle as SvgCircle, Rect } from "react-native-svg";
 import {
@@ -36,7 +49,7 @@ import {
   ShieldKeyIcon, ClipboardIcon, ChartIcon, PhoneIcon,
 } from "./Icons";
 import {
-  requestScreenTimeAuth, getScreenTimeAuthStatus,
+  requestScreenTimeAuth, getScreenTimeAuthStatus, isNativeBlockingAvailable,
 } from "./blockedApps";
 import { startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag } from "./screenTime";
 import { supabase, syncScreenTime, safeGetSession } from "./supabase";
@@ -218,7 +231,13 @@ function CreditTicker({ value, textColor }) {
     return () => { if (animRef.current) clearInterval(animRef.current); };
   }, [value]);
   return (
-    <Text style={{ fontFamily: FO, fontSize: 38, color: textColor || "#FFFFFF", letterSpacing: 1 }}>
+    <Text style={{
+      fontFamily: FF.serif,
+      fontSize: 72,
+      lineHeight: 76,
+      color: textColor || "#1A2820",
+      letterSpacing: -2.4,
+    }}>
       {fmtMins(show)}
     </Text>
   );
@@ -388,38 +407,6 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
         </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
-          {/* AI-valued notice or upgrade prompt */}
-          {isSubActive ? (
-            <View style={{
-              flexDirection: "row", alignItems: "center", gap: 10,
-              padding: 14, backgroundColor: earn.blueLo, borderRadius: 12, marginBottom: 14,
-              borderWidth: 1, borderColor: "rgba(90,180,212,0.2)",
-            }}>
-              <SparkleIcon size={22} color={earn.blue} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: FK, fontSize: 13, color: earn.blue, marginBottom: 2 }}>AI sets the credits</Text>
-                <Text style={{ fontFamily: FB, fontSize: 11, color: "#2A7FA0", lineHeight: 16 }}>
-                  Reward is calculated based on the task and duration when you save.
-                </Text>
-              </View>
-            </View>
-          ) : (
-            <TouchableOpacity onPress={onOpenPaywall} style={{
-              flexDirection: "row", alignItems: "center", gap: 10,
-              padding: 14, backgroundColor: ink.ghost, borderRadius: 12, marginBottom: 14,
-              borderWidth: 1, borderColor: ink.border,
-            }}>
-              <LockIcon size={22} color={ink.mid} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: FK, fontSize: 13, color: ink.deep, marginBottom: 2 }}>Unlock AI evaluation</Text>
-                <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, lineHeight: 16 }}>
-                  Tap to upgrade — credits are based on duration until then.
-                </Text>
-              </View>
-              <Text style={{ fontFamily: FO, fontSize: 9, color: earn.terra, letterSpacing: 1 }}>UPGRADE ›</Text>
-            </TouchableOpacity>
-          )}
-
           {/* Title */}
           <View style={{ marginBottom: 14 }}>
             <Text style={[s.label, { color: ink.faint }]}>What needs doing?</Text>
@@ -694,8 +681,8 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
               flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
             }}
           >
-            {evaluating && <Spinner size={20} color="#fff" />}
-            <Text style={{ fontFamily: FK, fontSize: 15, fontWeight: "600", color: "#fff", textAlign: "center" }}>
+            {evaluating && <Spinner size={20} color={dark ? "#16261C" : "#fff"} />}
+            <Text style={{ fontFamily: FK, fontSize: 15, fontWeight: "600", color: dark ? "#16261C" : "#fff", textAlign: "center" }}>
               {evaluating ? "AI is evaluating…" : "Add task"}
             </Text>
           </TouchableOpacity>
@@ -771,7 +758,7 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
           <TouchableOpacity onPress={confirm} style={{
             paddingVertical: 15, borderRadius: 14, backgroundColor: earn.green, alignItems: "center", marginBottom: 10,
           }}>
-            <Text style={{ fontFamily: FK, fontSize: 16, color: "#fff" }}>
+            <Text style={{ fontFamily: FK, fontSize: 16, color: dark ? "#16261C" : "#fff" }}>
               {step < QUESTIONS.length - 1 ? "Yes, next" : "Yes — claim credits"}
             </Text>
           </TouchableOpacity>
@@ -851,7 +838,7 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
               <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={confirm} disabled={!selected} style={[s2.solidBtn, { backgroundColor: selected ? earn.green : ink.faint }]}>
-              <Text style={s2.solidText}>Reduce</Text>
+              <Text style={[s2.solidText, { color: dark ? "#16261C" : "#fff" }]}>Reduce</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1000,7 +987,7 @@ function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
               <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={breathing ? finish : next} disabled={breathing && seconds > 0} style={[s2.solidBtn, { backgroundColor: breathing && seconds > 0 ? disabledBtn : earn.green }]}>
-              <Text style={[s2.solidText, { color: breathing && seconds > 0 ? disabledBtnText : "#FFFFFF" }]}>{breathing ? "Claim 15m" : "Continue"}</Text>
+              <Text style={[s2.solidText, { color: breathing && seconds > 0 ? disabledBtnText : (dark ? "#16261C" : "#FFFFFF") }]}>{breathing ? "Claim 15m" : "Continue"}</Text>
             </TouchableOpacity>
           </View>
           <Text style={[s2.footerHint, { color: ink.faint }]}>{Math.max(0, 3 - usedToday)} left today</Text>
@@ -1059,6 +1046,9 @@ function FloatingFeedback({ popup }) {
 function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onReduceScreenTime, onQuickGrant, quickGrantCount, dark }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
+  // Text color that sits on a `deep` (primary) button. In dark mode the deep
+  // token is a LIGHT green, so cream text would wash out — use dark ink instead.
+  const onDeep = dark ? "#16261C" : "#FAF6EE";
 
   const [verifyTask,   setVerifyTask]   = useState(null); // task being verified via prompts
   const [aiCheckTask,  setAiCheckTask]  = useState(null); // task being verified via AI
@@ -1074,6 +1064,27 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
     if (t.aiCheck) setAiCheckTask(t);
     else setVerifyTask(t);
   };
+
+  // Staggered entrance — runs once per mount. Sets a "delight" tone without
+  // being noisy: card fades up first, then heading, then the list rows.
+  const heroOp = useRef(new Animated.Value(0)).current;
+  const heroY  = useRef(new Animated.Value(14)).current;
+  const headOp = useRef(new Animated.Value(0)).current;
+  const listOp = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.stagger(110, [
+      Animated.parallel([
+        Animated.timing(heroOp, { toValue: 1, duration: 420, useNativeDriver: true }),
+        Animated.timing(heroY,  { toValue: 0, duration: 480, useNativeDriver: true }),
+      ]),
+      Animated.timing(headOp, { toValue: 1, duration: 360, useNativeDriver: true }),
+      Animated.timing(listOp, { toValue: 1, duration: 380, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  const balanceLabel = unlocked
+    ? "YOUR TIME"
+    : inDebt ? "TIME DEBT" : "YOUR TIME";
 
   return (
     <>
@@ -1092,138 +1103,314 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
       onCancel={() => setAiCheckTask(null)}
       dark={dark}
     />
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 18, paddingBottom: 110 }}>
-      {/* Credit bank */}
-      <View style={{
-        borderRadius: 20, padding: 20, marginBottom: 12,
-        backgroundColor: unlocked ? earn.terra : paper.card,
+    <ScrollView
+      style={{ flex: 1, backgroundColor: paper.warm }}
+      contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 130 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ── HERO CARD ────────────────────────────────────────────── */}
+      <Animated.View style={{
+        opacity: heroOp,
+        transform: [{ translateY: heroY }],
+        backgroundColor: paper.card,
+        borderRadius: 28,
+        padding: 22,
+        marginBottom: 26,
+        borderWidth: 1,
+        borderColor: ink.hairline,
+        shadowColor: dark ? "#000" : "#1F3A2A",
+        shadowOffset: { width: 0, height: 14 },
+        shadowOpacity: dark ? 0.35 : 0.06,
+        shadowRadius: 28,
+        elevation: 4,
         overflow: "hidden",
-        borderWidth: unlocked ? 0 : 1,
-        borderColor: ink.border,
       }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <View>
+        {/* Faint clay-tinted sprig — a subtle warm watermark in the corner */}
+        <View style={{ position: "absolute", left: -18, bottom: -22, pointerEvents: "none" }}>
+          <Sprig size={130} color={earn.clay} opacity={dark ? 0.07 : 0.05} flip />
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+          <View style={{ flex: 1, paddingRight: 6 }}>
+            {/* kicker */}
             <Text style={{
-              fontFamily: FB, fontSize: 11, fontWeight: "600",
-              color: unlocked ? "rgba(255,255,255,0.7)" : ink.faint,
-              textTransform: "uppercase", letterSpacing: 1, marginBottom: 6,
+              fontFamily: FF.kicker,
+              fontSize: 10,
+              letterSpacing: 2.4,
+              color: ink.faint,
+              marginBottom: 8,
             }}>
-              {unlocked ? "Screen time balance" : inDebt ? "Screen time debt" : "No time earned yet"}
+              {balanceLabel}
             </Text>
-            <CreditTicker value={credits.balance} textColor={unlocked ? "#FFFFFF" : inDebt ? "#C0392B" : ink.deep} />
-            <Text style={{ fontFamily: FB, fontSize: 12, color: unlocked ? "rgba(255,255,255,0.6)" : ink.faint, marginTop: 4 }}>
-              {unlocked ? "Available now" : inDebt ? "Earn this back to unlock time" : "Complete a task below"}
+
+            {/* huge balance display */}
+            <CreditTicker
+              value={Math.max(0, credits.balance)}
+              textColor={inDebt ? "#C0392B" : ink.deep}
+            />
+
+            <Text style={{
+              fontFamily: FF.body,
+              fontSize: 13,
+              color: ink.mid,
+              marginTop: 4,
+            }}>
+              {unlocked ? "Available now" : inDebt ? "Earn this back to unlock" : "No time earned yet"}
             </Text>
           </View>
-          <View style={{ alignItems: "flex-end" }}>
-            {unlocked
-              ? <UnlockIcon size={28} color="#fff" />
-              : <LockIcon size={28} color={earn.green} />}
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: unlocked ? "rgba(255,255,255,0.15)" : earn.greenLo, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 10, marginTop: 6 }}>
-              <LevelIcon index={getLevelIdx(totalXp)} size={12} color={unlocked ? "#fff" : earn.greenD} />
-              <Text style={{ fontFamily: FB, fontSize: 10, fontWeight: "600", color: unlocked ? "rgba(255,255,255,0.8)" : earn.greenD }}>
-                {lv.name}
-              </Text>
-            </View>
+
+          {/* level pill — top right */}
+          <View style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingVertical: 5,
+            paddingHorizontal: 11,
+            borderRadius: 18,
+            backgroundColor: earn.sageLo,
+          }}>
+            <LeafGlyph size={12} color={earn.sage} />
+            <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: earn.sage }}>
+              {lv.name}
+            </Text>
           </View>
         </View>
 
-        {credits.earned > 0 && (
-          <View style={{ flexDirection: "row", gap: 20, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: unlocked ? "rgba(255,255,255,0.15)" : ink.border }}>
-            {[["Earned", fmtMins(credits.earned)], ["Used", fmtMins(credits.spent)], stillEarnable > 0 ? ["Earnable", fmtMins(stillEarnable)] : null]
-              .filter(Boolean)
-              .map(([l, v]) => (
-                <View key={l}>
-                  <Text style={{ fontFamily: FB, fontSize: 10, color: unlocked ? "rgba(255,255,255,0.5)" : ink.faint, marginBottom: 2 }}>{l}</Text>
-                  <Text style={{ fontFamily: FO, fontSize: 13, color: unlocked ? "rgba(255,255,255,0.9)" : ink.deep, letterSpacing: 0.5 }}>{v}</Text>
-                </View>
-              ))}
+        {/* Sprout illustration — anchored to the right */}
+        <View style={{
+          position: "absolute",
+          right: -6,
+          top: 56,
+          width: 150,
+          height: 150,
+          alignItems: "center",
+          justifyContent: "center",
+          pointerEvents: "none",
+        }}>
+          <Sprout size={148} tone={dark ? "night" : "fresh"} />
+        </View>
+
+        {/* Hairline progress */}
+        <View style={{
+          height: 2,
+          backgroundColor: ink.hairline,
+          borderRadius: 1,
+          marginTop: 22,
+          marginBottom: 16,
+          overflow: "hidden",
+        }}>
+          {credits.earned > 0 && (
+            <View style={{
+              height: "100%",
+              width: `${Math.min(100, (credits.earned > 0 ? (credits.balance / Math.max(credits.earned, 1)) * 100 : 0))}%`,
+              backgroundColor: earn.terra,
+            }} />
+          )}
+        </View>
+
+        {/* Stat row — EARNED / USED / EARNABLE */}
+        <View style={{ flexDirection: "row", gap: 28 }}>
+          <StatBlock
+            dot={earn.terra}
+            label="EARNED"
+            value={fmtMins(credits.earned || 0)}
+            ink={ink}
+          />
+          <StatBlock
+            dot={ink.faint}
+            label="USED"
+            value={fmtMins(credits.spent || 0)}
+            ink={ink}
+          />
+          {stillEarnable > 0 && (
+            <StatBlock
+              dot={earn.clay}
+              label="EARNABLE"
+              value={fmtMins(stillEarnable)}
+              ink={ink}
+            />
+          )}
+        </View>
+
+        {/* ── In-card action zone (matches reference image) ──────── */}
+        {!unlocked ? (
+          <TouchableOpacity
+            onPress={onAdd}
+            activeOpacity={0.8}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 14,
+              backgroundColor: paper.sand,
+              borderRadius: 16,
+              paddingVertical: 14,
+              paddingHorizontal: 16,
+              marginTop: 20,
+            }}
+          >
+            <View style={{
+              width: 36, height: 36, borderRadius: 18,
+              alignItems: "center", justifyContent: "center",
+              backgroundColor: earn.clayLo,
+            }}>
+              <LockIcon size={18} color={earn.clay} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: FF.bodyBold, fontSize: 14, color: ink.deep, marginBottom: 2 }}>
+                Complete a task to start earning
+              </Text>
+              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid }}>
+                Finish focused work sessions to grow your time balance.
+              </Text>
+            </View>
+            <Text style={{ fontFamily: FF.serifReg, fontSize: 22, color: ink.faint, marginTop: -2 }}>›</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
+            <TouchableOpacity
+              onPress={onReduceScreenTime}
+              disabled={credits.balance <= 0}
+              activeOpacity={0.8}
+              style={{
+                flex: 1,
+                paddingVertical: 13,
+                borderRadius: 14,
+                alignItems: "center",
+                backgroundColor: paper.sand,
+              }}
+            >
+              <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.deep }}>Reduce time</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onQuickGrant}
+              disabled={quickGrantCount >= 3}
+              activeOpacity={0.8}
+              style={{
+                flex: 1,
+                paddingVertical: 13,
+                borderRadius: 14,
+                alignItems: "center",
+                backgroundColor: quickGrantCount < 3 ? earn.sageLo : ink.ghost,
+              }}
+            >
+              <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: quickGrantCount < 3 ? earn.sage : ink.faint }}>
+                Take 15m · {Math.max(0, 3 - quickGrantCount)} left
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
-      </View>
+      </Animated.View>
 
-      <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
-        <TouchableOpacity
-          onPress={onReduceScreenTime}
-          disabled={credits.balance <= 0}
-          activeOpacity={0.75}
-          style={{
-            flex: 1,
-            minHeight: 58,
-            paddingVertical: 13,
-            borderRadius: 16,
-            alignItems: "center",
-            justifyContent: "center",
-            borderWidth: 1,
-            borderColor: credits.balance > 0 ? ink.border : "transparent",
-            backgroundColor: credits.balance > 0 ? paper.card : ink.ghost,
-          }}
-        >
-          <Text style={{ fontFamily: FK, fontSize: 14, textAlign: "center", color: credits.balance > 0 ? ink.deep : ink.faint }}>Reduce time</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={onQuickGrant}
-          disabled={quickGrantCount >= 3}
-          activeOpacity={0.75}
-          style={{
-            flex: 1,
-            minHeight: 58,
-            paddingVertical: 13,
-            borderRadius: 16,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: quickGrantCount < 3 ? earn.greenLo : ink.ghost,
-            borderWidth: 1,
-            borderColor: quickGrantCount < 3 ? "rgba(47,171,114,0.22)" : "transparent",
-          }}
-        >
-          <Text style={{ fontFamily: FK, fontSize: 14, textAlign: "center", color: quickGrantCount < 3 ? earn.greenD : ink.faint }}>Take 15m</Text>
-          <Text style={{ fontFamily: FB, fontSize: 10, textAlign: "center", color: quickGrantCount < 3 ? ink.mid : ink.faint, marginTop: 2 }}>{Math.max(0, 3 - quickGrantCount)} left today</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <Text style={{ fontFamily: FK, fontSize: 18, color: ink.deep, fontStyle: "italic" }}>Today's work</Text>
+      {/* ── ADD TASK ROW (cursive heading removed per request) ───── */}
+      <Animated.View style={{
+        opacity: headOp,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 16,
+      }}>
+        <Text style={{
+          fontFamily: FF.kicker,
+          fontSize: 11,
+          letterSpacing: 2.4,
+          color: ink.faint,
+        }}>
+          TODAY
+        </Text>
         <TouchableOpacity
           onPress={onAdd}
+          activeOpacity={0.85}
           style={{
-            flexDirection: "row", alignItems: "center", gap: 5,
-            paddingVertical: 5, paddingHorizontal: 13,
-            borderRadius: 20, borderWidth: 1.5, borderColor: earn.terra,
-            backgroundColor: earn.terraLo,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingVertical: 11,
+            paddingHorizontal: 16,
+            borderRadius: 14,
+            backgroundColor: earn.deep,
           }}
         >
-          <Text style={{ fontFamily: FB, fontWeight: "600", fontSize: 11, color: earn.terra }}>+ Add task</Text>
+          <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
+          <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: onDeep }}>Add task</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       {tasks.length === 0 && (
-        <View style={{ alignItems: "center", paddingVertical: 28 }}>
-          <View style={{ marginBottom: 10 }}><ClipboardIcon size={42} color={ink.faint} /></View>
-          <Text style={{ fontFamily: FK, fontSize: 17, color: ink.mid, marginBottom: 6 }}>Nothing to earn from yet</Text>
-          <Text style={{ fontFamily: FB, fontSize: 13, color: ink.faint, marginBottom: 22, textAlign: "center" }}>
+        <Animated.View style={{
+          opacity: listOp,
+          alignItems: "center",
+          paddingVertical: 36,
+          paddingHorizontal: 22,
+          borderRadius: 22,
+          borderWidth: 1.4,
+          borderColor: paper.dash,
+          borderStyle: "dashed",
+          backgroundColor: "transparent",
+          overflow: "hidden",
+        }}>
+          {/* faint botanical watermarks */}
+          <View style={{ position: "absolute", right: -16, top: -10, pointerEvents: "none" }}>
+            <Sprig size={108} color={earn.sage} opacity={dark ? 0.06 : 0.05} />
+          </View>
+          <View style={{ position: "absolute", left: -20, bottom: -24, pointerEvents: "none" }}>
+            <Sprig size={120} color={earn.clay} opacity={dark ? 0.06 : 0.045} flip />
+          </View>
+
+          <View style={{
+            width: 64, height: 64, borderRadius: 32,
+            alignItems: "center", justifyContent: "center",
+            backgroundColor: paper.cream,
+            marginBottom: 18,
+          }}>
+            <ClipboardIcon size={30} color={ink.mid} />
+          </View>
+          <Text style={{
+            fontFamily: FF.serif,
+            fontSize: 26,
+            color: ink.deep,
+            marginBottom: 6,
+            letterSpacing: -0.4,
+          }}>
+            No tasks yet
+          </Text>
+          <Text style={{
+            fontFamily: FF.body,
+            fontSize: 13,
+            color: ink.mid,
+            marginBottom: 22,
+            textAlign: "center",
+          }}>
             Add the work you actually need to do today.
           </Text>
           <TouchableOpacity
             onPress={onAdd}
+            activeOpacity={0.85}
             style={{
-              paddingVertical: 16, paddingHorizontal: 28, borderRadius: 16,
-              backgroundColor: earn.terra,
-              flexDirection: "row", alignItems: "center", gap: 10,
-              shadowColor: earn.terra, shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.25, shadowRadius: 12, elevation: 6,
+              paddingVertical: 14, paddingHorizontal: 22, borderRadius: 14,
+              backgroundColor: earn.deep,
+              flexDirection: "row", alignItems: "center", gap: 8,
             }}
           >
-            <Text style={{ fontFamily: FO, fontSize: 18, color: "#fff" }}>+</Text>
-            <Text style={{ fontFamily: FK, fontSize: 16, color: "#fff" }}>Add First Task</Text>
+            <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
+            <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: onDeep }}>Add your first task</Text>
           </TouchableOpacity>
-        </View>
+          <Text style={{
+            fontFamily: FF.body,
+            fontSize: 11,
+            color: ink.faint,
+            marginTop: 16,
+            letterSpacing: 0.2,
+          }}>
+            Stay focused. Earn time.
+          </Text>
+        </Animated.View>
       )}
 
-      {pending.map(t => {
+      <Animated.View style={{ opacity: listOp }}>
+        {pending.map(t => {
         const cat = CATS[t.cat] || CATS.life;
         return (
-          <View key={t.id} style={{ marginBottom: 8 }}>
+          <View key={t.id} style={{ marginBottom: 10 }}>
           <Swipeable
             onDelete={() => onDelete?.(t.id)}
             confirmTitle="Delete this task?"
@@ -1231,102 +1418,116 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
           >
           <TouchableOpacity
             onPress={() => handleTaskTap(t)}
+            activeOpacity={0.85}
             style={{
               flexDirection: "row", alignItems: "center",
-              backgroundColor: paper.card, borderRadius: 16,
+              backgroundColor: paper.card, borderRadius: 18,
               overflow: "hidden",
-              borderWidth: 0.5, borderColor: ink.border,
+              borderWidth: 1, borderColor: ink.hairline,
+              paddingVertical: 14, paddingHorizontal: 16,
             }}
           >
-            {(() => {
-              const ratio = t.credits / Math.max(1, t.minutes);
-              const intensity = ratio >= 1.0 ? 3 : ratio >= 0.7 ? 2 : 1;
-              const h = intensity === 1 ? 24 : intensity === 2 ? 36 : 48;
-              return (
-                <View style={{
-                  width: 3, backgroundColor: cat.c, height: h,
-                  borderRadius: 2, marginLeft: 12, marginRight: 12,
-                  alignSelf: "center", flexShrink: 0,
-                }} />
-              );
-            })()}
-            <View style={{ flex: 1, paddingVertical: 12 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                <Text style={{ fontFamily: FB, fontSize: 14, fontWeight: "500", color: ink.deep, lineHeight: 19, flex: 1 }}>{t.title}</Text>
-                <View style={{ flexDirection: "row", gap: 5, alignItems: "center" }}>
-                  {t.aiCheck && (
-                    <View style={{ backgroundColor: earn.blueLo, borderRadius: 6, paddingVertical: 2, paddingHorizontal: 5 }}>
-                      <Text style={{ fontFamily: FOM, fontSize: 7, color: earn.blue, letterSpacing: 1 }}>AI</Text>
-                    </View>
-                  )}
-                  <View style={{ backgroundColor: `${cat.c}16`, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 5 }}>
-                    <CategoryIcon cat={t.cat} size={14} color={cat.c} />
-                  </View>
-                </View>
-              </View>
+            {/* Vertical category mark — slim and tall */}
+            <View style={{
+              width: 3,
+              height: 38,
+              backgroundColor: cat.c,
+              borderRadius: 2,
+              marginRight: 14,
+              alignSelf: "center",
+            }} />
+
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={{
+                fontFamily: FF.bodyMed,
+                fontSize: 15,
+                color: ink.deep,
+                lineHeight: 20,
+                marginBottom: 4,
+              }} numberOfLines={2}>
+                {t.title}
+              </Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Text style={{ fontSize: 11, color: ink.mid }}>{t.minutes}m</Text>
-                <View style={{ flexDirection: "row", gap: 3 }}>
-                  {(() => {
-                    const ratio = t.credits / Math.max(1, t.minutes);
-                    const intensity = ratio >= 1.0 ? 3 : ratio >= 0.7 ? 2 : 1;
-                    return [1, 2, 3].map(d => (
-                      <View key={d} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: d <= intensity ? cat.c : ink.ghost }} />
-                    ));
-                  })()}
-                </View>
-                <View style={{ flex: 1, alignItems: "flex-end" }}>
-                  <Text style={{ fontSize: 11, fontWeight: "600", color: earn.green }}>+{fmtMins(t.credits)}</Text>
-                </View>
+                <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid }}>
+                  {t.minutes}m
+                </Text>
+                <Text style={{ fontFamily: FF.body, fontSize: 10, color: ink.faint }}>·</Text>
+                <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: earn.terra }}>
+                  +{fmtMins(t.credits)}
+                </Text>
+                {t.aiCheck && (
+                  <>
+                    <Text style={{ fontFamily: FF.body, fontSize: 10, color: ink.faint }}>·</Text>
+                    <View style={{
+                      flexDirection: "row", alignItems: "center", gap: 3,
+                      paddingVertical: 1, paddingHorizontal: 6,
+                      borderRadius: 6,
+                      backgroundColor: earn.blueLo,
+                    }}>
+                      <SparkleIcon size={9} color={earn.blue} />
+                      <Text style={{ fontFamily: FF.bodyMed, fontSize: 9, color: earn.blue, letterSpacing: 0.5 }}>
+                        AI
+                      </Text>
+                    </View>
+                  </>
+                )}
               </View>
             </View>
+
+            {/* Check circle — minimal, becomes the tap-target */}
             <View style={{
-              width: 28, height: 28, borderRadius: 14,
-              borderWidth: 1.5, borderColor: t.aiCheck ? earn.blue : earn.green,
+              width: 30, height: 30, borderRadius: 15,
+              borderWidth: 1.5,
+              borderColor: t.aiCheck ? earn.blue : earn.deep,
               alignItems: "center", justifyContent: "center",
-              marginRight: 10, flexShrink: 0,
+              flexShrink: 0,
             }}>
               {t.aiCheck
                 ? <SparkleIcon size={14} color={earn.blue} />
-                : <CheckIcon size={14} color={earn.green} />}
+                : <CheckIcon size={14} color={earn.deep} />}
             </View>
-            {/* Inline delete button — also revealable via swipe-left */}
-            <TouchableOpacity
-              onPress={(e) => {
-                e.stopPropagation?.();
-                Alert.alert("Delete this task?", `"${t.title}" will be removed.`, [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Delete", style: "destructive", onPress: () => onDelete?.(t.id) },
-                ]);
-              }}
-              hitSlop={{ top: 12, bottom: 12, left: 6, right: 12 }}
-              style={{
-                width: 22, height: 22, borderRadius: 11,
-                alignItems: "center", justifyContent: "center",
-                marginRight: 12, flexShrink: 0,
-                backgroundColor: ink.ghost,
-              }}
-            >
-              <Text style={{ fontSize: 13, color: ink.mid, lineHeight: 15, fontWeight: "600" }}>×</Text>
-            </TouchableOpacity>
           </TouchableOpacity>
           </Swipeable>
           </View>
         );
       })}
+      </Animated.View>
 
       {done.length > 0 && (
-        <View style={{ marginTop: 10 }}>
-          <Text style={{ fontFamily: FB, fontSize: 11, fontWeight: "600", color: ink.faint, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
-            Done today
+        <View style={{ marginTop: 22 }}>
+          <Text style={{
+            fontFamily: FF.kicker,
+            fontSize: 10,
+            color: ink.faint,
+            letterSpacing: 2.4,
+            marginBottom: 10,
+          }}>
+            DONE TODAY
           </Text>
           {done.map(t => {
             const cat = CATS[t.cat] || CATS.life;
             return (
-              <View key={t.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: ink.border, opacity: 0.55 }}>
-                <CategoryIcon cat={t.cat} size={18} color={cat.c} />
-                <Text style={{ flex: 1, fontFamily: FB, fontSize: 13, color: ink.mid, textDecorationLine: "line-through" }}>{t.title}</Text>
-                <Text style={{ fontSize: 11, fontWeight: "600", color: earn.green }}>+{fmtMins(t.credits)}</Text>
+              <View key={t.id} style={{
+                flexDirection: "row", alignItems: "center", gap: 12,
+                paddingVertical: 12,
+                borderBottomWidth: 0.5, borderBottomColor: ink.hairline,
+              }}>
+                <View style={{
+                  width: 18, height: 18, borderRadius: 9,
+                  alignItems: "center", justifyContent: "center",
+                  backgroundColor: earn.sageLo,
+                }}>
+                  <CheckIcon size={11} color={earn.sage} />
+                </View>
+                <Text style={{
+                  flex: 1, fontFamily: FF.body, fontSize: 13,
+                  color: ink.mid, textDecorationLine: "line-through",
+                }} numberOfLines={1}>
+                  {t.title}
+                </Text>
+                <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: earn.terra }}>
+                  +{fmtMins(t.credits)}
+                </Text>
               </View>
             );
           })}
@@ -1337,10 +1538,29 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
   );
 }
 
+// Small visual primitive used by the hero card stat row.
+function StatBlock({ dot, label, value, ink }) {
+  return (
+    <View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
+        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: dot }} />
+        <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: ink.faint, letterSpacing: 1.6 }}>
+          {label}
+        </Text>
+      </View>
+      <Text style={{ fontFamily: FF.bodyBold, fontSize: 17, color: ink.deep, letterSpacing: -0.2 }}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 // ── Progress View ────────────────────────────────────────────
 function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
+  // Dark text for the light-green `deep` button in dark mode (see TodayView).
+  const onDeep = dark ? "#16261C" : "#FAF6EE";
   const lv        = getLevel(totalXp);
   const prog      = xpProg(totalXp);
   const toNext    = xpToNext(totalXp);
@@ -1351,73 +1571,183 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
   // Empty state — no tasks completed yet today
   if (done.length === 0 && tasks.length === 0) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-        <View style={{ marginBottom: 14 }}><ChartIcon size={62} color={ink.faint} /></View>
-        <Text style={{ fontFamily: FK, fontSize: 22, color: ink.deep, marginBottom: 6 }}>No stats yet</Text>
-        <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid, textAlign: "center", marginBottom: 28, lineHeight: 19 }}>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, backgroundColor: paper.warm }}>
+        <View style={{ marginBottom: 8 }}>
+          <Sprout size={140} tone={dark ? "night" : "fresh"} />
+        </View>
+        <Text style={{
+          fontFamily: FF.display,
+          fontSize: 32,
+          color: ink.deep,
+          marginBottom: 8,
+          letterSpacing: -0.4,
+        }}>
+          No stats yet
+        </Text>
+        <Text style={{
+          fontFamily: FF.body, fontSize: 13, color: ink.mid,
+          textAlign: "center", marginBottom: 28, lineHeight: 20,
+        }}>
           Add a task to start tracking{"\n"}your progress today.
         </Text>
-        <TouchableOpacity onPress={onAddTask} style={{
-          paddingVertical: 16, paddingHorizontal: 28, borderRadius: 16,
-          backgroundColor: earn.terra,
-          flexDirection: "row", alignItems: "center", gap: 10,
-          shadowColor: earn.terra, shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.25, shadowRadius: 12, elevation: 6,
-        }}>
-          <Text style={{ fontFamily: FO, fontSize: 18, color: "#fff" }}>+</Text>
-          <Text style={{ fontFamily: FK, fontSize: 16, color: "#fff" }}>Do a Task</Text>
+        <TouchableOpacity
+          onPress={onAddTask}
+          activeOpacity={0.85}
+          style={{
+            paddingVertical: 14, paddingHorizontal: 22, borderRadius: 14,
+            backgroundColor: earn.deep,
+            flexDirection: "row", alignItems: "center", gap: 8,
+          }}
+        >
+          <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
+          <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: onDeep }}>Add your first task</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 18, paddingBottom: 110 }}>
-      {/* Level card */}
-      <View style={{ backgroundColor: paper.card, borderRadius: 16, padding: 20, borderWidth: 0.5, borderColor: ink.border, marginBottom: 12 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 14 }}>
-          <LevelIcon index={getLevelIdx(totalXp)} size={40} color={earn.green} />
-          <View>
-            <Text style={{ fontFamily: FK, fontSize: 20, color: earn.green }}>{lv.name}</Text>
-            <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid }}>{totalXp.toLocaleString()} XP total</Text>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: paper.warm }}
+      contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 130 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Editorial page title */}
+      <Text style={{
+        fontFamily: FF.display,
+        fontSize: 36,
+        color: ink.deep,
+        letterSpacing: -0.4,
+        marginBottom: 4,
+      }}>
+        Your growth
+      </Text>
+      <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, marginBottom: 22 }}>
+        Every focused minute becomes part of the record.
+      </Text>
+
+      {/* Level card — editorial */}
+      <View style={{
+        backgroundColor: paper.card,
+        borderRadius: 24, padding: 22,
+        borderWidth: 1, borderColor: ink.hairline,
+        marginBottom: 14,
+        overflow: "hidden",
+        shadowColor: dark ? "#000" : "#1F3A2A",
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: dark ? 0.3 : 0.05,
+        shadowRadius: 22,
+        elevation: 3,
+      }}>
+        {/* faint sprig watermark behind the tier card */}
+        <View style={{ position: "absolute", right: -22, bottom: -26, pointerEvents: "none" }}>
+          <Sprig size={150} color={earn.clay} opacity={dark ? 0.07 : 0.05} />
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: FF.kicker, fontSize: 10, color: ink.faint, letterSpacing: 2.4, marginBottom: 6 }}>
+              CURRENT TIER
+            </Text>
+            <Text style={{ fontFamily: FF.display, fontSize: 30, color: ink.deep, letterSpacing: -0.3 }}>
+              {lv.name}
+            </Text>
+            <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, marginTop: 2 }}>
+              {totalXp.toLocaleString()} XP total
+            </Text>
+          </View>
+          <View style={{
+            width: 56, height: 56, borderRadius: 28,
+            alignItems: "center", justifyContent: "center",
+            backgroundColor: earn.sageLo,
+          }}>
+            <LeafGlyph size={26} color={earn.sage} />
           </View>
         </View>
         {toNext > 0 && (
           <>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
-              <Text style={{ fontFamily: FB, fontSize: 11, color: ink.faint }}>Progress to next level</Text>
-              <Text style={{ fontFamily: FB, fontSize: 11, color: ink.faint }}>{toNext} XP to go</Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+              <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: ink.faint, letterSpacing: 1.6 }}>
+                PROGRESS
+              </Text>
+              <Text style={{ fontFamily: FF.bodyMed, fontSize: 11, color: ink.mid }}>
+                {toNext} XP to next tier
+              </Text>
             </View>
-            <View style={{ height: 8, borderRadius: 4, backgroundColor: ink.ghost, overflow: "hidden" }}>
-              <View style={{ height: "100%", width: `${prog * 100}%`, backgroundColor: earn.terra, borderRadius: 4 }} />
+            <View style={{ height: 4, borderRadius: 2, backgroundColor: ink.hairline, overflow: "hidden" }}>
+              <View style={{ height: "100%", width: `${prog * 100}%`, backgroundColor: earn.terra, borderRadius: 2 }} />
             </View>
           </>
         )}
       </View>
 
-      {/* Stats */}
-      <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
-        {[["Earned", fmtMins(done.reduce((s, t) => s + t.credits, 0))], ["Done", `${done.length}`]].map(([l, v]) => (
-          <View key={l} style={{ flex: 1, alignItems: "center", paddingVertical: 12, backgroundColor: paper.card, borderRadius: 16, padding: 20, borderWidth: 0.5, borderColor: ink.border }}>
-            <Text style={{ fontFamily: FO, fontSize: 18, color: ink.deep, letterSpacing: 0.5 }}>{v}</Text>
-            <Text style={{ fontFamily: FB, fontSize: 10, color: ink.mid, marginTop: 2 }}>{l}</Text>
+      {/* Stat tiles */}
+      <View style={{ flexDirection: "row", gap: 12, marginBottom: 14 }}>
+        {[
+          ["Earned", fmtMins(done.reduce((s, t) => s + t.credits, 0)), earn.terra],
+          ["Tasks done", `${done.length}`, earn.sage],
+        ].map(([l, v, dot]) => (
+          <View key={l} style={{
+            flex: 1,
+            paddingVertical: 18, paddingHorizontal: 16,
+            backgroundColor: paper.card,
+            borderRadius: 22,
+            borderWidth: 1, borderColor: ink.hairline,
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: dot }} />
+              <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: ink.faint, letterSpacing: 1.6 }}>
+                {l.toUpperCase()}
+              </Text>
+            </View>
+            <Text style={{ fontFamily: FF.display, fontSize: 32, color: ink.deep, letterSpacing: -0.5 }}>
+              {v}
+            </Text>
           </View>
         ))}
       </View>
 
-      {/* Category chart */}
+      {/* Category breakdown */}
       {Object.keys(catCounts).length > 0 && (
-        <View style={{ backgroundColor: paper.card, borderRadius: 16, padding: 20, borderWidth: 0.5, borderColor: ink.border, marginBottom: 12 }}>
-          <Text style={{ fontFamily: FK, fontSize: 16, color: ink.deep, marginBottom: 12 }}>Earned by type</Text>
-          {Object.entries(catCounts).sort((a, b) => b[1] - a[1]).map(([cat, mins]) => {
+        <View style={{
+          backgroundColor: paper.card,
+          borderRadius: 24, padding: 22,
+          borderWidth: 1, borderColor: ink.hairline,
+          marginBottom: 14,
+        }}>
+          <Text style={{ fontFamily: FF.kicker, fontSize: 10, color: ink.faint, letterSpacing: 2.4, marginBottom: 4 }}>
+            BREAKDOWN
+          </Text>
+          <Text style={{ fontFamily: FF.display, fontSize: 22, color: ink.deep, letterSpacing: -0.3, marginBottom: 16 }}>
+            Earned by type
+          </Text>
+          {Object.entries(catCounts).sort((a, b) => b[1] - a[1]).map(([cat, mins], idx, arr) => {
             const meta = CATS[cat];
             return (
-              <View key={cat} style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <View style={{ width: 26, alignItems: "center" }}><CategoryIcon cat={cat} size={18} color={meta.c} /></View>
-                <View style={{ flex: 1, height: 8, backgroundColor: ink.ghost, borderRadius: 4, overflow: "hidden" }}>
-                  <View style={{ height: "100%", width: `${(mins / maxCat) * 100}%`, backgroundColor: meta.c, borderRadius: 4 }} />
+              <View key={cat} style={{
+                flexDirection: "row", alignItems: "center", gap: 14,
+                paddingVertical: 12,
+                borderBottomWidth: idx === arr.length - 1 ? 0 : 0.5,
+                borderBottomColor: ink.hairline,
+              }}>
+                <View style={{
+                  width: 32, height: 32, borderRadius: 16,
+                  alignItems: "center", justifyContent: "center",
+                  backgroundColor: `${meta.c}14`,
+                }}>
+                  <CategoryIcon cat={cat} size={16} color={meta.c} />
                 </View>
-                <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, width: 34, textAlign: "right" }}>{fmtMins(mins)}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.deep, marginBottom: 4, textTransform: "capitalize" }}>
+                    {cat}
+                  </Text>
+                  <View style={{ height: 3, backgroundColor: ink.hairline, borderRadius: 2, overflow: "hidden" }}>
+                    <View style={{ height: "100%", width: `${(mins / maxCat) * 100}%`, backgroundColor: meta.c, borderRadius: 2 }} />
+                  </View>
+                </View>
+                <Text style={{ fontFamily: FF.bodyBold, fontSize: 13, color: ink.deep }}>
+                  {fmtMins(mins)}
+                </Text>
               </View>
             );
           })}
@@ -1560,7 +1890,7 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
                 justifyContent: "center",
               }}
             >
-              <Text style={{ fontFamily: FK, fontSize: 14, color: "#fff" }}>Add</Text>
+              <Text style={{ fontFamily: FK, fontSize: 14, color: dark ? "#16261C" : "#fff" }}>Add</Text>
             </TouchableOpacity>
           </View>
 
@@ -1569,7 +1899,7 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
               <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={save} style={[s2.solidBtn, { backgroundColor: earn.green }]}>
-              <Text style={s2.solidText}>Save</Text>
+              <Text style={[s2.solidText, { color: dark ? "#16261C" : "#fff" }]}>Save</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1655,7 +1985,7 @@ function RecurringTasksModal({ visible, templates, dark, onClose, onSave }) {
               <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={save} style={[s2.solidBtn, { backgroundColor: earn.green }]}>
-              <Text style={s2.solidText}>Save</Text>
+              <Text style={[s2.solidText, { color: dark ? "#16261C" : "#fff" }]}>Save</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1736,48 +2066,64 @@ const s2 = StyleSheet.create({
 
 
 // ── Bottom nav icons ─────────────────────────────────────────
-function IconHome({ color, size = 22 }) {
+// Custom organic icon set — warm, hand-drawn character rather than the
+// default stroke-glyph look. Each carries a small filled accent so it reads
+// clearly at 20px and feels intentional, not templated.
+
+// Today → a rising sun over a horizon (the start of a fresh day)
+function IconToday({ color, size = 22 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"
-        stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M9 22V12h6v10" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <SvgCircle cx="12" cy="13" r="3.6" fill={color} />
+      <Path d="M12 3.5v2.2 M5 8l1.5 1.5 M19 8l-1.5 1.5 M3.5 13H5.5 M18.5 13h2"
+        stroke={color} strokeWidth={1.9} strokeLinecap="round" />
+      <Path d="M3 19.5h18" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
     </Svg>
   );
 }
-function IconBolt({ color, size = 22 }) {
+// Drift In → concentric ripples drawing inward to a still center (focus)
+function IconDrift({ color, size = 22 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
-        stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <SvgCircle cx="12" cy="12" r="9" stroke={color} strokeWidth={1.7} opacity={0.35} />
+      <SvgCircle cx="12" cy="12" r="5.4" stroke={color} strokeWidth={1.8} opacity={0.65} />
+      <SvgCircle cx="12" cy="12" r="2" fill={color} />
     </Svg>
   );
 }
-function IconChart({ color, size = 22 }) {
+// Stats → tree growth rings radiating from a corner (accumulated growth)
+function IconRings({ color, size = 22 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x="3" y="12" width="4" height="9" rx="1" stroke={color} strokeWidth={2} />
-      <Rect x="10" y="7" width="4" height="14" rx="1" stroke={color} strokeWidth={2} />
-      <Rect x="17" y="3" width="4" height="18" rx="1" stroke={color} strokeWidth={2} />
+      <Path d="M4 20 A 15 15 0 0 1 19 5" stroke={color} strokeWidth={1.8} strokeLinecap="round" opacity={0.4} />
+      <Path d="M4 20 A 10 10 0 0 1 14 10" stroke={color} strokeWidth={1.9} strokeLinecap="round" opacity={0.7} />
+      <Path d="M4 20 A 5 5 0 0 1 9 15" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <SvgCircle cx="4" cy="20" r="1.4" fill={color} />
     </Svg>
   );
 }
-function IconPeople({ color, size = 22 }) {
+// The Grove → a little cluster of trees
+function IconGrove({ color, size = 22 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <SvgCircle cx="9" cy="7" r="4" stroke={color} strokeWidth={2} />
-      <Path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M16 3.13a4 4 0 010 7.75" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      <Path d="M21 21v-2a4 4 0 00-3-3.87" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      {/* back tree (taller, lighter) */}
+      <SvgCircle cx="15.5" cy="8" r="3.4" stroke={color} strokeWidth={1.8} opacity={0.55} />
+      <Path d="M15.5 11v8" stroke={color} strokeWidth={1.8} strokeLinecap="round" opacity={0.55} />
+      {/* front tree (rounded canopy, filled-ish) */}
+      <SvgCircle cx="8.5" cy="9.5" r="4.2" fill={color} opacity={0.18} />
+      <SvgCircle cx="8.5" cy="9.5" r="4.2" stroke={color} strokeWidth={1.9} />
+      <Path d="M8.5 13.5v6" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
+      {/* ground */}
+      <Path d="M3.5 19.5h17" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
     </Svg>
   );
 }
 
 const TABS = [
-  { id: "today",    label: "Today",    Icon: IconHome   },
-  { id: "driftin",  label: "Drift In", Icon: IconBolt   },
-  { id: "progress", label: "Stats",    Icon: IconChart  },
-  { id: "friends",  label: "Friends",  Icon: IconPeople },
+  { id: "today",    label: "Today",     Icon: IconToday },
+  { id: "driftin",  label: "Drift In",  Icon: IconDrift },
+  { id: "progress", label: "Stats",     Icon: IconRings },
+  { id: "friends",  label: "The Grove", Icon: IconGrove },
 ];
 
 // ── Root App ─────────────────────────────────────────────────
@@ -1787,6 +2133,12 @@ export default function App() {
     Orbitron_700Bold,
     Oswald_400Regular,
     Oswald_700Bold,
+    PlayfairDisplay_400Regular,
+    PlayfairDisplay_700Bold,
+    PlayfairDisplay_700Bold_Italic,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_700Bold,
   });
 
   const [screen,      setScreen]      = useState("loading");
@@ -1846,6 +2198,26 @@ export default function App() {
   useEffect(() => { tabRef.current = tab; }, [tab]);
   useEffect(() => { driftInActRef.current = driftInActive; }, [driftInActive]);
 
+  // ── Tab filmstrip animation ──────────────────────────────────
+  // All four tabs live in a horizontal row that translates. translateX follows
+  // the finger during a swipe and springs to the active tab on release, so the
+  // motion always matches the direction you swiped.
+  const TAB_W   = Dimensions.get("window").width;
+  const tabIdx  = TABS.findIndex(t => t.id === tab);
+  const slideX  = useRef(new Animated.Value(-Math.max(0, tabIdx) * TAB_W)).current;
+
+  // Animate to the active tab whenever it changes (taps, swipe-cross, or
+  // programmatic navigation like session-complete → Today).
+  useEffect(() => {
+    const idx = Math.max(0, TABS.findIndex(t => t.id === tab));
+    Animated.spring(slideX, {
+      toValue: -idx * TAB_W,
+      useNativeDriver: true,
+      tension: 80,
+      friction: 13,
+    }).start();
+  }, [tab, TAB_W]);
+
   // Block tab swipes whenever an overlay/popup/nested swipe UI is active.
   useEffect(() => {
     swipeBlockedRef.current =
@@ -1865,27 +2237,61 @@ export default function App() {
 
   const stopTick = () => { if (tickRef.current) clearInterval(tickRef.current); };
 
-  // Swipe between tabs
+  // Swipe between tabs — the filmstrip (slideX) tracks the finger live and
+  // snaps to a neighbouring tab on release based on travel/velocity.
+  const settleTab = (idx) => {
+    Animated.spring(slideX, {
+      toValue: -idx * TAB_W,
+      useNativeDriver: true,
+      tension: 80,
+      friction: 13,
+    }).start();
+  };
   const tabSwipe = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gs) => {
         if (swipeBlockedRef.current) return false;
-        // Require a clearly-horizontal gesture with enough travel.
-        // The high ratio prevents accidental triggers when a child component
-        // (e.g. a horizontal ScrollView of challenges) is being swiped.
+        // The Grove (friends) has swipe-to-cancel rows; don't hijack those.
         if (tabRef.current === "friends") return false;
-        return Math.abs(gs.dx) > Math.abs(gs.dy) * 3 && Math.abs(gs.dx) > 42;
+        // Require a clearly-horizontal gesture so vertical scrolls and sliders
+        // keep their own gestures.
+        return Math.abs(gs.dx) > Math.abs(gs.dy) * 2.5 && Math.abs(gs.dx) > 24;
       },
-      // If a child wants the gesture (any horizontal ScrollView/FlatList),
-      // let it have it — never wrest control back.
       onPanResponderTerminationRequest: () => true,
       onShouldBlockNativeResponder: () => false,
+      onPanResponderMove: (_, gs) => {
+        if (swipeBlockedRef.current) return;
+        const idx = Math.max(0, TABS.findIndex(t => t.id === tabRef.current));
+        const minX = -(TABS.length - 1) * TAB_W;
+        let x = -idx * TAB_W + gs.dx;
+        // Rubber-band resistance past the first/last tab.
+        if (x > 0)    x = x * 0.3;
+        if (x < minX) x = minX + (x - minX) * 0.3;
+        slideX.setValue(x);
+      },
       onPanResponderRelease: (_, gs) => {
         if (swipeBlockedRef.current) return;
-        const idx = TABS.findIndex(t => t.id === tabRef.current);
-        if (gs.dx > 80 && idx > 0)                       setTab(TABS[idx - 1].id);
-        else if (gs.dx < -80 && idx < TABS.length - 1)   setTab(TABS[idx + 1].id);
+        const idx = Math.max(0, TABS.findIndex(t => t.id === tabRef.current));
+        const last = TABS.length - 1;
+        // A short flick OR a long drag both count, in the swiped direction.
+        const wantNext = gs.dx < -60 || gs.vx < -0.3;
+        const wantPrev = gs.dx >  60 || gs.vx >  0.3;
+        let target = idx;
+        if (wantNext && idx < last) target = idx + 1;
+        else if (wantPrev && idx > 0) target = idx - 1;
+
+        if (target !== idx) {
+          // setTab fires the [tab] effect which springs to the new position.
+          setTab(TABS[target].id);
+        } else {
+          // No change — snap back to where we were.
+          settleTab(idx);
+        }
+      },
+      onPanResponderTerminate: () => {
+        const idx = Math.max(0, TABS.findIndex(t => t.id === tabRef.current));
+        settleTab(idx);
       },
     })
   ).current;
@@ -2786,7 +3192,11 @@ export default function App() {
 
   return (
     <ThemeContext.Provider value={{ dark: darkMode, theme: activeTheme }}>
-    <SafeAreaView style={{ flex: 1, backgroundColor: driftInActive ? th_ink.void : th_paper.card }}>
+    <View style={{
+      flex: 1,
+      paddingTop: Constants.statusBarHeight,
+      backgroundColor: driftInActive ? th_ink.void : th_paper.warm,
+    }}>
       <StatusBar barStyle={driftInActive || darkMode ? "light-content" : "dark-content"} />
 
       {/* XP / credit popup */}
@@ -2796,155 +3206,200 @@ export default function App() {
       {!driftInActive && (
         <View style={{
           flexDirection: "row", alignItems: "center",
-          paddingHorizontal: 18, height: 52,
-          backgroundColor: th_paper.card,
-          borderBottomWidth: 0.5, borderBottomColor: th_ink.border,
+          paddingHorizontal: 22, paddingTop: 6, paddingBottom: 8,
+          backgroundColor: th_paper.warm,
         }}>
-          <Text style={{ fontFamily: FO, fontSize: 16, color: th_ink.deep, letterSpacing: 3, flex: 1 }}>DRIFT</Text>
-          <View style={{
-            backgroundColor: blockedHoursActive ? "rgba(224,80,80,0.12)" : displaySecLeft < 0 ? "rgba(224,80,80,0.12)" : displaySecLeft > 0 ? (displaySecLeft < 120 ? "#FDECEA" : th_earn.greenLo) : th_paper.warm,
-            borderRadius: 20, paddingVertical: 4, paddingHorizontal: 12, marginRight: 8,
+          {/* Wordmark — heavy condensed sans, generous tracking */}
+          <Text style={{
+            fontFamily: FF.mark,
+            fontSize: 26,
+            color: th_ink.deep,
+            letterSpacing: 4,
+            flex: 1,
           }}>
+            DRIFT
+          </Text>
+
+          {/* Time pill — small clock + status text */}
+          <View style={{
+            flexDirection: "row", alignItems: "center", gap: 6,
+            backgroundColor: blockedHoursActive
+              ? "rgba(224,80,80,0.10)"
+              : displaySecLeft > 0
+                ? (displaySecLeft < 120 ? "rgba(224,80,80,0.10)" : th_earn.sageLo)
+                : th_paper.card,
+            borderRadius: 22,
+            paddingVertical: 7,
+            paddingHorizontal: 12,
+            marginRight: 10,
+            borderWidth: 1,
+            borderColor: th_ink.hairline,
+          }}>
+            <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+              <SvgCircle cx="12" cy="12" r="9"
+                stroke={blockedHoursActive ? "#C0392B" : displaySecLeft > 0 ? (displaySecLeft < 120 ? "#C0392B" : th_earn.sage) : th_ink.mid}
+                strokeWidth={1.8} />
+              <Path d="M12 7v5l3 2"
+                stroke={blockedHoursActive ? "#C0392B" : displaySecLeft > 0 ? (displaySecLeft < 120 ? "#C0392B" : th_earn.sage) : th_ink.mid}
+                strokeWidth={1.8} strokeLinecap="round" />
+            </Svg>
             <Text style={{
-              fontFamily: FO, fontSize: 10, letterSpacing: 1,
-              color: blockedHoursActive ? "#C0392B" : displaySecLeft < 0 ? "#C0392B" : displaySecLeft > 0 ? (displaySecLeft < 120 ? "#C0392B" : th_earn.greenD) : th_ink.faint,
+              fontFamily: FF.bodyMed, fontSize: 12,
+              color: blockedHoursActive ? "#C0392B"
+                : displaySecLeft > 0 ? (displaySecLeft < 120 ? "#C0392B" : th_earn.sage)
+                : th_ink.mid,
             }}>
               {blockedHoursActive ? "blocked" : displaySecLeft !== 0 ? fmtSecLeft(displaySecLeft) : "no time"}
             </Text>
           </View>
-          {/* Account button */}
+
+          {/* Account icon — line style */}
           <TouchableOpacity
             onPress={() => setShowAccount(true)}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={{ marginRight: 6, width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 22 }}
+            hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+            style={{ width: 38, height: 38, alignItems: "center", justifyContent: "center" }}
             activeOpacity={0.6}
           >
             <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-              <SvgCircle cx="12" cy="8" r="4" stroke={th_earn.green} strokeWidth={2} />
-              <Path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"
-                stroke={th_earn.green} strokeWidth={2} strokeLinecap="round" />
+              <SvgCircle cx="12" cy="8" r="3.6" stroke={th_ink.deep} strokeWidth={1.8} />
+              <Path d="M5 21v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1"
+                stroke={th_ink.deep} strokeWidth={1.8} strokeLinecap="round" />
             </Svg>
           </TouchableOpacity>
-          {/* Dark/light toggle — green-toned SVG icons */}
+
+          {/* Theme toggle — moon/sun line style */}
           <TouchableOpacity
             onPress={toggleDark}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={{ marginRight: 4, width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 22 }}
+            hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+            style={{ width: 38, height: 38, alignItems: "center", justifyContent: "center" }}
             activeOpacity={0.6}
           >
             {darkMode ? (
-              // Sun: switch to light
-              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                <SvgCircle cx="12" cy="12" r="5" stroke={th_earn.green} strokeWidth={2} />
-                <Path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
-                  stroke={th_earn.green} strokeWidth={2} strokeLinecap="round" />
+              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                <SvgCircle cx="12" cy="12" r="4.5" stroke={th_ink.deep} strokeWidth={1.8} />
+                <Path d="M12 2.5v2M12 19.5v2M4.5 4.5l1.4 1.4M18.1 18.1l1.4 1.4M2.5 12h2M19.5 12h2M4.5 19.5l1.4-1.4M18.1 5.9l1.4-1.4"
+                  stroke={th_ink.deep} strokeWidth={1.8} strokeLinecap="round" />
               </Svg>
             ) : (
-              // Moon: switch to dark
-              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                 <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-                  stroke={th_earn.green} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  stroke={th_ink.deep} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
               </Svg>
             )}
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Content — DriftIn always rendered so session persists across tab switches */}
-      <View style={{ flex: 1, backgroundColor: th_paper.warm }} {...tabSwipe.panHandlers}>
-        <View style={{ flex: 1, display: tab === "today" ? "flex" : "none" }}>
-          <TodayView
-            tasks={tasks}
-            credits={displayCredits}
-            totalXp={totalXp}
-            onComplete={completeTask}
-            onDelete={deleteTask}
-            onAdd={() => setOverlay("add")}
-            onReduceScreenTime={() => setShowReduceTime(true)}
-            onQuickGrant={() => setShowQuickGrant(true)}
-            quickGrantCount={quickGrantCount}
-            dark={darkMode}
-          />
-        </View>
-        <View style={{ flex: 1, display: tab === "driftin" || driftInActive ? "flex" : "none", backgroundColor: driftInActive ? th_ink.void : th_paper.warm }}>
-          <DriftInScreen
-            onSessionComplete={handleDriftInComplete}
-            onSessionStart={handleDriftInStart}
-            onSessionEnd={handleDriftInEnd}
-            totalXp={totalXp}
-            dark={darkMode}
-          />
-        </View>
-        <View style={{ flex: 1, display: tab === "progress" && !driftInActive ? "flex" : "none" }}>
-          <ProgressView tasks={statsTasks} totalXp={totalXp} skips={0} onAddTask={() => setOverlay("add")} dark={darkMode} />
-        </View>
-        <View style={{ flex: 1, display: tab === "friends" && !driftInActive ? "flex" : "none" }}>
-          <SocialScreen
-            userId={userId}
-            isPremium={isPremium}
-            onOpenPaywall={() => setShowPaywall(true)}
-            onSwipeLockChange={setChildSwipeLocked}
-            onChallengeResolved={handleChallengeResolved}
-            dark={darkMode}
-          />
-        </View>
+      {/* Content — an animated horizontal filmstrip. All four tabs stay mounted
+          (so the Drift In session persists across tab switches); we just slide
+          the row left/right. translateX follows the finger during a swipe. */}
+      <View
+        style={{ flex: 1, overflow: "hidden", backgroundColor: driftInActive ? th_ink.void : th_paper.warm }}
+        {...tabSwipe.panHandlers}
+      >
+        <Animated.View style={{
+          flexDirection: "row",
+          width: TAB_W * TABS.length,
+          height: "100%",
+          transform: [{ translateX: slideX }],
+        }}>
+          <View style={{ width: TAB_W, height: "100%" }}>
+            <TodayView
+              tasks={tasks}
+              credits={displayCredits}
+              totalXp={totalXp}
+              onComplete={completeTask}
+              onDelete={deleteTask}
+              onAdd={() => setOverlay("add")}
+              onReduceScreenTime={() => setShowReduceTime(true)}
+              onQuickGrant={() => setShowQuickGrant(true)}
+              quickGrantCount={quickGrantCount}
+              dark={darkMode}
+            />
+          </View>
+          <View style={{ width: TAB_W, height: "100%", backgroundColor: driftInActive ? th_ink.void : th_paper.warm }}>
+            <DriftInScreen
+              onSessionComplete={handleDriftInComplete}
+              onSessionStart={handleDriftInStart}
+              onSessionEnd={handleDriftInEnd}
+              totalXp={totalXp}
+              dark={darkMode}
+            />
+          </View>
+          <View style={{ width: TAB_W, height: "100%" }}>
+            <ProgressView tasks={statsTasks} totalXp={totalXp} skips={0} onAddTask={() => setOverlay("add")} dark={darkMode} />
+          </View>
+          <View style={{ width: TAB_W, height: "100%" }}>
+            <SocialScreen
+              userId={userId}
+              isPremium={isPremium}
+              onOpenPaywall={() => setShowPaywall(true)}
+              onSwipeLockChange={setChildSwipeLocked}
+              onChallengeResolved={handleChallengeResolved}
+              dark={darkMode}
+            />
+          </View>
+        </Animated.View>
       </View>
 
-      {/* ── Floating bubble island ── */}
+      {/* ── Floating tab island — icons with labels stacked beneath ── */}
       {!driftInActive && (
         <View style={{
-          paddingHorizontal: 14,
-          paddingBottom: Platform.OS === "ios" ? 16 : 8,
+          paddingHorizontal: 16,
+          // Sits lower / closer to the bottom edge per request. The root View no
+          // longer adds a bottom safe inset, so include enough to clear the iOS
+          // home indicator while staying lower than the original position.
+          paddingBottom: Platform.OS === "ios" ? 28 : 12,
           paddingTop: 4,
           backgroundColor: "transparent",
           pointerEvents: "box-none",
         }}>
           <View style={{
             flexDirection: "row",
+            alignItems: "stretch",
             backgroundColor: th_paper.card,
-            borderRadius: 30,
-            paddingVertical: 10,
-            paddingHorizontal: 6,
-            shadowColor: darkMode ? "#000" : th_ink.deep,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: darkMode ? 0.4 : 0.10,
-            shadowRadius: 16,
-            elevation: 10,
+            borderRadius: 26,
+            paddingVertical: 8,
+            paddingHorizontal: 8,
+            borderWidth: 1,
+            borderColor: th_ink.hairline,
+            shadowColor: darkMode ? "#000" : "#1F3A2A",
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: darkMode ? 0.45 : 0.07,
+            shadowRadius: 22,
+            elevation: 8,
           }}>
             {TABS.map(t => {
-              const active    = tab === t.id;
-              const isDriftIn = t.id === "driftin";
-
-              if (isDriftIn) return (
-                <TouchableOpacity key={t.id} onPress={() => setTab(t.id)}
-                  style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                  <View style={{
-                    width: 52, height: 34, borderRadius: 17,
-                    backgroundColor: active ? th_earn.green : "transparent",
-                    alignItems: "center", justifyContent: "center",
-                  }}>
-                    <t.Icon color={active ? "#fff" : th_ink.mid} size={20} />
-                  </View>
-                  <Text style={{ fontFamily: FO, fontSize: 7, letterSpacing: 0.8, marginTop: 3,
-                    color: active ? th_earn.green : th_ink.mid }}>
-                    {t.label.toUpperCase()}
-                  </Text>
-                </TouchableOpacity>
-              );
-
+              const active = tab === t.id;
+              // Every tab: icon on top, label beneath. The active tab gets a
+              // soft sage pill behind the whole stack.
               return (
-                <TouchableOpacity key={t.id} onPress={() => setTab(t.id)}
-                  style={{ flex: 1, alignItems: "center", paddingVertical: 2 }}>
-                  <View style={{
-                    width: 40, height: 34, borderRadius: 14,
-                    backgroundColor: active ? th_earn.greenLo : "transparent",
-                    alignItems: "center", justifyContent: "center",
-                  }}>
-                    <t.Icon color={active ? th_earn.green : th_ink.mid} size={20} />
-                  </View>
-                  <Text style={{ fontFamily: FO, fontSize: 7, letterSpacing: 0.8, marginTop: 3,
-                    color: active ? th_earn.green : th_ink.mid }}>
-                    {t.label.toUpperCase()}
+                <TouchableOpacity
+                  key={t.id}
+                  onPress={() => setTab(t.id)}
+                  activeOpacity={0.7}
+                  style={{
+                    flex: 1,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4,
+                    paddingVertical: 9,
+                    paddingHorizontal: 4,
+                    borderRadius: 18,
+                    backgroundColor: active ? th_earn.sageLo : "transparent",
+                  }}
+                >
+                  <t.Icon color={active ? th_earn.sage : th_ink.mid} size={21} />
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      fontFamily: active ? FF.bodyMed : FF.body,
+                      fontSize: 11,
+                      letterSpacing: 0.1,
+                      color: active ? th_earn.sage : th_ink.mid,
+                    }}
+                  >
+                    {t.label}
                   </Text>
                 </TouchableOpacity>
               );
@@ -3100,7 +3555,7 @@ export default function App() {
         onCancel={() => { setShowCheckout(false); setCheckoutUrl(""); }}
         onSuccess={handleCheckoutSuccess}
       />
-    </SafeAreaView>
+    </View>
     </ThemeContext.Provider>
   );
 }

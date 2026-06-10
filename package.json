@@ -9,9 +9,11 @@
     "ios": "expo run:ios"
   },
   "dependencies": {
+    "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo-google-fonts/knewave": "^0.4.1",
     "@expo-google-fonts/orbitron": "^0.4.2",
     "@expo-google-fonts/oswald": "^0.4.2",
+    "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo/metro-runtime": "~6.1.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/slider": "5.0.1",

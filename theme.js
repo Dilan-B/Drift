@@ -1,32 +1,109 @@
 // ── Drift theme tokens ────────────────────────────────────────
-// Both themes keep the same green/blue accent system.
-// Only backgrounds, surfaces, and text flip between light/dark.
+// Aesthetic direction: organic-editorial.
+// Cream parchment grounds, deep forest green accents, generous whitespace,
+// editorial serif headlines paired with refined sans body. The seedling
+// motif is the soul. Soft clay/bark browns exist ONLY as subtle accents on
+// graphic elements (watermarks, dots, decorative strokes) — never in the
+// background surfaces, which stay cream + green-neutral.
 
 export const LIGHT = {
   ink: {
-    void: "#0B1A11", deep: "#1A2B1F", mid: "#6B8A78",
-    faint: "#A8BFB5", ghost: "rgba(26,43,31,0.07)", border: "rgba(26,43,31,0.09)",
+    void:   "#0B1A11",
+    deep:   "#1A2820",    // primary text / wordmark
+    mid:    "#6B7A6E",    // secondary text
+    faint:  "#A8B0A8",    // tertiary / dashed borders
+    ghost:  "rgba(26,40,32,0.05)",
+    border: "rgba(26,40,32,0.08)",
+    hairline: "rgba(26,40,32,0.06)",
   },
-  paper: { warm: "#F4F9F6", card: "#FFFFFF" },
+  paper: {
+    warm:   "#F7F7F4",    // canvas — clean white/off-white (no beige)
+    card:   "#FFFFFF",    // raised surfaces
+    cream:  "#FBFBF9",    // near-white soft variant
+    sand:   "#F1F2EE",    // neutral light inset (cards/insets — NOT brown)
+    dash:   "rgba(26,40,32,0.16)", // dashed empty-state outlines
+  },
   earn: {
-    terra: "#2FAB72", terraLo: "#E4F5EE",
-    green: "#1A8050", greenLo: "#DDF2EA", greenD: "#0E5434",
-    blue: "#5AB4D4", blueLo: "#E6F4FB",
+    // Deep forest = primary CTAs (the "+ Add task" button in the image)
+    deep:    "#1F3A2A",
+    deepHi:  "#2A4D38",
+    // Sage = soft pill backgrounds (the "Seedling" badge, active tab pill)
+    sage:    "#3E6B4E",
+    sageLo:  "#E4ECE0",
+    sageDot: "#5B8A6D",
+    // Mint accent for stat dots, progress fills
+    terra:   "#2D7A52",
+    terraLo: "#E8F0E5",
+    green:   "#2D6B47",
+    greenLo: "#E4ECE0",
+    greenD:  "#1F3A2A",
+    blue:    "#5A8FA4",   // calm slate-blue for AI tags
+    blueLo:  "#E8EFF1",
+    // Warm earth accents — homey browns, used ONLY on graphic elements
+    // (low-opacity watermarks, small accent dots, decorative strokes).
+    clay:    "#B0764E",   // terracotta clay
+    clayLo:  "#EEE0CF",
+    bark:    "#8A6F58",   // soft brown — graphic accents
+    barkLo:  "rgba(138,111,88,0.10)",
+    barkInk: "#6E5849",   // brown ink for occasional warm labels
   },
 };
 
 export const DARK = {
   ink: {
-    void: "#091310", deep: "#E8F5EC", mid: "#7BAA8C",
-    faint: "#4F7868", ghost: "rgba(255,255,255,0.07)", border: "rgba(255,255,255,0.1)",
+    void:   "#080F0B",
+    deep:   "#E8EEDF",
+    mid:    "#9DAE9A",
+    faint:  "#566357",
+    ghost:  "rgba(255,255,255,0.05)",
+    border: "rgba(255,255,255,0.08)",
+    hairline: "rgba(255,255,255,0.06)",
   },
-  // Slightly cooler + brighter — less swampy, more "night forest"
-  paper: { warm: "#0E1B17", card: "#15251F" },
+  paper: {
+    warm:   "#0F1611",
+    card:   "#171F18",
+    cream:  "#1A2320",
+    sand:   "#19231C",    // neutral dark inset (NOT brown)
+    dash:   "rgba(255,255,255,0.18)",
+  },
   earn: {
-    terra: "#3DC98A", terraLo: "rgba(61,201,138,0.2)",
-    green: "#3DC98A", greenLo: "rgba(61,201,138,0.16)", greenD: "#8FE5B8",
-    blue: "#6DC3DF", blueLo: "rgba(109,195,223,0.16)",
+    deep:    "#D8E8C5",
+    deepHi:  "#E4F0D0",
+    sage:    "#A8C99A",
+    sageLo:  "rgba(168,201,154,0.13)",
+    sageDot: "#8FB585",
+    terra:   "#7FBE96",
+    terraLo: "rgba(127,190,150,0.14)",
+    green:   "#7FBE96",
+    greenLo: "rgba(127,190,150,0.14)",
+    greenD:  "#A8D9B5",
+    blue:    "#9BC4D2",
+    blueLo:  "rgba(155,196,210,0.13)",
+    clay:    "#CCA07E",   // warm clay glow — graphic accents only
+    clayLo:  "rgba(204,160,126,0.14)",
+    bark:    "#A38C78",
+    barkLo:  "rgba(163,140,120,0.13)",
+    barkInk: "#C9B49E",
   },
 };
 
 export const getTheme = (dark) => dark ? DARK : LIGHT;
+
+// ── Typography tokens ────────────────────────────────────────
+// FF.display = Playfair Display (italic for editorial headlines)
+// FF.serif   = Playfair Display (regular)
+// FF.body    = DM Sans (refined neo-grotesque body)
+// FF.bodyMed = DM Sans 500
+// FF.bodyBold = DM Sans 700
+// FF.mark    = Oswald (condensed sans — wordmark only)
+// FF.kicker  = Orbitron (geometric — small-caps labels only)
+export const FF = {
+  display:  "PlayfairDisplay_700Bold_Italic",
+  serif:    "PlayfairDisplay_700Bold",
+  serifReg: "PlayfairDisplay_400Regular",
+  body:     "DMSans_400Regular",
+  bodyMed:  "DMSans_500Medium",
+  bodyBold: "DMSans_700Bold",
+  mark:     "Oswald_700Bold",
+  kicker:   "Orbitron_400Regular",
+};

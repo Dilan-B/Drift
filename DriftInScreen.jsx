@@ -16,6 +16,7 @@ import { Orbitron_700Bold, Orbitron_400Regular } from "@expo-google-fonts/orbitr
 import { getTheme } from "./theme";
 import Slider from "@react-native-community/slider";
 import { SparkleIcon, CheckIcon } from "./Icons";
+import Sprout, { LeafGlyph } from "./SproutArt";
 
 const { width } = Dimensions.get("window");
 
@@ -84,6 +85,47 @@ function ProgressRing({ progress }) {
 }
 
 // ── Main component ────────────────────────────────────────────
+// Reward preview tile with a soft, low-opacity sprout tucked into the corner.
+// The plant is clipped by the card's rounded bounds so it reads as a quiet
+// watermark rather than a foreground element.
+function RewardCard({ theme, accent, value, label, suffix, dark }) {
+  return (
+    <View style={{
+      flex: 1,
+      backgroundColor: theme.paper.sand,
+      borderRadius: 20,
+      paddingVertical: 18,
+      paddingHorizontal: 16,
+      minHeight: 96,
+      overflow: "hidden",
+      justifyContent: "flex-end",
+    }}>
+      {/* watermark plant */}
+      <View style={{
+        position: "absolute",
+        right: -14,
+        top: -10,
+        opacity: dark ? 0.12 : 0.10,
+        pointerEvents: "none",
+      }}>
+        <Sprout size={86} tone={dark ? "night" : "fresh"} />
+      </View>
+
+      <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
+        <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 30, color: accent, letterSpacing: -0.6 }}>
+          {value}
+        </Text>
+        {suffix && (
+          <Text style={{ fontFamily: "DMSans_700Bold", fontSize: 13, color: accent }}>{suffix}</Text>
+        )}
+      </View>
+      <Text style={{ fontFamily: "DMSans_400Regular", fontSize: 12, color: theme.ink.mid, marginTop: 4 }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 export default function DriftInScreen({ onSessionComplete, onSessionStart, onSessionEnd, dark = false }) {
   const theme = getTheme(dark);
   // Setup-phase colors follow the app theme; active/done always use dark forest
@@ -199,10 +241,18 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
     >
       <StatusBar barStyle={dark ? "light-content" : "dark-content"} />
 
-      {/* Header */}
-      <View style={{ marginBottom: 28 }}>
-        <Text style={[s.pageTitle, { color: setupTxt }]}>DRIFT IN</Text>
-        <Text style={[s.pageSubtitle, { color: setupMid }]}>Lock into deep focus</Text>
+      {/* Header — editorial */}
+      <View style={{ marginBottom: 30 }}>
+        <Text style={{
+          fontFamily: "Orbitron_400Regular",
+          fontSize: 10,
+          letterSpacing: 2.4,
+          color: setupFnt,
+          marginBottom: 4,
+        }}>
+          DEEP FOCUS
+        </Text>
+        <Text style={[s.pageTitle, { color: setupTxt }]}>Drift in</Text>
       </View>
 
       {/* Task input */}
@@ -215,7 +265,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
           placeholderTextColor={setupFnt}
           style={[s.taskInput, {
             backgroundColor: setupCard,
-            borderColor: task.trim() ? GREEN : setupBrd,
+            borderColor: task.trim() ? theme.earn.sage : setupBrd,
             color: setupTxt,
           }]}
           multiline={false}
@@ -225,10 +275,10 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
       </View>
 
       {/* Duration — slider 15m to 5h, 15m steps */}
-      <View style={{ marginBottom: 24 }}>
+      <View style={{ marginBottom: 26 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
           <Text style={[s.fieldLabel, { color: setupFnt, marginBottom: 0 }]}>SESSION LENGTH</Text>
-          <Text style={{ fontFamily: FO, fontSize: 16, color: GREEN, letterSpacing: 0.5 }}>
+          <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 20, color: theme.ink.deep, letterSpacing: -0.4 }}>
             {dur >= 60 ? `${Math.floor(dur/60)}h ${dur%60 ? `${dur%60}m` : ""}`.trim() : `${dur}m`}
           </Text>
         </View>
@@ -238,9 +288,9 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
           step={15}
           value={dur}
           onValueChange={setDur}
-          minimumTrackTintColor={GREEN}
-          maximumTrackTintColor={dark ? "rgba(255,255,255,0.1)" : "rgba(26,43,31,0.08)"}
-          thumbTintColor={GREEN}
+          minimumTrackTintColor={theme.earn.sage}
+          maximumTrackTintColor={dark ? "rgba(255,255,255,0.1)" : "rgba(60,48,36,0.08)"}
+          thumbTintColor={theme.earn.sage}
           style={{ width: "100%", height: 36 }}
         />
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -4 }}>
@@ -249,24 +299,24 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
         </View>
       </View>
 
-      {/* Drift Lock notice */}
-      <View style={[s.lockNotice, { backgroundColor: theme.earn.blueLo, borderColor: "rgba(90,180,212,0.2)" }]}>
-        <Text style={[s.lockNoticeTitle, { color: "#2A7FA0" }]}>DRIFT LOCK</Text>
-        <Text style={[s.lockNoticeBody, { color: "#2A7FA0" }]}>
-          Screen stays on. Back is blocked until you finish.
-        </Text>
-      </View>
-
-      {/* Reward preview */}
-      <View style={{ flexDirection: "row", gap: 10, marginBottom: 28 }}>
-        <View style={[s.rewardCard, { backgroundColor: setupCard, borderColor: "rgba(47,171,114,0.2)" }]}>
-          <Text style={[s.rewardVal, { color: GREEN }]}>{dur}m</Text>
-          <Text style={[s.rewardLabel, { color: setupMid }]}>credits earned</Text>
-        </View>
-        <View style={[s.rewardCard, { backgroundColor: setupCard, borderColor: "rgba(90,180,212,0.2)" }]}>
-          <Text style={[s.rewardVal, { color: BLUE }]}>+{Math.round(dur * 1.5 * 0.45 + 8)} XP</Text>
-          <Text style={[s.rewardLabel, { color: setupMid }]}>experience</Text>
-        </View>
+      {/* Reward preview — warm cards with a low-opacity plant tucked in each */}
+      <Text style={[s.fieldLabel, { color: setupFnt }]}>YOU'LL EARN</Text>
+      <View style={{ flexDirection: "row", gap: 12, marginBottom: 30 }}>
+        <RewardCard
+          theme={theme}
+          accent={theme.earn.sage}
+          value={`${dur}m`}
+          label="screen time"
+          dark={dark}
+        />
+        <RewardCard
+          theme={theme}
+          accent={theme.earn.clay}
+          value={`+${Math.round(dur * 1.5 * 0.45 + 8)}`}
+          label="experience"
+          suffix="XP"
+          dark={dark}
+        />
       </View>
 
       {/* CTA */}
@@ -276,16 +326,16 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
         style={[
           s.ctaBtn,
           !task.trim() && {
-            backgroundColor: dark ? "rgba(47,171,114,0.18)" : "#C2DDD3",
+            backgroundColor: dark ? "rgba(127,190,150,0.18)" : "#D7CDBA",
           },
         ]}
         activeOpacity={0.85}
       >
         <Text style={[
           s.ctaBtnText,
-          !task.trim() && { color: dark ? "#6B9A7A" : "#fff" },
+          !task.trim() && { color: dark ? "#8FA98F" : "#FAF6EE" },
         ]}>
-          {task.trim() ? "DRIFT IN" : "ENTER A TASK ABOVE"}
+          {task.trim() ? "Drift in" : "Enter a task above"}
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -402,9 +452,9 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
 // ── Styles ────────────────────────────────────────────────────
 const s = StyleSheet.create({
   // Setup
-  pageTitle:   { fontFamily: FO,  fontSize: 28, color: "#1A2B1F", letterSpacing: 1.5 },
-  pageSubtitle:{ fontFamily: FK,  fontSize: 17, color: "#6B8A78", marginTop: 4 },
-  fieldLabel:  { fontFamily: FOM, fontSize: 9,  color: "#A8BFB5", letterSpacing: 2, marginBottom: 10 },
+  pageTitle:   { fontFamily: "PlayfairDisplay_700Bold_Italic", fontSize: 38, color: "#1A2820", letterSpacing: -0.4 },
+  pageSubtitle:{ fontFamily: "DMSans_400Regular", fontSize: 14, color: "#6B7A6E", marginTop: 6 },
+  fieldLabel:  { fontFamily: "Orbitron_400Regular", fontSize: 9,  color: "#A8B0A8", letterSpacing: 2.4, marginBottom: 10 },
   taskInput: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1.5, borderColor: "rgba(26,43,31,0.1)",
@@ -433,11 +483,11 @@ const s = StyleSheet.create({
   rewardVal:   { fontFamily: FO, fontSize: 20 },
   rewardLabel: { fontFamily: FB, fontSize: 11, color: "#6B8A78", marginTop: 4 },
   ctaBtn: {
-    paddingVertical: 17, borderRadius: 16,
-    backgroundColor: GREEN, alignItems: "center",
+    paddingVertical: 16, borderRadius: 16,
+    backgroundColor: "#1F3A2A", alignItems: "center",
   },
   ctaBtnDisabled: { backgroundColor: "#C2DDD3" },
-  ctaBtnText: { fontFamily: FO, fontSize: 13, color: "#fff", letterSpacing: 2 },
+  ctaBtnText: { fontFamily: "DMSans_500Medium", fontSize: 14, color: "#FAF6EE", letterSpacing: 0.2 },
 
   // Active
   activeLabelSmall: { fontFamily: FOM, fontSize: 9, color: MUTED, letterSpacing: 2.5, marginBottom: 8 },

@@ -27,6 +27,10 @@ export default function Swipeable({
   height,
   disabled = false,
   rowStyle,
+  // Fired true the instant this row claims a horizontal gesture, and false when
+  // it ends. The parent uses this to suspend its tab-swipe so a delete drag can
+  // never also switch tabs.
+  onActiveChange,
 }) {
   const tx          = useRef(new Animated.Value(0)).current;
   const opened      = useRef(false);
