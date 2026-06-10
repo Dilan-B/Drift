@@ -174,7 +174,7 @@ const s = StyleSheet.create({
   heroEmoji: { fontSize: 56, marginBottom: 16 },
   heroTitle: {
     fontFamily: FD, fontSize: 26, color: "#E8F5EC",
-    fontStyle: "italic", fontWeight: "300", textAlign: "center", marginBottom: 10,
+    fontWeight: "300", textAlign: "center", marginBottom: 10,
   },
   heroSub: { fontSize: 14, color: "#4A8060", textAlign: "center", lineHeight: 22 },
   features: {

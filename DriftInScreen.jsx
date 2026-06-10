@@ -534,7 +534,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
 // ── Styles ────────────────────────────────────────────────────
 const s = StyleSheet.create({
   // Setup
-  pageTitle:   { fontFamily: "PlayfairDisplay_700Bold_Italic", fontSize: 38, color: "#1A2820", letterSpacing: -0.4 },
+  pageTitle:   { fontFamily: "PlayfairDisplay_500Medium", fontSize: 38, color: "#1A2820", letterSpacing: -0.4 },
   pageSubtitle:{ fontFamily: "DMSans_400Regular", fontSize: 14, color: "#6B7A6E", marginTop: 6 },
   fieldLabel:  { fontFamily: "Orbitron_400Regular", fontSize: 9,  color: "#A8B0A8", letterSpacing: 2.4, marginBottom: 10 },
   taskInput: {

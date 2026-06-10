@@ -33,6 +33,7 @@ import {
 } from "@expo-google-fonts/oswald";
 import {
   PlayfairDisplay_400Regular,
+  PlayfairDisplay_500Medium,
   PlayfairDisplay_700Bold,
   PlayfairDisplay_700Bold_Italic,
 } from "@expo-google-fonts/playfair-display";
@@ -2527,6 +2528,7 @@ export default function App() {
     Oswald_400Regular,
     Oswald_700Bold,
     PlayfairDisplay_400Regular,
+    PlayfairDisplay_500Medium,
     PlayfairDisplay_700Bold,
     PlayfairDisplay_700Bold_Italic,
     DMSans_400Regular,

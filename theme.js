@@ -98,8 +98,10 @@ export const getTheme = (dark) => dark ? DARK : LIGHT;
 // FF.mark    = Oswald (condensed sans — wordmark only)
 // FF.kicker  = Orbitron (geometric — small-caps labels only)
 export const FF = {
-  display:  "PlayfairDisplay_700Bold_Italic",
-  serif:    "PlayfairDisplay_700Bold",
+  // Display: Playfair Display Medium — upright, lighter weight than Bold.
+  // Same family/proportions as the original Bold-Italic, just lighter and straight.
+  display:  "PlayfairDisplay_500Medium",
+  serif:    "PlayfairDisplay_500Medium",
   serifReg: "PlayfairDisplay_400Regular",
   body:     "DMSans_400Regular",
   bodyMed:  "DMSans_500Medium",

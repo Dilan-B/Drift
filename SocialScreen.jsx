@@ -26,7 +26,8 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 const terra = "#2D7A52";
-const FD = "PlayfairDisplay_700Bold_Italic";
+// Upright, lighter Playfair Display — same family, no slant, slimmer strokes
+const FD = "PlayfairDisplay_500Medium";
 const FB = "DMSans_400Regular";
 const FO = "Orbitron_700Bold";
 const FK = "Oswald_700Bold";
@@ -1593,7 +1594,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 18, paddingTop: 48, paddingBottom: 12,
     borderBottomWidth: 0.5,
   },
-  headerTitle: { fontFamily: FD, fontSize: 30, fontWeight: "300", fontStyle: "italic" },
+  headerTitle: { fontFamily: FD, fontSize: 30, fontWeight: "300" },
   addBtn: { paddingVertical: 9, paddingHorizontal: 16, borderRadius: 14, borderWidth: 1, borderColor: terra },
   addBtnText: { color: terra, fontSize: 14, fontWeight: "800" },
   addRow: { flexDirection: "row", gap: 8, padding: 12, borderBottomWidth: 0.5 },
@@ -1640,7 +1641,7 @@ const s = StyleSheet.create({
   statValue: { fontFamily: FK, fontSize: 20 },
   statLabel: { fontSize: 11, fontWeight: "700", marginTop: 3 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
-  emptyTitle: { fontFamily: FD, fontSize: 22, fontStyle: "italic", marginBottom: 8 },
+  emptyTitle: { fontFamily: FD, fontSize: 22, marginBottom: 8 },
   emptySub: { fontSize: 13, textAlign: "center", lineHeight: 20 },
   toast: {
     position: "absolute", top: 14, left: 18, right: 18, zIndex: 50,
