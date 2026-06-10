@@ -2995,11 +2995,6 @@ export default function App() {
   }, []);
 
   const drainBy = useCallback((elapsedSec) => {
-    // When iOS native blocking is available we let the DeviceActivityMonitor
-    // extension count real usage of restricted apps — JS doesn't drain.
-    // Otherwise (Android / unsupported builds) fall back to the elapsed-
-    // background-time heuristic.
-    if (isNativeBlockingAvailable()) return;
     if (elapsedSec <= 0) return;
     if (driftInActRef.current) return; // shield is up
     const prevSec = secRef.current;
