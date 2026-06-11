@@ -43,8 +43,14 @@ class DriftMonitor: DeviceActivityMonitor {
   // We don't shield here by default — the shield state is whatever Drift left it.
   override func intervalDidStart(for activity: DeviceActivityName) {
     super.intervalDidStart(for: activity)
-    UserDefaults(suiteName: APP_GROUP)?.set(Date().timeIntervalSince1970,
-                                            forKey: "drift_interval_start_at")
+    let defaults = UserDefaults(suiteName: APP_GROUP)
+    defaults?.set(Date().timeIntervalSince1970, forKey: "drift_interval_start_at")
+    let armedDay = defaults?.string(forKey: "drift_balance_armed_day")
+    if armedDay != localDayKey() {
+      applyShieldFromSelection()
+      defaults?.set(true, forKey: "drift_balance_depleted")
+      defaults?.set(Date().timeIntervalSince1970, forKey: "drift_last_fired_at")
+    }
   }
 
   // Called at end of monitoring window (e.g. midnight). Reset for the new day.
@@ -76,5 +82,14 @@ class DriftMonitor: DeviceActivityMonitor {
     store.shield.applications = nil
     store.shield.applicationCategories = nil
     store.shield.webDomains = nil
+  }
+
+  private func localDayKey(_ date: Date = Date()) -> String {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar.current
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone.current
+    formatter.dateFormat = "yyyy-MM-dd"
+    return formatter.string(from: date)
   }
 }

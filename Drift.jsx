@@ -22,6 +22,7 @@ import {
 import { applyBlocking, clearBlocking } from "./blockedApps";
 import { Spinner } from "./Skeleton";
 import Slider from "@react-native-community/slider";
+import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { useFonts } from "expo-font";
 import {
   Orbitron_400Regular,
@@ -63,6 +64,9 @@ import ProfileScreen from "./ProfileScreen";
 import StripeCheckoutModal from "./StripeCheckoutModal";
 import { cached, rateLimited } from "./apiGuards";
 import { useBetaMode } from "./useBetaMode";
+import {
+  TouchTracker, OriginPanel, OriginSheet, Backdrop, Pop, FadeInUp, Pulse, useCountUp, getLastTouch,
+} from "./Anim";
 
 // ── Theme context ─────────────────────────────────────────────
 export const ThemeContext = createContext({ dark: false, theme: getTheme(false) });
@@ -142,20 +146,143 @@ const makeUuid = () => {
 const clockStr    = () => new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 const pad2         = n => String(n).padStart(2, "0");
 const timeToMins   = t => {
-  const m = String(t || "").match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return null;
-  const h = Number(m[1]), min = Number(m[2]);
+  const raw = String(t || "").trim();
+  const m12 = raw.match(/^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s*m?\.?$/i);
+  if (m12) {
+    let h = Number(m12[1]);
+    const min = Number(m12[2] || 0);
+    if (h < 1 || h > 12 || min < 0 || min > 59) return null;
+    const pm = m12[3].toLowerCase() === "p";
+    if (h === 12) h = 0;
+    return (pm ? h + 12 : h) * 60 + min;
+  }
+  const m24 = raw.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m24) return null;
+  const h = Number(m24[1]), min = Number(m24[2]);
   if (h < 0 || h > 23 || min < 0 || min > 59) return null;
   return h * 60 + min;
 };
-const minsToTime   = mins => `${pad2(Math.floor((((mins % 1440) + 1440) % 1440) / 60))}:${pad2((((mins % 1440) + 1440) % 1440) % 60)}`;
+const minsToTime   = mins => {
+  const n = ((mins % 1440) + 1440) % 1440;
+  const h = Math.floor(n / 60);
+  const min = n % 60;
+  return `${h % 12 || 12}:${pad2(min)} ${h >= 12 ? "PM" : "AM"}`;
+};
 const prettyTime   = t => {
   const mins = timeToMins(t);
   if (mins == null) return t || "";
-  const h = Math.floor(mins / 60), m = mins % 60;
-  const hr = h % 12 || 12;
-  return `${hr}:${pad2(m)} ${h >= 12 ? "PM" : "AM"}`;
+  return minsToTime(mins);
 };
+const minsToDate = mins => {
+  const n = ((mins % 1440) + 1440) % 1440;
+  const d = new Date();
+  d.setHours(Math.floor(n / 60), n % 60, 0, 0);
+  return d;
+};
+const dateToMins = d => d.getHours() * 60 + d.getMinutes();
+
+function TimePickerButton({ value, onChange, fallback = "9:00 AM", dark = false, theme, style, textStyle }) {
+  const th = theme || getTheme(dark);
+  const { ink, paper, earn } = th;
+  const currentMins = timeToMins(value) ?? timeToMins(fallback) ?? 540;
+  const [iosOpen, setIosOpen] = useState(false);
+  const [draftDate, setDraftDate] = useState(() => minsToDate(currentMins));
+
+  const openPicker = () => {
+    const pickerDate = minsToDate(currentMins);
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: pickerDate,
+        mode: "time",
+        is24Hour: false,
+        onChange: (event, selectedDate) => {
+          if (event.type === "set" && selectedDate) onChange?.(minsToTime(dateToMins(selectedDate)));
+        },
+      });
+      return;
+    }
+    setDraftDate(pickerDate);
+    setIosOpen(true);
+  };
+
+  const confirmIos = () => {
+    onChange?.(minsToTime(dateToMins(draftDate)));
+    setIosOpen(false);
+  };
+
+  return (
+    <>
+      <TouchableOpacity
+        onPress={openPicker}
+        activeOpacity={0.85}
+        style={[{
+          minWidth: 104,
+          paddingVertical: 8,
+          paddingHorizontal: 10,
+          borderRadius: 10,
+          backgroundColor: paper.warm,
+          borderWidth: 1,
+          borderColor: ink.border,
+          alignItems: "center",
+          justifyContent: "center",
+        }, style]}
+      >
+        <Text style={[{
+          color: ink.deep,
+          fontFamily: FO,
+          fontSize: 12,
+          textAlign: "center",
+        }, textStyle]}>
+          {prettyTime(value || fallback)}
+        </Text>
+      </TouchableOpacity>
+      {Platform.OS === "ios" && (
+        <Modal visible={iosOpen} transparent animationType="fade" onRequestClose={() => setIosOpen(false)}>
+          <Pressable
+            onPress={() => setIosOpen(false)}
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.42)", justifyContent: "flex-end" }}
+          >
+            <Pressable
+              onPress={(e) => e.stopPropagation?.()}
+              style={{
+                backgroundColor: paper.card,
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                paddingTop: 16,
+                paddingHorizontal: 18,
+                paddingBottom: 32,
+                borderWidth: 1,
+                borderColor: ink.border,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <TouchableOpacity onPress={() => setIosOpen(false)} style={{ paddingVertical: 10, paddingHorizontal: 4 }}>
+                  <Text style={{ fontFamily: FB, fontSize: 15, color: ink.mid }}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={{ fontFamily: FK, fontSize: 18, color: ink.deep }}>Choose time</Text>
+                <TouchableOpacity onPress={confirmIos} style={{ paddingVertical: 10, paddingHorizontal: 4 }}>
+                  <Text style={{ fontFamily: FK, fontSize: 15, color: earn.green }}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={draftDate}
+                mode="time"
+                display="spinner"
+                is24Hour={false}
+                textColor={ink.deep}
+                themeVariant={dark ? "dark" : "light"}
+                onChange={(_, selectedDate) => {
+                  if (selectedDate) setDraftDate(selectedDate);
+                }}
+                style={{ alignSelf: "stretch" }}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
+    </>
+  );
+}
 const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const recurrenceDaysFor = frequency => {
   if (frequency === "weekdays") return [1, 2, 3, 4, 5];
@@ -414,13 +541,38 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
   const [aiCheck,  setAiCheck]  = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [evalError,  setEvalError]  = useState("");
+  const [saved,      setSaved]      = useState(false);
   const [recur,    setRecur]    = useState("none");
   const [recurDays, setRecurDays] = useState([new Date().getDay()]);
   const [recurTime, setRecurTime] = useState(() => {
     const d = new Date();
     d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0);
-    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    return minsToTime(d.getHours() * 60 + d.getMinutes());
   });
+
+  const entrance = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(entrance, {
+      toValue: 1,
+      useNativeDriver: true,
+      damping: 18,
+      stiffness: 180,
+      mass: 0.8,
+    }).start();
+  }, [entrance]);
+
+  const closeWithAnimation = useCallback((success = false) => {
+    if (success) setSaved(true);
+    const delay = success ? 360 : 0;
+    setTimeout(() => {
+      Animated.timing(entrance, {
+        toValue: 0,
+        duration: success ? 260 : 210,
+        useNativeDriver: true,
+      }).start(() => onClose?.());
+    }, delay);
+  }, [entrance, onClose]);
 
   // Swipe right to dismiss
   const slideX   = useRef(new Animated.Value(0)).current;
@@ -434,7 +586,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
       },
       onPanResponderRelease: (_, gs) => {
         if (gs.dx > 100) {
-          Animated.timing(slideX, { toValue: 400, duration: 180, useNativeDriver: true }).start(onClose);
+          Animated.timing(slideX, { toValue: 400, duration: 180, useNativeDriver: true }).start(() => closeWithAnimation(false));
         } else {
           Animated.spring(slideX, { toValue: 0, useNativeDriver: true }).start();
         }
@@ -483,7 +635,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
     if (!isSubActive) {
       const { credits, xp, reasoning } = freeTierCredits(mins);
       onSave(buildTask({ credits, xp, reasoning, aiValued: false }), recurrence);
-      onClose();
+      closeWithAnimation(true);
       return;
     }
 
@@ -495,14 +647,14 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
         category: cat,
       });
       onSave(buildTask({ credits, xp, reasoning, aiValued: true }), recurrence);
-      onClose();
+      closeWithAnimation(true);
     } catch (e) {
       if (e?.code === "subscription_required") {
         // Server told us their sub lapsed mid-session — fall back to the
         // free-tier duration formula (same path a free user would take).
         const { credits, xp, reasoning } = freeTierCredits(mins);
         onSave(buildTask({ credits, xp, reasoning, aiValued: false }), recurrence);
-        onClose();
+        closeWithAnimation(true);
         return;
       }
       setEvalError(e?.message || "AI evaluation failed. Try again.");
@@ -511,9 +663,15 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
   };
 
   const safeTop = Platform.OS === "ios" ? 54 : (StatusBar.currentHeight || 24) + 8;
+  const enterY = entrance.interpolate({ inputRange: [0, 1], outputRange: [28, 0] });
+  const enterScale = entrance.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] });
 
   return (
-    <Animated.View style={{ flex: 1, transform: [{ translateX: slideX }] }}
+    <Animated.View style={{
+      flex: 1,
+      opacity: entrance,
+      transform: [{ translateX: slideX }, { translateY: enterY }, { scale: enterScale }],
+    }}
       {...swipeRef.panHandlers}>
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: paper.warm }}
@@ -526,7 +684,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
           backgroundColor: paper.card,
           borderBottomWidth: 0.5, borderBottomColor: ink.border,
         }}>
-          <TouchableOpacity onPress={onClose} style={{ marginRight: 12 }}>
+          <TouchableOpacity onPress={() => closeWithAnimation(false)} style={{ marginRight: 12 }}>
             <Text style={{ fontSize: 22, color: ink.mid, lineHeight: 26 }}>×</Text>
           </TouchableOpacity>
           <Text style={{ fontFamily: FK, fontSize: 17, color: ink.deep, flex: 1 }}>Add task</Text>
@@ -545,6 +703,20 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
         </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
+          {saved && (
+            <Animated.View style={{
+              marginBottom: 14,
+              padding: 14,
+              borderRadius: 14,
+              backgroundColor: earn.terraLo,
+              borderWidth: 1,
+              borderColor: "rgba(47,171,114,0.28)",
+            }}>
+              <Text style={{ fontFamily: FK, fontSize: 15, color: earn.greenD, textAlign: "center" }}>
+                Task added
+              </Text>
+            </Animated.View>
+          )}
           {/* Title */}
           <View style={{ marginBottom: 14 }}>
             <Text style={[s.label, { color: ink.faint }]}>What needs doing?</Text>
@@ -687,24 +859,22 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
                   <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, flex: 1 }}>
                     Create this task at
                   </Text>
-                  <TextInput
+                  <TimePickerButton
                     value={recurTime}
-                    onChangeText={(t) => setRecurTime(t.replace(/[^\d:]/g, "").slice(0, 5))}
-                    onBlur={() => {
-                      const mins = timeToMins(recurTime);
-                      setRecurTime(mins == null ? "09:00" : minsToTime(mins));
-                    }}
-                    keyboardType="numbers-and-punctuation"
-                    placeholder="09:00"
-                    placeholderTextColor={ink.faint}
+                    onChange={setRecurTime}
+                    fallback="9:00 AM"
+                    dark={dark}
+                    theme={theme}
                     style={{
-                      width: 78,
+                      width: 112,
                       paddingVertical: 8,
                       paddingHorizontal: 10,
                       borderRadius: 10,
                       backgroundColor: paper.warm,
                       borderWidth: 1,
                       borderColor: ink.border,
+                    }}
+                    textStyle={{
                       color: ink.deep,
                       fontFamily: FO,
                       fontSize: 12,
@@ -839,8 +1009,8 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
 
   const QUESTIONS = [
     {
-      q: `Did you actually spend ~${task.minutes} minutes on this?`,
-      sub: "Be honest — estimates are fine, but it should be real time.",
+      q: `Spent ~${task.minutes} minutes?`,
+      sub: "Close enough is fine. Make it real.",
       Icon: ({ size, color }) => (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <SvgCircle cx="12" cy="13" r="8" stroke={color} strokeWidth={2} />
@@ -849,8 +1019,8 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
       ),
     },
     {
-      q: "Was it focused, quality time?",
-      sub: "Not half-distracted, not just started and stopped.",
+      q: "Focused time?",
+      sub: "No background scrolling.",
       Icon: ({ size, color }) => (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <SvgCircle cx="12" cy="12" r="9" stroke={color} strokeWidth={2} />
@@ -869,44 +1039,41 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
   const q = QUESTIONS[step];
 
   return (
-    <Modal visible={!!task} transparent animationType="fade" onRequestClose={onCancel}>
-      <Pressable onPress={onCancel} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "flex-end" }}>
-        <Pressable onPress={(e) => e.stopPropagation?.()} style={{
-          width: "100%", backgroundColor: paper.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-          padding: 28, paddingBottom: Platform.OS === "ios" ? 44 : 28,
-        }}>
-          {/* Step dots */}
-          <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginBottom: 24 }}>
-            {QUESTIONS.map((_, i) => (
-              <View key={i} style={{
-                width: i === step ? 20 : 6, height: 6, borderRadius: 3,
-                backgroundColor: i <= step ? earn.green : ink.ghost,
-              }} />
-            ))}
-          </View>
+    <OriginSheet visible={!!task} onClose={onCancel} align="bottom"
+      sheetStyle={{
+        backgroundColor: paper.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+        padding: 28, paddingBottom: Platform.OS === "ios" ? 44 : 28,
+      }}>
+      {/* Step dots */}
+      <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginBottom: 24 }}>
+        {QUESTIONS.map((_, i) => (
+          <View key={i} style={{
+            width: i === step ? 20 : 6, height: 6, borderRadius: 3,
+            backgroundColor: i <= step ? earn.green : ink.ghost,
+          }} />
+        ))}
+      </View>
 
-          <View style={{ alignItems: "center", marginBottom: 16 }}>
-            <q.Icon size={40} color={earn.green} />
-          </View>
-          <Text style={{ fontFamily: FK, fontSize: 20, color: ink.deep, textAlign: "center", marginBottom: 8 }}>{q.q}</Text>
-          <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid, textAlign: "center", lineHeight: 20, marginBottom: 28 }}>{q.sub}</Text>
+      <View style={{ alignItems: "center", marginBottom: 16 }}>
+        <q.Icon size={40} color={earn.green} />
+      </View>
+      <Text style={{ fontFamily: FK, fontSize: 20, color: ink.deep, textAlign: "center", marginBottom: 8 }}>{q.q}</Text>
+      <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid, textAlign: "center", lineHeight: 20, marginBottom: 28 }}>{q.sub}</Text>
 
-          <TouchableOpacity onPress={confirm} style={{
-            paddingVertical: 15, borderRadius: 14, backgroundColor: earn.green, alignItems: "center", marginBottom: 10,
-          }}>
-            <Text style={{ fontFamily: FK, fontSize: 16, color: dark ? "#16261C" : "#fff" }}>
-              {step < QUESTIONS.length - 1 ? "Yes, next" : "Yes — claim credits"}
-            </Text>
-          </TouchableOpacity>
+      <Pop onPress={confirm} style={{
+        paddingVertical: 15, borderRadius: 14, backgroundColor: earn.green, alignItems: "center", marginBottom: 10,
+      }}>
+        <Text style={{ fontFamily: FK, fontSize: 16, color: dark ? "#16261C" : "#fff" }}>
+          {step < QUESTIONS.length - 1 ? "Yes" : "Claim credits"}
+        </Text>
+      </Pop>
 
-          <TouchableOpacity onPress={onCancel} style={{ paddingVertical: 12, alignItems: "center" }}>
-            <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid }}>
-              {step === 0 ? "Not really, cancel" : "No, cancel"}
-            </Text>
-          </TouchableOpacity>
-        </Pressable>
-      </Pressable>
-    </Modal>
+      <TouchableOpacity onPress={onCancel} style={{ paddingVertical: 12, alignItems: "center" }}>
+        <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid }}>
+          {step === 0 ? "Cancel" : "No"}
+        </Text>
+      </TouchableOpacity>
+    </OriginSheet>
   );
 }
 
@@ -922,7 +1089,8 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
     if (visible) setSelected(options[0] || null);
   }, [visible, maxMins]);
 
-  if (!visible) return null;
+  // No early return on !visible — OriginSheet manages mount/unmount so the
+  // close animation can play out.
 
   const confirm = () => {
     if (!selected || selected > maxMins) return;
@@ -930,100 +1098,60 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={s2.backdrop}>
-        <Pressable onPress={(e) => e.stopPropagation?.()} style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
-          <Text style={[s2.kicker, { color: ink.faint }]}>SCREEN TIME</Text>
-          <Text style={[s2.panelTitle, { color: ink.deep }]}>Reduce your balance</Text>
-          <Text style={[s2.panelText, { color: ink.mid }]}>
-            Choose how much time to give back. This can only subtract from what you already have.
-          </Text>
-          {maxMins < 1 ? (
-            <Text style={[s2.emptyText, { color: ink.faint }]}>You do not have any screen time to reduce.</Text>
-          ) : (
-            <View style={s2.amountGrid}>
-              {options.map(m => (
-                <TouchableOpacity
-                  key={m}
-                  onPress={() => setSelected(m)}
-                  style={[
-                    s2.amountPill,
-                    { borderColor: ink.border, backgroundColor: paper.sand },
-                    selected === m && { borderColor: earn.sage, backgroundColor: earn.sageLo },
-                  ]}
-                >
-                  <Text style={[s2.amountText, { color: selected === m ? earn.sage : ink.deep }]}>{m}m</Text>
-                </TouchableOpacity>
-              ))}
-              {maxMins > 0 && !options.includes(maxMins) && (
-                <TouchableOpacity
-                  onPress={() => setSelected(maxMins)}
-                  style={[
-                    s2.amountPill,
-                    { borderColor: ink.border, backgroundColor: paper.sand },
-                    selected === maxMins && { borderColor: earn.sage, backgroundColor: earn.sageLo },
-                  ]}
-                >
-                  <Text style={[s2.amountText, { color: selected === maxMins ? earn.sage : ink.deep }]}>All</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+    <OriginSheet visible={visible} onClose={onClose} align="bottom"
+      sheetStyle={[s2.panel, s2.bottomSheetPanel, { backgroundColor: paper.card, borderColor: ink.border }]}>
+      <Text style={[s2.kicker, { color: ink.faint }]}>SCREEN TIME</Text>
+      <Text style={[s2.panelTitle, { color: ink.deep }]}>Remove time</Text>
+      <Text style={[s2.panelText, { color: ink.mid }]}>
+        Give back earned minutes.
+      </Text>
+      {maxMins < 1 ? (
+        <Text style={[s2.emptyText, { color: ink.faint }]}>No time to remove.</Text>
+      ) : (
+        <View style={s2.amountGrid}>
+          {options.map(m => (
+            <Pop
+              key={m}
+              onPress={() => setSelected(m)}
+              style={[
+                s2.amountPill,
+                { borderColor: ink.border, backgroundColor: paper.sand },
+                selected === m && { borderColor: earn.sage, backgroundColor: earn.sageLo },
+              ]}
+            >
+              <Text style={[s2.amountText, { color: selected === m ? earn.sage : ink.deep }]}>{m}m</Text>
+            </Pop>
+          ))}
+          {maxMins > 0 && !options.includes(maxMins) && (
+            <Pop
+              onPress={() => setSelected(maxMins)}
+              style={[
+                s2.amountPill,
+                { borderColor: ink.border, backgroundColor: paper.sand },
+                selected === maxMins && { borderColor: earn.sage, backgroundColor: earn.sageLo },
+              ]}
+            >
+              <Text style={[s2.amountText, { color: selected === maxMins ? earn.sage : ink.deep }]}>All</Text>
+            </Pop>
           )}
-          <View style={s2.actions}>
-            <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, { borderColor: ink.border }]}>
-              <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={confirm} disabled={!selected} style={[s2.solidBtn, { backgroundColor: selected ? earn.deep : ink.faint }]}>
-              <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Reduce</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+        </View>
+      )}
+      <View style={[s2.actions, s2.quickActions]}>
+        <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, s2.quickActionBtn, { borderColor: ink.border }]}>
+          <Text numberOfLines={1} style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={confirm} disabled={!selected} style={[s2.solidBtn, s2.quickActionBtn, { backgroundColor: selected ? earn.deep : ink.faint }]}>
+          <Text numberOfLines={1} style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Reduce</Text>
+        </TouchableOpacity>
+      </View>
+    </OriginSheet>
   );
 }
 
 const QUICK_SLIDES = [
-  {
-    title: "Pause for a second.",
-    body: "This button is meant for real resets, not autopilot. A task will feel better if you can do one.",
-  },
-  {
-    title: "This is unearned time.",
-    body: "You can take it, but it will not give XP or progress. It is only a shortcut to more screen time.",
-  },
-  {
-    title: "Your future self still pays for it.",
-    body: "Fifteen minutes can disappear fast. Make sure this is worth giving away your attention.",
-  },
-  {
-    title: "You only get three today.",
-    body: "Using one now means having fewer emergency resets later when you may actually need it.",
-  },
-  {
-    title: "Try the smallest useful task first.",
-    body: "Two minutes of cleanup, stretching, water, or planning might unlock time without using a reset.",
-  },
-  {
-    title: "Check the urge.",
-    body: "Are you opening an app because you chose to, or because the app pulled you back in?",
-  },
-  {
-    title: "This will not solve avoidance.",
-    body: "If there is one thing you are dodging, name it before you continue.",
-  },
-  {
-    title: "Screen time is easier to spend than earn.",
-    body: "If you take this, spend it on purpose. Do not let it become background scrolling.",
-  },
-  {
-    title: "You can still back out.",
-    body: "Canceling now is a win if you were about to click through without thinking.",
-  },
-  {
-    title: "Final check.",
-    body: "Only continue if you intentionally want these 15 minutes more than you want to earn them.",
-  },
+  { title: "Pause.", body: "This is unearned time." },
+  { title: "Use it well.", body: "Ten minutes goes fast." },
+  { title: "Final check.", body: "Take 10 minutes?" },
 ];
 
 function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
@@ -1061,7 +1189,7 @@ function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
     return () => clearTimeout(id);
   }, [breathing, seconds]);
 
-  if (!visible) return null;
+  // OriginSheet manages mount/unmount; no early return so close anim plays.
 
   const next = () => {
     if (step < QUICK_SLIDES.length - 1) {
@@ -1096,9 +1224,9 @@ function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
   const slide = QUICK_SLIDES[step] || QUICK_SLIDES[0];
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={s2.backdrop}>
-        <Animated.View onTouchStart={(e) => e.stopPropagation?.()} style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border, transform: [{ scale }] }]}>
+    <OriginSheet visible={visible} onClose={onClose} align="bottom"
+      sheetStyle={[s2.panel, s2.bottomSheetPanel, { backgroundColor: paper.card, borderColor: ink.border }]}>
+      <Animated.View style={{ transform: [{ scale }] }}>
           <Text style={[s2.kicker, { color: ink.faint }]}>RESET MINUTES</Text>
           <View style={[s2.progressTrack, { backgroundColor: ink.ghost }]}>
             <Animated.View style={[s2.progressFill, { width: `${progress * 100}%`, backgroundColor: earn.sage }]} />
@@ -1128,22 +1256,21 @@ function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
               </Animated.View>
               <Text style={[s2.panelTitle, { color: primaryText, textAlign: "center" }]}>Take deep breaths</Text>
               <Text style={[s2.panelText, { color: secondaryText, textAlign: "center" }]}>
-                In through the nose. Out slowly. You can continue in {seconds}s.
+                Continue in {seconds}s.
               </Text>
             </View>
           )}
-          <View style={s2.actions}>
-            <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, { borderColor: ink.border }]}>
-              <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
+          <View style={[s2.actions, s2.quickActions]}>
+            <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, s2.quickActionBtn, { borderColor: ink.border }]}>
+              <Text numberOfLines={1} style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={breathing ? finish : next} disabled={breathing && seconds > 0} style={[s2.solidBtn, { backgroundColor: breathing && seconds > 0 ? disabledBtn : earn.deep }]}>
-              <Text style={[s2.solidText, { color: breathing && seconds > 0 ? disabledBtnText : (dark ? "#1F3A2A" : "#FAF6EE") }]}>{breathing ? "Claim 15m" : "Continue"}</Text>
+            <TouchableOpacity onPress={breathing ? finish : next} disabled={breathing && seconds > 0} style={[s2.solidBtn, s2.quickActionBtn, { backgroundColor: breathing && seconds > 0 ? disabledBtn : earn.deep }]}>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[s2.solidText, { color: breathing && seconds > 0 ? disabledBtnText : (dark ? "#1F3A2A" : "#FAF6EE") }]}>{breathing ? "Claim 10m" : "Continue"}</Text>
             </TouchableOpacity>
           </View>
           <Text style={[s2.footerHint, { color: ink.faint }]}>{Math.max(0, 3 - usedToday)} left today</Text>
-        </Animated.View>
-      </Pressable>
-    </Modal>
+      </Animated.View>
+    </OriginSheet>
   );
 }
 
@@ -1277,16 +1404,16 @@ function LevelUpModal({ level, dark, onClose }) {
           <Text style={[s2.panelText, { color: ink.mid, textAlign: "center", marginBottom: 20 }]}>
             Nice work. Your progress grew into a new tier.
           </Text>
-          <TouchableOpacity onPress={onClose} activeOpacity={0.86} style={[s2.solidBtn, { width: "100%", backgroundColor: earn.deep }]}>
+          <Pop onPress={onClose} style={[s2.solidBtn, { width: "100%", backgroundColor: earn.deep }]}>
             <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Continue</Text>
-          </TouchableOpacity>
+          </Pop>
         </Animated.View>
       </Pressable>
     </Modal>
   );
 }
 
-function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onReduceScreenTime, onQuickGrant, quickGrantCount, onSwipeLockChange, onDemoLevelUp, dark }) {
+function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onReduceScreenTime, onQuickGrant, quickGrantCount, onSwipeLockChange, dark }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Text color that sits on a `deep` (primary) button. In dark mode the deep
@@ -1517,7 +1644,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
               minimumFontScale={0.88}
               style={{ flex: 1, fontFamily: FF.bodyBold, fontSize: 14, color: ink.deep }}
             >
-              Complete a task to start earning
+              Start earning
             </Text>
             <Text style={{ fontFamily: FF.serifReg, fontSize: 22, color: ink.faint, marginTop: -2 }}>›</Text>
           </TouchableOpacity>
@@ -1567,7 +1694,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
                 minimumFontScale={0.82}
                 style={{ fontFamily: FF.bodyMed, fontSize: 13, color: quickGrantCount < 3 ? earn.sage : ink.faint, textAlign: "center" }}
               >
-                Take 15m · {Math.max(0, 3 - quickGrantCount)} left
+                Take 10m · {Math.max(0, 3 - quickGrantCount)} left
               </Text>
             </TouchableOpacity>
           </View>
@@ -1607,26 +1734,6 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
         </TouchableOpacity>
       </Animated.View>
 
-      <TouchableOpacity
-        onPress={onDemoLevelUp}
-        activeOpacity={0.82}
-        style={{
-          alignSelf: "flex-start",
-          marginTop: -8,
-          marginBottom: 14,
-          paddingVertical: 8,
-          paddingHorizontal: 12,
-          borderRadius: 999,
-          backgroundColor: earn.sageLo,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: ink.hairline,
-        }}
-      >
-        <Text style={{ fontFamily: FF.bodyMed, fontSize: 11, color: earn.sage }}>
-          Demo level up
-        </Text>
-      </TouchableOpacity>
-
       {tasks.length === 0 && (
         <Animated.View style={{
           opacity: listOp,
@@ -1663,7 +1770,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
             marginBottom: 6,
             letterSpacing: -0.4,
           }}>
-            No tasks yet
+            No tasks
           </Text>
           <Text style={{
             fontFamily: FF.body,
@@ -1672,7 +1779,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
             marginBottom: 22,
             textAlign: "center",
           }}>
-            Add the work you actually need to do today.
+            Add one to begin.
           </Text>
           <TouchableOpacity
             onPress={onAdd}
@@ -1684,7 +1791,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
             }}
           >
             <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
-            <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: onDeep }}>Add your first task</Text>
+            <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: onDeep }}>Add task</Text>
           </TouchableOpacity>
           <Text style={{
             fontFamily: FF.body,
@@ -1693,7 +1800,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
             marginTop: 16,
             letterSpacing: 0.2,
           }}>
-            Stay focused. Earn time.
+            Earn time.
           </Text>
         </Animated.View>
       )}
@@ -1907,13 +2014,13 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
           marginBottom: 8,
           letterSpacing: -0.4,
         }}>
-          No stats yet
+          No stats
         </Text>
         <Text style={{
           fontFamily: FF.body, fontSize: 13, color: ink.mid,
           textAlign: "center", marginBottom: 28, lineHeight: 20,
         }}>
-          Add a task to start tracking{"\n"}your progress today.
+          Complete a task first.
         </Text>
         <TouchableOpacity
           onPress={onAddTask}
@@ -1925,7 +2032,7 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
           }}
         >
           <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
-          <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: onDeep }}>Add your first task</Text>
+          <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: onDeep }}>Add task</Text>
         </TouchableOpacity>
       </View>
     );
@@ -1945,10 +2052,10 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
         letterSpacing: -0.4,
         marginBottom: 4,
       }}>
-        Your growth
+        Growth
       </Text>
       <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, marginBottom: 22 }}>
-        Every focused minute becomes part of the record.
+        Today's record.
       </Text>
 
       {/* Level card — editorial */}
@@ -2088,8 +2195,8 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   const [draft, setDraft] = useState(rules || []);
-  const [start, setStart] = useState("22:00");
-  const [end, setEnd] = useState("07:00");
+  const [start, setStart] = useState("10:00 PM");
+  const [end, setEnd] = useState("7:00 AM");
 
   useEffect(() => {
     if (visible) setDraft(rules || []);
@@ -2099,7 +2206,7 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
     const sM = timeToMins(start);
     const eM = timeToMins(end);
     if (sM == null || eM == null || sM === eM) {
-      Alert.alert("Blocked hours", "Use valid 24-hour times like 22:00 and 07:00.");
+      Alert.alert("Blocked hours", "Use times like 10:00 PM and 7:00 AM.");
       return;
     }
     setDraft(list => [
@@ -2118,9 +2225,9 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
       <Pressable onPress={onClose} style={s2.backdrop}>
         <Pressable onPress={(e) => e.stopPropagation?.()} style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
           <Text style={[s2.kicker, { color: ink.faint }]}>BLOCKED HOURS</Text>
-          <Text style={[s2.panelTitle, { color: ink.deep }]}>Recurring zero-time windows</Text>
+          <Text style={[s2.panelTitle, { color: ink.deep }]}>Blocked hours</Text>
           <Text style={[s2.panelText, { color: ink.mid }]}>
-            During these hours Drift treats your available screen time as 0 and keeps blocked apps shielded.
+            Balance is 0 during these windows.
           </Text>
 
           <View style={{ gap: 8, marginBottom: 14 }}>
@@ -2178,23 +2285,22 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
             ].map(([label, value, setter]) => (
               <View key={label} style={{ flex: 1 }}>
                 <Text style={[s.label, { color: ink.faint }]}>{label}</Text>
-                <TextInput
+                <TimePickerButton
                   value={value}
-                  onChangeText={(t) => setter(t.replace(/[^\d:]/g, "").slice(0, 5))}
-                  onBlur={() => {
-                    const mins = timeToMins(value);
-                    setter(mins == null ? (label === "Start" ? "22:00" : "07:00") : minsToTime(mins));
-                  }}
-                  keyboardType="numbers-and-punctuation"
-                  placeholder="22:00"
-                  placeholderTextColor={ink.faint}
+                  onChange={setter}
+                  fallback={label === "Start" ? "10:00 PM" : "7:00 AM"}
+                  dark={dark}
+                  theme={theme}
                   style={{
+                    width: "100%",
                     paddingVertical: 12,
                     paddingHorizontal: 12,
                     borderRadius: 13,
                     backgroundColor: paper.warm,
                     borderWidth: 1,
                     borderColor: ink.border,
+                  }}
+                  textStyle={{
                     color: ink.deep,
                     fontFamily: FO,
                     fontSize: 13,
@@ -2252,9 +2358,9 @@ function RecurringTasksModal({ visible, templates, dark, onClose, onSave }) {
       <Pressable onPress={onClose} style={s2.backdrop}>
         <Pressable onPress={(e) => e.stopPropagation?.()} style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
           <Text style={[s2.kicker, { color: ink.faint }]}>RECURRING TASKS</Text>
-          <Text style={[s2.panelTitle, { color: ink.deep }]}>Task schedule</Text>
+          <Text style={[s2.panelTitle, { color: ink.deep }]}>Schedule</Text>
           <Text style={[s2.panelText, { color: ink.mid }]}>
-            These tasks appear automatically on Today when their scheduled time and repeat pattern match.
+            Tasks that come back automatically.
           </Text>
 
           <View style={{ gap: 8, marginBottom: 16 }}>
@@ -2358,6 +2464,10 @@ const s2 = StyleSheet.create({
     shadowRadius: 30,
     elevation: 18,
   },
+  bottomSheetPanel: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
   kicker: { fontFamily: FF.kicker, fontSize: 9, letterSpacing: 2.4, marginBottom: 6 },
   panelTitle: { fontFamily: FF.display, fontSize: 30, letterSpacing: -0.4, marginBottom: 8 },
   panelText: { fontFamily: FF.body, fontSize: 13, lineHeight: 20, marginBottom: 18 },
@@ -2373,6 +2483,13 @@ const s2 = StyleSheet.create({
   },
   amountText: { fontFamily: FF.bodyMed, fontSize: 13 },
   actions: { flexDirection: "row", gap: 10, marginTop: 4 },
+  quickActions: { alignItems: "stretch" },
+  quickActionBtn: {
+    flex: 1,
+    height: 48,
+    paddingVertical: 0,
+    justifyContent: "center",
+  },
   ghostBtn: {
     flex: 1,
     borderWidth: 1,
@@ -2521,6 +2638,98 @@ const TABS = [
 ];
 
 // ── Root App ─────────────────────────────────────────────────
+// ── Theme toggle with spin + crossfade ──────────────────────
+function ThemeToggleButton({ darkMode, onToggle, color }) {
+  const spin = useRef(new Animated.Value(0)).current;
+  const turns = useRef(0);
+
+  const handle = () => {
+    turns.current += 1;
+    Animated.spring(spin, {
+      toValue: turns.current, useNativeDriver: true, damping: 11, stiffness: 120, mass: 0.9,
+    }).start();
+    onToggle();
+  };
+
+  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "180deg"] });
+
+  return (
+    <Pop onPress={handle} hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+      style={{ width: 38, height: 38, alignItems: "center", justifyContent: "center" }}>
+      <Animated.View style={{ transform: [{ rotate }] }}>
+        {darkMode ? (
+          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+            <SvgCircle cx="12" cy="12" r="4.5" stroke={color} strokeWidth={1.8} />
+            <Path d="M12 2.5v2M12 19.5v2M4.5 4.5l1.4 1.4M18.1 18.1l1.4 1.4M2.5 12h2M19.5 12h2M4.5 19.5l1.4-1.4M18.1 5.9l1.4-1.4"
+              stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+          </Svg>
+        ) : (
+          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+            <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+              stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+        )}
+      </Animated.View>
+    </Pop>
+  );
+}
+
+// ── Bottom-nav tab with bounce-on-select + press feedback ────
+function TabItem({ tab: t, active, onPress, sage, sageLo, mid }) {
+  const iconScale = useRef(new Animated.Value(1)).current;
+  const press     = useRef(new Animated.Value(1)).current;
+  const prevActive = useRef(active);
+  const animatePress = (to) => {
+    press.stopAnimation();
+    Animated.spring(press, {
+      toValue: to,
+      useNativeDriver: true,
+      damping: 18,
+      stiffness: 420,
+      overshootClamping: true,
+    }).start();
+  };
+
+  // Little upward bounce whenever this tab becomes active
+  useEffect(() => {
+    if (active && !prevActive.current) {
+      iconScale.setValue(0.7);
+      Animated.spring(iconScale, {
+        toValue: 1, useNativeDriver: true, damping: 9, stiffness: 320, mass: 0.7,
+      }).start();
+    }
+    prevActive.current = active;
+  }, [active]);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      unstable_pressDelay={0}
+      onPressIn={() => animatePress(0.9)}
+      onPressOut={() => animatePress(1)}
+      style={{ flex: 1 }}
+    >
+      <Animated.View style={{
+        alignItems: "center", justifyContent: "center", gap: 4,
+        paddingVertical: 9, paddingHorizontal: 4, borderRadius: 18,
+        backgroundColor: active ? sageLo : "transparent",
+        transform: [{ scale: press }],
+      }}>
+        <Animated.View style={{ transform: [{ scale: iconScale }] }}>
+          <t.Icon color={active ? sage : mid} size={21} />
+        </Animated.View>
+        <Text numberOfLines={1} style={{
+          fontFamily: active ? FF.bodyMed : FF.body,
+          fontSize: 11, letterSpacing: 0.1,
+          color: active ? sage : mid,
+        }}>
+          {t.label}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     Orbitron_400Regular,
@@ -2594,8 +2803,17 @@ export default function App() {
   const driftInActRef   = useRef(driftInActive);
   const swipeBlockedRef = useRef(false);
   const levelIdxRef     = useRef(null);
+  const appActiveRef    = useRef(true);   // true while app is foregrounded
   useEffect(() => { tabRef.current = tab; }, [tab]);
   useEffect(() => { driftInActRef.current = driftInActive; }, [driftInActive]);
+
+  // Mirror the latest persisted-state values into refs so any async closure
+  // (intervals, timeouts, AppState handlers) can persist without clobbering
+  // newer state. Fixes stale-closure overwrites of tasks/xp from the timer.
+  const tasksRef       = useRef([]);
+  const taskHistoryRef = useRef([]);
+  const totalXpRef     = useRef(0);
+  const creditsRef     = useRef({ balance: 0, earned: 0, spent: 0 });
   useEffect(() => {
     const idx = getLevelIdx(totalXp);
     if (screen !== "app") {
@@ -2735,12 +2953,20 @@ export default function App() {
     // (No setInterval — drain is computed from wall-clock delta on foreground.)
   };
 
-  // Keep `secLeft` visually fresh when the app IS active (read-only — no drain)
+  // Real-time countdown while the app is foregrounded.
+  //
+  // When iOS native blocking is available, the DeviceActivityMonitor extension
+  // counts real restricted-app usage, so JS must NOT tick (it would double-count).
+  // Without native blocking (Expo Go / Android / dev), we tick the balance down
+  // in real time so the timer is visibly alive and testable. We don't tick during
+  // a Drift In focus session (the shield is up — you're not spending).
   useEffect(() => {
     if (screen !== "app") return;
+    // Mirror only; do not consume time while Drift itself is foregrounded.
     const i = setInterval(() => setSecLeft(secRef.current), 1000);
     return () => clearInterval(i);
   }, [screen]);
+
 
   // ── Screen-time drain (works across background AND full kill) ──
   //
@@ -2803,15 +3029,19 @@ export default function App() {
   useEffect(() => {
     const sub = AppState.addEventListener("change", next => {
       if (next !== "active") {
+        appActiveRef.current = false;
         bgTimeRef.current = Date.now();
         persistLastAlive();   // stamp NOW so kill-while-bg still measures correctly
         stopTick();
-      } else if (bgTimeRef.current && screen === "app") {
-        const elapsedSec = Math.floor((Date.now() - bgTimeRef.current) / 1000);
-        bgTimeRef.current = null;
-        try { refreshSub?.(); } catch {}
-        drainBy(elapsedSec);
-        persistLastAlive();
+      } else {
+        appActiveRef.current = true;
+        if (bgTimeRef.current && screen === "app") {
+          const elapsedSec = Math.floor((Date.now() - bgTimeRef.current) / 1000);
+          bgTimeRef.current = null;
+          try { refreshSub?.(); } catch {}
+          drainBy(elapsedSec);
+          persistLastAlive();
+        }
       }
     });
     return () => { sub.remove(); stopTick(); };
@@ -2999,8 +3229,8 @@ export default function App() {
       if (!depleted) return;
       secRef.current = 0;
       setSecLeft(0);
-      await AsyncStorage.removeItem("drift_last_armed_balance").catch(() => {});
-      setLastArmedBalance(-1);
+      await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
+      setLastArmedSeconds(-1);
       setCredits(c => {
         const nc = { ...c, balance: 0, balanceSec: 0,
           spent: Math.min(c.earned, c.spent + (c.balance || 0)) };
@@ -3024,10 +3254,10 @@ export default function App() {
   // remaining time by reopening Drift.
   const shieldStateRef = useRef(null);       // "on" | "off" | null
   // null = not yet loaded; number = last value we armed iOS with; -1 = no current arming.
-  const [lastArmedBalance, setLastArmedBalance] = useState(null);
+  const [lastArmedSeconds, setLastArmedSeconds] = useState(null);
   useEffect(() => {
-    AsyncStorage.getItem("drift_last_armed_balance").then(v => {
-      setLastArmedBalance(v != null ? Number(v) : -1);
+    AsyncStorage.getItem("drift_last_armed_seconds").then(v => {
+      setLastArmedSeconds(v != null ? Number(v) : -1);
     });
   }, []);
 
@@ -3038,16 +3268,16 @@ export default function App() {
         try {
           await stopBalanceMonitoring();
           await applyBlocking([]);
-          if (lastArmedBalance !== -1) {
-            await AsyncStorage.removeItem("drift_last_armed_balance");
-            setLastArmedBalance(-1);
+          if (lastArmedSeconds !== -1) {
+            await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]);
+            setLastArmedSeconds(-1);
           }
           shieldStateRef.current = "on";
         } catch {}
       })();
       return;
     }
-    if (lastArmedBalance === null) return; // waiting for AsyncStorage
+    if (lastArmedSeconds === null) return; // waiting for AsyncStorage
 
     const desired = credits.balance > 0 ? "off" : "on";
     const prevState = shieldStateRef.current;
@@ -3058,9 +3288,9 @@ export default function App() {
           if (prevState !== "on") {
             await stopBalanceMonitoring();
             await applyBlocking([]);
-            if (lastArmedBalance !== -1) {
-              await AsyncStorage.removeItem("drift_last_armed_balance");
-              setLastArmedBalance(-1);
+            if (lastArmedSeconds !== -1) {
+              await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]);
+              setLastArmedSeconds(-1);
             }
           }
         } else {
@@ -3069,26 +3299,28 @@ export default function App() {
           // (Re)arm iOS only when balance went UP — never on launch with the
           // same balance we previously armed for, because iOS already has a
           // monitor running and re-arming would reset its cumulative counter.
-          const shouldArm = lastArmedBalance === -1 || credits.balance > lastArmedBalance;
+          const seconds = typeof credits.balanceSec === "number"
+            ? credits.balanceSec
+            : credits.balance * 60;
+          const currentSeconds = Math.max(60, Math.floor(seconds));
+          const shouldArm = lastArmedSeconds === -1 || currentSeconds !== lastArmedSeconds;
           if (shouldArm) {
             // Pass exact seconds so iOS's threshold matches the displayed
             // balance — passing minutes rounds the threshold up.
-            const seconds = typeof credits.balanceSec === "number"
-              ? credits.balanceSec
-              : credits.balance * 60;
             const res = await startBalanceMonitoring(seconds);
             if (res?.started === false) {
               Alert.alert("Background timer not active", res.reason || "Unknown");
             } else {
-              await AsyncStorage.setItem("drift_last_armed_balance", String(credits.balance));
-              setLastArmedBalance(credits.balance);
+              await AsyncStorage.setItem("drift_last_armed_seconds", String(currentSeconds));
+              await AsyncStorage.removeItem("drift_last_armed_balance");
+              setLastArmedSeconds(currentSeconds);
             }
           }
         }
         shieldStateRef.current = desired;
       } catch {}
     })();
-  }, [credits.balance, driftInActive, blockedHoursActive, lastArmedBalance]);
+  }, [credits.balance, credits.balanceSec, driftInActive, blockedHoursActive, lastArmedSeconds]);
 
   // Refresh Screen Time auth status when the account sheet opens
   useEffect(() => {
@@ -3251,9 +3483,15 @@ export default function App() {
           setTaskHistory(prev => mergeCompletedTasks(prev, history));
           if (p.date !== todayKey()) {
             if (!remoteStatsApplied) setTotalXp(prev => Math.max(prev, p.totalXp || 0));
+            const resetCredits = { balance: 0, balanceSec: 0, earned: 0, spent: 0 };
+            setCredits(resetCredits);
+            secRef.current = 0;
+            setSecLeft(0);
+            AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
+            syncProfileStats(uid, { balanceSeconds: 0 }).catch(() => {});
             if (!remoteTasksApplied) {
               setTasks(savedTasks.filter(t => isTodayTask(t)));
-              persist({ tasks: savedTasks, taskHistory: history, totalXp: p.totalXp || 0 });
+              persist({ tasks: savedTasks, taskHistory: history, totalXp: p.totalXp || 0, credits: resetCredits });
             }
           } else {
             const rawSc = p.credits || { balance: 0, earned: 0, spent: 0 };
@@ -3287,13 +3525,19 @@ export default function App() {
     })();
   }, []);
 
+  // Keep refs current every render so persist() never writes stale data.
+  tasksRef.current       = tasks;
+  taskHistoryRef.current = taskHistory;
+  totalXpRef.current     = totalXp;
+  creditsRef.current     = credits;
+
   const persist = async upd => {
     try {
       await storage.set("drift_v4", JSON.stringify({
-        tasks:       upd.tasks       ?? tasks,
-        taskHistory: upd.taskHistory ?? taskHistory,
-        credits:     upd.credits     ?? credits,
-        totalXp:     upd.totalXp     ?? totalXp,
+        tasks:       upd.tasks       ?? tasksRef.current,
+        taskHistory: upd.taskHistory ?? taskHistoryRef.current,
+        credits:     upd.credits     ?? creditsRef.current,
+        totalXp:     upd.totalXp     ?? totalXpRef.current,
         date:        todayKey(),
       }));
     } catch {}
@@ -3360,7 +3604,7 @@ export default function App() {
         aiValued: !!t.aiValued,
         aiReasoning: t.aiReasoning || "",
         frequency: recurrence.frequency || "daily",
-        time: recurrence.time || "09:00",
+        time: recurrence.time || "9:00 AM",
         days: recurrence.days || recurrenceDaysFor(recurrence.frequency) || null,
         enabled: true,
         createdDate: todayKey(),
@@ -3392,8 +3636,8 @@ export default function App() {
   const handleDriftInStart  = async () => {
     setDriftInActive(true);
     try { await stopBalanceMonitoring(); } catch {}
-    await AsyncStorage.removeItem("drift_last_armed_balance").catch(() => {});
-    setLastArmedBalance(-1);
+    await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
+    setLastArmedSeconds(-1);
 
     // Warn if no apps are blocked — common foot-gun where users skip the picker
     // and assume the focus session is enforced. Beta testers will report this.
@@ -3468,8 +3712,8 @@ export default function App() {
     const lostMins   = Math.min(Math.ceil(prevSec / 60), penaltyMins || 0);
     secRef.current = newSec;
     setSecLeft(newSec);
-    AsyncStorage.removeItem("drift_last_armed_balance").catch(() => {});
-    setLastArmedBalance(-1);
+    AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
+    setLastArmedSeconds(-1);
     const nc = {
       ...credits,
       balance: Math.ceil(newSec / 60),
@@ -3534,7 +3778,11 @@ export default function App() {
     setQuickGrantCount(newCount);
     setShowQuickGrant(false);
 
-    const addedMins = 15;
+    // Acts like completing a 10-minute light activity: a 10-min light task
+    // (0.5x multiplier) grants 5 minutes of screen time. We route it through
+    // the same applyBalanceSeconds path a real task uses so credits/ledger/
+    // sync all behave identically.
+    const addedMins = 10;
     const newSec = secRef.current + addedMins * 60;
     const nextCredits = {
       ...credits,
@@ -3598,6 +3846,7 @@ export default function App() {
       "drift_v4",
       "drift_beta_preview_as_free",
       "drift_blocked_apps",
+      "drift_last_armed_seconds",
       "drift_last_armed_balance",
       "drift_last_alive",
     ]).catch(() => {});
@@ -3614,6 +3863,18 @@ export default function App() {
     // Drop them straight into the sign-in screen
     setSignInOnly(true);
     setOnboarding(true);
+  };
+
+  const deleteAccount = async () => {
+    try {
+      const { error } = await supabase.functions.invoke("delete-account", {});
+      if (error) throw error;
+      await signOut();
+      Alert.alert("Account deleted", "Your Drift account has been anonymized and signed out.");
+    } catch (e) {
+      Alert.alert("Could not delete account", e?.message || "Please try again later.");
+      throw e;
+    }
   };
 
   if (onboarding) return (
@@ -3672,7 +3933,7 @@ export default function App() {
 
   return (
     <ThemeContext.Provider value={{ dark: darkMode, theme: activeTheme }}>
-    <View style={{
+    <TouchTracker style={{
       flex: 1,
       paddingTop: Constants.statusBarHeight,
       backgroundColor: driftInActive ? th_ink.void : th_paper.warm,
@@ -3688,7 +3949,7 @@ export default function App() {
       />
 
       {/* Header — hidden during active Drift In session */}
-      {!driftInActive && (
+      {!driftInActive && !showAccount && (
         <View style={{
           flexDirection: "row", alignItems: "center",
           paddingHorizontal: 22, paddingTop: 6, paddingBottom: 8,
@@ -3739,45 +4000,76 @@ export default function App() {
           </View>
 
           {/* Account icon — line style */}
-          <TouchableOpacity
+          <Pop
             onPress={() => setShowAccount(true)}
             hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
             style={{ width: 38, height: 38, alignItems: "center", justifyContent: "center" }}
-            activeOpacity={0.6}
           >
             <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
               <SvgCircle cx="12" cy="8" r="3.6" stroke={th_ink.deep} strokeWidth={1.8} />
               <Path d="M5 21v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1"
                 stroke={th_ink.deep} strokeWidth={1.8} strokeLinecap="round" />
             </Svg>
-          </TouchableOpacity>
+          </Pop>
 
-          {/* Theme toggle — moon/sun line style */}
-          <TouchableOpacity
-            onPress={toggleDark}
-            hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
-            style={{ width: 38, height: 38, alignItems: "center", justifyContent: "center" }}
-            activeOpacity={0.6}
-          >
-            {darkMode ? (
-              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                <SvgCircle cx="12" cy="12" r="4.5" stroke={th_ink.deep} strokeWidth={1.8} />
-                <Path d="M12 2.5v2M12 19.5v2M4.5 4.5l1.4 1.4M18.1 18.1l1.4 1.4M2.5 12h2M19.5 12h2M4.5 19.5l1.4-1.4M18.1 5.9l1.4-1.4"
-                  stroke={th_ink.deep} strokeWidth={1.8} strokeLinecap="round" />
-              </Svg>
-            ) : (
-              <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-                  stroke={th_ink.deep} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
-            )}
-          </TouchableOpacity>
+          {/* Theme toggle — moon/sun with a satisfying spin on toggle */}
+          <ThemeToggleButton darkMode={darkMode} onToggle={toggleDark} color={th_ink.deep} />
         </View>
       )}
 
       {/* Content — an animated horizontal filmstrip. All four tabs stay mounted
           (so the Drift In session persists across tab switches); we just slide
           the row left/right. translateX follows the finger during a swipe. */}
+      {showAccount ? (
+        <ProfileScreen
+          userId={userId}
+          userEmail={userEmail}
+          username={myUsername}
+          subActive={proAccess}
+          trialDays={trialDays}
+          screenTimeStatus={screenTimeStatus}
+          dark={darkMode}
+          beta={beta}
+          inAppPage
+          onClose={() => setShowAccount(false)}
+          onProfileChange={(profile) => {
+            if (profile?.username) {
+              setUserName(profile.username);
+              AsyncStorage.setItem("drift_username", profile.username);
+            }
+          }}
+          onOpenBlockedApps={() => { setFirstTimeBlockedApps(false); setShowBlockedApps(true); }}
+          onOpenBlockedHours={() => {
+            if (!proAccess) setShowPaywall(true);
+            else setShowBlockedHours(true);
+          }}
+          onOpenRecurringTasks={() => {
+            if (!proAccess) setShowPaywall(true);
+            else setShowRecurringTasks(true);
+          }}
+          onRequestScreenTime={async () => {
+            const next = await requestScreenTimeAuth();
+            setScreenTimeStatus(next);
+            if (next !== "approved") {
+              Alert.alert("Screen Time", `Status: ${next}. Open Settings -> Screen Time to grant access.`);
+            }
+          }}
+          onUpgrade={async () => {
+            try {
+              await openCheckout();
+            } catch (e) {
+              const raw = (e?.message || "").toLowerCase();
+              const friendly = raw.includes("edge function") || raw.includes("send a request")
+                ? "Payments aren't set up yet. Please try again later."
+                : (e?.message || "Try again.");
+              Alert.alert("Checkout unavailable", friendly);
+            }
+          }}
+          onSignOut={signOut}
+          onDeleteAccount={deleteAccount}
+        />
+      ) : (
+      <>
       <View
         style={{ flex: 1, overflow: "hidden", backgroundColor: driftInActive ? th_ink.void : th_paper.warm }}
         {...tabSwipe.panHandlers}
@@ -3800,7 +4092,6 @@ export default function App() {
               onQuickGrant={() => setShowQuickGrant(true)}
               quickGrantCount={quickGrantCount}
               onSwipeLockChange={setChildSwipeLockedNow}
-              onDemoLevelUp={() => setLevelUp(LEVELS[Math.min(LEVELS.length - 1, getLevelIdx(totalXp) + 1)])}
               dark={darkMode}
             />
           </View>
@@ -3858,41 +4149,22 @@ export default function App() {
           }}>
             {TABS.map(t => {
               const active = tab === t.id;
-              // Every tab: icon on top, label beneath. The active tab gets a
-              // soft sage pill behind the whole stack.
               return (
-                <TouchableOpacity
+                <TabItem
                   key={t.id}
+                  tab={t}
+                  active={active}
                   onPress={() => setTab(t.id)}
-                  activeOpacity={0.7}
-                  style={{
-                    flex: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 4,
-                    paddingVertical: 9,
-                    paddingHorizontal: 4,
-                    borderRadius: 18,
-                    backgroundColor: active ? th_earn.sageLo : "transparent",
-                  }}
-                >
-                  <t.Icon color={active ? th_earn.sage : th_ink.mid} size={21} />
-                  <Text
-                    numberOfLines={1}
-                    style={{
-                      fontFamily: active ? FF.bodyMed : FF.body,
-                      fontSize: 11,
-                      letterSpacing: 0.1,
-                      color: active ? th_earn.sage : th_ink.mid,
-                    }}
-                  >
-                    {t.label}
-                  </Text>
-                </TouchableOpacity>
+                  sage={th_earn.sage}
+                  sageLo={th_earn.sageLo}
+                  mid={th_ink.mid}
+                />
               );
             })}
           </View>
         </View>
+      )}
+      </>
       )}
 
       {/* Add task overlay */}
@@ -3932,57 +4204,6 @@ export default function App() {
         </Modal>
       )}
 
-      {/* Profile page */}
-      <Modal visible={showAccount} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowAccount(false)}>
-        <ProfileScreen
-          userId={userId}
-          userEmail={userEmail}
-          username={myUsername}
-          subActive={proAccess}
-          trialDays={trialDays}
-          screenTimeStatus={screenTimeStatus}
-          dark={darkMode}
-          beta={beta}
-          onClose={() => setShowAccount(false)}
-          onProfileChange={(profile) => {
-            if (profile?.username) {
-              setUserName(profile.username);
-              AsyncStorage.setItem("drift_username", profile.username);
-            }
-          }}
-          onOpenBlockedApps={() => { setShowAccount(false); setFirstTimeBlockedApps(false); setShowBlockedApps(true); }}
-          onOpenBlockedHours={() => {
-            setShowAccount(false);
-            if (!proAccess) setShowPaywall(true);
-            else setShowBlockedHours(true);
-          }}
-          onOpenRecurringTasks={() => {
-            setShowAccount(false);
-            if (!proAccess) setShowPaywall(true);
-            else setShowRecurringTasks(true);
-          }}
-          onRequestScreenTime={async () => {
-            const next = await requestScreenTimeAuth();
-            setScreenTimeStatus(next);
-            if (next !== "approved") {
-              Alert.alert("Screen Time", `Status: ${next}. Open Settings -> Screen Time to grant access.`);
-            }
-          }}
-          onUpgrade={async () => {
-            setShowAccount(false);
-            try {
-              await openCheckout();
-            } catch (e) {
-              const raw = (e?.message || "").toLowerCase();
-              const friendly = raw.includes("edge function") || raw.includes("send a request")
-                ? "Payments aren't set up yet. Please try again later."
-                : (e?.message || "Try again.");
-              Alert.alert("Checkout unavailable", friendly);
-            }
-          }}
-          onSignOut={signOut}
-        />
-      </Modal>
       {/* Blocked apps modal (onboarding + ongoing management) */}
       <BlockedAppsModal
         visible={showBlockedApps}
@@ -4042,7 +4263,8 @@ export default function App() {
         onCancel={() => { setShowCheckout(false); setCheckoutUrl(""); }}
         onSuccess={handleCheckoutSuccess}
       />
-    </View>
+    </TouchTracker>
     </ThemeContext.Provider>
   );
 }
+

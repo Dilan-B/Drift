@@ -62,10 +62,10 @@ export async function getTrialStatus(userId, { force = false } = {}) {
 // ── Paywall screen ───────────────────────────────────────────
 
 const FEATURES = [
-  { Icon: TrophyIcon, title: "Challenge friends",    sub: "Dare or compete — winner gets bonus time" },
-  { Icon: ChartIcon,  title: "Full leaderboard",     sub: "See weekly rankings in your friend group"  },
-  { Icon: BoltIcon,   title: "Streak bonuses",       sub: "Complete 7 days straight for double screen time" },
-  { Icon: BellIcon,   title: "Challenge alerts",     sub: "Push notifications when a friend dares you"  },
+  { Icon: TrophyIcon, title: "Challenge friends",    sub: "Dare or compete" },
+  { Icon: ChartIcon,  title: "Leaderboard",     sub: "Weekly rankings"  },
+  { Icon: BoltIcon,   title: "Streak bonuses",       sub: "Double-time streaks" },
+  { Icon: BellIcon,   title: "Challenge alerts",     sub: "Friend dares"  },
 ];
 
 export default function PaywallScreen({ userId, daysLeft, onSubscribe, onClose }) {
@@ -106,7 +106,7 @@ export default function PaywallScreen({ userId, daysLeft, onSubscribe, onClose }
             <>
               <Text style={s.heroTitle}>Your free trial ended</Text>
               <Text style={s.heroSub}>
-                Subscribe to keep challenging friends{"\n"}and see their screen time.
+                Keep Grove challenges.
               </Text>
             </>
           ) : (
@@ -115,7 +115,7 @@ export default function PaywallScreen({ userId, daysLeft, onSubscribe, onClose }
                 {daysLeft} day{daysLeft !== 1 ? "s" : ""} left in your trial
               </Text>
               <Text style={s.heroSub}>
-                After that, challenges are locked.{"\n"}Subscribe to keep going.
+                Subscribe to keep Pro.
               </Text>
             </>
           )}
@@ -138,7 +138,7 @@ export default function PaywallScreen({ userId, daysLeft, onSubscribe, onClose }
         <View style={s.pricingBox}>
           <Text style={s.priceLabel}>Monthly</Text>
           <Text style={s.price}>{MONTHLY_PRICE}<Text style={s.pricePer}> / month</Text></Text>
-          <Text style={s.priceSub}>Cancel anytime · first 7 days free</Text>
+          <Text style={s.priceSub}>Cancel anytime</Text>
         </View>
 
         {/* CTA */}
@@ -204,3 +204,4 @@ const s = StyleSheet.create({
   ctaBtnText: { color: "#fff", fontWeight: "600", fontSize: 16 },
   legalText: { fontSize: 11, color: "#3A6048", textAlign: "center", lineHeight: 17 },
 });
+

@@ -4,7 +4,7 @@
  */
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator, Alert, Image, Linking, Platform, ScrollView, StyleSheet,
+  ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet,
   Text, TextInput, TouchableOpacity, View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
@@ -109,7 +109,7 @@ function BetaSection({ beta, theme }) {
       {!beta.unlocked ? (
         <>
           <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginBottom: 10, lineHeight: 17 }}>
-            Got a beta code? Enter it below to unlock the preview toggle.
+            Enter beta code.
           </Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <TextInput
@@ -160,7 +160,7 @@ function BetaSection({ beta, theme }) {
                 Preview free experience
               </Text>
               <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2, lineHeight: 16 }}>
-                You have Pro via beta access. Flip this to preview the Free experience for testing/feedback.
+                Preview Free while keeping beta access.
               </Text>
             </View>
             <TouchableOpacity
@@ -201,7 +201,8 @@ function BetaSection({ beta, theme }) {
 export default function ProfileScreen({
   userId, userEmail, username, subActive, trialDays, screenTimeStatus,
   dark = false, onClose, onProfileChange, onOpenBlockedApps, onOpenBlockedHours, onOpenRecurringTasks,
-  onRequestScreenTime, onUpgrade, onSignOut,
+  onRequestScreenTime, onUpgrade, onSignOut, onDeleteAccount,
+  inAppPage = false,
   // Beta-tester preview toggle (UX only — no real Pro grant)
   beta,
 }) {
@@ -212,6 +213,8 @@ export default function ProfileScreen({
   const [savingName, setSavingName] = useState(false);
   const [savingPhoto, setSavingPhoto] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [busyActions, setBusyActions] = useState({});
 
   useEffect(() => {
     if (!userId) return;
@@ -324,20 +327,81 @@ export default function ProfileScreen({
     }
   };
 
-  const Row = ({ icon, title, sub, cta, onPress, accent = earn.green }) => (
-    <TouchableOpacity onPress={onPress} style={[s.row, { backgroundColor: paper.warm, borderColor: ink.border }]}>
+  const runAction = async (key, fn) => {
+    if (busyActions[key]) return;
+    try {
+      const result = fn?.();
+      if (result && typeof result.then === "function") {
+        setBusyActions(list => ({ ...list, [key]: true }));
+        await result;
+      }
+    } finally {
+      setBusyActions(list => {
+        const next = { ...list };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
+  const Row = ({ id, icon, title, sub, cta, onPress, accent = earn.green }) => {
+    const key = id || title;
+    const busy = !!busyActions[key];
+    return (
+    <TouchableOpacity disabled={busy} onPress={() => runAction(key, onPress)} style={[s.row, { backgroundColor: paper.warm, borderColor: ink.border, opacity: busy ? 0.65 : 1 }]}>
       <View style={s.rowIcon}>{icon?.(accent)}</View>
       <View style={{ flex: 1 }}>
         <Text style={[s.rowTitle, { color: ink.deep }]}>{title}</Text>
         <Text style={[s.rowSub, { color: ink.mid }]}>{sub}</Text>
       </View>
-      <Text style={[s.rowCta, { color: accent }]}>{cta || "OPEN"}</Text>
+      {busy
+        ? <ActivityIndicator color={accent} />
+        : <Text style={[s.rowCta, { color: accent }]}>{cta || "OPEN"}</Text>}
     </TouchableOpacity>
-  );
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      "Delete account?",
+      "This anonymizes your Drift profile and signs you out. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Are you sure?",
+              "Your username, profile details, tasks, friendships, and feedback will be disconnected from your identity.",
+              [
+                { text: "Keep account", style: "cancel" },
+                {
+                  text: "Delete account",
+                  style: "destructive",
+                  onPress: async () => {
+                    setDeletingAccount(true);
+                    try {
+                      await onDeleteAccount?.();
+                    } finally {
+                      setDeletingAccount(false);
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
 
   return (
-    <View style={[s.screen, { backgroundColor: paper.card }]}>
-      <View style={[s.top, { borderColor: ink.border }]}>
+    <KeyboardAvoidingView
+      style={[s.screen, { backgroundColor: paper.card }]}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <View style={[s.top, { borderColor: ink.border }, inAppPage && { paddingTop: 14 }]}>
         <TouchableOpacity onPress={onClose} style={[s.close, { backgroundColor: paper.warm }]}>
           <CloseIcon size={16} color={ink.deep} />
         </TouchableOpacity>
@@ -345,7 +409,7 @@ export default function ProfileScreen({
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={s.hero}>
           <TouchableOpacity onPress={pickAvatar} disabled={savingPhoto} style={[s.avatar, { backgroundColor: paper.warm, borderColor: ink.border }]}>
             {avatarUrl && !isInlineImage(avatarUrl) ? (
@@ -391,35 +455,40 @@ export default function ProfileScreen({
 
         <View style={{ gap: 10 }}>
           <Row
+            id="blockedApps"
             title="Blocked apps"
-            sub="Apps Shielded during Drift In sessions"
+            sub="Apps blocked during focus"
             icon={(c) => <ShieldKeyIcon size={20} color={c} />}
             onPress={onOpenBlockedApps}
           />
           <Row
+            id="blockedHours"
             title="Blocked hours"
-            sub="Recurring hours where available screen time is forced to 0"
+            sub="Force balance to 0"
             cta={subActive ? "OPEN" : "PRO"}
             icon={(c) => <PhoneIcon size={20} color={c} />}
             onPress={onOpenBlockedHours}
           />
           <Row
+            id="recurringTasks"
             title="Recurring tasks"
-            sub="Manage tasks that reappear automatically each day"
+            sub="Auto-create daily tasks"
             cta={subActive ? "OPEN" : "PRO"}
             icon={(c) => <CheckIcon size={20} color={c} />}
             onPress={onOpenRecurringTasks}
           />
           <Row
+            id="screenTime"
             title="Screen Time access"
-            sub={screenTimeStatus === "approved" ? "Approved and ready" : `Status: ${screenTimeStatus || "unknown"}`}
+            sub={screenTimeStatus === "approved" ? "Approved" : `Status: ${screenTimeStatus || "unknown"}`}
             icon={(c) => <PhoneIcon size={20} color={c} />}
             onPress={onRequestScreenTime}
           />
           {!subActive && (
             <Row
+              id="upgrade"
               title="Upgrade to Pro"
-              sub="AI checks, custom verified challenges, and more"
+              sub="AI checks and challenges"
               cta="UPGRADE"
               accent={earn.terra}
               icon={(c) => <SparkleIcon size={20} color={c} />}
@@ -441,7 +510,15 @@ export default function ProfileScreen({
           </TouchableOpacity>
           <TouchableOpacity onPress={async () => {
             const d = await getDiagnostics();
-            const fmt = (ts) => ts ? new Date(ts * 1000).toLocaleString() : "never";
+            const fmt = (ts) => ts ? new Date(ts * 1000).toLocaleString("en-US", {
+              year: "numeric",
+              month: "numeric",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: true,
+            }) : "never";
             Alert.alert("Screen Time diagnostics",
               `Auth: ${d.authStatus || "?"}\n` +
               `App Group OK: ${d.appGroupAvailable}\n` +
@@ -482,6 +559,16 @@ export default function ProfileScreen({
         >
           <Text style={s.signOutText}>Sign out</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={confirmDeleteAccount}
+          disabled={deletingAccount}
+          style={[s.deleteAccount, deletingAccount && { opacity: 0.65 }]}
+        >
+          {deletingAccount
+            ? <ActivityIndicator color="#E05050" />
+            : <Text style={s.deleteAccountText}>Delete account</Text>}
+        </TouchableOpacity>
       </ScrollView>
 
       <FeedbackModal
@@ -491,7 +578,7 @@ export default function ProfileScreen({
         username={username}
         dark={dark}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -533,4 +620,6 @@ const s = StyleSheet.create({
   legalChevron: { fontSize: 18 },
   signOut: { marginTop: 22, padding: 15, borderRadius: 15, backgroundColor: "rgba(224,80,80,0.11)", alignItems: "center" },
   signOutText: { fontFamily: FK, fontSize: 15, color: "#E05050" },
+  deleteAccount: { marginTop: 10, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: "rgba(224,80,80,0.22)", alignItems: "center" },
+  deleteAccountText: { fontFamily: FK, fontSize: 15, color: "#E05050" },
 });

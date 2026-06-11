@@ -191,6 +191,15 @@ export const UsersIcon = make(({ color, strokeWidth }) => (
   </>
 ));
 
+export const ShareIcon = make(({ color, strokeWidth }) => (
+  <>
+    <Circle cx="18" cy="5" r="3" stroke={color} strokeWidth={strokeWidth} fill="none" />
+    <Circle cx="6" cy="12" r="3" stroke={color} strokeWidth={strokeWidth} fill="none" />
+    <Circle cx="18" cy="19" r="3" stroke={color} strokeWidth={strokeWidth} fill="none" />
+    <Path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+  </>
+));
+
 export const WaveIcon = make(({ color, strokeWidth }) => (
   // hello/wave hand
   <Path d="M7 11V6a1.5 1.5 0 0 1 3 0v4 M10 10V4a1.5 1.5 0 0 1 3 0v6 M13 10V5a1.5 1.5 0 0 1 3 0v8 M16 11V8a1.5 1.5 0 0 1 3 0v6a7 7 0 0 1-13 3l-3-5a1.5 1.5 0 0 1 2.5-1.5z"

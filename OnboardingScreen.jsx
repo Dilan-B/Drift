@@ -89,7 +89,7 @@ const STEPS = [
   {
     id: "age",
     question: "How old are you?",
-    subtitle: "Helps us tailor your challenges.",
+    subtitle: "Sets your baseline.",
     type: "single",
     options: [
       { id: "under18", label: "Under 18" },
@@ -101,13 +101,13 @@ const STEPS = [
   {
     id: "goals",
     question: "What do you want\nfrom Drift?",
-    subtitle: "Pick everything that resonates.",
+    subtitle: "Pick any.",
     type: "multi",
     options: [
-      { id: "cut", label: "Cut screen time", sub: "Reclaim hours every day" },
-      { id: "mornings", label: "Better mornings", sub: "Own your first hour" },
-      { id: "focus", label: "More focus", sub: "Deep work, fewer interruptions" },
-      { id: "addiction", label: "Break the addiction", sub: "Stop compulsive checking" },
+      { id: "cut", label: "Cut screen time", sub: "Reclaim hours" },
+      { id: "mornings", label: "Better mornings", sub: "Own the first hour" },
+      { id: "focus", label: "More focus", sub: "Fewer interruptions" },
+      { id: "addiction", label: "Break the addiction", sub: "Stop checking" },
     ],
   },
   { id: "auth" },
@@ -123,7 +123,7 @@ function WelcomeSlide({ onNext }) {
         <Text style={[styles.welcomeLogo, fontsLoaded && { fontFamily: "Orbitron_700Bold", fontSize: 22, letterSpacing: 4 }]}>DRIFT</Text>
         <Text style={[styles.welcomeHeadline, fontsLoaded && { fontFamily: "Oswald_700Bold", fontSize: 36, lineHeight: 44, letterSpacing: 0.5 }]}>{"Your phone unlocks\nwhen you earn it."}</Text>
         <Text style={styles.welcomeSub}>
-          Complete a physical challenge every morning before your screen time begins.
+          Earn screen time before it starts.
         </Text>
       </View>
       <TouchableOpacity style={styles.ctaBtn} onPress={onNext}>

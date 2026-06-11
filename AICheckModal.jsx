@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, StyleSheet,
-  ScrollView, Modal, ActivityIndicator, Alert, Image, Platform,
+  ScrollView, Modal, ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform,
 } from "react-native";
 import { supabase } from "./supabase";
 import { getTheme } from "./theme";
@@ -217,8 +217,12 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCancel}>
-      <View style={{ flex: 1, backgroundColor: BG }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: BG }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: 24, paddingTop: 36, paddingBottom: 48 }}
           showsVerticalScrollIndicator={false}
         >
@@ -411,7 +415,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
             </>
           )}
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

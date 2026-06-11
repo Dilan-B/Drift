@@ -241,6 +241,9 @@ class ScreenTimeModule: NSObject {
       // doesn't replace events automatically.
       center.stopMonitoring([.driftBalance])
       do {
+        let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
+        defaults?.set(Self.localDayKey(), forKey: "drift_balance_armed_day")
+        defaults?.set(totalSec, forKey: "drift_balance_armed_seconds")
         try center.startMonitoring(
           .driftBalance,
           during: schedule,
@@ -262,6 +265,9 @@ class ScreenTimeModule: NSObject {
     #if canImport(DeviceActivity)
     if #available(iOS 16.0, *) {
       DeviceActivityCenter().stopMonitoring([.driftBalance])
+      let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
+      defaults?.removeObject(forKey: "drift_balance_armed_day")
+      defaults?.removeObject(forKey: "drift_balance_armed_seconds")
       resolve(nil)
       return
     }
@@ -326,6 +332,15 @@ class ScreenTimeModule: NSObject {
     }
   }
   #endif
+
+  private static func localDayKey(_ date: Date = Date()) -> String {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar.current
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone.current
+    formatter.dateFormat = "yyyy-MM-dd"
+    return formatter.string(from: date)
+  }
 
   private static func topViewController(_ base: UIViewController? =
     UIApplication.shared.connectedScenes

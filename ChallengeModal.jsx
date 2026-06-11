@@ -4,7 +4,7 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator, Animated, PanResponder, ScrollView, StyleSheet,
+  ActivityIndicator, Animated, KeyboardAvoidingView, PanResponder, Platform, ScrollView, StyleSheet,
   Pressable, Text, TextInput, TouchableOpacity, Vibration, View,
 } from "react-native";
 import { supabase } from "./supabase";
@@ -170,6 +170,11 @@ export default function ChallengeSheet({
   return (
     <View style={[StyleSheet.absoluteFill, { zIndex: 500 }]}>
       <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: th.overlay }]} onPress={onClose} />
+      <KeyboardAvoidingView
+        pointerEvents="box-none"
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={StyleSheet.absoluteFill}
+      >
       <Animated.View
         {...panResponder.panHandlers}
         style={[s.sheet, { backgroundColor: th.sheet, borderColor: th.border, transform: [{ translateY: slideY }] }]}
@@ -286,11 +291,12 @@ export default function ChallengeSheet({
           <TouchableOpacity onPress={onClose} style={[s.cancelBtn, { borderColor: th.border }]}>
             <Text style={{ color: th.mid, fontFamily: FF.bodyMed, fontSize: 14 }}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={send} disabled={!canSend} style={[s.sendBtn, { backgroundColor: th.deep }, (!canSend || sending) && { opacity: 0.45 }]}>
+          <TouchableOpacity onPress={send} disabled={!canSend || sending} style={[s.sendBtn, { backgroundColor: th.deep }, (!canSend || sending) && { opacity: 0.45 }]}>
             {sending ? <ActivityIndicator color={dark ? "#1F3A2A" : "#FAF6EE"} size="small" /> : <Text style={[s.sendBtnText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Send</Text>}
           </TouchableOpacity>
         </View>
       </Animated.View>
+      </KeyboardAvoidingView>
     </View>
   );
 }

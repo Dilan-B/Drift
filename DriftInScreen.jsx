@@ -13,7 +13,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import Svg, { Circle as SvgCircle } from "react-native-svg";
 import { useFonts, Oswald_400Regular, Oswald_700Bold } from "@expo-google-fonts/oswald";
 import { Orbitron_700Bold, Orbitron_400Regular } from "@expo-google-fonts/orbitron";
-import { getTheme } from "./theme";
+import { FF, getTheme } from "./theme";
 import Slider from "@react-native-community/slider";
 import { SparkleIcon, CheckIcon } from "./Icons";
 import Sprout, { LeafGlyph } from "./SproutArt";
@@ -56,16 +56,16 @@ const fmtSecs = s => {
 const RING_R    = 108;
 const RING_CIRC = 2 * Math.PI * RING_R;
 
-function ProgressRing({ progress }) {
+function ProgressRing({ progress, accent = GREEN, track = "rgba(47,171,114,0.12)" }) {
   const offset = RING_CIRC * (1 - Math.min(1, Math.max(0, progress)));
   return (
     <Svg width={260} height={260} style={StyleSheet.absoluteFill}>
       {/* Track */}
       <SvgCircle cx={130} cy={130} r={RING_R}
-        stroke="rgba(47,171,114,0.12)" strokeWidth={7} fill="none" />
+        stroke={track} strokeWidth={7} fill="none" />
       {/* Fill */}
       <SvgCircle cx={130} cy={130} r={RING_R}
-        stroke={GREEN} strokeWidth={7} fill="none"
+        stroke={accent} strokeWidth={7} fill="none"
         strokeDasharray={RING_CIRC}
         strokeDashoffset={offset}
         strokeLinecap="round"
@@ -73,7 +73,7 @@ function ProgressRing({ progress }) {
       />
       {/* Glow layer (soft duplicate at lower opacity) */}
       <SvgCircle cx={130} cy={130} r={RING_R}
-        stroke={GREEN} strokeWidth={14} fill="none"
+        stroke={accent} strokeWidth={14} fill="none"
         strokeDasharray={RING_CIRC}
         strokeDashoffset={offset}
         strokeLinecap="round"
@@ -315,6 +315,10 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
   const setupMid  = theme.ink.mid;
   const setupBrd  = theme.ink.border;
   const setupFnt  = theme.ink.faint;
+  const focusTheme = getTheme(true);
+  const focusInk = focusTheme.ink;
+  const focusPaper = focusTheme.paper;
+  const focusEarn = focusTheme.earn;
 
   if (phase === "setup") return (
     <ScrollView
@@ -341,11 +345,11 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
 
       {/* Task input */}
       <View style={{ marginBottom: 22 }}>
-        <Text style={[s.fieldLabel, { color: setupFnt }]}>WHAT ARE YOU WORKING ON?</Text>
+        <Text style={[s.fieldLabel, { color: setupFnt }]}>TASK</Text>
         <TextInput
           value={task}
           onChangeText={setTask}
-          placeholder="e.g. Study for exam, Deep work sprint..."
+          placeholder="Deep work sprint"
           placeholderTextColor={setupFnt}
           style={[s.taskInput, {
             backgroundColor: setupCard,
@@ -361,7 +365,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
       {/* Duration — slider 15m to 5h, 15m steps */}
       <View style={{ marginBottom: 26 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-          <Text style={[s.fieldLabel, { color: setupFnt, marginBottom: 0 }]}>SESSION LENGTH</Text>
+          <Text style={[s.fieldLabel, { color: setupFnt, marginBottom: 0 }]}>LENGTH</Text>
           <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 20, color: theme.ink.deep, letterSpacing: -0.4 }}>
             {dur >= 60 ? `${Math.floor(dur/60)}h ${dur%60 ? `${dur%60}m` : ""}`.trim() : `${dur}m`}
           </Text>
@@ -382,7 +386,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
       </View>
 
       {/* Reward preview — warm cards with a low-opacity plant tucked in each */}
-      <Text style={[s.fieldLabel, { color: setupFnt }]}>YOU'LL EARN</Text>
+      <Text style={[s.fieldLabel, { color: setupFnt }]}>EARN</Text>
       <View style={{ flexDirection: "row", gap: 12, marginBottom: 30 }}>
         <RewardCard
           theme={theme}
@@ -417,7 +421,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
           s.ctaBtnText,
           !task.trim() && { color: dark ? "#8FA98F" : "#FAF6EE" },
         ]}>
-          {task.trim() ? "Drift in" : "Enter a task above"}
+          {task.trim() ? "Drift in" : "Add a task"}
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -428,49 +432,62 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
   // ACTIVE SESSION
   // ──────────────────────────────────────────────────────────
   if (phase === "active") return (
-    <View style={{ flex: 1, backgroundColor: BG }}>
+    <View style={[s.focusScreen, { backgroundColor: focusInk.void }]}>
       <StatusBar barStyle="light-content" />
 
-      {/* Task name */}
-      <View style={{ paddingTop: Platform.OS === "ios" ? 64 : 40, paddingHorizontal: 28, alignItems: "center" }}>
-        <Text style={s.activeLabelSmall}>FOCUSED ON</Text>
-        <Text style={s.activeTask} numberOfLines={2}>{task}</Text>
+      <View style={s.focusHeader}>
+        <Text style={[s.focusKicker, { color: focusInk.faint }]}>DEEP FOCUS</Text>
+        <Text style={[s.focusTitle, { color: focusInk.deep }]}>Drift in</Text>
+        <View style={[s.focusTaskPill, { backgroundColor: focusEarn.sageLo, borderColor: focusInk.border }]}>
+          <LeafGlyph size={14} color={focusEarn.sage} />
+          <Text style={[s.focusTaskText, { color: focusInk.deep }]} numberOfLines={2}>{task}</Text>
+        </View>
       </View>
 
-      {/* Ring + timer */}
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-
-        {/* Outer glow */}
+      <View style={s.focusCenter}>
         <Animated.View style={{
-          width: 280, height: 280,
-          borderRadius: 140,
-          backgroundColor: "transparent",
-          shadowColor: GREEN,
-          shadowRadius: 40,
-          shadowOpacity: glowAnim,
-          shadowOffset: { width: 0, height: 0 },
           position: "absolute",
+          opacity: 0.08,
+          transform: [{ scale: pulseAnim }],
         }} />
 
         <Animated.View style={{
-          width: 260, height: 260,
+          width: 260,
+          height: 260,
           alignItems: "center", justifyContent: "center",
           transform: [{ scale: pulseAnim }],
         }}>
-          <ProgressRing progress={progress} />
+          <ProgressRing
+            progress={progress}
+            accent={focusEarn.sage}
+            track="rgba(232,238,223,0.08)"
+          />
+          <View pointerEvents="none" style={{ position: "absolute", opacity: 0.08 }}>
+            <Sprout size={210} tone="night" />
+          </View>
           <View style={{ alignItems: "center", zIndex: 1 }}>
-            <Text style={s.timerText}>{fmtSecs(secLeft)}</Text>
-            <Text style={s.timerSub}>
+            <Text style={[s.timerText, { color: focusInk.deep }]}>{fmtSecs(secLeft)}</Text>
+            <Text style={[s.timerSub, { color: focusInk.mid }]}>
               {Math.floor(elapsed / 60)}m {String(elapsed % 60).padStart(2,"0")}s focused
             </Text>
           </View>
         </Animated.View>
+
+        <View style={s.focusStats}>
+          <View style={[s.focusStat, { backgroundColor: focusPaper.sand, borderColor: focusInk.border }]}>
+            <Text style={[s.focusStatValue, { color: focusEarn.sage }]}>{Math.max(0, Math.floor(secLeft / 60))}m</Text>
+            <Text style={[s.focusStatLabel, { color: focusInk.mid }]}>remaining</Text>
+          </View>
+          <View style={[s.focusStat, { backgroundColor: focusPaper.sand, borderColor: focusInk.border }]}>
+            <Text style={[s.focusStatValue, { color: focusEarn.clay }]}>{Math.round(progress * 100)}%</Text>
+            <Text style={[s.focusStatLabel, { color: focusInk.mid }]}>complete</Text>
+          </View>
+        </View>
       </View>
 
-      {/* Actions */}
-      <View style={{ paddingHorizontal: 24, paddingBottom: Platform.OS === "ios" ? 52 : 32, gap: 12 }}>
-        <TouchableOpacity onPress={completeEarly} style={s.completeBtn}>
-          <Text style={s.completeBtnText}>COMPLETE EARLY</Text>
+      <View style={s.focusActions}>
+        <TouchableOpacity onPress={completeEarly} style={[s.completeBtn, { backgroundColor: focusEarn.deep }]}>
+          <Text style={[s.completeBtnText, { color: focusInk.void }]}>Complete early</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => Alert.alert(
@@ -481,9 +498,9 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
               { text: "Abandon", style: "destructive", onPress: abandon },
             ]
           )}
-          style={{ paddingVertical: 12, alignItems: "center" }}
+          style={s.abandonBtn}
         >
-          <Text style={{ fontFamily: FB, fontSize: 13, color: MUTED }}>Abandon session</Text>
+          <Text style={[s.abandonText, { color: focusInk.mid }]}>Abandon session</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -493,22 +510,25 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
   // DONE
   // ──────────────────────────────────────────────────────────
   return (
-    <View style={{ flex: 1, backgroundColor: BG, alignItems: "center", justifyContent: "center", padding: 32 }}>
+    <View style={[s.doneScreen, { backgroundColor: focusInk.void }]}>
       <StatusBar barStyle="light-content" />
 
-      <View style={{ marginBottom: 16 }}><SparkleIcon size={64} color={GREEN} /></View>
-      <Text style={s.doneTitle}>SESSION COMPLETE</Text>
-      <Text style={s.doneTask}>{task}</Text>
+      <View style={[s.doneHero, { backgroundColor: focusEarn.sageLo, borderColor: focusInk.border }]}>
+        <Sprout size={116} tone="night" />
+      </View>
+      <Text style={[s.doneKicker, { color: focusInk.faint }]}>SESSION COMPLETE</Text>
+      <Text style={[s.doneTitle, { color: focusInk.deep }]}>Good work.</Text>
+      <Text style={[s.doneTask, { color: focusInk.mid }]}>{task}</Text>
 
       {/* Stats */}
-      <View style={{ flexDirection: "row", gap: 14, width: "100%", marginBottom: 40 }}>
-        <View style={s.doneCard}>
-          <Text style={[s.doneVal, { color: GREEN }]}>{creditsEarned}m</Text>
-          <Text style={s.doneCardLabel}>credits earned</Text>
+      <View style={s.doneStats}>
+        <View style={[s.doneCard, { backgroundColor: focusPaper.sand, borderColor: focusInk.border }]}>
+          <Text style={[s.doneVal, { color: focusEarn.sage }]}>{creditsEarned}m</Text>
+          <Text style={[s.doneCardLabel, { color: focusInk.mid }]}>screen time</Text>
         </View>
-        <View style={s.doneCard}>
-          <Text style={[s.doneVal, { color: BLUE }]}>+{xpEarned} XP</Text>
-          <Text style={s.doneCardLabel}>experience</Text>
+        <View style={[s.doneCard, { backgroundColor: focusPaper.sand, borderColor: focusInk.border }]}>
+          <Text style={[s.doneVal, { color: focusEarn.clay }]}>+{xpEarned}</Text>
+          <Text style={[s.doneCardLabel, { color: focusInk.mid }]}>experience</Text>
         </View>
       </View>
 
@@ -520,11 +540,11 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
           setTask("");
           setDur(25);
         }}
-        style={s.collectBtn}
+        style={[s.collectBtn, { backgroundColor: focusEarn.deep }]}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Text style={s.collectBtnText}>COLLECT REWARDS</Text>
-          <CheckIcon size={16} color="#fff" />
+          <Text style={[s.collectBtnText, { color: focusInk.void }]}>Collect rewards</Text>
+          <CheckIcon size={16} color={focusInk.void} />
         </View>
       </TouchableOpacity>
     </View>
@@ -572,28 +592,80 @@ const s = StyleSheet.create({
   ctaBtnText: { fontFamily: "DMSans_500Medium", fontSize: 14, color: "#FAF6EE", letterSpacing: 0.2 },
 
   // Active
-  activeLabelSmall: { fontFamily: FOM, fontSize: 9, color: MUTED, letterSpacing: 2.5, marginBottom: 8 },
-  activeTask:       { fontFamily: FK,  fontSize: 22, color: WHITE, textAlign: "center" },
-  timerText:  { fontFamily: FO,  fontSize: 46, color: WHITE, letterSpacing: 3 },
-  timerSub:   { fontFamily: FOM, fontSize: 11, color: MUTED, marginTop: 8, letterSpacing: 1 },
-  completeBtn: {
-    paddingVertical: 15, borderRadius: 14,
-    backgroundColor: GREEN, alignItems: "center",
+  focusScreen: { flex: 1 },
+  focusHeader: {
+    paddingTop: Platform.OS === "ios" ? 58 : 36,
+    paddingHorizontal: 24,
+    alignItems: "center",
   },
-  completeBtnText: { fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 2 },
+  focusKicker: { fontFamily: FF.kicker, fontSize: 10, letterSpacing: 2.4, marginBottom: 8 },
+  focusTitle: { fontFamily: FF.display, fontSize: 34, letterSpacing: -0.4, marginBottom: 18 },
+  focusTaskPill: {
+    maxWidth: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 18,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+  },
+  focusTaskText: { flexShrink: 1, fontFamily: FF.bodyMed, fontSize: 14, lineHeight: 18, textAlign: "center" },
+  focusCenter: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
+  timerText:  { fontFamily: FF.display, fontSize: 50, letterSpacing: 0 },
+  timerSub:   { fontFamily: FF.bodyMed, fontSize: 12, marginTop: 8 },
+  focusStats: { flexDirection: "row", gap: 12, width: "100%", marginTop: 26 },
+  focusStat: {
+    flex: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  focusStatValue: { fontFamily: FF.display, fontSize: 24, letterSpacing: -0.3 },
+  focusStatLabel: { fontFamily: FF.body, fontSize: 11, marginTop: 3 },
+  focusActions: { paddingHorizontal: 24, paddingBottom: Platform.OS === "ios" ? 48 : 28, gap: 10 },
+  completeBtn: {
+    height: 52,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  completeBtnText: { fontFamily: FF.bodyMed, fontSize: 15 },
+  abandonBtn: { height: 42, alignItems: "center", justifyContent: "center" },
+  abandonText: { fontFamily: FF.bodyMed, fontSize: 13 },
 
   // Done
-  doneTitle: { fontFamily: FO, fontSize: 18, color: GREEN, letterSpacing: 2, marginBottom: 8 },
-  doneTask:  { fontFamily: FK, fontSize: 20, color: WHITE, textAlign: "center", marginBottom: 36 },
+  doneScreen: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 },
+  doneHero: {
+    width: 148,
+    height: 148,
+    borderRadius: 74,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 22,
+    overflow: "hidden",
+  },
+  doneKicker: { fontFamily: FF.kicker, fontSize: 10, letterSpacing: 2.4, marginBottom: 8 },
+  doneTitle: { fontFamily: FF.display, fontSize: 38, letterSpacing: -0.5, marginBottom: 8 },
+  doneTask:  { fontFamily: FF.body, fontSize: 14, lineHeight: 20, textAlign: "center", marginBottom: 30 },
+  doneStats: { flexDirection: "row", gap: 12, width: "100%", marginBottom: 34 },
   doneCard: {
-    flex: 1, backgroundColor: "rgba(255,255,255,0.06)",
-    borderRadius: 14, padding: 18, alignItems: "center",
+    flex: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 16,
+    paddingVertical: 18,
+    alignItems: "center",
   },
-  doneVal:      { fontFamily: FO, fontSize: 22 },
-  doneCardLabel:{ fontFamily: FB, fontSize: 11, color: MUTED, marginTop: 6 },
+  doneVal:      { fontFamily: FF.display, fontSize: 28, letterSpacing: -0.4 },
+  doneCardLabel:{ fontFamily: FF.body, fontSize: 11, marginTop: 4 },
   collectBtn: {
-    width: "100%", paddingVertical: 16, borderRadius: 14,
-    backgroundColor: GREEN, alignItems: "center",
+    width: "100%",
+    height: 52,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  collectBtnText: { fontFamily: FO, fontSize: 13, color: "#fff", letterSpacing: 2 },
+  collectBtnText: { fontFamily: FF.bodyMed, fontSize: 15 },
 });
