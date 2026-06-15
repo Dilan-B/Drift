@@ -110,6 +110,18 @@ const STEPS = [
       { id: "addiction", label: "Break the addiction", sub: "Stop checking" },
     ],
   },
+  {
+    id: "difficulty",
+    question: "How strict should\nDrift be?",
+    subtitle: "Controls how much free screen time the Take button gives you.",
+    type: "single",
+    options: [
+      { id: "easy", label: "Easy", sub: "15 min per tap — gentle start" },
+      { id: "medium", label: "Medium", sub: "7 min per tap — balanced" },
+      { id: "hard", label: "Hard", sub: "3 min per tap — stay disciplined" },
+      { id: "committed", label: "Committed", sub: "1 min per tap — earn everything" },
+    ],
+  },
   { id: "auth" },
 ];
 

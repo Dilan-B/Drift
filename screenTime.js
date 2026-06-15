@@ -64,7 +64,7 @@ export async function clearShield() {
 export async function startBalanceMonitoring(seconds) {
   if (!isAvailable()) return { started: false, reason: "unavailable" };
   try {
-    await Native.startBalanceMonitoring(Math.max(60, Math.floor(seconds)));
+    await Native.startBalanceMonitoring(Math.max(5, Math.floor(seconds)));
     return { started: true };
   } catch (e) {
     return { started: false, reason: e?.message || "unknown" };
@@ -75,6 +75,15 @@ export async function startBalanceMonitoring(seconds) {
 export async function stopBalanceMonitoring() {
   if (!isAvailable()) return;
   try { await Native.stopBalanceMonitoring(); } catch {}
+}
+
+/**
+ * Returns seconds of blocked-app usage iOS counted since last read. Resets counter.
+ */
+export async function consumeUsedSeconds() {
+  if (!isAvailable()) return 0;
+  try { return (await Native.consumeUsedSeconds()) || 0; }
+  catch { return 0; }
 }
 
 /**

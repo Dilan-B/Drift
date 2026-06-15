@@ -238,8 +238,9 @@ export function Pop({ children, onPress, style, scaleTo = 0.94, disabled, hitSlo
       onPressIn={() => press(scaleTo)}
       onPressOut={() => press(1)}
       onPress={onPress}
+      style={[style, { alignItems: "center", justifyContent: "center" }]}
     >
-      <Animated.View style={[style, { transform: [{ scale: s }] }]}>
+      <Animated.View pointerEvents="none" style={{ transform: [{ scale: s }] }}>
         {children}
       </Animated.View>
     </Pressable>

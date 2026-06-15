@@ -100,12 +100,14 @@ serve(async (req: Request) => {
 
     // Compare against the server-side code
     const expectedCode = Deno.env.get("BETA_CODE") || "";
-    if (!expectedCode) {
+    const reviewCode = Deno.env.get("BETA_REVIEW_CODE") || "";
+    if (!expectedCode && !reviewCode) {
       console.error("BETA_CODE env var not set");
       return json({ error: "Beta access not configured" }, 500);
     }
 
-    const matched = constantTimeEq(submittedCode, expectedCode);
+    const matched = constantTimeEq(submittedCode, expectedCode) ||
+      (reviewCode.length > 0 && constantTimeEq(submittedCode, reviewCode));
 
     // Log every attempt (success or fail) for abuse audit
     await admin.from("beta_redeem_attempts").insert({

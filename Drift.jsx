@@ -54,7 +54,7 @@ import {
 import {
   requestScreenTimeAuth, getScreenTimeAuthStatus, isNativeBlockingAvailable,
 } from "./blockedApps";
-import { startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag } from "./screenTime";
+import { startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag, consumeUsedSeconds } from "./screenTime";
 import { supabase, syncScreenTime, safeGetSession } from "./supabase";
 import SocialScreen from "./SocialScreen";
 import PaywallScreen, { initTrial, getTrialStatus } from "./PaywallScreen";
@@ -367,30 +367,14 @@ const storage = {
 };
 
 // ── Credit Ticker ────────────────────────────────────────────
-function CreditTicker({ value, textColor }) {
-  const prevRef = useRef(value);
-  const [show, setShow] = useState(value);
-  const animRef = useRef(null);
-  useEffect(() => {
-    if (value === prevRef.current) return;
-    if (animRef.current) clearInterval(animRef.current);
-    const start = prevRef.current, diff = value - start;
-    const steps = Math.min(Math.abs(diff), 18);
-    let step = 0;
-    animRef.current = setInterval(() => {
-      step++;
-      const cur = Math.round(start + diff * (step / steps));
-      setShow(cur); prevRef.current = cur;
-      if (step >= steps) { clearInterval(animRef.current); setShow(value); prevRef.current = value; }
-    }, 40);
-    return () => { if (animRef.current) clearInterval(animRef.current); };
-  }, [value]);
+function CreditTicker({ value, seconds, textColor }) {
   const color = textColor || "#1A2820";
-  const mins = Math.max(0, Math.round(show || 0));
-  const hrs = Math.floor(mins / 60);
-  const rem = mins % 60;
-  const primary = hrs > 0 ? `${hrs}h` : `${mins}m`;
-  const secondary = hrs > 0 && rem > 0 ? `${rem}m` : "";
+  const totalSec = Math.max(0, seconds != null ? seconds : (value || 0) * 60);
+  const hrs = Math.floor(totalSec / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  const primary = hrs > 0 ? `${hrs}:${pad(mins)}:${pad(secs)}` : `${mins}:${pad(secs)}`;
   return (
     <View style={{ flexDirection: "row", alignItems: "baseline", flexWrap: "nowrap" }}>
       <Text
@@ -399,7 +383,7 @@ function CreditTicker({ value, textColor }) {
         minimumFontScale={0.78}
         style={{
           fontFamily: FF.serif,
-          fontSize: 72,
+          fontSize: hrs > 0 ? 52 : 64,
           lineHeight: 76,
           color,
           letterSpacing: -2.4,
@@ -407,18 +391,6 @@ function CreditTicker({ value, textColor }) {
       >
         {primary}
       </Text>
-      {!!secondary && (
-        <Text style={{
-          fontFamily: FF.serif,
-          fontSize: 38,
-          lineHeight: 44,
-          color,
-          marginLeft: 8,
-          letterSpacing: -0.4,
-        }}>
-          {secondary}
-        </Text>
-      )}
     </View>
   );
 }
@@ -435,6 +407,7 @@ function CreditTicker({ value, textColor }) {
 // existing default and keeps balance with paid users (whose AI typically lands
 // in the 0.5-1.0 range depending on task quality).
 const FREE_TIER_MULTIPLIER = 0.6;
+const DIFFICULTY_GRANT = { easy: 15, medium: 7, hard: 3, committed: 1 };
 
 function freeTierCredits(mins) {
   const credits = Math.max(1, Math.round(mins * FREE_TIER_MULTIPLIER));
@@ -1148,13 +1121,12 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
   );
 }
 
-const QUICK_SLIDES = [
-  { title: "Pause.", body: "This is unearned time." },
-  { title: "Use it well.", body: "Ten minutes goes fast." },
-  { title: "Final check.", body: "Take 10 minutes?" },
-];
-
-function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
+function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant, grantMins }) {
+  const QUICK_SLIDES = [
+    { title: "Pause.", body: "This is unearned time." },
+    { title: "Use it well.", body: `${grantMins} minute${grantMins === 1 ? "" : "s"} goes fast.` },
+    { title: "Final check.", body: `Take ${grantMins} minute${grantMins === 1 ? "" : "s"}?` },
+  ];
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   const [step, setStep] = useState(0);
@@ -1265,7 +1237,7 @@ function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant }) {
               <Text numberOfLines={1} style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={breathing ? finish : next} disabled={breathing && seconds > 0} style={[s2.solidBtn, s2.quickActionBtn, { backgroundColor: breathing && seconds > 0 ? disabledBtn : earn.deep }]}>
-              <Text numberOfLines={1} adjustsFontSizeToFit style={[s2.solidText, { color: breathing && seconds > 0 ? disabledBtnText : (dark ? "#1F3A2A" : "#FAF6EE") }]}>{breathing ? "Claim 10m" : "Continue"}</Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[s2.solidText, { color: breathing && seconds > 0 ? disabledBtnText : (dark ? "#1F3A2A" : "#FAF6EE") }]}>{breathing ? `Claim ${grantMins}m` : "Continue"}</Text>
             </TouchableOpacity>
           </View>
           <Text style={[s2.footerHint, { color: ink.faint }]}>{Math.max(0, 3 - usedToday)} left today</Text>
@@ -1413,7 +1385,7 @@ function LevelUpModal({ level, dark, onClose }) {
   );
 }
 
-function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onReduceScreenTime, onQuickGrant, quickGrantCount, onSwipeLockChange, dark }) {
+function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onReduceScreenTime, onQuickGrant, quickGrantCount, grantMins, onSwipeLockChange, dark, secLeft }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Text color that sits on a `deep` (primary) button. In dark mode the deep
@@ -1527,6 +1499,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
             {/* huge balance display */}
             <CreditTicker
               value={Math.max(0, credits.balance)}
+              seconds={secLeft}
               textColor={inDebt ? "#C0392B" : ink.deep}
             />
 
@@ -1694,7 +1667,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
                 minimumFontScale={0.82}
                 style={{ fontFamily: FF.bodyMed, fontSize: 13, color: quickGrantCount < 3 ? earn.sage : ink.faint, textAlign: "center" }}
               >
-                Take 10m · {Math.max(0, 3 - quickGrantCount)} left
+                Take {grantMins}m · {Math.max(0, 3 - quickGrantCount)} left
               </Text>
             </TouchableOpacity>
           </View>
@@ -2654,7 +2627,7 @@ function ThemeToggleButton({ darkMode, onToggle, color }) {
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "180deg"] });
 
   return (
-    <Pop onPress={handle} hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+    <Pop onPress={handle} hitSlop={{ top: 22, bottom: 2, left: 6, right: 6 }}
       style={{ width: 38, height: 38, alignItems: "center", justifyContent: "center" }}>
       <Animated.View style={{ transform: [{ rotate }] }}>
         {darkMode ? (
@@ -2771,6 +2744,7 @@ export default function App() {
   const [showReduceTime,     setShowReduceTime]     = useState(false);
   const [showQuickGrant,     setShowQuickGrant]     = useState(false);
   const [quickGrantCount,    setQuickGrantCount]    = useState(0);
+  const [difficulty,         setDifficulty]         = useState("medium");
   const [checkoutUrl,        setCheckoutUrl]        = useState("");
   const [showCheckout,       setShowCheckout]       = useState(false);
   const [userEmail,          setUserEmail]          = useState("");
@@ -2962,10 +2936,17 @@ export default function App() {
   // a Drift In focus session (the shield is up — you're not spending).
   useEffect(() => {
     if (screen !== "app") return;
-    // Mirror only; do not consume time while Drift itself is foregrounded.
-    const i = setInterval(() => setSecLeft(secRef.current), 1000);
+    const tick = async () => {
+      if (nativeArmedRef.current) {
+        const used = await consumeUsedSeconds();
+        if (used > 0) drainBy(used);
+      }
+      setSecLeft(secRef.current);
+    };
+    tick();
+    const i = setInterval(tick, 1000);
     return () => clearInterval(i);
-  }, [screen]);
+  }, [screen, drainBy]);
 
 
   // ── Screen-time drain (works across background AND full kill) ──
@@ -2989,6 +2970,7 @@ export default function App() {
   //   - a Drift In focus session is active (the shield is up)
   //   - no credits to drain
   const bgTimeRef = useRef(null);
+  const nativeArmedRef = useRef(false);
 
   const persistLastAlive = useCallback(() => {
     AsyncStorage.setItem("drift_last_alive", String(Date.now())).catch(() => {});
@@ -3022,19 +3004,25 @@ export default function App() {
 
   // 2. AppState transitions: drain on foregrounding, stamp on backgrounding
   useEffect(() => {
-    const sub = AppState.addEventListener("change", next => {
+    const sub = AppState.addEventListener("change", async (next) => {
       if (next !== "active") {
         appActiveRef.current = false;
         bgTimeRef.current = Date.now();
-        persistLastAlive();   // stamp NOW so kill-while-bg still measures correctly
+        persistLastAlive();
         stopTick();
       } else {
         appActiveRef.current = true;
         if (bgTimeRef.current && screen === "app") {
-          const elapsedSec = Math.floor((Date.now() - bgTimeRef.current) / 1000);
+          const bgStart = bgTimeRef.current;
           bgTimeRef.current = null;
           try { refreshSub?.(); } catch {}
-          drainBy(elapsedSec);
+          if (nativeArmedRef.current) {
+            const used = await consumeUsedSeconds();
+            if (used > 0) drainBy(used);
+          } else {
+            const elapsedSec = Math.floor((Date.now() - bgStart) / 1000);
+            drainBy(elapsedSec);
+          }
           persistLastAlive();
         }
       }
@@ -3042,25 +3030,26 @@ export default function App() {
     return () => { sub.remove(); stopTick(); };
   }, [screen, drainBy, persistLastAlive]);
 
-  // 3. Launch-time catch-up: app just opened — drain by (now - last_alive)
-  // Runs once when we transition into "app" screen (i.e. user is signed-in
-  // and ready). Compares wall clock to the persisted heartbeat, drains the
-  // delta. Handles the swipe-up-to-close case.
+  // 3. Launch-time catch-up: app just opened — drain by actual blocked-app usage
+  // (native) or wall-clock delta (fallback when native unavailable).
   const launchDrainRanRef = useRef(false);
   useEffect(() => {
     if (screen !== "app" || launchDrainRanRef.current) return;
     launchDrainRanRef.current = true;
     (async () => {
       try {
-        const lastStr = await AsyncStorage.getItem("drift_last_alive");
-        if (!lastStr) { persistLastAlive(); return; }
-        const last = parseInt(lastStr, 10);
-        if (!Number.isFinite(last)) { persistLastAlive(); return; }
-        const elapsedSec = Math.floor((Date.now() - last) / 1000);
-        // Cap absurd values (clock changes, multi-day kill) at 24h to avoid
-        // wiping a freshly-earned balance because of bad clock math.
-        const capped = Math.min(elapsedSec, 86_400);
-        if (capped > 0) drainBy(capped);
+        if (nativeArmedRef.current) {
+          const used = await consumeUsedSeconds();
+          if (used > 0) drainBy(used);
+        } else {
+          const lastStr = await AsyncStorage.getItem("drift_last_alive");
+          if (!lastStr) { persistLastAlive(); return; }
+          const last = parseInt(lastStr, 10);
+          if (!Number.isFinite(last)) { persistLastAlive(); return; }
+          const elapsedSec = Math.floor((Date.now() - last) / 1000);
+          const capped = Math.min(elapsedSec, 86_400);
+          if (capped > 0) drainBy(capped);
+        }
         persistLastAlive();
       } catch {}
     })();
@@ -3068,6 +3057,7 @@ export default function App() {
 
   useEffect(() => {
     AsyncStorage.getItem("drift_dark_mode").then(v => { if (v === "1") setDarkMode(true); });
+    AsyncStorage.getItem("drift_difficulty").then(v => { if (v) setDifficulty(v); });
   }, []);
 
   const refreshQuickGrantCount = useCallback(async () => {
@@ -3252,9 +3242,14 @@ export default function App() {
   const [lastArmedSeconds, setLastArmedSeconds] = useState(null);
   useEffect(() => {
     AsyncStorage.getItem("drift_last_armed_seconds").then(v => {
-      setLastArmedSeconds(v != null ? Number(v) : -1);
+      const val = v != null ? Number(v) : -1;
+      setLastArmedSeconds(val);
+      nativeArmedRef.current = isNativeBlockingAvailable() && val > 0;
     });
   }, []);
+  useEffect(() => {
+    nativeArmedRef.current = isNativeBlockingAvailable() && lastArmedSeconds > 0;
+  }, [lastArmedSeconds]);
 
   useEffect(() => {
     if (driftInActive) return; // session handler controls shield
@@ -3777,7 +3772,7 @@ export default function App() {
     // (0.5x multiplier) grants 5 minutes of screen time. We route it through
     // the same applyBalanceSeconds path a real task uses so credits/ledger/
     // sync all behave identically.
-    const addedMins = 10;
+    const addedMins = DIFFICULTY_GRANT[difficulty] || 7;
     const newSec = secRef.current + addedMins * 60;
     const nextCredits = {
       ...credits,
@@ -3875,7 +3870,10 @@ export default function App() {
   if (onboarding) return (
     <OnboardingScreen
       signInOnly={signInOnly}
-      onComplete={async ({ user }) => {
+      onComplete={async ({ user, answers }) => {
+        const diff = answers?.difficulty?.[0] || "medium";
+        setDifficulty(diff);
+        await AsyncStorage.setItem("drift_difficulty", diff);
         setUserId(user?.id ?? null);
         setUserEmail(user?.email ?? "");
         if (user?.id) {
@@ -3997,7 +3995,7 @@ export default function App() {
           {/* Account icon — line style */}
           <Pop
             onPress={() => setShowAccount(true)}
-            hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+            hitSlop={{ top: 22, bottom: 2, left: 6, right: 6 }}
             style={{ width: 38, height: 38, alignItems: "center", justifyContent: "center" }}
           >
             <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
@@ -4086,8 +4084,10 @@ export default function App() {
               onReduceScreenTime={() => setShowReduceTime(true)}
               onQuickGrant={() => setShowQuickGrant(true)}
               quickGrantCount={quickGrantCount}
+              grantMins={DIFFICULTY_GRANT[difficulty] || 7}
               onSwipeLockChange={setChildSwipeLockedNow}
               dark={darkMode}
+              secLeft={displaySecLeft}
             />
           </View>
           <View style={{ width: TAB_W, height: "100%", backgroundColor: driftInActive ? th_ink.void : th_paper.warm }}>
@@ -4250,6 +4250,7 @@ export default function App() {
         dark={darkMode}
         onClose={() => setShowQuickGrant(false)}
         onGrant={handleQuickGrant}
+        grantMins={DIFFICULTY_GRANT[difficulty] || 7}
       />
       <StripeCheckoutModal
         visible={showCheckout}

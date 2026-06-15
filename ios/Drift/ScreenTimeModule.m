@@ -28,6 +28,9 @@ RCT_EXTERN_METHOD(startBalanceMonitoring:(nonnull NSNumber *)minutes
 RCT_EXTERN_METHOD(stopBalanceMonitoring:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(consumeUsedSeconds:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 RCT_EXTERN_METHOD(consumeDepletedFlag:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 

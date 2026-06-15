@@ -222,12 +222,10 @@ class ScreenTimeModule: NSObject {
         repeats: true
       )
 
-      // Build the threshold from exact seconds so we don't round and end up
-      // firing 15-45 sec early relative to the user's real balance.
-      let totalSec = max(60, seconds.intValue)
-      let mins  = totalSec / 60
-      let secs  = totalSec % 60
-      let threshold = DateComponents(minute: mins, second: secs)
+      // Fire every 5s of blocked-app usage so JS can show near-live progress.
+      let totalSec = max(5, seconds.intValue)
+      let chunk = min(5, totalSec)
+      let threshold = DateComponents(second: chunk)
 
       let event = DeviceActivityEvent(
         applications: selection.applicationTokens,
@@ -244,6 +242,8 @@ class ScreenTimeModule: NSObject {
         let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
         defaults?.set(Self.localDayKey(), forKey: "drift_balance_armed_day")
         defaults?.set(totalSec, forKey: "drift_balance_armed_seconds")
+        defaults?.set(0, forKey: "drift_usage_consumed_seconds")
+        defaults?.set(chunk, forKey: "drift_balance_chunk_size")
         try center.startMonitoring(
           .driftBalance,
           during: schedule,
@@ -273,6 +273,17 @@ class ScreenTimeModule: NSObject {
     }
     #endif
     resolve(nil)
+  }
+
+  // Returns how many seconds of blocked-app usage iOS has counted since arming,
+  // then resets the counter (so JS doesn't double-count on next foreground).
+  @objc(consumeUsedSeconds:rejecter:)
+  func consumeUsedSeconds(_ resolve: RCTPromiseResolveBlock,
+                          rejecter reject: RCTPromiseRejectBlock) {
+    let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
+    let consumed = defaults?.integer(forKey: "drift_usage_consumed_seconds") ?? 0
+    if consumed > 0 { defaults?.set(0, forKey: "drift_usage_consumed_seconds") }
+    resolve(consumed)
   }
 
   // Returns true if the DriftMonitor extension fired its threshold callback
