@@ -34,8 +34,21 @@ class DriftMonitor: DeviceActivityMonitor {
     super.eventDidReachThreshold(event, activity: activity)
     let defaults = UserDefaults(suiteName: APP_GROUP)
 
-    let thresholdMin = defaults?.integer(forKey: "drift_balance_threshold_min") ?? 15
-    defaults?.set(thresholdMin * 60, forKey: "drift_usage_consumed_seconds")
+    if event.rawValue.hasPrefix("drift.balanceCheckpoint.") {
+      let raw = event.rawValue.replacingOccurrences(of: "drift.balanceCheckpoint.", with: "")
+      let checkpointSec = Int(raw) ?? 0
+      let previous = defaults?.integer(forKey: "drift_usage_consumed_total_seconds") ?? 0
+      defaults?.set(max(previous, checkpointSec), forKey: "drift_usage_consumed_total_seconds")
+      defaults?.set(Date().timeIntervalSince1970, forKey: "drift_last_fired_at")
+      let count = (defaults?.integer(forKey: "drift_fire_count") ?? 0) + 1
+      defaults?.set(count, forKey: "drift_fire_count")
+      return
+    }
+
+    let thresholdSec = defaults?.integer(forKey: "drift_balance_threshold_seconds") ?? 900
+    let previous = defaults?.integer(forKey: "drift_usage_consumed_total_seconds") ?? 0
+    defaults?.set(max(previous, thresholdSec), forKey: "drift_usage_consumed_total_seconds")
+    defaults?.set(thresholdSec, forKey: "drift_usage_consumed_seconds")
     defaults?.set(Date().timeIntervalSince1970, forKey: "drift_last_fired_at")
     let count = (defaults?.integer(forKey: "drift_fire_count") ?? 0) + 1
     defaults?.set(count, forKey: "drift_fire_count")
@@ -44,13 +57,18 @@ class DriftMonitor: DeviceActivityMonitor {
     // app re-arms with a fresh balance.
     applyShieldFromSelection()
     defaults?.set(true, forKey: "drift_balance_depleted")
-    DeviceActivityCenter().stopMonitoring([DeviceActivityName("drift.balance")])
+    defaults?.set(false, forKey: "drift_balance_failsafe_active")
+    DeviceActivityCenter().stopMonitoring([
+      DeviceActivityName("drift.balance"),
+      DeviceActivityName("drift.balance.failsafe")
+    ])
   }
 
   // Called when the monitoring window starts (a new day, in our schedule).
   // We don't shield here by default — the shield state is whatever Drift left it.
   override func intervalDidStart(for activity: DeviceActivityName) {
     super.intervalDidStart(for: activity)
+    guard activity.rawValue == "drift.balance" else { return }
     let defaults = UserDefaults(suiteName: APP_GROUP)
     defaults?.set(Date().timeIntervalSince1970, forKey: "drift_interval_start_at")
     let armedDay = defaults?.string(forKey: "drift_balance_armed_day")
@@ -64,6 +82,25 @@ class DriftMonitor: DeviceActivityMonitor {
   // Called at end of monitoring window (e.g. midnight). Reset for the new day.
   override func intervalDidEnd(for activity: DeviceActivityName) {
     super.intervalDidEnd(for: activity)
+    if activity.rawValue == "drift.balance.failsafe" {
+      let defaults = UserDefaults(suiteName: APP_GROUP)
+      guard defaults?.bool(forKey: "drift_balance_failsafe_active") == true else { return }
+      let armedSec = defaults?.integer(forKey: "drift_balance_armed_seconds") ?? 0
+      applyShieldFromSelection()
+      let previous = defaults?.integer(forKey: "drift_usage_consumed_total_seconds") ?? 0
+      defaults?.set(max(previous, max(0, armedSec)), forKey: "drift_usage_consumed_total_seconds")
+      defaults?.set(max(0, armedSec), forKey: "drift_usage_consumed_seconds")
+      defaults?.set(true, forKey: "drift_balance_depleted")
+      defaults?.set(false, forKey: "drift_balance_failsafe_active")
+      defaults?.set(Date().timeIntervalSince1970, forKey: "drift_last_fired_at")
+      let count = (defaults?.integer(forKey: "drift_fire_count") ?? 0) + 1
+      defaults?.set(count, forKey: "drift_fire_count")
+      DeviceActivityCenter().stopMonitoring([
+        DeviceActivityName("drift.balance"),
+        DeviceActivityName("drift.balance.failsafe")
+      ])
+      return
+    }
     // Optional: clear the shield at midnight so user starts the day with a
     // fresh slate. Comment this out if you'd rather keep the shield sticky.
     // clearShield()

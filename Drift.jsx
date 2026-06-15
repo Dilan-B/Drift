@@ -56,6 +56,7 @@ import {
 } from "./blockedApps";
 import { startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag, consumeUsedSeconds } from "./screenTime";
 import { supabase, syncScreenTime, safeGetSession } from "./supabase";
+import { handleSupabaseAuthCallback } from "./authLinks";
 import SocialScreen from "./SocialScreen";
 import PaywallScreen, { initTrial, getTrialStatus } from "./PaywallScreen";
 import OnboardingScreen from "./OnboardingScreen";
@@ -2778,6 +2779,7 @@ export default function App() {
   const swipeBlockedRef = useRef(false);
   const levelIdxRef     = useRef(null);
   const appActiveRef    = useRef(true);   // true while app is foregrounded
+  const processedAuthUrlRef = useRef("");
   useEffect(() => { tabRef.current = tab; }, [tab]);
   useEffect(() => { driftInActRef.current = driftInActive; }, [driftInActive]);
 
@@ -2927,10 +2929,12 @@ export default function App() {
     // (No setInterval — drain is computed from wall-clock delta on foreground.)
   };
 
-  // Real-time countdown while the app is foregrounded.
+  // Foreground display sync.
   //
   // When iOS native blocking is available, the DeviceActivityMonitor extension
-  // counts real restricted-app usage, so JS must NOT tick (it would double-count).
+  // counts real restricted-app usage. JS polls for native deltas and updates
+  // the visible timer, but it must NOT tick down by wall clock while Drift is
+  // foregrounded because that would charge time when no blocked app is in use.
   // Without native blocking (Expo Go / Android / dev), we tick the balance down
   // in real time so the timer is visibly alive and testable. We don't tick during
   // a Drift In focus session (the shield is up — you're not spending).
@@ -2971,6 +2975,7 @@ export default function App() {
   //   - no credits to drain
   const bgTimeRef = useRef(null);
   const nativeArmedRef = useRef(false);
+  const nativeArmFailedSecondsRef = useRef(null);
 
   const persistLastAlive = useCallback(() => {
     AsyncStorage.setItem("drift_last_alive", String(Date.now())).catch(() => {});
@@ -3171,7 +3176,65 @@ export default function App() {
     }));
   }, [screen, userId, proAccess, recurringTasks, tasks, minuteTick]);
 
+  // Shared path for password sign-in, OAuth sign-in, and verified email links.
+  const completeAuthenticatedUser = useCallback(async (user, answers = {}) => {
+    const authUser = user?.id ? user : (await safeGetSession())?.data?.session?.user;
+    if (!authUser?.id) return;
+
+    const diff = answers?.difficulty?.[0] || "medium";
+    setDifficulty(diff);
+    await AsyncStorage.setItem("drift_difficulty", diff);
+    setUserId(authUser.id);
+    setUserEmail(authUser.email ?? "");
+    try {
+      const { data: prof } = await cached(`drift_profile_${authUser.id}`, 30_000, () =>
+        supabase
+          .from("profiles").select("username").eq("id", authUser.id).maybeSingle()
+      );
+      if (prof?.username) {
+        setUserName(prof.username);
+        AsyncStorage.setItem("drift_username", prof.username);
+      }
+    } catch {}
+    setOnboarding(false);
+    setSignInOnly(false);
+    const hadOnboarded = await AsyncStorage.getItem("drift_onboarded");
+    await AsyncStorage.setItem("drift_onboarded", "1");
+    await initTrial();
+    try {
+      await rateLimited("claim_trial", { limit: 3, windowMs: 10 * 60_000 }, () =>
+        supabase.functions.invoke("claim-trial", {})
+      );
+    } catch {}
+    const { isPremium: prem, daysLeft } = await getTrialStatus(authUser.id);
+    setIsPremium(prem);
+    setTrialDays(daysLeft);
+    setScreen("app");
+    if (!hadOnboarded && !signInOnly) {
+      setFirstTimeBlockedApps(true);
+      setShowBlockedApps(true);
+    }
+  }, [signInOnly]);
+
+  // Supabase email confirmation links open here before a user is signed in.
   // Deep-link friend invites — drift://add-friend/[username]
+  useEffect(() => {
+    const handleAuthUrl = async (url) => {
+      if (!url || processedAuthUrlRef.current === url) return;
+      const result = await handleSupabaseAuthCallback(url);
+      if (!result.handled) return;
+      processedAuthUrlRef.current = url;
+      if (result.error) {
+        Alert.alert("Could not verify email", result.error.message || "Open the latest verification email and try again.");
+        return;
+      }
+      await completeAuthenticatedUser(result.user);
+    };
+    Linking.getInitialURL().then(handleAuthUrl);
+    const sub = Linking.addEventListener("url", ({ url }) => handleAuthUrl(url));
+    return () => sub.remove();
+  }, [completeAuthenticatedUser]);
+
   useEffect(() => {
     const handleUrl = async (url) => {
       if (!url || !userId) return;
@@ -3295,12 +3358,21 @@ export default function App() {
           const currentSeconds = Math.max(60, Math.floor(seconds));
           const shouldArm = lastArmedSeconds === -1 || currentSeconds !== lastArmedSeconds;
           if (shouldArm) {
+            if (nativeArmFailedSecondsRef.current === currentSeconds) return;
             // Pass exact seconds so iOS's threshold matches the displayed
             // balance — passing minutes rounds the threshold up.
             const res = await startBalanceMonitoring(seconds);
             if (res?.started === false) {
+              if (!/unavailable/i.test(res.reason || "")) {
+                nativeArmFailedSecondsRef.current = currentSeconds;
+                await applyBlocking([]);
+                shieldStateRef.current = "on";
+                await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]);
+                setLastArmedSeconds(-1);
+              }
               Alert.alert("Background timer not active", res.reason || "Unknown");
             } else {
+              nativeArmFailedSecondsRef.current = null;
               await AsyncStorage.setItem("drift_last_armed_seconds", String(currentSeconds));
               await AsyncStorage.removeItem("drift_last_armed_balance");
               setLastArmedSeconds(currentSeconds);
@@ -3533,6 +3605,39 @@ export default function App() {
     } catch {}
   };
 
+  const unlockAndArmBalance = useCallback(async (seconds) => {
+    if (driftInActRef.current) return;
+    const currentSeconds = Math.max(0, Math.floor(seconds || 0));
+    if (currentSeconds <= 0) {
+      await stopBalanceMonitoring().catch(() => {});
+      await applyBlocking([]).catch(() => {});
+      shieldStateRef.current = "on";
+      await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
+      setLastArmedSeconds(-1);
+      return;
+    }
+
+    await clearBlocking().catch(() => {});
+    const armedSeconds = Math.max(60, currentSeconds);
+    const res = await startBalanceMonitoring(armedSeconds);
+    if (res?.started === false && !/unavailable/i.test(res.reason || "")) {
+      nativeArmFailedSecondsRef.current = armedSeconds;
+      await applyBlocking([]).catch(() => {});
+      shieldStateRef.current = "on";
+      await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
+      setLastArmedSeconds(-1);
+      Alert.alert("Background timer not active", res.reason || "Unknown");
+      return;
+    }
+    shieldStateRef.current = "off";
+    nativeArmFailedSecondsRef.current = null;
+    if (res?.started !== false) {
+      await AsyncStorage.setItem("drift_last_armed_seconds", String(armedSeconds)).catch(() => {});
+      await AsyncStorage.removeItem("drift_last_armed_balance").catch(() => {});
+      setLastArmedSeconds(armedSeconds);
+    }
+  }, []);
+
   const completeTask = id => {
     const task = tasks.find(t => t.id === id);
     if (!task || task.done) return;
@@ -3566,8 +3671,7 @@ export default function App() {
     // moment we earn balance, instead of waiting on the useEffect to
     // notice the credits change.
     if (nc.balance > 0 && !driftInActive) {
-      shieldStateRef.current = "off";
-      clearBlocking();
+      unlockAndArmBalance(newSec);
     }
   };
 
@@ -3658,8 +3762,7 @@ export default function App() {
   };
   const handleDriftInEnd    = () => {
     setDriftInActive(false);
-    if (secRef.current > 0) clearBlocking();
-    else applyBlocking([]);
+    unlockAndArmBalance(secRef.current);
   };
 
   const handleDriftInComplete = ({ credits: earned, xp }) => {
@@ -3672,6 +3775,7 @@ export default function App() {
     setPopup({ credits: earned, xp });
     setTimeout(() => setPopup(null), 2500);
     startTick(newSec);
+    unlockAndArmBalance(newSec);
     persist({ credits: nc, totalXp: nx });
     if (userId) {
       syncProfileStats(userId, { totalXp: nx, balanceSeconds: newSec }).catch(() => {});
@@ -3712,6 +3816,7 @@ export default function App() {
     };
     setCredits(nc);
     persist({ credits: nc });
+    unlockAndArmBalance(newSec);
   };
 
   const applyBalanceSeconds = useCallback((newSec, nextCredits, popupData) => {
@@ -3723,11 +3828,12 @@ export default function App() {
       setTimeout(() => setPopup(null), 2200);
     }
     startTick(newSec);
+    unlockAndArmBalance(newSec);
     persist({ credits: nextCredits });
     if (userId) {
       syncProfileStats(userId, { totalXp, balanceSeconds: newSec }).catch(() => {});
     }
-  }, [credits, totalXp, userId]);
+  }, [credits, totalXp, userId, unlockAndArmBalance]);
 
   const handleReduceScreenTime = (mins) => {
     const requestedSec = Math.max(0, Math.floor(mins || 0) * 60);
@@ -3870,43 +3976,7 @@ export default function App() {
   if (onboarding) return (
     <OnboardingScreen
       signInOnly={signInOnly}
-      onComplete={async ({ user, answers }) => {
-        const diff = answers?.difficulty?.[0] || "medium";
-        setDifficulty(diff);
-        await AsyncStorage.setItem("drift_difficulty", diff);
-        setUserId(user?.id ?? null);
-        setUserEmail(user?.email ?? "");
-        if (user?.id) {
-          try {
-            const { data: prof } = await cached(`drift_profile_${user.id}`, 30_000, () =>
-              supabase
-                .from("profiles").select("username").eq("id", user.id).maybeSingle()
-            );
-            if (prof?.username) {
-              setUserName(prof.username);
-              AsyncStorage.setItem("drift_username", prof.username);
-            }
-          } catch {}
-        }
-        setOnboarding(false);
-        const hadOnboarded = await AsyncStorage.getItem("drift_onboarded");
-        await AsyncStorage.setItem("drift_onboarded", "1");
-        await initTrial();
-        try {
-          await rateLimited("claim_trial", { limit: 3, windowMs: 10 * 60_000 }, () =>
-            supabase.functions.invoke("claim-trial", {})
-          );
-        } catch {}
-        const { isPremium: prem, daysLeft } = await getTrialStatus(user?.id);
-        setIsPremium(prem);
-        setTrialDays(daysLeft);
-        setScreen("app");
-        // Show blocked-apps picker the very first time only
-        if (!hadOnboarded && !signInOnly) {
-          setFirstTimeBlockedApps(true);
-          setShowBlockedApps(true);
-        }
-      }}
+      onComplete={({ user, answers }) => completeAuthenticatedUser(user, answers)}
     />
   );
 

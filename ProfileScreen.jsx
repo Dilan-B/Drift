@@ -525,7 +525,12 @@ export default function ProfileScreen({
               `Selection saved: ${d.selectionStored} (${d.selectionBytes}B)\n` +
               `Picked: ${d.pickedAppCount ?? 0} apps, ${d.pickedCategoryCount ?? 0} cats\n` +
               `Active monitors: ${(d.activeMonitors || []).join(",") || "none"}\n` +
+              `Threshold seconds: ${d.thresholdSeconds ?? 0}\n` +
+              `Consumed total: ${d.consumedTotalSeconds ?? 0}s\n` +
+              `Reported: ${d.reportedSeconds ?? 0}s\n` +
               `Interval start: ${fmt(d.intervalStartAt)}\n` +
+              `Failsafe active: ${d.failsafeActive}\n` +
+              `Failsafe deadline: ${fmt(d.failsafeDeadline)}\n` +
               `Last fired: ${fmt(d.lastFiredAt)}\n` +
               `Fire count: ${d.fireCount ?? 0}\n` +
               `Depleted flag: ${d.depletedFlag}`

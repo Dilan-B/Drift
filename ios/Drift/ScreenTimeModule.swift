@@ -8,7 +8,7 @@
 //   presentFamilyActivityPicker()       -> void (Apple's secure app picker)
 //   applyShield()                       -> void
 //   clearShield()                       -> void
-//   startBalanceMonitoring(minutes:N)   -> void  (NEW: iOS-enforced timer)
+//   startBalanceMonitoring(seconds:N)   -> void  (iOS-enforced timer)
 //   stopBalanceMonitoring()             -> void
 //
 // The user's selection (apps/categories/web domains) is persisted to the
@@ -37,11 +37,15 @@ func driftStoreName() -> ManagedSettingsStore.Name { ManagedSettingsStore.Name(D
 @available(iOS 16.0, *)
 extension DeviceActivityName {
   static let driftBalance = Self("drift.balance")
+  static let driftBalanceFailsafe = Self("drift.balance.failsafe")
 }
 
 @available(iOS 16.0, *)
 extension DeviceActivityEvent.Name {
   static let balanceDepleted = Self("drift.balanceDepleted")
+  static func balanceCheckpoint(_ seconds: Int) -> Self {
+    Self("drift.balanceCheckpoint.\(seconds)")
+  }
 }
 
 @available(iOS 16.0, *)
@@ -210,7 +214,8 @@ class ScreenTimeModule: NSObject {
       let selection = ScreenTimeSelectionStore.shared.selection
       let appCount = selection.applicationTokens.count
       let catCount = selection.categoryTokens.count
-      if appCount == 0 && catCount == 0 {
+      let webCount = selection.webDomainTokens.count
+      if appCount == 0 && catCount == 0 && webCount == 0 {
         reject("no_selection", "No apps selected. Pick apps to block first.", nil)
         return
       }
@@ -227,17 +232,34 @@ class ScreenTimeModule: NSObject {
       // (the old `DateComponents(second: 5)`) never fired, which is why the
       // extension never woke and nothing was enforced when Drift was closed.
       //
-      // We arm ONE event whose threshold is the user's whole earned balance,
-      // floored to Apple's 15-minute minimum. After that much *blocked-app
-      // usage*, the extension fires once and applies the shield — even if
-      // Drift is force-quit.
+      // We arm one usage event at the user's exact balance when it is above
+      // Apple's minimum. For shorter balances, iOS may not deliver a usage
+      // threshold, so we also arm a one-shot wall-clock failsafe that shields
+      // at the deadline. That is stricter than usage-only counting, but it
+      // prevents over-limit use while Drift is closed.
       let totalSec = max(60, seconds.intValue)
       let APPLE_MIN_THRESHOLD_MIN = 15
+      let APPLE_MIN_THRESHOLD_SEC = APPLE_MIN_THRESHOLD_MIN * 60
       let balanceMin = Int(ceil(Double(totalSec) / 60.0))
       let thresholdMin = max(APPLE_MIN_THRESHOLD_MIN, balanceMin)
-      let threshold = DateComponents(minute: thresholdMin)
+      let thresholdSec = max(APPLE_MIN_THRESHOLD_SEC, totalSec)
+      let threshold = DateComponents(minute: thresholdSec / 60, second: thresholdSec % 60)
+      let needsFailsafe = totalSec < APPLE_MIN_THRESHOLD_SEC
 
-      let event = DeviceActivityEvent(
+      var events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [:]
+      if totalSec > APPLE_MIN_THRESHOLD_SEC {
+        var checkpointSec = APPLE_MIN_THRESHOLD_SEC
+        while checkpointSec < totalSec {
+          events[.balanceCheckpoint(checkpointSec)] = DeviceActivityEvent(
+            applications: selection.applicationTokens,
+            categories:   selection.categoryTokens,
+            webDomains:   selection.webDomainTokens,
+            threshold:    DateComponents(minute: checkpointSec / 60, second: checkpointSec % 60)
+          )
+          checkpointSec += APPLE_MIN_THRESHOLD_SEC
+        }
+      }
+      events[.balanceDepleted] = DeviceActivityEvent(
         applications: selection.applicationTokens,
         categories:   selection.categoryTokens,
         webDomains:   selection.webDomainTokens,
@@ -247,23 +269,36 @@ class ScreenTimeModule: NSObject {
       let center = DeviceActivityCenter()
       // Always stop any existing monitor before restarting — DeviceActivity
       // doesn't replace events automatically.
-      center.stopMonitoring([.driftBalance])
+      center.stopMonitoring([.driftBalance, .driftBalanceFailsafe])
       do {
         let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
         defaults?.set(Self.localDayKey(), forKey: "drift_balance_armed_day")
         defaults?.set(totalSec, forKey: "drift_balance_armed_seconds")
         defaults?.set(thresholdMin, forKey: "drift_balance_threshold_min")
+        defaults?.set(thresholdSec, forKey: "drift_balance_threshold_seconds")
+        defaults?.set(needsFailsafe, forKey: "drift_balance_failsafe_active")
+        defaults?.set(Date().addingTimeInterval(TimeInterval(totalSec)).timeIntervalSince1970, forKey: "drift_balance_failsafe_deadline")
+        defaults?.set(0, forKey: "drift_usage_consumed_total_seconds")
+        defaults?.set(0, forKey: "drift_usage_reported_seconds")
         defaults?.set(0, forKey: "drift_usage_consumed_seconds")
         // Keep chunk for diagnostics only; the extension no longer re-arms
         // at sub-minute granularity (impossible on iOS).
-        defaults?.set(thresholdMin * 60, forKey: "drift_balance_chunk_size")
+        defaults?.set(thresholdSec, forKey: "drift_balance_chunk_size")
         try center.startMonitoring(
           .driftBalance,
           during: schedule,
-          events: [.balanceDepleted: event]
+          events: events
         )
+        if needsFailsafe {
+          try center.startMonitoring(
+            .driftBalanceFailsafe,
+            during: Self.oneShotSchedule(afterSeconds: totalSec)
+          )
+        }
         resolve(nil)
       } catch {
+        center.stopMonitoring([.driftBalance, .driftBalanceFailsafe])
+        UserDefaults(suiteName: DRIFT_APP_GROUP)?.set(false, forKey: "drift_balance_failsafe_active")
         reject("schedule_error", error.localizedDescription, error)
       }
       return
@@ -277,10 +312,13 @@ class ScreenTimeModule: NSObject {
                              rejecter reject: RCTPromiseRejectBlock) {
     #if canImport(DeviceActivity)
     if #available(iOS 16.0, *) {
-      DeviceActivityCenter().stopMonitoring([.driftBalance])
+      DeviceActivityCenter().stopMonitoring([.driftBalance, .driftBalanceFailsafe])
       let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
       defaults?.removeObject(forKey: "drift_balance_armed_day")
       defaults?.removeObject(forKey: "drift_balance_armed_seconds")
+      defaults?.removeObject(forKey: "drift_balance_threshold_seconds")
+      defaults?.set(false, forKey: "drift_balance_failsafe_active")
+      defaults?.removeObject(forKey: "drift_balance_failsafe_deadline")
       resolve(nil)
       return
     }
@@ -294,9 +332,17 @@ class ScreenTimeModule: NSObject {
   func consumeUsedSeconds(_ resolve: RCTPromiseResolveBlock,
                           rejecter reject: RCTPromiseRejectBlock) {
     let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
-    let consumed = defaults?.integer(forKey: "drift_usage_consumed_seconds") ?? 0
-    if consumed > 0 { defaults?.set(0, forKey: "drift_usage_consumed_seconds") }
-    resolve(consumed)
+    let total = max(
+      defaults?.integer(forKey: "drift_usage_consumed_total_seconds") ?? 0,
+      defaults?.integer(forKey: "drift_usage_consumed_seconds") ?? 0
+    )
+    let reported = defaults?.integer(forKey: "drift_usage_reported_seconds") ?? 0
+    let delta = max(0, total - reported)
+    if delta > 0 {
+      defaults?.set(total, forKey: "drift_usage_reported_seconds")
+      defaults?.set(0, forKey: "drift_usage_consumed_seconds")
+    }
+    resolve(delta)
   }
 
   // Returns true if the DriftMonitor extension fired its threshold callback
@@ -325,6 +371,11 @@ class ScreenTimeModule: NSObject {
     info["lastFiredAt"]        = defaults?.double(forKey: "drift_last_fired_at") ?? 0
     info["fireCount"]          = defaults?.integer(forKey: "drift_fire_count") ?? 0
     info["depletedFlag"]       = defaults?.bool(forKey: "drift_balance_depleted") ?? false
+    info["thresholdSeconds"]   = defaults?.integer(forKey: "drift_balance_threshold_seconds") ?? 0
+    info["consumedTotalSeconds"] = defaults?.integer(forKey: "drift_usage_consumed_total_seconds") ?? 0
+    info["reportedSeconds"]    = defaults?.integer(forKey: "drift_usage_reported_seconds") ?? 0
+    info["failsafeActive"]     = defaults?.bool(forKey: "drift_balance_failsafe_active") ?? false
+    info["failsafeDeadline"]   = defaults?.double(forKey: "drift_balance_failsafe_deadline") ?? 0
 
     #if canImport(FamilyControls)
     if #available(iOS 16.0, *) {
@@ -366,6 +417,18 @@ class ScreenTimeModule: NSObject {
     return formatter.string(from: date)
   }
 
+  @available(iOS 16.0, *)
+  private static func oneShotSchedule(afterSeconds seconds: Int) -> DeviceActivitySchedule {
+    let calendar = Calendar.current
+    let start = Date()
+    let end = start.addingTimeInterval(TimeInterval(max(60, seconds)))
+    return DeviceActivitySchedule(
+      intervalStart: calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: start),
+      intervalEnd: calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: end),
+      repeats: false
+    )
+  }
+
   private static func topViewController(_ base: UIViewController? =
     UIApplication.shared.connectedScenes
       .compactMap { ($0 as? UIWindowScene)?.keyWindow }
@@ -378,3 +441,4 @@ class ScreenTimeModule: NSObject {
     return base
   }
 }
+

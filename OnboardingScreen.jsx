@@ -8,7 +8,7 @@ import { Oswald_700Bold } from "@expo-google-fonts/oswald";
 import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions,
   ScrollView, Animated, StatusBar, TextInput, KeyboardAvoidingView,
-  Platform, ActivityIndicator, Alert,
+  Platform, ActivityIndicator, Alert, Linking,
 } from "react-native";
 import { supabase } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
@@ -17,6 +17,8 @@ import { cached, rateLimited } from "./apiGuards";
 // the imports above and the Apple button block in OAuthButtons.
 import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon } from "./Icons";
 import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
+import Sprout, { Sprig, SeedDots } from "./SproutArt";
+import { FF } from "./theme";
 
 function ClockIcon({ size = 56, color = ACCENT }) {
   return (
@@ -36,13 +38,16 @@ const STEP_ICONS = {
 };
 
 const { width, height } = Dimensions.get("window");
-const BG = "#F4F9F6";
+const BG = "#F7F7F4";
 const CARD_BG = "#FFFFFF";
-const ACCENT = "#2FAB72";
-const ACCENT2 = "#3DC985";
-const TEXT = "#1A2B1F";
-const MUTED = "#6B8A78";
-const BORDER = "#DFF0E8";
+const ACCENT = "#3E6B4E";
+const TEXT = "#1A2820";
+const MUTED = "#6B7A6E";
+const FAINT = "#A8B0A8";
+const BORDER = "rgba(26,40,32,0.08)";
+const HAIRLINE = "rgba(26,40,32,0.06)";
+const SAGE_LO = "#E4ECE0";
+const CLAY = "#B0764E";
 
 // ─── Step data ──────────────────────────────────────────────────────────────
 
@@ -131,9 +136,15 @@ function WelcomeSlide({ onNext }) {
   const [fontsLoaded] = useFonts({ Orbitron_700Bold, Orbitron_400Regular, Oswald_700Bold });
   return (
     <View style={styles.slide}>
+      <View pointerEvents="none" style={styles.welcomeSprout}>
+        <Sprout size={210} tone="fresh" />
+      </View>
+      <View pointerEvents="none" style={styles.welcomeSprig}>
+        <Sprig size={150} color={CLAY} opacity={0.055} flip />
+      </View>
       <View style={styles.welcomeContent}>
-        <Text style={[styles.welcomeLogo, fontsLoaded && { fontFamily: "Orbitron_700Bold", fontSize: 22, letterSpacing: 4 }]}>DRIFT</Text>
-        <Text style={[styles.welcomeHeadline, fontsLoaded && { fontFamily: "Oswald_700Bold", fontSize: 36, lineHeight: 44, letterSpacing: 0.5 }]}>{"Your phone unlocks\nwhen you earn it."}</Text>
+        <Text style={[styles.welcomeLogo, fontsLoaded && { fontFamily: "Orbitron_700Bold" }]}>DRIFT</Text>
+        <Text style={[styles.welcomeHeadline, fontsLoaded && { fontFamily: FF.display }]}>{"Your phone unlocks\nwhen you earn it."}</Text>
         <Text style={styles.welcomeSub}>
           Earn screen time before it starts.
         </Text>
@@ -152,10 +163,10 @@ function QuestionSlide({ step, answers, onToggle, onNext, canContinue }) {
   return (
     <View style={styles.slide}>
       <View style={{ flex: 1 }}>
-        <View style={styles.stepEmoji}>
+        <View style={styles.stepBadge}>
           {(() => {
             const Icon = STEP_ICONS[step.id];
-            return Icon ? <Icon size={48} color={ACCENT} /> : null;
+            return Icon ? <Icon size={24} color={ACCENT} /> : null;
           })()}
         </View>
         <Text style={styles.question}>{step.question}</Text>
@@ -297,7 +308,7 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
     <>
       <View style={{ flexDirection: "row", alignItems: "center", marginTop: 16, marginBottom: 12, gap: 10 }}>
         <View style={{ flex: 1, height: 1, backgroundColor: BORDER }} />
-        <Text style={{ color: MUTED, fontSize: 12 }}>or</Text>
+        <Text style={{ color: FAINT, fontFamily: FF.body, fontSize: 12 }}>or</Text>
         <View style={{ flex: 1, height: 1, backgroundColor: BORDER }} />
       </View>
 
@@ -306,8 +317,8 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
         onPress={handleGoogle}
         disabled={loading || !google.isReady}
         style={{
-          height: 52, borderRadius: 14, backgroundColor: "#fff",
-          borderWidth: 1, borderColor: "#dadce0",
+          height: 52, borderRadius: 14, backgroundColor: CARD_BG,
+          borderWidth: 1, borderColor: BORDER,
           alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10,
           opacity: loading ? 0.6 : 1,
         }}
@@ -317,7 +328,7 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
         ) : (
           <>
             <GoogleGlyph />
-            <Text style={{ color: "#3c4043", fontSize: 16, fontWeight: "600" }}>
+            <Text style={{ color: TEXT, fontSize: 15, fontFamily: FF.bodyMed }}>
               {mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
             </Text>
           </>
@@ -358,13 +369,70 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [loading,  setLoading]  = useState(false);
+  const [resending, setResending] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
   const [error,    setError]    = useState("");
+  const [notice,   setNotice]   = useState("");
 
   // Client-side rate limiting (anti-spam, not a security boundary)
   const attemptsRef = useRef([]);
+  const resendAttemptsRef = useRef([]);
+
+  async function handleOpenMail() {
+    const url = Platform.OS === "ios" ? "message://" : "mailto:";
+    const canOpen = await Linking.canOpenURL(url).catch(() => false);
+    if (canOpen) {
+      await Linking.openURL(url).catch(() => {});
+    } else {
+      Alert.alert("Open your email", "Open your email app and tap the latest Drift verification link.");
+    }
+  }
+
+  async function handleResendVerification() {
+    const cleanEmail = verificationEmail.trim().toLowerCase();
+    const emailErr = validateEmail(cleanEmail);
+    if (emailErr) { setError(emailErr); setNotice(""); return; }
+
+    const now = Date.now();
+    resendAttemptsRef.current = resendAttemptsRef.current.filter(t => now - t < 60_000);
+    if (resendAttemptsRef.current.length >= 3) {
+      setError("Too many resend attempts. Wait a minute and try again.");
+      setNotice("");
+      return;
+    }
+    resendAttemptsRef.current.push(now);
+
+    setError("");
+    setNotice("");
+    setResending(true);
+    try {
+      const { error: resendErr } = await rateLimited("auth_resend_signup", { limit: 3, windowMs: 60_000 }, () =>
+        supabase.auth.resend({
+          type: "signup",
+          email: cleanEmail,
+          options: { emailRedirectTo: "drift://auth-callback" },
+        })
+      );
+      if (resendErr) throw resendErr;
+      setNotice("Verification email sent again.");
+    } catch (e) {
+      const raw = (e?.message || "").toLowerCase();
+      if (raw.includes("rate") || raw.includes("too many")) {
+        setError("Too many resend attempts. Try again in a few minutes.");
+      } else if (raw.includes("network") || raw.includes("fetch")) {
+        setError("Network error. Check your connection.");
+      } else {
+        setError("Could not resend the email. Try again.");
+      }
+      setNotice("");
+    } finally {
+      setResending(false);
+    }
+  }
 
   async function handleSubmit() {
     setError("");
+    setNotice("");
 
     // Validate email
     const cleanEmail = email.trim().toLowerCase();
@@ -424,16 +492,6 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
         );
         if (err) throw err;
 
-        // Supabase quirk: if a user with this email already exists but is
-        // *unconfirmed*, signUp succeeds with no error and no session.
-        // We detect this and tell the user.
-        if (!data.session && !data.user?.identities?.length) {
-          setError("An account with that email already exists. Try signing in.");
-          setLoading(false);
-          setMode("login");
-          return;
-        }
-
         // Profile row is created by the auth.users trigger (handle_new_user).
         // The trigger handles username collisions automatically by suffixing
         // _2, _3, etc. — so the user always ends up with SOME profile, even
@@ -456,9 +514,10 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
 
         // Email confirmation flow (confirmed email setting ON)
         if (!data.session) {
-          setError("Check your email to verify your account, then sign in.");
+          setVerificationEmail(cleanEmail);
+          setError("");
+          setNotice("");
           setLoading(false);
-          setMode("login");
           return;
         }
 
@@ -492,6 +551,8 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
         setError("That username is taken. Try another.");
       } else if (raw.includes("invalid") && raw.includes("credential")) {
         setError("Email or password is incorrect.");
+      } else if (raw.includes("email") && raw.includes("confirm")) {
+        setError("Check your email to verify your account, then try signing in again.");
       } else if (raw.includes("network") || raw.includes("fetch")) {
         setError("Network error. Check your connection.");
       } else if (raw.includes("rate") || raw.includes("too many")) {
@@ -504,18 +565,79 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
     }
   }
 
+  if (verificationEmail) {
+    return (
+      <View style={styles.slide}>
+        <View pointerEvents="none" style={styles.authSeeds}>
+          <SeedDots size={170} color={ACCENT} opacity={0.045} />
+        </View>
+        <View pointerEvents="none" style={styles.authSprig}>
+          <Sprig size={130} color={CLAY} opacity={0.052} />
+        </View>
+
+        <View style={styles.verifyContent}>
+          <View style={styles.stepBadge}><WaveIcon size={24} color={ACCENT} /></View>
+          <Text style={styles.question}>Check your email</Text>
+          <Text style={styles.questionSub}>
+            We sent a verification link to {verificationEmail}. Tap it on this device to finish creating your Drift account.
+          </Text>
+
+          <View style={styles.authForm}>
+            <Text style={styles.verifyNote}>
+              Once the link opens Drift, you will be signed in automatically.
+            </Text>
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {notice ? <Text style={styles.noticeText}>{notice}</Text> : null}
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={styles.ctaBtn}
+          onPress={handleOpenMail}
+        >
+          <Text style={styles.ctaBtnText}>Open email app</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.secondaryBtn, resending && styles.ctaBtnDisabled]}
+          onPress={handleResendVerification}
+          disabled={resending}
+        >
+          {resending ? (
+            <ActivityIndicator color={ACCENT} />
+          ) : (
+            <Text style={styles.secondaryBtnText}>Resend email</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => { setVerificationEmail(""); setMode("login"); setError(""); setNotice(""); }}
+          style={{ marginTop: 14, marginBottom: 32, alignItems: "center" }}
+        >
+          <Text style={styles.switchMode}>Back to sign in</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.slide}
       behavior={Platform.OS === "ios" ? "height" : undefined}
     >
+      <View pointerEvents="none" style={styles.authSeeds}>
+        <SeedDots size={170} color={ACCENT} opacity={0.045} />
+      </View>
+      <View pointerEvents="none" style={styles.authSprig}>
+        <Sprig size={130} color={CLAY} opacity={0.052} />
+      </View>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.stepEmoji}><WaveIcon size={48} color={ACCENT} /></View>
+        <View style={styles.stepBadge}><WaveIcon size={24} color={ACCENT} /></View>
         <Text style={styles.question}>
           {mode === "signup" ? "Create your account" : "Welcome back"}
         </Text>
@@ -601,7 +723,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
 
       {/* Terms + privacy disclosure shown to anyone creating an account */}
       {mode === "signup" && (
-        <Text style={{ marginTop: 14, marginHorizontal: 24, textAlign: "center", color: MUTED, fontSize: 11, lineHeight: 16 }}>
+        <Text style={{ marginTop: 14, marginHorizontal: 24, textAlign: "center", color: MUTED, fontFamily: FF.body, fontSize: 11, lineHeight: 16 }}>
           By creating an account you agree to our{" "}
           <Text style={{ color: ACCENT, textDecorationLine: "underline" }}
             onPress={() => require("react-native").Linking.openURL("https://drift.app/terms")}>
@@ -713,50 +835,77 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: BG,
-    paddingTop: Platform.OS === "ios" ? 56 : 32,
+    paddingTop: Platform.OS === "ios" ? 56 : 34,
   },
   slide: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === "ios" ? 80 : 56,
+    paddingHorizontal: 22,
+    paddingBottom: Platform.OS === "ios" ? 72 : 52,
+    overflow: "hidden",
   },
 
   // Welcome
-  welcomeContent: { flex: 1, justifyContent: "center", paddingBottom: 40 },
+  welcomeContent: { flex: 1, justifyContent: "center", paddingBottom: 36 },
+  welcomeSprout: {
+    position: "absolute",
+    right: -58,
+    bottom: 118,
+    opacity: 0.13,
+  },
+  welcomeSprig: {
+    position: "absolute",
+    left: -32,
+    top: 52,
+  },
   welcomeLogo: {
-    fontSize: 18,
+    fontFamily: FF.kicker,
+    fontSize: 12,
     color: ACCENT,
-    fontWeight: "700",
-    letterSpacing: 4,
+    letterSpacing: 4.2,
     textTransform: "uppercase",
-    marginBottom: 48,
+    marginBottom: 34,
   },
   welcomeHeadline: {
-    fontSize: 40,
-    fontWeight: "800",
+    fontFamily: FF.display,
+    fontSize: 42,
     color: TEXT,
     lineHeight: 48,
-    marginBottom: 20,
+    letterSpacing: -0.2,
+    marginBottom: 18,
   },
   welcomeSub: {
-    fontSize: 17,
-    color: "#8A8480",
-    lineHeight: 26,
+    fontFamily: FF.body,
+    fontSize: 16,
+    color: MUTED,
+    lineHeight: 24,
   },
 
   // Question
-  stepEmoji: { marginBottom: 20, marginTop: 8 },
+  stepBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: SAGE_LO,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 22,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+  },
   question: {
-    fontSize: 30,
-    fontWeight: "800",
+    fontFamily: FF.display,
+    fontSize: 33,
     color: TEXT,
-    lineHeight: 38,
+    lineHeight: 39,
+    letterSpacing: -0.2,
     marginBottom: 10,
   },
   questionSub: {
+    fontFamily: FF.body,
     fontSize: 15,
     color: MUTED,
-    marginBottom: 28,
+    marginBottom: 24,
     lineHeight: 22,
   },
   optionsScroll: { flex: 1 },
@@ -764,24 +913,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: CARD_BG,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    borderRadius: 16,
+    borderWidth: 1,
     borderColor: BORDER,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    marginBottom: 10,
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+    marginBottom: 9,
   },
   optionCardSelected: {
     borderColor: ACCENT,
-    backgroundColor: "#E4F5EE",
+    backgroundColor: SAGE_LO,
   },
   optionLabel: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontFamily: FF.bodyMed,
+    fontSize: 15,
     color: TEXT,
   },
   optionLabelSelected: { color: ACCENT },
   optionSub: {
+    fontFamily: FF.body,
     fontSize: 13,
     color: MUTED,
     marginTop: 3,
@@ -791,7 +941,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: BORDER,
     alignItems: "center",
     justifyContent: "center",
@@ -801,60 +951,112 @@ const styles = StyleSheet.create({
     backgroundColor: ACCENT,
     borderColor: ACCENT,
   },
-  checkMark: { color: "#fff", fontSize: 13, fontWeight: "700" },
 
   // Auth
-  authForm: { marginTop: 8 },
-  inputWrap: { marginBottom: 16 },
+  authSeeds: {
+    position: "absolute",
+    right: -28,
+    top: 40,
+  },
+  authSprig: {
+    position: "absolute",
+    left: -28,
+    bottom: 170,
+  },
+  verifyContent: {
+    flex: 1,
+    justifyContent: "center",
+    paddingBottom: 24,
+  },
+  authForm: {
+    marginTop: 8,
+    padding: 14,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  inputWrap: { marginBottom: 14 },
   inputLabel: {
+    fontFamily: FF.kicker,
     fontSize: 13,
-    fontWeight: "600",
-    color: MUTED,
+    color: FAINT,
     marginBottom: 8,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 1.4,
   },
   input: {
     backgroundColor: CARD_BG,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    fontFamily: FF.body,
     fontSize: 16,
     color: TEXT,
   },
   errorText: {
     color: "#E05050",
+    fontFamily: FF.bodyMed,
     fontSize: 14,
     marginTop: 8,
     lineHeight: 20,
   },
+  noticeText: {
+    color: ACCENT,
+    fontFamily: FF.bodyMed,
+    fontSize: 14,
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  verifyNote: {
+    color: MUTED,
+    fontFamily: FF.body,
+    fontSize: 14,
+    lineHeight: 21,
+  },
   switchMode: {
+    fontFamily: FF.bodyMed,
     color: MUTED,
     fontSize: 14,
   },
 
   // Buttons
   ctaBtn: {
-    backgroundColor: ACCENT,
+    backgroundColor: "#1F3A2A",
     borderRadius: 14,
-    paddingVertical: 17,
+    paddingVertical: 16,
     alignItems: "center",
     marginTop: 16,
   },
   ctaBtnDisabled: {
-    backgroundColor: "#C2DDD3",
+    backgroundColor: "#C7D5C9",
+  },
+  secondaryBtn: {
+    backgroundColor: CARD_BG,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BORDER,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  secondaryBtnText: {
+    color: ACCENT,
+    fontFamily: FF.bodyMed,
+    fontSize: 15,
   },
   ctaBtnText: {
-    color: "#fff",
-    fontFamily: "Orbitron_700Bold",
-    fontSize: 13,
-    letterSpacing: 2,
+    color: "#FAF6EE",
+    fontFamily: FF.bodyMed,
+    fontSize: 15,
+    letterSpacing: 0,
   },
   legal: {
+    fontFamily: FF.body,
     color: MUTED,
-    fontSize: 13,
+    fontSize: 12,
     textAlign: "center",
     marginTop: 14,
   },
@@ -864,7 +1066,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 6,
-    paddingBottom: 16,
+    paddingBottom: 18,
     paddingHorizontal: 24,
   },
   progressDot: {

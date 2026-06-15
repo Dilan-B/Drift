@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { CloseIcon } from "./Icons";
+import { FF } from "./theme";
 
 const allowedCheckoutHosts = new Set([
   "checkout.stripe.com",
@@ -60,13 +61,17 @@ export default function StripeCheckoutModal({
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <View style={s.root}>
         <View style={s.header}>
-          <View>
-            <Text style={s.kicker}>SECURE CHECKOUT</Text>
+          <TouchableOpacity onPress={onClose} hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }} style={s.close}>
+            <CloseIcon size={17} color="#1A2B1F" />
+          </TouchableOpacity>
+          <View style={s.headerCopy}>
+            <Text style={s.kicker}>CHECKOUT</Text>
             <Text style={s.title}>Drift Pro</Text>
           </View>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }} style={s.close}>
-            <CloseIcon size={18} color="#E8F5EC" />
-          </TouchableOpacity>
+          <View style={s.securePill}>
+            <View style={s.secureDot} />
+            <Text style={s.secureText}>Stripe</Text>
+          </View>
         </View>
 
         <View style={s.frame}>
@@ -93,7 +98,7 @@ export default function StripeCheckoutModal({
           {loading && (
             <View pointerEvents="none" style={s.loading}>
               <ActivityIndicator color="#2FAB72" />
-              <Text style={s.loadingText}>Opening secure Stripe checkout</Text>
+              <Text style={s.loadingText}>Opening checkout</Text>
             </View>
           )}
         </View>
@@ -105,27 +110,78 @@ export default function StripeCheckoutModal({
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0B1A11",
-    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 0) : 44,
+    backgroundColor: "#F4F9F6",
+    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 8 : 54,
   },
   header: {
-    height: 64, paddingHorizontal: 18, flexDirection: "row",
-    alignItems: "center", justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.12)",
+    minHeight: 62,
+    paddingHorizontal: 18,
+    paddingBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
-  kicker: { fontSize: 9, color: "#4A8060", letterSpacing: 2, fontWeight: "700" },
-  title: { fontSize: 18, color: "#E8F5EC", fontWeight: "700", marginTop: 2 },
+  headerCopy: { flex: 1, minWidth: 0 },
+  kicker: {
+    fontFamily: FF.kicker,
+    fontSize: 9,
+    color: "#A8BFB5",
+    letterSpacing: 2.1,
+    marginBottom: 2,
+  },
+  title: {
+    fontFamily: FF.display,
+    fontSize: 26,
+    color: "#1A2B1F",
+    letterSpacing: -0.2,
+  },
   close: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 42, height: 42, borderRadius: 14,
     alignItems: "center", justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(26,43,31,0.09)",
   },
-  frame: { flex: 1, backgroundColor: "#FFFFFF" },
+  securePill: {
+    height: 34,
+    paddingHorizontal: 11,
+    borderRadius: 17,
+    backgroundColor: "#E4F5EE",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  secureDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#2FAB72",
+  },
+  secureText: {
+    fontFamily: FF.bodyMed,
+    fontSize: 12,
+    color: "#1A8050",
+  },
+  frame: {
+    flex: 1,
+    marginHorizontal: 12,
+    marginBottom: Platform.OS === "ios" ? 12 : 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(26,43,31,0.09)",
+  },
   webview: { flex: 1, backgroundColor: "#FFFFFF" },
   loading: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center", justifyContent: "center",
     backgroundColor: "#FFFFFF",
   },
-  loadingText: { marginTop: 10, color: "#4A8060", fontSize: 12 },
+  loadingText: {
+    marginTop: 10,
+    color: "#6B8A78",
+    fontFamily: FF.bodyMed,
+    fontSize: 13,
+  },
 });
