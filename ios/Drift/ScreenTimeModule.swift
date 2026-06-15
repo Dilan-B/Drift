@@ -222,10 +222,20 @@ class ScreenTimeModule: NSObject {
         repeats: true
       )
 
-      // Fire every 5s of blocked-app usage so JS can show near-live progress.
-      let totalSec = max(5, seconds.intValue)
-      let chunk = min(5, totalSec)
-      let threshold = DateComponents(second: chunk)
+      // IMPORTANT — Apple constraint: DeviceActivityEvent thresholds below
+      // ~15 minutes are NOT delivered by iOS. A second-level threshold
+      // (the old `DateComponents(second: 5)`) never fired, which is why the
+      // extension never woke and nothing was enforced when Drift was closed.
+      //
+      // We arm ONE event whose threshold is the user's whole earned balance,
+      // floored to Apple's 15-minute minimum. After that much *blocked-app
+      // usage*, the extension fires once and applies the shield — even if
+      // Drift is force-quit.
+      let totalSec = max(60, seconds.intValue)
+      let APPLE_MIN_THRESHOLD_MIN = 15
+      let balanceMin = Int(ceil(Double(totalSec) / 60.0))
+      let thresholdMin = max(APPLE_MIN_THRESHOLD_MIN, balanceMin)
+      let threshold = DateComponents(minute: thresholdMin)
 
       let event = DeviceActivityEvent(
         applications: selection.applicationTokens,
@@ -242,8 +252,11 @@ class ScreenTimeModule: NSObject {
         let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
         defaults?.set(Self.localDayKey(), forKey: "drift_balance_armed_day")
         defaults?.set(totalSec, forKey: "drift_balance_armed_seconds")
+        defaults?.set(thresholdMin, forKey: "drift_balance_threshold_min")
         defaults?.set(0, forKey: "drift_usage_consumed_seconds")
-        defaults?.set(chunk, forKey: "drift_balance_chunk_size")
+        // Keep chunk for diagnostics only; the extension no longer re-arms
+        // at sub-minute granularity (impossible on iOS).
+        defaults?.set(thresholdMin * 60, forKey: "drift_balance_chunk_size")
         try center.startMonitoring(
           .driftBalance,
           during: schedule,

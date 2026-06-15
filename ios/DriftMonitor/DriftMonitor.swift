@@ -22,9 +22,11 @@ func storeName() -> ManagedSettingsStore.Name { ManagedSettingsStore.Name(STORE_
 @available(iOS 16.0, *)
 class DriftMonitor: DeviceActivityMonitor {
 
-  // Called each time the user hits a 1-minute chunk of blocked-app usage.
-  // We track cumulative consumed time and re-arm for the next chunk, or
-  // apply the shield when the full balance is used up.
+  // Fires ONCE, after the user has spent their entire earned balance on
+  // blocked apps. (iOS won't deliver sub-15-minute thresholds, so there is
+  // no per-chunk re-arming — the single threshold == the whole balance.)
+  // When it fires, the balance is gone: shield the apps. This runs in the
+  // extension's own process, so it works even when Drift is force-quit.
   override func eventDidReachThreshold(
     _ event: DeviceActivityEvent.Name,
     activity: DeviceActivityName
@@ -32,54 +34,17 @@ class DriftMonitor: DeviceActivityMonitor {
     super.eventDidReachThreshold(event, activity: activity)
     let defaults = UserDefaults(suiteName: APP_GROUP)
 
-    let armedTotal = defaults?.integer(forKey: "drift_balance_armed_seconds") ?? 0
-    let chunk = defaults?.integer(forKey: "drift_balance_chunk_size") ?? 5
-    let consumed = (defaults?.integer(forKey: "drift_usage_consumed_seconds") ?? 0) + chunk
-    defaults?.set(consumed, forKey: "drift_usage_consumed_seconds")
+    let thresholdMin = defaults?.integer(forKey: "drift_balance_threshold_min") ?? 15
+    defaults?.set(thresholdMin * 60, forKey: "drift_usage_consumed_seconds")
     defaults?.set(Date().timeIntervalSince1970, forKey: "drift_last_fired_at")
     let count = (defaults?.integer(forKey: "drift_fire_count") ?? 0) + 1
     defaults?.set(count, forKey: "drift_fire_count")
 
-    let remaining = armedTotal - consumed
-    if remaining <= 0 {
-      // Balance fully depleted — lock them out.
-      applyShieldFromSelection()
-      defaults?.set(true, forKey: "drift_balance_depleted")
-      DeviceActivityCenter().stopMonitoring([DeviceActivityName("drift.balance")])
-    } else {
-      // Re-arm for the next chunk (up to 60s).
-      rearmMonitor(remainingSeconds: remaining)
-    }
-  }
-
-  private func rearmMonitor(remainingSeconds: Int) {
-    guard let defaults = UserDefaults(suiteName: APP_GROUP),
-          let data = defaults.data(forKey: SELECTION_KEY),
-          let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
-    else { return }
-
-    let chunk = min(5, remainingSeconds)
-    let schedule = DeviceActivitySchedule(
-      intervalStart: DateComponents(hour: 0, minute: 0),
-      intervalEnd:   DateComponents(hour: 23, minute: 59),
-      repeats: true
-    )
-    let threshold = DateComponents(second: chunk)
-    let event = DeviceActivityEvent(
-      applications: selection.applicationTokens,
-      categories:   selection.categoryTokens,
-      webDomains:   selection.webDomainTokens,
-      threshold:    threshold
-    )
-    let center = DeviceActivityCenter()
-    center.stopMonitoring([DeviceActivityName("drift.balance")])
-    do {
-      try center.startMonitoring(
-        DeviceActivityName("drift.balance"),
-        during: schedule,
-        events: [DeviceActivityEvent.Name("drift.balanceDepleted"): event]
-      )
-    } catch {}
+    // Balance fully depleted — lock them out and stop monitoring until the
+    // app re-arms with a fresh balance.
+    applyShieldFromSelection()
+    defaults?.set(true, forKey: "drift_balance_depleted")
+    DeviceActivityCenter().stopMonitoring([DeviceActivityName("drift.balance")])
   }
 
   // Called when the monitoring window starts (a new day, in our schedule).

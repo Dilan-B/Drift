@@ -45,8 +45,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "8f1e9313-f2ae-4add-a09f-c29384b0cf94"
+        "projectId": "75025803-e721-47ae-9e85-9c4c7225524f"
       }
-    }
+    },
+    "owner": "dilandirft"
   }
 }

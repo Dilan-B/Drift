@@ -1,0 +1,54 @@
+# Drift Project Guidelines
+
+## ECC System Integration
+
+This project uses the **ECC (Extremely Capable CLI)** operating system globally. ECC provides:
+
+- **Security & Compliance**: Guardrails for prompt injection, data protection, malware prevention
+- **Development Standards**: Conventional commits, code style, testing patterns
+- **Research & Debugging**: Systematic problem-solving workflows
+- **Multi-Platform Support**: Consistent behavior across Claude Code, Cursor, Codex
+
+### Active ECC Rules
+
+All prompts in this session automatically load:
+
+1. **Global Guardrails** (`~/.claude/rules/everything-claude-code-guardrails.md`)
+   - Prompt defense baseline
+   - Confidentiality and security requirements
+   - Code output and link handling policies
+
+2. **Instincts** (`~/.claude/homunculus/instincts/inherited/everything-claude-code-instincts.yaml`)
+   - Conventional commit patterns
+   - Code style conventions
+   - Testing and workflow practices
+
+3. **Research Playbooks** (`~/.claude/research/everything-claude-code-research-playbook.md`)
+   - Systematic debugging methodology
+   - Investigation patterns
+   - Evidence-based decision making
+
+## Project-Specific Overrides
+
+See `.claude/CLAUDE.md` for Drift-specific customizations and rules.
+
+## When ECC Rules Apply
+
+| Rule Type | Scope | Applies Always |
+|-----------|-------|---|
+| Security Guardrails | Global | ✅ Yes |
+| Commit Conventions | Project | Per-project override via `.claude/CLAUDE.md` |
+| Code Style | Project | Check `.claude/CLAUDE.md` |
+| Workflow Patterns | Per-Task | Recommended in applicable contexts |
+
+## ECC Lifecycle
+
+- **SessionStart**: ECC configuration is loaded automatically
+- **Each Prompt**: ECC guardrails and instincts inform decision-making
+- **Version Updates**: ECC evolves; check `~/.claude/rules/` for latest
+
+---
+
+**Global ECC Install**: `~/.claude/`  
+**Project Config**: `.claude/` (this directory)  
+**Updated**: 2026-06-14
