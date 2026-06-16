@@ -64,7 +64,6 @@ import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
 import StripeCheckoutModal from "./StripeCheckoutModal";
 import { cached, rateLimited } from "./apiGuards";
-import { useBetaMode } from "./useBetaMode";
 import {
   TouchTracker, OriginPanel, OriginSheet, Backdrop, Pop, FadeInUp, Pulse, useCountUp, getLastTouch,
 } from "./Anim";
@@ -911,7 +910,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
                 </Text>
                 <View style={{ backgroundColor: isSubActive ? earn.blueLo : ink.ghost, borderRadius: 6, paddingVertical: 1, paddingHorizontal: 6 }}>
                   <Text style={{ fontFamily: FOM, fontSize: 8, color: isSubActive ? earn.blue : ink.mid, letterSpacing: 1 }}>
-                    {isSubActive ? "BETA" : "PRO"}
+                    PRO
                   </Text>
                 </View>
               </View>
@@ -2761,14 +2760,7 @@ export default function App() {
 
   // Subscription state (Stripe → Supabase) — server is source of truth
   const { active: subActive, refresh: refreshSub } = useSubscription(userId);
-  // Beta tester flow: code redemption grants REAL Pro access via the server
-  // (sets profiles.beta_unlocked_at). The previewAsFree toggle then lets the
-  // tester flip the UI between Pro and Free for testing — server-side they
-  // remain Pro the whole time, so AI features keep working even while
-  // previewing the Free UI (they'd just hit the paywall in-app).
-  const beta = useBetaMode(userId);
-  const rawProAccess = isPremium || subActive;
-  const proAccess = (beta.unlocked && beta.previewAsFree) ? false : rawProAccess;
+  const proAccess = isPremium || subActive;
   const [driftInActive,  setDriftInActive]  = useState(false);
   const [darkMode,       setDarkMode]       = useState(false);
 
@@ -3361,7 +3353,7 @@ export default function App() {
             if (nativeArmFailedSecondsRef.current === currentSeconds) return;
             // Pass exact seconds so iOS's threshold matches the displayed
             // balance — passing minutes rounds the threshold up.
-            const res = await startBalanceMonitoring(seconds);
+            const res = await startBalanceMonitoring(seconds + 900);
             if (res?.started === false) {
               if (!/unavailable/i.test(res.reason || "")) {
                 nativeArmFailedSecondsRef.current = currentSeconds;
@@ -3370,7 +3362,7 @@ export default function App() {
                 await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]);
                 setLastArmedSeconds(-1);
               }
-              Alert.alert("Background timer not active", res.reason || "Unknown");
+
             } else {
               nativeArmFailedSecondsRef.current = null;
               await AsyncStorage.setItem("drift_last_armed_seconds", String(currentSeconds));
@@ -3619,14 +3611,13 @@ export default function App() {
 
     await clearBlocking().catch(() => {});
     const armedSeconds = Math.max(60, currentSeconds);
-    const res = await startBalanceMonitoring(armedSeconds);
+    const res = await startBalanceMonitoring(armedSeconds + 900);
     if (res?.started === false && !/unavailable/i.test(res.reason || "")) {
       nativeArmFailedSecondsRef.current = armedSeconds;
       await applyBlocking([]).catch(() => {});
       shieldStateRef.current = "on";
       await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
       setLastArmedSeconds(-1);
-      Alert.alert("Background timer not active", res.reason || "Unknown");
       return;
     }
     shieldStateRef.current = "off";
@@ -3940,7 +3931,6 @@ export default function App() {
     await AsyncStorage.multiRemove([
       "drift_username",
       "drift_v4",
-      "drift_beta_preview_as_free",
       "drift_blocked_apps",
       "drift_last_armed_seconds",
       "drift_last_armed_balance",
@@ -4092,7 +4082,6 @@ export default function App() {
           trialDays={trialDays}
           screenTimeStatus={screenTimeStatus}
           dark={darkMode}
-          beta={beta}
           inAppPage
           onClose={() => setShowAccount(false)}
           onProfileChange={(profile) => {

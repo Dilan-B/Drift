@@ -12,7 +12,6 @@ import { supabase } from "./supabase";
 import { getTheme } from "./theme";
 import { cached, invalidateCache, rateLimited } from "./apiGuards";
 import FeedbackModal from "./FeedbackModal";
-import { getDiagnostics } from "./screenTime";
 import {
   CloseIcon, ShieldKeyIcon, PhoneIcon, SparkleIcon, CheckIcon,
 } from "./Icons";
@@ -76,135 +75,11 @@ async function uploadAvatar(userId, sourceUri) {
   });
 }
 
-// ── Beta tester section ──
-// `beta` is the object returned by useBetaMode():
-//   { unlocked, previewAsFree, tryUnlock(code), setPreviewAsFree(bool), lock() }
-function BetaSection({ beta, theme }) {
-  const { ink, paper, earn } = theme;
-  const [codeInput, setCodeInput] = useState("");
-  const [busy,      setBusy]      = useState(false);
-  const [err,       setErr]       = useState("");
-
-  const submit = async () => {
-    setErr("");
-    setBusy(true);
-    try {
-      const res = await beta.tryUnlock(codeInput);
-      if (res.ok) {
-        setCodeInput("");
-        return;
-      }
-      if (res.reason === "rate_limit") setErr(res.message || "Too many attempts. Try later.");
-      else if (res.reason === "network") setErr("Network error. Check your connection.");
-      else setErr("Invalid code.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <View style={[s.section, { borderColor: ink.border, marginTop: 16 }]}>
-      <Text style={[s.sectionLabel, { color: ink.faint }]}>BETA ACCESS</Text>
-
-      {!beta.unlocked ? (
-        <>
-          <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginBottom: 10, lineHeight: 17 }}>
-            Enter beta code.
-          </Text>
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <TextInput
-              value={codeInput}
-              onChangeText={setCodeInput}
-              placeholder="ENTER CODE"
-              placeholderTextColor={ink.faint}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              maxLength={32}
-              style={[s.nameInput, {
-                backgroundColor: paper.warm, borderColor: ink.border, color: ink.deep,
-                letterSpacing: 1, fontFamily: FOM,
-              }]}
-            />
-            <TouchableOpacity
-              onPress={submit}
-              disabled={busy || !codeInput.trim()}
-              style={{
-                paddingHorizontal: 18,
-                height: 46,
-                borderRadius: 13,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: codeInput.trim() ? earn.green : ink.ghost,
-              }}
-            >
-              {busy ? <ActivityIndicator color="#fff" />
-                    : <Text
-                        numberOfLines={1}
-                        style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>
-                        UNLOCK
-                      </Text>}
-            </TouchableOpacity>
-          </View>
-          {!!err && (
-            <Text style={{ fontFamily: FB, fontSize: 12, color: "#E05050", marginTop: 8 }}>{err}</Text>
-          )}
-        </>
-      ) : (
-        <>
-          <View style={{
-            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-            paddingVertical: 4,
-          }}>
-            <View style={{ flex: 1, marginRight: 12 }}>
-              <Text style={{ fontFamily: FK, fontSize: 14, color: ink.deep }}>
-                Preview free experience
-              </Text>
-              <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2, lineHeight: 16 }}>
-                Preview Free while keeping beta access.
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => beta.setPreviewAsFree(!beta.previewAsFree)}
-              style={{
-                width: 44, height: 26, borderRadius: 13,
-                backgroundColor: beta.previewAsFree ? earn.green : ink.ghost,
-                justifyContent: "center",
-                paddingHorizontal: 3,
-              }}
-            >
-              <View style={{
-                width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff",
-                alignSelf: beta.previewAsFree ? "flex-end" : "flex-start",
-              }} />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            onPress={() => {
-              Alert.alert("Lock beta access?", "You'll need to enter the code again to use the toggle.", [
-                { text: "Cancel", style: "cancel" },
-                { text: "Lock", style: "destructive", onPress: () => beta.lock() },
-              ]);
-            }}
-            style={{ marginTop: 14, alignSelf: "flex-start" }}
-          >
-            <Text style={{ fontFamily: FOM, fontSize: 10, color: ink.mid, letterSpacing: 1 }}>
-              LOCK BETA ACCESS
-            </Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
-  );
-}
-
 export default function ProfileScreen({
   userId, userEmail, username, subActive, trialDays, screenTimeStatus,
   dark = false, onClose, onProfileChange, onOpenBlockedApps, onOpenBlockedHours, onOpenRecurringTasks,
   onRequestScreenTime, onUpgrade, onSignOut, onDeleteAccount,
   inAppPage = false,
-  // Beta-tester preview toggle (UX only — no real Pro grant)
-  beta,
 }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
@@ -497,46 +372,10 @@ export default function ProfileScreen({
           )}
         </View>
 
-        {/* ── Beta tester section ── */}
-        {beta && (
-          <BetaSection beta={beta} theme={theme} />
-        )}
-
         {/* Feedback + legal */}
         <View style={s.legalGroup}>
           <TouchableOpacity onPress={() => setFeedbackOpen(true)} style={s.legalRow}>
             <Text style={[s.legalText, { color: ink.deep }]}>Send feedback</Text>
-            <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={async () => {
-            const d = await getDiagnostics();
-            const fmt = (ts) => ts ? new Date(ts * 1000).toLocaleString("en-US", {
-              year: "numeric",
-              month: "numeric",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: true,
-            }) : "never";
-            Alert.alert("Screen Time diagnostics",
-              `Auth: ${d.authStatus || "?"}\n` +
-              `App Group OK: ${d.appGroupAvailable}\n` +
-              `Selection saved: ${d.selectionStored} (${d.selectionBytes}B)\n` +
-              `Picked: ${d.pickedAppCount ?? 0} apps, ${d.pickedCategoryCount ?? 0} cats\n` +
-              `Active monitors: ${(d.activeMonitors || []).join(",") || "none"}\n` +
-              `Threshold seconds: ${d.thresholdSeconds ?? 0}\n` +
-              `Consumed total: ${d.consumedTotalSeconds ?? 0}s\n` +
-              `Reported: ${d.reportedSeconds ?? 0}s\n` +
-              `Interval start: ${fmt(d.intervalStartAt)}\n` +
-              `Failsafe active: ${d.failsafeActive}\n` +
-              `Failsafe deadline: ${fmt(d.failsafeDeadline)}\n` +
-              `Last fired: ${fmt(d.lastFiredAt)}\n` +
-              `Fire count: ${d.fireCount ?? 0}\n` +
-              `Depleted flag: ${d.depletedFlag}`
-            );
-          }} style={s.legalRow}>
-            <Text style={[s.legalText, { color: ink.deep }]}>Debug: Screen Time</Text>
             <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity
