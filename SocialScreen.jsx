@@ -1348,7 +1348,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
                   <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.ink, flex: 1 }}>
                     Challenges
                   </Text>
-                  <Text style={{ fontFamily: FF.serifReg, fontSize: 20, color: th.faint }}>></Text>
+                  <Text style={{ fontFamily: FF.serifReg, fontSize: 20, color: th.faint }}>{"›"}</Text>
                 </TouchableOpacity>
               )}
 

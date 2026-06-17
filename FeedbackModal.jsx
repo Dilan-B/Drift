@@ -1,63 +1,50 @@
 /**
  * FeedbackModal.jsx
- * In-app feedback form for beta testers. Saves to supabase.feedback table
- * (with RLS), and falls back to a mailto link if the user prefers email.
- *
- * Run supabase/feedback_setup.sql once to create the table.
+ * In-app feedback form for beta testers. Opens a prefilled mailto with
+ * the user's feedback so it can be sent to Drift support.
  */
 import React, { useState } from "react";
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Modal,
+  Alert, KeyboardAvoidingView, Linking, Modal,
   Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
-import { supabase } from "./supabase";
 import { getTheme } from "./theme";
-import { rateLimited } from "./apiGuards";
 
 const FK = "Oswald_700Bold";
 const FO = "Orbitron_700Bold";
+const FEEDBACK_EMAIL = "driftappcontact@gmail.com";
 
 export default function FeedbackModal({ visible, onClose, userId, username, dark = false }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   const [body, setBody] = useState("");
-  const [busy, setBusy] = useState(false);
+
+  const openMail = async (message = body.trim()) => {
+    const subject = encodeURIComponent("Drift beta feedback");
+    const emailBody = encodeURIComponent(
+      `${message}\n\n-- App version: 1.0\n-- Device: ${Platform.OS} ${Platform.Version}\n-- Username: @${username || "(none)"}\n-- User ID: ${userId || "(none)"}`
+    );
+
+    try {
+      await Linking.openURL(`mailto:${FEEDBACK_EMAIL}?subject=${subject}&body=${emailBody}`);
+      return true;
+    } catch {
+      Alert.alert("Mail not set up", `Email us at ${FEEDBACK_EMAIL}`);
+      return false;
+    }
+  };
 
   const submit = async () => {
     const clean = body.trim();
     if (clean.length < 5) { Alert.alert("Too short", "Tell us a bit more."); return; }
     if (clean.length > 5000) { Alert.alert("Too long", "Keep it under 5000 characters."); return; }
 
-    setBusy(true);
-    try {
-      const { error } = await rateLimited(`feedback_${userId || "anon"}`, { limit: 5, windowMs: 60 * 60_000 }, () =>
-        supabase.from("feedback").insert({
-          user_id:     userId || null,
-          body:        clean,
-          app_version: "1.0",
-          platform:    Platform.OS,
-          os_version:  String(Platform.Version),
-        })
-      );
-      if (error) throw error;
+    const opened = await openMail(clean);
+    if (opened) {
       setBody("");
       onClose?.();
-      Alert.alert("Thanks", "We read every message. We'll get back to you soon.");
-    } catch (e) {
-      Alert.alert("Couldn't send", e?.message || "Try again later.");
-    } finally {
-      setBusy(false);
+      Alert.alert("Thanks", "Your email draft is ready to send.");
     }
-  };
-
-  const openMail = () => {
-    const subject = encodeURIComponent("Drift beta feedback");
-    const meta = encodeURIComponent(
-      `\n\n— App version: 1.0\n— Device: ${Platform.OS} ${Platform.Version}\n— Username: @${username || "(none)"}`
-    );
-    Linking.openURL(`mailto:driftappcontact@gmail.com?subject=${subject}&body=${meta}`).catch(() => {
-      Alert.alert("Mail not set up", "Email us at driftappcontact@gmail.com");
-    });
   };
 
   return (
@@ -69,10 +56,8 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
             <Text style={[s.headerCancel, { color: ink.mid }]}>Cancel</Text>
           </TouchableOpacity>
           <Text style={[s.headerTitle, { color: ink.deep, fontFamily: FK }]}>Send feedback</Text>
-          <TouchableOpacity onPress={submit} disabled={busy}>
-            {busy
-              ? <ActivityIndicator color={earn.green} />
-              : <Text style={[s.headerSend, { color: earn.green }]}>Send</Text>}
+          <TouchableOpacity onPress={submit}>
+            <Text style={[s.headerSend, { color: earn.green }]}>Send</Text>
           </TouchableOpacity>
         </View>
 
@@ -100,9 +85,9 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
             {body.length} / 5000
           </Text>
 
-          <TouchableOpacity onPress={openMail} style={{ marginTop: 24, padding: 14, alignItems: "center" }}>
+          <TouchableOpacity onPress={() => openMail()} style={{ marginTop: 24, padding: 14, alignItems: "center" }}>
             <Text style={{ color: ink.mid, fontSize: 13 }}>
-              Prefer email? Tap to open Mail to <Text style={{ color: earn.green }}>driftappcontact@gmail.com</Text>
+              Tap to open Mail to <Text style={{ color: earn.green }}>{FEEDBACK_EMAIL}</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>

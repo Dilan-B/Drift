@@ -379,14 +379,14 @@ export default function ProfileScreen({
             <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => Linking.openURL("https://drift.app/privacy")}
+            onPress={() => Linking.openURL("https://drift-landing-page-git-main-ridi-labs.vercel.app/privacy")}
             style={s.legalRow}
           >
             <Text style={[s.legalText, { color: ink.deep }]}>Privacy policy</Text>
             <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => Linking.openURL("https://drift.app/terms")}
+            onPress={() => Linking.openURL("https://drift-landing-page-git-main-ridi-labs.vercel.app/terms")}
             style={s.legalRow}
           >
             <Text style={[s.legalText, { color: ink.deep }]}>Terms of use</Text>
