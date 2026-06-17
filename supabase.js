@@ -1,14 +1,72 @@
 import { createClient } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import "react-native-get-random-values";
+import * as SecureStore from "expo-secure-store";
+import * as aes from "aes-js";
 import { cached, invalidateCache, rateLimited } from "./apiGuards";
 
 // ── Project values — anon key is safe to ship (RLS-bounded). ──
 export const SUPABASE_URL  = "https://kxsikaymdykepcniozlp.supabase.co";
 export const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4c2lrYXltZHlrZXBjbmlvemxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MzEzMDksImV4cCI6MjA5NjEwNzMwOX0.lORjy6XQNBASj28svb9cdqlh9mkvzxu1dy0f77_QrIs";
 
+const AUTH_KEYSTORE_KEY = "drift_supabase_auth_key";
+
+function randomBytes(length) {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+async function getAuthCipherKey() {
+  let keyHex = await SecureStore.getItemAsync(AUTH_KEYSTORE_KEY);
+  if (!keyHex) {
+    keyHex = aes.utils.hex.fromBytes(randomBytes(32));
+    await SecureStore.setItemAsync(AUTH_KEYSTORE_KEY, keyHex, {
+      keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+    });
+  }
+  return aes.utils.hex.toBytes(keyHex);
+}
+
+const encryptedAuthStorage = {
+  async getItem(key) {
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return null;
+
+    try {
+      const payload = JSON.parse(raw);
+      if (payload?.access_token || payload?.refresh_token || payload?.currentSession) {
+        await encryptedAuthStorage.setItem(key, raw);
+        return raw;
+      }
+      const cipherKey = await getAuthCipherKey();
+      const iv = aes.utils.hex.toBytes(payload.iv);
+      const encrypted = aes.utils.hex.toBytes(payload.value);
+      const ctr = new aes.ModeOfOperation.ctr(cipherKey, new aes.Counter(iv));
+      return aes.utils.utf8.fromBytes(ctr.decrypt(encrypted));
+    } catch {
+      await AsyncStorage.removeItem(key).catch(() => {});
+      return null;
+    }
+  },
+  async setItem(key, value) {
+    const cipherKey = await getAuthCipherKey();
+    const iv = randomBytes(16);
+    const ctr = new aes.ModeOfOperation.ctr(cipherKey, new aes.Counter(iv));
+    const encrypted = ctr.encrypt(aes.utils.utf8.toBytes(value));
+    await AsyncStorage.setItem(key, JSON.stringify({
+      iv: aes.utils.hex.fromBytes(iv),
+      value: aes.utils.hex.fromBytes(encrypted),
+    }));
+  },
+  async removeItem(key) {
+    await AsyncStorage.removeItem(key);
+  },
+};
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
-    storage: AsyncStorage,
+    storage: encryptedAuthStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

@@ -11,8 +11,8 @@
  *    the app. The OAuth code never leaves the device unencrypted.
  *  - All identity tokens are validated against the provider's public keys by
  *    Supabase Auth before any session is issued.
- *  - We never store or log raw tokens. Sessions are persisted only by Supabase's
- *    AsyncStorage adapter (already configured).
+ *  - We never store or log raw tokens. Supabase sessions are persisted through
+ *    the encrypted auth storage adapter configured in supabase.js.
  */
 import { Platform } from "react-native";
 import * as Crypto from "expo-crypto";

@@ -12,6 +12,10 @@ const cors = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
+function isEmailVerified(user: { email_confirmed_at?: string | null; confirmed_at?: string | null } | null): boolean {
+  return !!(user?.email_confirmed_at || user?.confirmed_at);
+}
+
 function subscriptionPeriodEnd(sub: Stripe.Subscription | string | null): number | null {
   if (!sub || typeof sub === "string") return null;
   return sub.current_period_end || null;
@@ -35,6 +39,7 @@ serve(async (req: Request) => {
     );
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) return json({ error: "Unauthorized" }, 401);
+    if (!isEmailVerified(user)) return json({ error: "email_not_verified" }, 403);
 
     let body: { sessionId?: string };
     try { body = await req.json(); }

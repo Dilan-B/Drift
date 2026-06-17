@@ -19,6 +19,10 @@ const cors = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
+function isEmailVerified(user: { email_confirmed_at?: string | null; confirmed_at?: string | null } | null): boolean {
+  return !!(user?.email_confirmed_at || user?.confirmed_at);
+}
+
 // Hash IP with a server-side salt — irreversible, but deterministic enough
 // to detect collisions.
 async function hashIp(ip: string): Promise<string> {
@@ -38,6 +42,7 @@ function extractIp(req: Request): string {
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -50,6 +55,7 @@ serve(async (req: Request) => {
     );
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) return json({ error: "Unauthorized" }, 401);
+    if (!isEmailVerified(user)) return json({ error: "email_not_verified" }, 403);
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,

@@ -219,12 +219,20 @@ function QuestionSlide({ step, answers, onToggle, onNext, canContinue }) {
 
 // ── Validation helpers ────────────────────────────────────────
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const AUTH_ATTEMPT_LIMIT = 5;
+const AUTH_ATTEMPT_WINDOW_MS = 15 * 60_000;
+
+function isEmailVerified(user) {
+  return !!(user?.email_confirmed_at || user?.confirmed_at);
+}
 
 function validatePassword(pw) {
-  if (pw.length < 8) return "Password must be at least 8 characters.";
+  if (pw.length < 12) return "Password must be at least 12 characters.";
   if (pw.length > 72) return "Password too long (max 72 characters).";
-  if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw))
-    return "Password must contain letters and at least one number.";
+  if (!/[a-z]/.test(pw) || !/[A-Z]/.test(pw) || !/\d/.test(pw) || !/[^A-Za-z0-9]/.test(pw))
+    return "Use uppercase, lowercase, a number, and a symbol.";
+  if (/^(password|qwerty|letmein|welcome|drift)/i.test(pw) || /123456|password/i.test(pw))
+    return "Use a less common password.";
   return null;
 }
 
@@ -375,7 +383,6 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
   const [notice,   setNotice]   = useState("");
 
   // Client-side rate limiting (anti-spam, not a security boundary)
-  const attemptsRef = useRef([]);
   const resendAttemptsRef = useRef([]);
 
   async function handleOpenMail() {
@@ -439,9 +446,13 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
     const emailErr   = validateEmail(cleanEmail);
     if (emailErr) { setError(emailErr); return; }
 
-    // Validate password
-    const pwErr = validatePassword(password);
-    if (pwErr) { setError(pwErr); return; }
+    // Validate password. Strength rules apply to signup; existing users may
+    // still have older passwords until Supabase policy forces a reset.
+    if (!password) { setError("Password required."); return; }
+    if (mode === "signup") {
+      const pwErr = validatePassword(password);
+      if (pwErr) { setError(pwErr); return; }
+    }
 
     // Validate username (signup only) + availability check
     let cleanUsername = "";
@@ -465,19 +476,10 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
       }
     }
 
-    // Client-side rate limit: max 5 attempts per 60s window
-    const now = Date.now();
-    attemptsRef.current = attemptsRef.current.filter(t => now - t < 60_000);
-    if (attemptsRef.current.length >= 5) {
-      setError("Too many attempts. Wait a minute and try again.");
-      return;
-    }
-    attemptsRef.current.push(now);
-
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { data, error: err } = await rateLimited("auth_signup", { limit: 5, windowMs: 60_000 }, () =>
+        const { data, error: err } = await rateLimited(`auth_signup_${cleanEmail}`, { limit: AUTH_ATTEMPT_LIMIT, windowMs: AUTH_ATTEMPT_WINDOW_MS }, () =>
           supabase.auth.signUp({
           email: cleanEmail,
           password,
@@ -521,6 +523,15 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
           return;
         }
 
+        if (!isEmailVerified(data.user)) {
+          await supabase.auth.signOut().catch(() => {});
+          setVerificationEmail(cleanEmail);
+          setError("");
+          setNotice("Check your email to verify your account, then sign in again.");
+          setLoading(false);
+          return;
+        }
+
         // Claim 7-day free trial (server tracks IP hash to prevent abuse)
         try {
           await rateLimited("claim_trial", { limit: 3, windowMs: 10 * 60_000 }, () =>
@@ -533,13 +544,20 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
 
         onDone(data.user);
       } else {
-        const { data, error: err } = await rateLimited("auth_signin", { limit: 8, windowMs: 60_000 }, () =>
+        const { data, error: err } = await rateLimited(`auth_signin_${cleanEmail}`, { limit: AUTH_ATTEMPT_LIMIT, windowMs: AUTH_ATTEMPT_WINDOW_MS }, () =>
           supabase.auth.signInWithPassword({
           email: cleanEmail,
           password,
           })
         );
         if (err) throw err;
+        if (!isEmailVerified(data.user)) {
+          await supabase.auth.signOut().catch(() => {});
+          setVerificationEmail(cleanEmail);
+          setError("");
+          setNotice("Check your email to verify your account, then sign in again.");
+          return;
+        }
         onDone(data.user);
       }
     } catch (e) {
@@ -684,7 +702,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
             <Text style={styles.inputLabel}>Password</Text>
             <TextInput
               style={styles.input}
-              placeholder="Min. 8 characters"
+              placeholder="12+ chars, number, symbol"
               placeholderTextColor={MUTED}
               value={password}
               onChangeText={setPassword}
@@ -726,12 +744,12 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
         <Text style={{ marginTop: 14, marginHorizontal: 24, textAlign: "center", color: MUTED, fontFamily: FF.body, fontSize: 11, lineHeight: 16 }}>
           By creating an account you agree to our{" "}
           <Text style={{ color: ACCENT, textDecorationLine: "underline" }}
-            onPress={() => require("react-native").Linking.openURL("https://drift.app/terms")}>
+            onPress={() => require("react-native").Linking.openURL("https://drift-landing-page-git-main-ridi-labs.vercel.app/terms")}>
             Terms of Use
           </Text>{" "}
           and{" "}
           <Text style={{ color: ACCENT, textDecorationLine: "underline" }}
-            onPress={() => require("react-native").Linking.openURL("https://drift.app/privacy")}>
+            onPress={() => require("react-native").Linking.openURL("https://drift-landing-page-git-main-ridi-labs.vercel.app/privacy")}>
             Privacy Policy
           </Text>.
         </Text>

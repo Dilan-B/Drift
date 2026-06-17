@@ -37,9 +37,14 @@ const json = (body: unknown, status = 200) =>
     headers: { ...cors, "Content-Type": "application/json" },
   });
 
+function isEmailVerified(user: { email_confirmed_at?: string | null; confirmed_at?: string | null } | null): boolean {
+  return !!(user?.email_confirmed_at || user?.confirmed_at);
+}
+
 // ── Main handler ──────────────────────────────────────────────
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
     // ── 1. Authenticate ──────────────────────────────────────
@@ -54,6 +59,7 @@ serve(async (req: Request) => {
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser();
     if (authErr || !user) return json({ error: "Unauthorized" }, 401);
+    if (!isEmailVerified(user)) return json({ error: "email_not_verified" }, 403);
 
     // Reject oversized requests early — protect from amplification attacks
     const lenHeader = parseInt(req.headers.get("content-length") || "0", 10);

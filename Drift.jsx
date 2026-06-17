@@ -3172,6 +3172,11 @@ export default function App() {
   const completeAuthenticatedUser = useCallback(async (user, answers = {}) => {
     const authUser = user?.id ? user : (await safeGetSession())?.data?.session?.user;
     if (!authUser?.id) return;
+    if (!(authUser.email_confirmed_at || authUser.confirmed_at)) {
+      await supabase.auth.signOut().catch(() => {});
+      Alert.alert("Verify your email", "Check your email and tap the latest Drift verification link before continuing.");
+      return;
+    }
 
     const diff = answers?.difficulty?.[0] || "medium";
     setDifficulty(diff);
