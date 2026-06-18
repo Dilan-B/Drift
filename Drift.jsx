@@ -2782,6 +2782,7 @@ export default function App() {
   const taskHistoryRef = useRef([]);
   const totalXpRef     = useRef(0);
   const creditsRef     = useRef({ balance: 0, earned: 0, spent: 0 });
+  const userIdRef      = useRef(null);
   useEffect(() => {
     const idx = getLevelIdx(totalXp);
     if (screen !== "app") {
@@ -2989,6 +2990,12 @@ export default function App() {
       persist({ credits: nc });
       return nc;
     });
+    // Push the spent-down balance to the server too. Without this, the server
+    // still holds the pre-drain balance and resurrects it on the next launch
+    // (boot restore trusts server balanceSeconds > 0 over fresher local state).
+    if (userIdRef.current) {
+      syncProfileStats(userIdRef.current, { balanceSeconds: rem }).catch(() => {});
+    }
   }, []);
 
   // 1. Heartbeat while foregrounded — every 15s, write "I'm alive" timestamp
@@ -3269,6 +3276,11 @@ export default function App() {
   // already drained the balance to zero while Drift was closed. If so, sync
   // the JS state down to 0 so the UI matches what iOS has enforced.
   useEffect(() => {
+    // Wait until we know the user — consumeDepletedFlag() clears the native
+    // flag on read, so if we ran before userId loaded we'd consume it without
+    // being able to sync balanceSeconds:0 to the server, and the stale server
+    // balance would resurrect on the next launch.
+    if (!userId) return;
     const sync = async () => {
       const depleted = await consumeDepletedFlag();
       if (!depleted) return;
@@ -3282,11 +3294,14 @@ export default function App() {
         persist({ credits: nc });
         return nc;
       });
+      // Mirror the depletion to the server so the boot restore doesn't bring
+      // the balance back from a stale balanceSeconds on the next launch.
+      syncProfileStats(userId, { balanceSeconds: 0 }).catch(() => {});
     };
     sync();
     const sub = AppState.addEventListener("change", n => { if (n === "active") sync(); });
     return () => sub.remove();
-  }, []);
+  }, [userId]);
 
   // Keep the Apple Screen Time shield in sync with balance.
   // balance == 0 → shield ON (blocked apps shielded)
@@ -3589,6 +3604,7 @@ export default function App() {
   taskHistoryRef.current = taskHistory;
   totalXpRef.current     = totalXp;
   creditsRef.current     = credits;
+  userIdRef.current      = userId;
 
   const persist = async upd => {
     try {
