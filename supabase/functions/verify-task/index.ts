@@ -83,9 +83,11 @@ serve(async (req: Request) => {
       subActive = isDev || subOk || betaOk;
       setCachedSub(user.id, subActive);
     }
-    if (!subActive) {
-      return json({ error: "subscription_required", message: "AI Check requires Pro. Tap profile → Upgrade." }, 402);
-    }
+    // TEMPORARY: Pro is free for everyone until Apple IAP is re-enabled
+    // post-approval. To restore paid gating, uncomment the block below.
+    // if (!subActive) {
+    //   return json({ error: "subscription_required", message: "AI Check requires Pro. Tap profile → Upgrade." }, 402);
+    // }
 
     // ── 2. Rate limiting ─────────────────────────────────────
     const now      = new Date();

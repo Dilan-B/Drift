@@ -65,7 +65,9 @@ serve(async (req: Request) => {
       subActive = isDev || subOk || betaOk;
       setCachedSub(user.id, subActive);
     }
-    if (!subActive) return json({ error: "subscription_required" }, 402);
+    // TEMPORARY: Pro is free for everyone until Apple IAP is re-enabled
+    // post-approval. To restore paid gating, uncomment the line below.
+    // if (!subActive) return json({ error: "subscription_required" }, 402);
 
     // Rate limiting (shared ai_check_usage table is fine here too)
     const hourAgo  = new Date(Date.now() - 3_600_000).toISOString();

@@ -10,13 +10,12 @@ import * as Crypto from "expo-crypto";
 import { getTheme } from "./theme";
 import AICheckModal from "./AICheckModal";
 import { evaluateTask } from "./aiEvaluate";
-import { useSubscription, createCheckoutSession, confirmCheckoutSession } from "./useSubscription";
 import BlockedAppsModal from "./BlockedAppsModal";
 import UsernameSetupModal from "./UsernameSetupModal";
 import Swipeable from "./Swipeable";
 import {
   fetchTasks, insertTask, completeTaskRow, softDeleteTask,
-  appendLedgerEntry, syncProfileStats, fetchProfileStats,
+  appendLedgerEntry, syncProfileStats, fetchProfileStats, flushPendingStats,
   cache,
 } from "./sync";
 import { applyBlocking, clearBlocking } from "./blockedApps";
@@ -58,11 +57,9 @@ import { startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag, con
 import { supabase, syncScreenTime, safeGetSession } from "./supabase";
 import { handleSupabaseAuthCallback } from "./authLinks";
 import SocialScreen from "./SocialScreen";
-import PaywallScreen, { initTrial, getTrialStatus } from "./PaywallScreen";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
-import StripeCheckoutModal from "./StripeCheckoutModal";
 import { cached, rateLimited } from "./apiGuards";
 import {
   TouchTracker, OriginPanel, OriginSheet, Backdrop, Pop, FadeInUp, Pulse, useCountUp, getLastTouch,
@@ -2730,9 +2727,6 @@ export default function App() {
   const [secLeft,     setSecLeft]     = useState(0);
 
   const [userId,         setUserId]         = useState(null);
-  const [isPremium,      setIsPremium]      = useState(false);
-  const [trialDays,      setTrialDays]      = useState(7);
-  const [showPaywall,    setShowPaywall]    = useState(false);
   const [onboarding,     setOnboarding]     = useState(false);
   const [signInOnly,     setSignInOnly]     = useState(false); // returning user (skip questionnaire)
   const [showAccount,        setShowAccount]        = useState(false);
@@ -2745,8 +2739,6 @@ export default function App() {
   const [showQuickGrant,     setShowQuickGrant]     = useState(false);
   const [quickGrantCount,    setQuickGrantCount]    = useState(0);
   const [difficulty,         setDifficulty]         = useState("medium");
-  const [checkoutUrl,        setCheckoutUrl]        = useState("");
-  const [showCheckout,       setShowCheckout]       = useState(false);
   const [userEmail,          setUserEmail]          = useState("");
   const [myUsername,         setUserName]           = useState("");
   const [screenTimeStatus,   setScreenTimeStatus]   = useState("unknown");
@@ -2758,9 +2750,11 @@ export default function App() {
   const quickGrantDayRef = useRef(todayKey());
   const visibleTaskDayRef = useRef(todayKey());
 
-  // Subscription state (Stripe → Supabase) — server is source of truth
-  const { active: subActive, refresh: refreshSub } = useSubscription(userId);
-  const proAccess = isPremium || subActive;
+  // ── Pro access ─────────────────────────────────────────────────────────
+  // Payments/IAP are removed for now: everyone gets Pro for free until the app
+  // is approved and Apple in-app purchases can be wired in. The RevenueCat
+  // webhook + schema_v6 (server) remain in place for the eventual re-enable.
+  const proAccess = true;
   const [driftInActive,  setDriftInActive]  = useState(false);
   const [darkMode,       setDarkMode]       = useState(false);
 
@@ -2834,12 +2828,10 @@ export default function App() {
       showBlockedApps ||
       showBlockedHours ||
       showRecurringTasks ||
-      showPaywall ||
       showReduceTime ||
       showQuickGrant ||
-      showCheckout ||
       childSwipeLocked;
-  }, [driftInActive, overlay, popup, showAccount, showBlockedApps, showBlockedHours, showRecurringTasks, showPaywall, showReduceTime, showQuickGrant, showCheckout, tab, childSwipeLocked]);
+  }, [driftInActive, overlay, popup, showAccount, showBlockedApps, showBlockedHours, showRecurringTasks, showReduceTime, showQuickGrant, tab, childSwipeLocked]);
 
   const stopTick = () => { if (tickRef.current) clearInterval(tickRef.current); };
 
@@ -3019,7 +3011,8 @@ export default function App() {
         if (bgTimeRef.current && screen === "app") {
           const bgStart = bgTimeRef.current;
           bgTimeRef.current = null;
-          try { refreshSub?.(); } catch {}
+          // Retry any balance/XP writes that failed while offline.
+          if (userIdRef.current) flushPendingStats(userIdRef.current).catch(() => {});
           if (nativeArmedRef.current) {
             const used = await consumeUsedSeconds();
             if (used > 0) drainBy(used);
@@ -3204,15 +3197,6 @@ export default function App() {
     setSignInOnly(false);
     const hadOnboarded = await AsyncStorage.getItem("drift_onboarded");
     await AsyncStorage.setItem("drift_onboarded", "1");
-    await initTrial();
-    try {
-      await rateLimited("claim_trial", { limit: 3, windowMs: 10 * 60_000 }, () =>
-        supabase.functions.invoke("claim-trial", {})
-      );
-    } catch {}
-    const { isPremium: prem, daysLeft } = await getTrialStatus(authUser.id);
-    setIsPremium(prem);
-    setTrialDays(daysLeft);
     setScreen("app");
     if (!hadOnboarded && !signInOnly) {
       setFirstTimeBlockedApps(true);
@@ -3281,6 +3265,9 @@ export default function App() {
     // being able to sync balanceSeconds:0 to the server, and the stale server
     // balance would resurrect on the next launch.
     if (!userId) return;
+    // On launch / each foreground, first flush any balance write that failed
+    // while offline so the server can't resurrect a stale balance.
+    flushPendingStats(userId).catch(() => {});
     const sync = async () => {
       const depleted = await consumeDepletedFlag();
       if (!depleted) return;
@@ -3438,7 +3425,6 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        await initTrial();
         const { data: { session } } = await safeGetSession();
         const uid = session?.user?.id ?? null;
         setUserId(uid);
@@ -3466,12 +3452,6 @@ export default function App() {
           setOnboarding(true);
           return;
         }
-        try {
-          await rateLimited("claim_trial", { limit: 3, windowMs: 10 * 60_000 }, () =>
-            supabase.functions.invoke("claim-trial", {})
-          );
-        } catch {}
-
         // ── Server-authoritative state: tasks come from Supabase ──
         // Boot order: show cached state instantly, then refresh from server.
         let remoteTasksApplied = false;
@@ -3542,9 +3522,6 @@ export default function App() {
           }
         } catch (e) { console.warn("fetchProfileStats at boot:", e?.message); }
 
-        const { isPremium: prem, daysLeft } = await getTrialStatus(uid);
-        setIsPremium(prem);
-        setTrialDays(daysLeft);
         const d = await storage.get("drift_v4");
         if (d?.value) {
           const p = JSON.parse(d.value);
@@ -3908,36 +3885,6 @@ export default function App() {
     }
   };
 
-  const openCheckout = async () => {
-    const url = await createCheckoutSession();
-    if (!url) throw new Error("No checkout URL");
-    setCheckoutUrl(url);
-    setShowPaywall(false);
-    setShowCheckout(true);
-  };
-
-  const handleCheckoutSuccess = async (sessionId) => {
-    setShowCheckout(false);
-    setCheckoutUrl("");
-    try {
-      if (sessionId) {
-        const confirmed = await confirmCheckoutSession(sessionId);
-        if (confirmed?.active) setIsPremium(true);
-      }
-      await refreshSub?.();
-      if (userId) {
-        const { isPremium: prem, daysLeft } = await getTrialStatus(userId, { force: true });
-        setIsPremium(prem);
-        setTrialDays(daysLeft);
-      }
-    } catch (e) {
-      Alert.alert(
-        "Payment pending",
-        "Stripe received the checkout return, but Drift could not verify the subscription yet. If payment succeeded, access should unlock when Stripe's webhook arrives."
-      );
-    }
-  };
-
   const signOut = async () => {
     setShowAccount(false);
     try { await supabase.auth.signOut(); } catch {}
@@ -4100,7 +4047,6 @@ export default function App() {
           userEmail={userEmail}
           username={myUsername}
           subActive={proAccess}
-          trialDays={trialDays}
           screenTimeStatus={screenTimeStatus}
           dark={darkMode}
           inAppPage
@@ -4112,30 +4058,13 @@ export default function App() {
             }
           }}
           onOpenBlockedApps={() => { setFirstTimeBlockedApps(false); setShowBlockedApps(true); }}
-          onOpenBlockedHours={() => {
-            if (!proAccess) setShowPaywall(true);
-            else setShowBlockedHours(true);
-          }}
-          onOpenRecurringTasks={() => {
-            if (!proAccess) setShowPaywall(true);
-            else setShowRecurringTasks(true);
-          }}
+          onOpenBlockedHours={() => setShowBlockedHours(true)}
+          onOpenRecurringTasks={() => setShowRecurringTasks(true)}
           onRequestScreenTime={async () => {
             const next = await requestScreenTimeAuth();
             setScreenTimeStatus(next);
             if (next !== "approved") {
               Alert.alert("Screen Time", `Status: ${next}. Open Settings -> Screen Time to grant access.`);
-            }
-          }}
-          onUpgrade={async () => {
-            try {
-              await openCheckout();
-            } catch (e) {
-              const raw = (e?.message || "").toLowerCase();
-              const friendly = raw.includes("edge function") || raw.includes("send a request")
-                ? "Payments aren't set up yet. Please try again later."
-                : (e?.message || "Try again.");
-              Alert.alert("Checkout unavailable", friendly);
             }
           }}
           onSignOut={signOut}
@@ -4185,8 +4114,8 @@ export default function App() {
           <View style={{ width: TAB_W, height: "100%" }}>
             <SocialScreen
               userId={userId}
-              isPremium={isPremium}
-              onOpenPaywall={() => setShowPaywall(true)}
+              isPremium={true}
+              onOpenPaywall={() => {}}
               onSwipeLockChange={setChildSwipeLockedNow}
               onChallengeResolved={handleChallengeResolved}
               dark={darkMode}
@@ -4251,32 +4180,10 @@ export default function App() {
               onClose={() => setOverlay(null)}
               userId={userId}
               isSubActive={proAccess}
-              onOpenPaywall={() => { setOverlay(null); setShowPaywall(true); }}
+              onOpenPaywall={() => {}}
             />
           )}
         </View>
-      )}
-
-      {/* Paywall modal */}
-      {showPaywall && (
-        <Modal animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPaywall(false)}>
-          <PaywallScreen
-            userId={userId}
-            daysLeft={trialDays}
-            onSubscribe={async () => {
-              try {
-                await openCheckout();
-              } catch (e) {
-                const raw = (e?.message || "").toLowerCase();
-                const friendly = raw.includes("edge function") || raw.includes("send a request")
-                  ? "Payments aren't set up yet. Please try again later."
-                  : (e?.message || "Try again.");
-                Alert.alert("Checkout unavailable", friendly);
-              }
-            }}
-            onClose={() => setShowPaywall(false)}
-          />
-        </Modal>
       )}
 
       {/* Blocked apps modal (onboarding + ongoing management) */}
@@ -4331,13 +4238,6 @@ export default function App() {
         onClose={() => setShowQuickGrant(false)}
         onGrant={handleQuickGrant}
         grantMins={DIFFICULTY_GRANT[difficulty] || 7}
-      />
-      <StripeCheckoutModal
-        visible={showCheckout}
-        checkoutUrl={checkoutUrl}
-        onClose={() => { setShowCheckout(false); setCheckoutUrl(""); }}
-        onCancel={() => { setShowCheckout(false); setCheckoutUrl(""); }}
-        onSuccess={handleCheckoutSuccess}
       />
     </TouchTracker>
     </ThemeContext.Provider>

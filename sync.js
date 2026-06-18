@@ -138,8 +138,30 @@ export async function fetchBalanceFromLedger(userId) {
 
 
 // ── XP / PROFILE STATE ───────────────────────────────────────
-export async function syncProfileStats(userId, { totalXp, balanceSeconds }) {
-  if (!userId) return;
+// Offline-durable balance/XP sync.
+//
+// balance_seconds is the cross-launch source of truth. If a write fails
+// (offline, transient error) we MUST NOT silently drop it — otherwise a stale
+// server balance resurrects on the next launch. We persist the latest intended
+// values to a local "pending" record and flush them on launch / foreground.
+// Both fields are absolute + monotonic-by-max, so keeping only the newest
+// pending value (not a delta queue) is correct.
+const pendingKey = (userId) => `drift_pending_stats_${userId}`;
+
+async function mergePendingStats(userId, fields) {
+  try {
+    const raw = await AsyncStorage.getItem(pendingKey(userId));
+    const prev = raw ? JSON.parse(raw) : {};
+    const next = { ...prev };
+    // balance_seconds: newest write wins.
+    if (typeof fields.balanceSeconds === "number") next.balanceSeconds = Math.max(0, fields.balanceSeconds);
+    // total_xp: monotonic — keep the highest.
+    if (typeof fields.totalXp === "number") next.totalXp = Math.max(Number(prev.totalXp || 0), Math.max(0, fields.totalXp));
+    await AsyncStorage.setItem(pendingKey(userId), JSON.stringify(next));
+  } catch {}
+}
+
+async function writeProfileStats(userId, { totalXp, balanceSeconds }) {
   const patch = {};
   if (typeof totalXp === "number") {
     const { data } = await supabase
@@ -150,12 +172,49 @@ export async function syncProfileStats(userId, { totalXp, balanceSeconds }) {
     patch.total_xp = Math.max(Number(data?.total_xp || 0), Math.max(0, totalXp));
   }
   if (typeof balanceSeconds === "number") patch.balance_seconds = Math.max(0, balanceSeconds);
-  if (!Object.keys(patch).length) return;
+  if (!Object.keys(patch).length) return { ok: true };
   const { error } = await rateLimited(`profile_stats_${userId}`, { limit: 60, windowMs: 60_000 }, () =>
     supabase.from("profiles").update(patch).eq("id", userId)
   );
-  if (error) console.warn("syncProfileStats:", error.message);
-  else invalidateCache(`profile_stats_${userId}`);
+  if (error) return { ok: false, error };
+  invalidateCache(`profile_stats_${userId}`);
+  return { ok: true };
+}
+
+export async function syncProfileStats(userId, { totalXp, balanceSeconds }) {
+  if (!userId) return;
+  let res;
+  try {
+    res = await writeProfileStats(userId, { totalXp, balanceSeconds });
+  } catch (e) {
+    res = { ok: false, error: e };
+  }
+  if (!res.ok) {
+    console.warn("syncProfileStats (queued for retry):", res.error?.message || res.error);
+    await mergePendingStats(userId, { totalXp, balanceSeconds });
+  }
+}
+
+// Flush any balance/XP writes that failed while offline. Call on launch and
+// whenever the app returns to the foreground / regains connectivity.
+export async function flushPendingStats(userId) {
+  if (!userId) return;
+  let pending;
+  try {
+    const raw = await AsyncStorage.getItem(pendingKey(userId));
+    if (!raw) return;
+    pending = JSON.parse(raw);
+  } catch { return; }
+  if (!pending || (typeof pending.balanceSeconds !== "number" && typeof pending.totalXp !== "number")) {
+    await AsyncStorage.removeItem(pendingKey(userId)).catch(() => {});
+    return;
+  }
+  try {
+    const res = await writeProfileStats(userId, pending);
+    if (res.ok) await AsyncStorage.removeItem(pendingKey(userId)).catch(() => {});
+  } catch {
+    // still offline — leave the pending record in place for the next attempt.
+  }
 }
 
 export async function fetchProfileStats(userId) {

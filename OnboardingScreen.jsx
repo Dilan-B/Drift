@@ -273,12 +273,7 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
       setError(prettyAuthError(res.error.message) || "Google sign-in failed.");
       return;
     }
-    // Claim trial (best effort) and finish
-    try {
-      await rateLimited("claim_trial", { limit: 3, windowMs: 10 * 60_000 }, () =>
-        supabase.functions.invoke("claim-trial", {})
-      );
-    } catch {}
+    // (Payments removed — everyone is Pro for free; no trial to claim.)
     setLoading(false);
     onDone?.(res.user);
   });
@@ -532,16 +527,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
           return;
         }
 
-        // Claim 7-day free trial (server tracks IP hash to prevent abuse)
-        try {
-          await rateLimited("claim_trial", { limit: 3, windowMs: 10 * 60_000 }, () =>
-            supabase.functions.invoke("claim-trial", {})
-          );
-        } catch (e) {
-          // Non-fatal — user just won't get the trial
-          console.warn("Trial claim failed:", e?.message);
-        }
-
+        // (Payments removed — everyone is Pro for free; no trial to claim.)
         onDone(data.user);
       } else {
         const { data, error: err } = await rateLimited(`auth_signin_${cleanEmail}`, { limit: AUTH_ATTEMPT_LIMIT, windowMs: AUTH_ATTEMPT_WINDOW_MS }, () =>
