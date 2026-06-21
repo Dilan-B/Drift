@@ -18,6 +18,7 @@ import {
   appendLedgerEntry, syncProfileStats, fetchProfileStats, flushPendingStats,
   cache,
 } from "./sync";
+import { registerBackgroundRefresh } from "./backgroundRefresh";
 import { applyBlocking, clearBlocking } from "./blockedApps";
 import { Spinner } from "./Skeleton";
 import Slider from "@react-native-community/slider";
@@ -3265,6 +3266,10 @@ export default function App() {
     // being able to sync balanceSeconds:0 to the server, and the stale server
     // balance would resurrect on the next launch.
     if (!userId) return;
+    // Register iOS Background App Refresh so iOS can wake us opportunistically
+    // to reconcile the balance even between foregrounds (complements the
+    // DeviceActivityMonitor extension; see backgroundRefresh.js).
+    registerBackgroundRefresh().catch(() => {});
     // On launch / each foreground, first flush any balance write that failed
     // while offline so the server can't resurrect a stale balance.
     flushPendingStats(userId).catch(() => {});
