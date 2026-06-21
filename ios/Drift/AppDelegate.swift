@@ -1,6 +1,7 @@
 import Expo
 import React
 import ReactAppDependencyProvider
+import ObjectiveC.runtime
 
 @UIApplicationMain
 public class AppDelegate: ExpoAppDelegate {
@@ -13,6 +14,8 @@ public class AppDelegate: ExpoAppDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
+    DriftTextUndoCrashGuard.install()
+
     let delegate = ReactNativeDelegate()
     let factory = ExpoReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
@@ -49,6 +52,41 @@ public class AppDelegate: ExpoAppDelegate {
   ) -> Bool {
     let result = RCTLinkingManager.application(application, continue: userActivity, restorationHandler: restorationHandler)
     return super.application(application, continue: userActivity, restorationHandler: restorationHandler) || result
+  }
+}
+
+private enum DriftTextUndoCrashGuard {
+  private static var installed = false
+
+  static func install() {
+    guard !installed else { return }
+    installed = true
+
+    // The TestFlight 1.0.0 (8) crash is UIKit aborting inside text undo:
+    // UIUndoGestureInteraction -> _UITextUndoManager -> NSTextStorage.
+    // React Native TextInput is controlled from JS, so system undo is not worth
+    // the risk here. Disable shake/gesture undo globally for native text inputs.
+    UIApplication.shared.applicationSupportsShakeToEdit = false
+    disableUndoManager(for: UITextField.self)
+    disableUndoManager(for: UITextView.self)
+    disableUndoAction("undo:", for: UITextField.self)
+    disableUndoAction("redo:", for: UITextField.self)
+    disableUndoAction("undo:", for: UITextView.self)
+    disableUndoAction("redo:", for: UITextView.self)
+  }
+
+  private static func disableUndoManager(for cls: AnyClass) {
+    let selector = NSSelectorFromString("undoManager")
+    let block: @convention(block) (AnyObject) -> AnyObject? = { _ in nil }
+    let implementation = imp_implementationWithBlock(block)
+    class_replaceMethod(cls, selector, implementation, "@@:")
+  }
+
+  private static func disableUndoAction(_ actionName: String, for cls: AnyClass) {
+    let selector = NSSelectorFromString(actionName)
+    let block: @convention(block) (AnyObject, AnyObject?) -> Void = { _, _ in }
+    let implementation = imp_implementationWithBlock(block)
+    class_replaceMethod(cls, selector, implementation, "v@:@")
   }
 }
 
