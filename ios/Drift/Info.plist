@@ -60,6 +60,8 @@
     <string>Drift may save a screenshot to your photo library if you choose to share your progress.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Drift does not record audio. This permission is required by a camera component used for pose detection.</string>
+    <key>NSSupportsLiveActivities</key>
+    <true/>
     <key>RCTNewArchEnabled</key>
     <true/>
     <key>UILaunchStoryboardName</key>

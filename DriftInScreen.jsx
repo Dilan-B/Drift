@@ -210,7 +210,7 @@ function PlantSlider({
   );
 }
 
-export default function DriftInScreen({ onSessionComplete, onSessionStart, onSessionEnd, dark = false }) {
+export default function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSessionEnd, dark = false }) {
   const theme = getTheme(dark);
   // Setup-phase colors follow the app theme; active/done always use dark forest
   const [phase,   setPhase]   = useState("setup"); // setup | active | done
@@ -269,15 +269,19 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
     setSecTotal(secs);
     setSecLeft(secs);
     setPhase("active");
-    onSessionStart?.();
+    onSessionStart?.({ task: task.trim(), durationSeconds: secs });
+    onSessionTick?.(secs);
     timerRef.current = setInterval(() => {
       setSecLeft(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current);
           setPhase("done");
+          onSessionTick?.(0);
           return 0;
         }
-        return prev - 1;
+        const next = prev - 1;
+        onSessionTick?.(next);
+        return next;
       });
     }, 1000);
   };
@@ -351,6 +355,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
           onChangeText={setTask}
           placeholder="Deep work sprint"
           placeholderTextColor={setupFnt}
+          maxLength={80}
           style={[s.taskInput, {
             backgroundColor: setupCard,
             borderColor: task.trim() ? theme.earn.sage : setupBrd,

@@ -10,6 +10,7 @@ import DeviceActivity
 import ManagedSettings
 import FamilyControls
 import Foundation
+import UserNotifications
 
 // Same App Group used by the main app. MUST match exactly.
 let APP_GROUP = "group.com.sanghani.drift.shared"
@@ -56,6 +57,7 @@ class DriftMonitor: DeviceActivityMonitor {
     // Balance fully depleted — lock them out and stop monitoring until the
     // app re-arms with a fresh balance.
     applyShieldFromSelection()
+    notifyOutOfTime()
     defaults?.set(true, forKey: "drift_balance_depleted")
     defaults?.set(false, forKey: "drift_balance_failsafe_active")
     DeviceActivityCenter().stopMonitoring([
@@ -74,6 +76,7 @@ class DriftMonitor: DeviceActivityMonitor {
     let armedDay = defaults?.string(forKey: "drift_balance_armed_day")
     if armedDay != localDayKey() {
       applyShieldFromSelection()
+      notifyOutOfTime()
       defaults?.set(true, forKey: "drift_balance_depleted")
       defaults?.set(Date().timeIntervalSince1970, forKey: "drift_last_fired_at")
     }
@@ -87,6 +90,7 @@ class DriftMonitor: DeviceActivityMonitor {
       guard defaults?.bool(forKey: "drift_balance_failsafe_active") == true else { return }
       let armedSec = defaults?.integer(forKey: "drift_balance_armed_seconds") ?? 0
       applyShieldFromSelection()
+      notifyOutOfTime()
       let previous = defaults?.integer(forKey: "drift_usage_consumed_total_seconds") ?? 0
       defaults?.set(max(previous, max(0, armedSec)), forKey: "drift_usage_consumed_total_seconds")
       defaults?.set(max(0, armedSec), forKey: "drift_usage_consumed_seconds")
@@ -127,6 +131,20 @@ class DriftMonitor: DeviceActivityMonitor {
     store.shield.applications = nil
     store.shield.applicationCategories = nil
     store.shield.webDomains = nil
+  }
+
+  private func notifyOutOfTime() {
+    let content = UNMutableNotificationContent()
+    content.title = "Time's up"
+    content.body = "You're out of earned time. Complete a task to unlock your apps."
+    content.sound = .default
+
+    let request = UNNotificationRequest(
+      identifier: "drift.monitor.out_of_time.\(Int(Date().timeIntervalSince1970))",
+      content: content,
+      trigger: nil
+    )
+    UNUserNotificationCenter.current().add(request)
   }
 
   private func localDayKey(_ date: Date = Date()) -> String {

@@ -80,7 +80,8 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
             <Text style={{ fontFamily: FB, fontSize: 12, color: "#2A7FA0", lineHeight: 18 }}>
               Pick the apps you want Drift to block when your screen-time balance hits zero.
               Selection happens in Apple's secure picker — Drift itself never sees your app list.
-              iOS enforces the block even if Drift is closed.
+              iOS enforces the block even if Drift is closed. Because Apple checks usage in
+              ~15-minute windows, blocking can kick in slightly after your time runs out.
             </Text>
           </View>
 

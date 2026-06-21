@@ -179,6 +179,7 @@ function FriendPlant({ friend, onPress, dark }) {
     <TouchableOpacity
       onPress={() => onPress(friend)}
       activeOpacity={0.85}
+      pointerEvents="box-only"
       style={{
         paddingTop: 6,
         paddingBottom: 14,
@@ -381,6 +382,7 @@ function ChallengeRow({ item, myId, dark, onPress, onVerify }) {
   return (
     <TouchableOpacity
       activeOpacity={0.85}
+      pointerEvents="box-only"
       onPress={() => incoming || outgoingPending ? onPress(item) : (!mineDone && item.status === "active" ? onVerify(item) : onPress(item))}
       style={{
         flexDirection: "row", alignItems: "center", gap: 12,
@@ -1147,6 +1149,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
             autoCorrect={false}
             returnKeyType="send"
             onSubmitEditing={addFriend}
+            maxLength={30}
           />
           <TouchableOpacity
             onPress={addFriend}
@@ -1177,6 +1180,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
         <FlatList
           data={friendPairs}
           keyExtractor={(_, idx) => `pair_${idx}`}
+          keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadAll(); }} tintColor={th.sage} />}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={

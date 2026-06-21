@@ -681,6 +681,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
               keyboardType="email-address"
               autoComplete="email"
               returnKeyType="next"
+              maxLength={100}
             />
           </View>
 
@@ -695,6 +696,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
               secureTextEntry
               returnKeyType="done"
               onSubmitEditing={handleSubmit}
+              maxLength={72}
             />
           </View>
 

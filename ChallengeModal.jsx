@@ -232,7 +232,7 @@ export default function ChallengeSheet({
             <Text style={[s.pickLabel, { color: th.faint }]}>Choose challenge</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }} contentContainerStyle={{ paddingBottom: 4 }}>
               {CHALLENGE_OPTIONS.map(opt => (
-                <TouchableOpacity key={opt.id} onPress={() => setExercise(opt)} style={[s.exCard, { backgroundColor: th.card, borderColor: th.border }, exercise?.id === opt.id && { borderColor: terra, backgroundColor: th.washStrong }]}>
+                <TouchableOpacity key={opt.id} onPress={() => setExercise(opt)} pointerEvents="box-only" style={[s.exCard, { backgroundColor: th.card, borderColor: th.border }, exercise?.id === opt.id && { borderColor: terra, backgroundColor: th.washStrong }]}>
                   <View style={s.exIconWrap}><opt.Icon size={24} color={exercise?.id === opt.id ? terra : th.mid} /></View>
                   <Text numberOfLines={2} style={[s.exLabel, { color: exercise?.id === opt.id ? terra : th.ink }]}>{opt.label}</Text>
                   <Text numberOfLines={1} style={[s.exMeta, { color: th.mid }]}>{opt.reps ? `${opt.reps} reps` : `${opt.secs}s`}</Text>
@@ -258,6 +258,7 @@ export default function ChallengeSheet({
                 placeholder="Minutes"
                 placeholderTextColor={th.faint}
                 keyboardType="number-pad"
+                maxLength={4}
               />
               <TextInput
                 style={[s.input, { flex: 1, backgroundColor: th.input, borderColor: th.border, color: th.ink }]}

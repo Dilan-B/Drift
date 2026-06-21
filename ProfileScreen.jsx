@@ -286,7 +286,7 @@ export default function ProfileScreen({
 
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={s.hero}>
-          <TouchableOpacity onPress={pickAvatar} disabled={savingPhoto} style={[s.avatar, { backgroundColor: paper.warm, borderColor: ink.border }]}>
+          <TouchableOpacity onPress={pickAvatar} disabled={savingPhoto} pointerEvents="box-only" style={[s.avatar, { backgroundColor: paper.warm, borderColor: ink.border }]}>
             {avatarUrl && !isInlineImage(avatarUrl) ? (
               <Image source={{ uri: avatarUrl }} style={s.avatarImg} />
             ) : (

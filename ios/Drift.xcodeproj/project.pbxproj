@@ -16,6 +16,7 @@
 		C9D2621DA58127DB323B2D8D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E67FB59A2F59FB64009250 /* ExpoModulesProvider.swift */; };
 		DR70010000000000000000A1 /* ScreenTimeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B1 /* ScreenTimeModule.swift */; };
 		DR70010000000000000000A2 /* ScreenTimeModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B2 /* ScreenTimeModule.m */; };
+		DRP2010000000000000000A1 /* DriftPhase2Shared.swift in Sources */ = {isa = PBXBuildFile; fileRef = DRP2020000000000000000B1 /* DriftPhase2Shared.swift */; };
 		DR70010000000000000000C1 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000D1 /* FamilyControls.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		DR70010000000000000000C2 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000D2 /* ManagedSettings.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		DR70010000000000000000C3 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000D3 /* DeviceActivity.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
@@ -61,6 +62,7 @@
 		D048D60A21832318D6C696F5 /* Pods-Drift.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Drift.debug.xcconfig"; path = "Target Support Files/Pods-Drift/Pods-Drift.debug.xcconfig"; sourceTree = "<group>"; };
 		DR70020000000000000000B1 /* ScreenTimeModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScreenTimeModule.swift; path = Drift/ScreenTimeModule.swift; sourceTree = "<group>"; };
 		DR70020000000000000000B2 /* ScreenTimeModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ScreenTimeModule.m; path = Drift/ScreenTimeModule.m; sourceTree = "<group>"; };
+		DRP2020000000000000000B1 /* DriftPhase2Shared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DriftPhase2Shared.swift; path = DriftPhase2/Shared/DriftPhase2Shared.swift; sourceTree = "<group>"; };
 		DR70020000000000000000D1 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 		DR70020000000000000000D2 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
 		DR70020000000000000000D3 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
@@ -124,6 +126,7 @@
 				F11748442D0722820044C1D9 /* Drift-Bridging-Header.h */,
 				DR70020000000000000000B1 /* ScreenTimeModule.swift */,
 				DR70020000000000000000B2 /* ScreenTimeModule.m */,
+				DRP2020000000000000000B1 /* DriftPhase2Shared.swift */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
@@ -448,6 +451,7 @@
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
 				C9D2621DA58127DB323B2D8D /* ExpoModulesProvider.swift in Sources */,
+				DRP2010000000000000000A1 /* DriftPhase2Shared.swift in Sources */,
 				DR70010000000000000000A1 /* ScreenTimeModule.swift in Sources */,
 				DR70010000000000000000A2 /* ScreenTimeModule.m in Sources */,
 			);

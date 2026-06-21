@@ -19,6 +19,7 @@ import {
   cache,
 } from "./sync";
 import { registerBackgroundRefresh } from "./backgroundRefresh";
+import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, scheduleDailyReminder, cancelAllNotifications } from "./notifications";
 import { applyBlocking, clearBlocking } from "./blockedApps";
 import { Spinner } from "./Skeleton";
 import Slider from "@react-native-community/slider";
@@ -54,7 +55,11 @@ import {
 import {
   requestScreenTimeAuth, getScreenTimeAuthStatus, isNativeBlockingAvailable,
 } from "./blockedApps";
-import { startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag, consumeUsedSeconds } from "./screenTime";
+import {
+  startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag, consumeUsedSeconds,
+  getDiagnostics, updateSharedBalance, startDriftInLiveActivity, updateDriftInLiveActivity,
+  endDriftInLiveActivity, consumePendingHealthEarn,
+} from "./screenTime";
 import { supabase, syncScreenTime, safeGetSession } from "./supabase";
 import { handleSupabaseAuthCallback } from "./authLinks";
 import SocialScreen from "./SocialScreen";
@@ -126,12 +131,63 @@ const xpToNext  = xp => { const ni = LEVELS.findIndex(l => l.min > xp); return n
 // Use LOCAL date, not UTC. Using ISO/UTC caused tasks to disappear mid-day
 // for users in non-UTC timezones (the "day" would flip while they were still
 // awake, triggering the reset branch on next launch).
-const todayKey    = () => {
-  const d = new Date();
+const dayKeyOfDate = (d) => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+};
+const todayKey    = () => dayKeyOfDate(new Date());
+
+// ── Weekly insights helpers (derived client-side from completed tasks) ──
+// A completed task's day = its task_date (YYYY-MM-DD) or the local date of
+// completedAt. We only have reliable history for EARNED time (completed tasks);
+// per-day "spent" (blocked-app usage) isn't recorded anywhere, so insights
+// focus on earned/day, by-category, and streak.
+const taskDayKey = (t) => {
+  if (t.task_date) return String(t.task_date).slice(0, 10);
+  const ms = t.completedAt
+    ? (typeof t.completedAt === "number" ? t.completedAt : Date.parse(t.completedAt))
+    : null;
+  return ms ? dayKeyOfDate(new Date(ms)) : null;
+};
+const last7DayKeys = () => {
+  const out = [];
+  const base = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const x = new Date(base);
+    x.setDate(base.getDate() - i);
+    out.push(dayKeyOfDate(x));
+  }
+  return out;
+};
+const computeWeekly = (completed) => {
+  const keys = last7DayKeys();
+  const inWeek = new Set(keys);
+  const perDay = Object.fromEntries(keys.map(k => [k, 0]));
+  const byCat = {};
+  let total = 0;
+  for (const t of (completed || [])) {
+    const k = taskDayKey(t);
+    if (!k || !inWeek.has(k)) continue;
+    const mins = t.credits || 0;
+    perDay[k] += mins;
+    byCat[t.cat] = (byCat[t.cat] || 0) + mins;
+    total += mins;
+  }
+  return { keys, perDay: keys.map(k => perDay[k]), byCat, total };
+};
+const computeStreak = (completed) => {
+  const days = new Set((completed || []).map(taskDayKey).filter(Boolean));
+  let streak = 0;
+  const cursor = new Date();
+  // If nothing completed today yet, the streak can still stand from yesterday.
+  if (!days.has(dayKeyOfDate(cursor))) cursor.setDate(cursor.getDate() - 1);
+  while (days.has(dayKeyOfDate(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
 };
 const makeUuid = () => {
   if (typeof Crypto.randomUUID === "function") return Crypto.randomUUID();
@@ -695,6 +751,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
               value={title} onChangeText={setTitle}
               placeholder='e.g. "30 min gym" or "finish report"'
               placeholderTextColor={ink.faint}
+              maxLength={80}
               returnKeyType="done"
               blurOnSubmit={true}
               style={{
@@ -1509,6 +1566,21 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
             }}>
               {unlocked ? "Available now" : inDebt ? "Earn this back to unlock" : "No time earned yet"}
             </Text>
+
+            {/* iOS enforces Screen Time in ~15-minute windows, so blocking can
+                kick in slightly after your balance hits zero. Setting this
+                expectation avoids "it didn't block instantly" confusion. */}
+            {unlocked && (
+              <Text style={{
+                fontFamily: FF.body,
+                fontSize: 10.5,
+                color: ink.faint,
+                marginTop: 8,
+                lineHeight: 15,
+              }}>
+                iOS enforces blocking in ~15-minute windows, so timing is approximate.
+              </Text>
+            )}
           </View>
 
           {/* level pill — top right */}
@@ -1970,6 +2042,10 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
   const done      = tasks.filter(t => t.done);
   const catCounts = done.reduce((a, t) => { a[t.cat] = (a[t.cat] || 0) + t.credits; return a; }, {});
   const maxCat    = Math.max(...Object.values(catCounts), 1);
+  const weekly    = computeWeekly(done);
+  const streak    = computeStreak(done);
+  const maxDay    = Math.max(...weekly.perDay, 1);
+  const DOW       = ["S", "M", "T", "W", "T", "F", "S"];
 
   // Empty state — no tasks completed yet today
   if (done.length === 0 && tasks.length === 0) {
@@ -2026,7 +2102,7 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
         Growth
       </Text>
       <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, marginBottom: 22 }}>
-        Today's record.
+        Your progress.
       </Text>
 
       {/* Level card — editorial */}
@@ -2082,6 +2158,62 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
             </View>
           </>
         )}
+      </View>
+
+      {/* ── This week: streak + earned-per-day chart ── */}
+      <View style={{
+        backgroundColor: paper.card,
+        borderRadius: 24, padding: 22,
+        borderWidth: 1, borderColor: ink.hairline,
+        marginBottom: 14,
+      }}>
+        <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 16 }}>
+          <View>
+            <Text style={{ fontFamily: FF.kicker, fontSize: 10, color: ink.faint, letterSpacing: 2.4, marginBottom: 4 }}>
+              THIS WEEK
+            </Text>
+            <Text style={{ fontFamily: FF.display, fontSize: 22, color: ink.deep, letterSpacing: -0.3 }}>
+              {fmtMins(weekly.total)} earned
+            </Text>
+          </View>
+          <View style={{
+            flexDirection: "row", alignItems: "center", gap: 6,
+            paddingVertical: 6, paddingHorizontal: 11, borderRadius: 16,
+            backgroundColor: earn.sageLo,
+          }}>
+            <Text style={{ fontSize: 13 }}>🔥</Text>
+            <Text style={{ fontFamily: FF.bodyBold, fontSize: 13, color: earn.greenD }}>
+              {streak}-day streak
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+          {weekly.keys.map((k, i) => {
+            const mins = weekly.perDay[i];
+            const [yy, mm, dd] = k.split("-").map(Number);
+            const wd = DOW[new Date(yy, mm - 1, dd).getDay()];
+            const isToday = k === todayKey();
+            return (
+              <View key={k} style={{ flex: 1, alignItems: "center", gap: 6 }}>
+                <View style={{ height: 64, justifyContent: "flex-end" }}>
+                  <View style={{
+                    width: 14,
+                    height: Math.max(3, (mins / maxDay) * 64),
+                    borderRadius: 4,
+                    backgroundColor: mins > 0 ? earn.terra : ink.hairline,
+                  }} />
+                </View>
+                <Text style={{
+                  fontFamily: FF.kicker, fontSize: 9,
+                  color: isToday ? earn.sage : ink.faint,
+                }}>
+                  {wd}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
       </View>
 
       {/* Stat tiles */}
@@ -2680,7 +2812,7 @@ function TabItem({ tab: t, active, onPress, sage, sageLo, mid }) {
       onPressOut={() => animatePress(1)}
       style={{ flex: 1 }}
     >
-      <Animated.View style={{
+      <Animated.View pointerEvents="none" style={{
         alignItems: "center", justifyContent: "center", gap: 4,
         paddingVertical: 9, paddingHorizontal: 4, borderRadius: 18,
         backgroundColor: active ? sageLo : "transparent",
@@ -2989,7 +3121,75 @@ export default function App() {
     if (userIdRef.current) {
       syncProfileStats(userIdRef.current, { balanceSeconds: rem }).catch(() => {});
     }
+    // Local notifications: alert when time just ran out, or warn when crossing
+    // below ~2 min. (Fires on the next drain/reconcile while the app is alive.)
+    if (rem <= 0) {
+      notifyOutOfTime();
+    } else if (prevSec > 120 && rem <= 120) {
+      notifyLowTime(Math.ceil(rem / 60));
+    }
   }, []);
+
+  const claimPendingHealthEarn = useCallback(async () => {
+    const earnedSec = await consumePendingHealthEarn();
+    if (earnedSec <= 0) return;
+    const earnedMin = Math.ceil(earnedSec / 60);
+    const newSec = secRef.current + earnedSec;
+    secRef.current = newSec;
+    setSecLeft(newSec);
+    setCredits(c => {
+      const nc = {
+        ...c,
+        balance: Math.ceil(newSec / 60),
+        balanceSec: newSec,
+        earned: c.earned + earnedMin,
+      };
+      persist({ credits: nc });
+      return nc;
+    });
+    if (userIdRef.current) {
+      syncProfileStats(userIdRef.current, { balanceSeconds: newSec }).catch(() => {});
+    }
+    unlockAndArmBalance(newSec);
+  }, []);
+
+  // Reliability: on launch/foreground, (a) prompt once if Family Controls
+  // authorization was revoked in Settings, and (b) re-arm the DeviceActivity
+  // monitor if we still have a balance but the OS monitor is gone (e.g. after a
+  // device reboot, which drops active monitors). Uses only existing native
+  // methods — no new Swift.
+  const authPromptShownRef = useRef(false);
+  const reconcileMonitoring = useCallback(async () => {
+    if (!isNativeBlockingAvailable()) return;
+    let diag;
+    try { diag = await getDiagnostics(); } catch { return; }
+    if (!diag) return;
+
+    // (a) Auth revoked — prompt once (non-blocking) to re-grant.
+    if (diag.authStatus && diag.authStatus !== "approved") {
+      if (!authPromptShownRef.current) {
+        authPromptShownRef.current = true;
+        Alert.alert(
+          "Screen Time access needed",
+          "Drift can't block apps until you re-enable Screen Time access in Settings → Screen Time.",
+          [
+            { text: "Later", style: "cancel" },
+            { text: "Open Settings", onPress: () => { try { Linking.openSettings?.(); } catch {} } },
+          ],
+        );
+      }
+      return; // can't arm without authorization
+    }
+    authPromptShownRef.current = false; // reset once access is back
+
+    // (b) Re-arm if a positive balance exists but no balance monitor is active.
+    if (driftInActRef.current || blockedHoursActive) return; // these manage the shield themselves
+    const sec = Math.max(0, secRef.current);
+    const monitors = Array.isArray(diag.activeMonitors) ? diag.activeMonitors : [];
+    if (sec > 0 && !monitors.includes("drift.balance")) {
+      startBalanceMonitoring(sec).catch(() => {});
+    }
+  }, [blockedHoursActive]);
 
   // 1. Heartbeat while foregrounded — every 15s, write "I'm alive" timestamp
   useEffect(() => {
@@ -3270,10 +3470,17 @@ export default function App() {
     // to reconcile the balance even between foregrounds (complements the
     // DeviceActivityMonitor extension; see backgroundRefresh.js).
     registerBackgroundRefresh().catch(() => {});
+    // Ask for notification permission (once) and (re)schedule the daily
+    // earn/streak reminder.
+    requestNotificationPermission().then((ok) => { if (ok) scheduleDailyReminder(); }).catch(() => {});
     // On launch / each foreground, first flush any balance write that failed
     // while offline so the server can't resurrect a stale balance.
     flushPendingStats(userId).catch(() => {});
+    claimPendingHealthEarn().catch(() => {});
+    reconcileMonitoring();
     const sync = async () => {
+      await claimPendingHealthEarn().catch(() => {});
+      reconcileMonitoring();
       const depleted = await consumeDepletedFlag();
       if (!depleted) return;
       secRef.current = 0;
@@ -3289,11 +3496,13 @@ export default function App() {
       // Mirror the depletion to the server so the boot restore doesn't bring
       // the balance back from a stale balanceSeconds on the next launch.
       syncProfileStats(userId, { balanceSeconds: 0 }).catch(() => {});
+      // The extension drained us to zero while away — tell the user.
+      notifyOutOfTime();
     };
     sync();
     const sub = AppState.addEventListener("change", n => { if (n === "active") sync(); });
     return () => sub.remove();
-  }, [userId]);
+  }, [userId, reconcileMonitoring, claimPendingHealthEarn]);
 
   // Keep the Apple Screen Time shield in sync with balance.
   // balance == 0 → shield ON (blocked apps shielded)
@@ -3588,6 +3797,10 @@ export default function App() {
   creditsRef.current     = credits;
   userIdRef.current      = userId;
 
+  useEffect(() => {
+    updateSharedBalance(secLeft).catch(() => {});
+  }, [secLeft]);
+
   const persist = async upd => {
     try {
       await storage.set("drift_v4", JSON.stringify({
@@ -3721,8 +3934,9 @@ export default function App() {
     }
   };
 
-  const handleDriftInStart  = async () => {
+  const handleDriftInStart  = async ({ task, durationSeconds } = {}) => {
     setDriftInActive(true);
+    startDriftInLiveActivity(task || "Drift In", durationSeconds || 25 * 60).catch(() => {});
     try { await stopBalanceMonitoring(); } catch {}
     await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
     setLastArmedSeconds(-1);
@@ -3756,11 +3970,13 @@ export default function App() {
   };
   const handleDriftInEnd    = () => {
     setDriftInActive(false);
+    endDriftInLiveActivity().catch(() => {});
     unlockAndArmBalance(secRef.current);
   };
 
   const handleDriftInComplete = ({ credits: earned, xp }) => {
     setDriftInActive(false);
+    endDriftInLiveActivity().catch(() => {});
     clearBlocking();
     const newSec = secRef.current + earned * 60;
     const nx  = totalXp + xp;
@@ -3777,6 +3993,10 @@ export default function App() {
     }
     setTimeout(() => setTab("today"), 400);
   };
+
+  const handleDriftInTick = useCallback((remainingSeconds) => {
+    updateDriftInLiveActivity(remainingSeconds).catch(() => {});
+  }, []);
 
   const handleChallengeResolved = ({ won, xp, penaltyMins }) => {
     if (won) {
@@ -3895,6 +4115,7 @@ export default function App() {
     try { await supabase.auth.signOut(); } catch {}
     try { await stopBalanceMonitoring(); } catch {}
     try { await clearBlocking(); } catch {}
+    try { await cancelAllNotifications(); } catch {}
     stopTick();
     setUserId(null);
     setUserEmail("");
@@ -4108,6 +4329,7 @@ export default function App() {
             <DriftInScreen
               onSessionComplete={handleDriftInComplete}
               onSessionStart={handleDriftInStart}
+              onSessionTick={handleDriftInTick}
               onSessionEnd={handleDriftInEnd}
               totalXp={totalXp}
               dark={darkMode}

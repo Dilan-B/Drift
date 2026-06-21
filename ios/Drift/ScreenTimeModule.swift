@@ -19,6 +19,10 @@ import Foundation
 import UIKit
 import React
 
+#if canImport(ActivityKit)
+import ActivityKit
+#endif
+
 #if canImport(FamilyControls) && canImport(ManagedSettings)
 import FamilyControls
 import ManagedSettings
@@ -30,6 +34,9 @@ import Combine
 let DRIFT_APP_GROUP    = "group.com.sanghani.drift.shared"
 let DRIFT_SELECTION_KEY = "drift_family_activity_selection"
 let DRIFT_STORE_NAME_RAW = "driftFocus"
+let DRIFT_SHARED_BALANCE_SECONDS_KEY = "drift_widget_balance_seconds"
+let DRIFT_SHARED_BALANCE_UPDATED_AT_KEY = "drift_widget_balance_updated_at"
+let DRIFT_SHARED_LAST_SESSION_TITLE_KEY = "drift_widget_last_session_title"
 
 @available(iOS 16.0, *)
 func driftStoreName() -> ManagedSettingsStore.Name { ManagedSettingsStore.Name(DRIFT_STORE_NAME_RAW) }
@@ -355,6 +362,126 @@ class ScreenTimeModule: NSObject {
     let depleted = defaults?.bool(forKey: "drift_balance_depleted") ?? false
     if depleted { defaults?.set(false, forKey: "drift_balance_depleted") }
     resolve(depleted)
+  }
+
+  @objc(updateSharedBalance:resolver:rejecter:)
+  func updateSharedBalance(_ seconds: NSNumber,
+                           resolver resolve: RCTPromiseResolveBlock,
+                           rejecter reject: RCTPromiseRejectBlock) {
+    guard let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP) else {
+      reject("app_group_unavailable", "Shared App Group storage is unavailable.", nil)
+      return
+    }
+    defaults.set(max(0, seconds.intValue), forKey: DRIFT_SHARED_BALANCE_SECONDS_KEY)
+    defaults.set(Date().timeIntervalSince1970, forKey: DRIFT_SHARED_BALANCE_UPDATED_AT_KEY)
+    resolve(nil)
+  }
+
+  @objc(consumePendingHealthEarn:rejecter:)
+  func consumePendingHealthEarn(_ resolve: RCTPromiseResolveBlock,
+                                rejecter reject: RCTPromiseRejectBlock) {
+    guard let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP) else {
+      resolve(0)
+      return
+    }
+    let seconds = max(0, defaults.integer(forKey: "drift_health_earn_pending_seconds"))
+    if seconds > 0 {
+      defaults.removeObject(forKey: "drift_health_earn_pending_seconds")
+      defaults.removeObject(forKey: "drift_health_earn_updated_at")
+    }
+    resolve(seconds)
+  }
+
+  @objc(startDriftInLiveActivity:seconds:resolver:rejecter:)
+  func startDriftInLiveActivity(_ title: NSString,
+                                seconds: NSNumber,
+                                resolver resolve: RCTPromiseResolveBlock,
+                                rejecter reject: RCTPromiseRejectBlock) {
+    #if canImport(ActivityKit)
+    if #available(iOS 16.1, *) {
+      guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+        resolve(["started": false, "reason": "disabled"])
+        return
+      }
+      Task {
+        do {
+          for activity in Activity<DriftInActivityAttributes>.activities {
+            let finalState = DriftInActivityAttributes.ContentState(
+              remainingSeconds: 0,
+              isComplete: true
+            )
+            await activity.end(using: finalState, dismissalPolicy: .immediate)
+          }
+          let duration = max(60, seconds.intValue)
+          let safeTitle = String(title).trimmingCharacters(in: .whitespacesAndNewlines)
+          let attributes = DriftInActivityAttributes(
+            taskTitle: safeTitle.isEmpty ? "Drift In" : String(safeTitle.prefix(64)),
+            totalSeconds: duration
+          )
+          let state = DriftInActivityAttributes.ContentState(
+            remainingSeconds: duration,
+            isComplete: false
+          )
+          _ = try Activity.request(
+            attributes: attributes,
+            contentState: state,
+            pushType: nil
+          )
+          UserDefaults(suiteName: DRIFT_APP_GROUP)?
+            .set(attributes.taskTitle, forKey: DRIFT_SHARED_LAST_SESSION_TITLE_KEY)
+          resolve(["started": true])
+        } catch {
+          reject("live_activity_error", error.localizedDescription, error)
+        }
+      }
+      return
+    }
+    #endif
+    resolve(["started": false, "reason": "unavailable"])
+  }
+
+  @objc(updateDriftInLiveActivity:resolver:rejecter:)
+  func updateDriftInLiveActivity(_ seconds: NSNumber,
+                                 resolver resolve: RCTPromiseResolveBlock,
+                                 rejecter reject: RCTPromiseRejectBlock) {
+    #if canImport(ActivityKit)
+    if #available(iOS 16.1, *) {
+      Task {
+        let remaining = max(0, seconds.intValue)
+        let state = DriftInActivityAttributes.ContentState(
+          remainingSeconds: remaining,
+          isComplete: remaining == 0
+        )
+        for activity in Activity<DriftInActivityAttributes>.activities {
+          await activity.update(using: state)
+        }
+        resolve(nil)
+      }
+      return
+    }
+    #endif
+    resolve(nil)
+  }
+
+  @objc(endDriftInLiveActivity:rejecter:)
+  func endDriftInLiveActivity(_ resolve: RCTPromiseResolveBlock,
+                              rejecter reject: RCTPromiseRejectBlock) {
+    #if canImport(ActivityKit)
+    if #available(iOS 16.1, *) {
+      Task {
+        for activity in Activity<DriftInActivityAttributes>.activities {
+          let state = DriftInActivityAttributes.ContentState(
+            remainingSeconds: 0,
+            isComplete: true
+          )
+          await activity.end(using: state, dismissalPolicy: .after(Date().addingTimeInterval(60)))
+        }
+        resolve(nil)
+      }
+      return
+    }
+    #endif
+    resolve(nil)
   }
 
   // Diagnostics — read every state we care about so we can debug why the

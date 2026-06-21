@@ -96,6 +96,57 @@ export async function consumeDepletedFlag() {
   catch { return false; }
 }
 
+/** Persist the current earned balance to App Group storage for widgets. */
+export async function updateSharedBalance(seconds) {
+  if (!isAvailable() || typeof Native.updateSharedBalance !== "function") return false;
+  try {
+    await Native.updateSharedBalance(Math.max(0, Math.floor(Number(seconds) || 0)));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function consumePendingHealthEarn() {
+  if (!isAvailable() || typeof Native.consumePendingHealthEarn !== "function") return 0;
+  try { return Math.max(0, Number(await Native.consumePendingHealthEarn()) || 0); }
+  catch { return 0; }
+}
+
+export async function startDriftInLiveActivity(title, seconds) {
+  if (!isAvailable() || typeof Native.startDriftInLiveActivity !== "function") {
+    return { started: false, reason: "unavailable" };
+  }
+  try {
+    return await Native.startDriftInLiveActivity(
+      String(title || "Drift In"),
+      Math.max(60, Math.floor(Number(seconds) || 0))
+    );
+  } catch (e) {
+    return { started: false, reason: e?.message || "unknown" };
+  }
+}
+
+export async function updateDriftInLiveActivity(seconds) {
+  if (!isAvailable() || typeof Native.updateDriftInLiveActivity !== "function") return false;
+  try {
+    await Native.updateDriftInLiveActivity(Math.max(0, Math.floor(Number(seconds) || 0)));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function endDriftInLiveActivity() {
+  if (!isAvailable() || typeof Native.endDriftInLiveActivity !== "function") return false;
+  try {
+    await Native.endDriftInLiveActivity();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Return a diagnostics dump for debugging the DeviceActivity pipeline. */
 export async function getDiagnostics() {
   if (!isAvailable()) return { available: false };

@@ -61,7 +61,7 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 60 }}>
+        <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
           <Text style={{ fontFamily: FO, fontSize: 9, color: ink.faint, letterSpacing: 2, marginBottom: 6 }}>
             BETA FEEDBACK
           </Text>
