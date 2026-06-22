@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drift — Earn Your Screen Time</title>
+<meta name="description" content="Drift turns productivity into screen time. Complete real tasks, earn minutes. Take back your attention.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#050508;
+  --surface:#0c0c12;
+  --card:#12121a;
+  --text:#f0f0f5;
+  --text-secondary:#8888a0;
+  --accent:#6c5ce7;
+  --accent-glow:rgba(108,92,231,.35);
+  --accent2:#00cec9;
+  --accent2-glow:rgba(0,206,201,.25);
+  --gradient:linear-gradient(135deg,#6c5ce7,#a29bfe,#00cec9);
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;line-height:1.6}
+a{color:inherit;text-decoration:none}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(20px);background:rgba(5,5,8,.7);border-bottom:1px solid rgba(255,255,255,.05);transition:background .3s}
+.nav-logo{font-weight:800;font-size:1.4rem;letter-spacing:-.02em;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-links{display:flex;gap:2rem;align-items:center}
+.nav-links a{font-size:.9rem;color:var(--text-secondary);transition:color .2s;font-weight:500}
+.nav-links a:hover{color:var(--text)}
+.nav-cta{background:var(--accent)!important;color:#fff!important;padding:.55rem 1.4rem;border-radius:99px;font-weight:600;font-size:.85rem;transition:transform .15s,box-shadow .15s}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 4px 20px var(--accent-glow)}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8rem 2rem 4rem;position:relative}
+.hero::before{content:'';position:absolute;top:15%;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,var(--accent-glow) 0%,transparent 70%);filter:blur(80px);pointer-events:none;z-index:0}
+.hero::after{content:'';position:absolute;top:25%;left:60%;width:400px;height:400px;background:radial-gradient(circle,var(--accent2-glow) 0%,transparent 70%);filter:blur(80px);pointer-events:none;z-index:0}
+.hero>*{position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem 1rem;border-radius:99px;border:1px solid rgba(108,92,231,.3);background:rgba(108,92,231,.08);font-size:.8rem;color:var(--accent);font-weight:600;margin-bottom:2rem;letter-spacing:.03em;text-transform:uppercase}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{font-size:clamp(3rem,8vw,6rem);font-weight:900;letter-spacing:-.04em;line-height:1.05;margin-bottom:1.5rem}
+.hero h1 .grad{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:clamp(1.1rem,2.5vw,1.35rem);color:var(--text-secondary);max-width:560px;margin:0 auto 3rem;line-height:1.7;font-weight:400}
+.hero-ctas{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center}
+.btn-primary{display:inline-flex;align-items:center;gap:.5rem;padding:.85rem 2rem;border-radius:99px;background:var(--accent);color:#fff;font-weight:700;font-size:1rem;transition:transform .15s,box-shadow .15s;border:none;cursor:pointer}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px var(--accent-glow)}
+.btn-secondary{display:inline-flex;align-items:center;gap:.5rem;padding:.85rem 2rem;border-radius:99px;background:rgba(255,255,255,.06);color:var(--text);font-weight:600;font-size:1rem;border:1px solid rgba(255,255,255,.1);transition:background .2s;cursor:pointer}
+.btn-secondary:hover{background:rgba(255,255,255,.1)}
+.hero-stats{display:flex;gap:3rem;margin-top:5rem;padding-top:3rem;border-top:1px solid rgba(255,255,255,.06)}
+.hero-stats .stat{text-align:center}
+.hero-stats .stat-value{font-size:2rem;font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-stats .stat-label{font-size:.8rem;color:var(--text-secondary);margin-top:.25rem;font-weight:500}
+
+/* PHONE MOCKUP */
+.phone-section{padding:2rem 2rem 6rem;display:flex;justify-content:center}
+.phone-frame{width:280px;height:560px;border-radius:40px;background:var(--card);border:2px solid rgba(255,255,255,.08);position:relative;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 60px var(--accent-glow)}
+.phone-screen{padding:3rem 1.5rem 1.5rem;height:100%;display:flex;flex-direction:column;gap:1rem}
+.phone-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:28px;background:var(--bg);border-radius:0 0 16px 16px}
+.phone-time-display{text-align:center;margin-top:1.5rem}
+.phone-time-display .timer{font-size:3.5rem;font-weight:900;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-.03em}
+.phone-time-display .timer-label{font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.1em;margin-top:.25rem}
+.phone-task{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;background:rgba(255,255,255,.04);border-radius:14px;border:1px solid rgba(255,255,255,.06)}
+.phone-task .check{width:22px;height:22px;border-radius:50%;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.7rem}
+.phone-task .check.done{background:var(--accent);border-color:var(--accent)}
+.phone-task .task-info{flex:1}
+.phone-task .task-title{font-size:.8rem;font-weight:600}
+.phone-task .task-sub{font-size:.65rem;color:var(--text-secondary)}
+.phone-task .task-reward{font-size:.7rem;font-weight:700;color:var(--accent2);white-space:nowrap}
+
+/* HOW IT WORKS */
+.section{padding:6rem 2rem}
+.section-header{text-align:center;margin-bottom:4rem}
+.section-header .label{font-size:.75rem;text-transform:uppercase;letter-spacing:.15em;color:var(--accent);font-weight:700;margin-bottom:1rem}
+.section-header h2{font-size:clamp(2rem,5vw,3.5rem);font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.section-header p{color:var(--text-secondary);max-width:500px;margin:1rem auto 0;font-size:1.05rem}
+
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;max-width:1000px;margin:0 auto}
+.how-card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:20px;padding:2.5rem;position:relative;overflow:hidden;transition:border-color .3s}
+.how-card:hover{border-color:rgba(108,92,231,.3)}
+.how-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gradient);opacity:0;transition:opacity .3s}
+.how-card:hover::before{opacity:1}
+.how-number{font-size:3rem;font-weight:900;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:1rem}
+.how-card h3{font-size:1.3rem;font-weight:700;margin-bottom:.75rem}
+.how-card p{color:var(--text-secondary);font-size:.95rem;line-height:1.6}
+
+/* FEATURES */
+.features{background:var(--surface)}
+.feature-row{display:flex;align-items:center;gap:4rem;max-width:1000px;margin:0 auto 6rem;padding:0 2rem}
+.feature-row:last-child{margin-bottom:0}
+.feature-row.reverse{flex-direction:row-reverse}
+.feature-text{flex:1}
+.feature-text .label{font-size:.75rem;text-transform:uppercase;letter-spacing:.15em;color:var(--accent2);font-weight:700;margin-bottom:.75rem}
+.feature-text h3{font-size:clamp(1.5rem,3vw,2.2rem);font-weight:800;letter-spacing:-.02em;margin-bottom:1rem}
+.feature-text p{color:var(--text-secondary);font-size:1rem;line-height:1.7}
+.feature-visual{flex:1;display:flex;justify-content:center}
+.feature-card-demo{width:100%;max-width:380px;background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:24px;padding:2rem;position:relative}
+.feature-card-demo::after{content:'';position:absolute;inset:-1px;border-radius:24px;background:var(--gradient);opacity:.1;z-index:0;pointer-events:none}
+
+/* Shield demo */
+.shield-demo{text-align:center}
+.shield-icon{font-size:4rem;margin-bottom:1rem;filter:drop-shadow(0 0 20px var(--accent-glow))}
+.shield-apps{display:flex;justify-content:center;gap:.5rem;margin-top:1.5rem}
+.shield-app{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;position:relative}
+.shield-app.blocked{background:rgba(255,50,50,.15);border:1px solid rgba(255,50,50,.2)}
+.shield-app.open{background:rgba(0,206,201,.15);border:1px solid rgba(0,206,201,.2)}
+.shield-status{font-size:.7rem;font-weight:700;margin-top:.5rem;text-transform:uppercase;letter-spacing:.08em}
+.shield-status.locked{color:#ff6b6b}
+.shield-status.unlocked{color:var(--accent2)}
+
+/* Timer demo */
+.timer-demo{text-align:center}
+.timer-ring{width:160px;height:160px;margin:0 auto 1.5rem;position:relative}
+.timer-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.timer-ring circle{fill:none;stroke-width:6}
+.timer-ring .track{stroke:rgba(255,255,255,.06)}
+.timer-ring .progress{stroke:url(#timerGrad);stroke-linecap:round;stroke-dasharray:440;stroke-dashoffset:110;transition:stroke-dashoffset 1s}
+.timer-ring .time{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:2.2rem;font-weight:800;letter-spacing:-.02em}
+.timer-ring .time small{font-size:.7rem;color:var(--text-secondary);font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+.timer-bar{display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-secondary)}
+
+/* Difficulty demo */
+.diff-demo .diff-options{display:flex;flex-direction:column;gap:.75rem}
+.diff-option{display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);transition:all .2s}
+.diff-option.active{border-color:var(--accent);background:rgba(108,92,231,.08)}
+.diff-option .dot{width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.2);flex-shrink:0}
+.diff-option.active .dot{border-color:var(--accent);background:var(--accent);box-shadow:0 0 10px var(--accent-glow)}
+.diff-option .diff-info h4{font-size:.9rem;font-weight:600;margin-bottom:.15rem}
+.diff-option .diff-info span{font-size:.75rem;color:var(--text-secondary)}
+
+/* SOCIAL PROOF */
+.social-proof{text-align:center}
+.testimonial-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;max-width:1000px;margin:0 auto}
+.testimonial{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:1.75rem;text-align:left;transition:border-color .3s}
+.testimonial:hover{border-color:rgba(108,92,231,.2)}
+.testimonial .stars{color:#ffc312;font-size:.85rem;margin-bottom:.75rem;letter-spacing:2px}
+.testimonial q{display:block;font-size:.95rem;line-height:1.6;color:var(--text-secondary);font-style:normal;margin-bottom:1rem}
+.testimonial .author{font-size:.8rem;font-weight:600}
+.testimonial .author span{color:var(--text-secondary);font-weight:400}
+
+/* CTA SECTION */
+.cta-section{padding:8rem 2rem;text-align:center;position:relative}
+.cta-section::before{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:800px;height:400px;background:radial-gradient(ellipse,var(--accent-glow) 0%,transparent 70%);filter:blur(60px);pointer-events:none}
+.cta-section>*{position:relative;z-index:1}
+.cta-section h2{font-size:clamp(2.5rem,6vw,4rem);font-weight:900;letter-spacing:-.04em;margin-bottom:1.5rem}
+.cta-section p{color:var(--text-secondary);font-size:1.1rem;max-width:480px;margin:0 auto 2.5rem}
+
+/* FOOTER */
+footer{border-top:1px solid rgba(255,255,255,.06);padding:3rem 2rem;display:flex;justify-content:space-between;align-items:center;max-width:1000px;margin:0 auto}
+footer .foot-logo{font-weight:800;font-size:1.2rem;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+footer .foot-links{display:flex;gap:2rem}
+footer .foot-links a{font-size:.85rem;color:var(--text-secondary);transition:color .2s}
+footer .foot-links a:hover{color:var(--text)}
+footer .foot-copy{font-size:.8rem;color:var(--text-secondary)}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .nav-links a:not(.nav-cta){display:none}
+  .hero h1{font-size:2.8rem}
+  .hero-stats{flex-direction:column;gap:1.5rem}
+  .how-grid{grid-template-columns:1fr}
+  .feature-row,.feature-row.reverse{flex-direction:column;gap:2rem}
+  .testimonial-grid{grid-template-columns:1fr}
+  footer{flex-direction:column;gap:1.5rem;text-align:center}
+  footer .foot-links{flex-wrap:wrap;justify-content:center}
+}
+@media(max-width:480px){
+  nav{padding:.75rem 1rem}
+  .hero{padding:6rem 1.25rem 3rem}
+  .section{padding:4rem 1.25rem}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Drift</div>
+  <div class="nav-links">
+    <a href="#how">How It Works</a>
+    <a href="#features">Features</a>
+    <a href="#proof">Reviews</a>
+    <a href="https://apps.apple.com/app/id6778215875" class="nav-cta">Download</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge"><span class="dot"></span> Now on iOS</div>
+  <h1>Earn your<br><span class="grad">screen time.</span></h1>
+  <p>Drift locks your most distracting apps until you've done something real. Complete tasks, earn minutes, take back your day.</p>
+  <div class="hero-ctas">
+    <a href="https://apps.apple.com/app/id6778215875" class="btn-primary">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+      App Store
+    </a>
+    <a href="#how" class="btn-secondary">See how it works</a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-value">1h 24m</div>
+      <div class="stat-label">Average daily screen time saved</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">92%</div>
+      <div class="stat-label">Say they're more productive</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">4.8&star;</div>
+      <div class="stat-label">User rating</div>
+    </div>
+  </div>
+</section>
+
+<!-- PHONE MOCKUP -->
+<section class="phone-section">
+  <div class="phone-frame">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="phone-time-display">
+        <div class="timer">23:41</div>
+        <div class="timer-label">minutes earned today</div>
+      </div>
+      <div class="phone-task">
+        <div class="check done">&check;</div>
+        <div class="task-info">
+          <div class="task-title">Morning workout</div>
+          <div class="task-sub">30 min &middot; Fitness</div>
+        </div>
+        <div class="task-reward">+18m</div>
+      </div>
+      <div class="phone-task">
+        <div class="check done">&check;</div>
+        <div class="task-info">
+          <div class="task-title">Read for 20 min</div>
+          <div class="task-sub">20 min &middot; Learning</div>
+        </div>
+        <div class="task-reward">+12m</div>
+      </div>
+      <div class="phone-task">
+        <div class="check"></div>
+        <div class="task-info">
+          <div class="task-title">Study</div>
+          <div class="task-sub">30 min &middot; Learning</div>
+        </div>
+        <div class="task-reward">+18m</div>
+      </div>
+      <div class="phone-task">
+        <div class="check"></div>
+        <div class="task-info">
+          <div class="task-title">Meditate</div>
+          <div class="task-sub">10 min &middot; Self-care</div>
+        </div>
+        <div class="task-reward">+6m</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <div class="section-header">
+    <div class="label">How It Works</div>
+    <h2>Three steps to<br>taking control</h2>
+  </div>
+  <div class="how-grid">
+    <div class="how-card">
+      <div class="how-number">01</div>
+      <h3>Choose your blocks</h3>
+      <p>Pick the apps that steal your time &mdash; TikTok, Instagram, X, whatever. Drift uses iOS Screen Time to lock them down.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-number">02</div>
+      <h3>Do real things</h3>
+      <p>Add tasks that matter to you. Work out, read, study, cook &mdash; or create your own. Each completed task earns screen time.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-number">03</div>
+      <h3>Earn your scroll</h3>
+      <p>Your balance ticks down only while blocked apps are open. When it hits zero, the shield goes back up. Simple.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section features" id="features">
+  <div class="section-header">
+    <div class="label">Features</div>
+    <h2>Built to actually work</h2>
+    <p>Not another screen time app you'll ignore in a week.</p>
+  </div>
+
+  <div class="feature-row">
+    <div class="feature-text">
+      <div class="label">App Shield</div>
+      <h3>Your apps, locked<br>until you've earned it</h3>
+      <p>Drift uses Apple's Screen Time API to create a real barrier between you and your distracting apps. No workarounds, no cheating. The shield only drops when your balance is positive.</p>
+    </div>
+    <div class="feature-visual">
+      <div class="feature-card-demo">
+        <div class="shield-demo">
+          <div class="shield-icon">🛡️</div>
+          <div style="font-weight:700;font-size:1.1rem;margin-bottom:.25rem">Shield Active</div>
+          <div style="font-size:.85rem;color:var(--text-secondary)">Complete a task to unlock</div>
+          <div class="shield-apps">
+            <div class="shield-app blocked">
+              <span>📱</span>
+            </div>
+            <div class="shield-app blocked">
+              <span>📸</span>
+            </div>
+            <div class="shield-app blocked">
+              <span>🎵</span>
+            </div>
+            <div class="shield-app open">
+              <span>📚</span>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:center;gap:1.5rem;margin-top:.75rem">
+            <div class="shield-status locked">Blocked</div>
+            <div class="shield-status unlocked">Allowed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature-row reverse">
+    <div class="feature-text">
+      <div class="label">Live Countdown</div>
+      <h3>Watch every second<br>you've earned</h3>
+      <p>Your balance counts down in real time &mdash; only while you're using blocked apps. Switch to something productive and the timer pauses. You're always in control of how you spend your time.</p>
+    </div>
+    <div class="feature-visual">
+      <div class="feature-card-demo">
+        <div class="timer-demo">
+          <div class="timer-ring">
+            <svg viewBox="0 0 160 160">
+              <defs>
+                <linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#6c5ce7"/>
+                  <stop offset="100%" stop-color="#00cec9"/>
+                </linearGradient>
+              </defs>
+              <circle class="track" cx="80" cy="80" r="70"/>
+              <circle class="progress" cx="80" cy="80" r="70"/>
+            </svg>
+            <div class="time">
+              23:41
+              <small>remaining</small>
+            </div>
+          </div>
+          <div class="timer-bar">
+            <span>Draining on TikTok</span>
+            <span style="color:var(--accent2)">-1s/sec</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature-row">
+    <div class="feature-text">
+      <div class="label">Your Difficulty</div>
+      <h3>Set the challenge<br>that fits you</h3>
+      <p>Easy mode rewards more screen time per task. Hard mode makes you really earn it. You pick the difficulty &mdash; change it anytime as your habits improve.</p>
+    </div>
+    <div class="feature-visual">
+      <div class="feature-card-demo">
+        <div class="diff-demo">
+          <div class="diff-options">
+            <div class="diff-option">
+              <div class="dot"></div>
+              <div class="diff-info">
+                <h4>Easy</h4>
+                <span>1 min of work = 1 min of screen time</span>
+              </div>
+            </div>
+            <div class="diff-option active">
+              <div class="dot"></div>
+              <div class="diff-info">
+                <h4>Medium</h4>
+                <span>2 min of work = 1 min of screen time</span>
+              </div>
+            </div>
+            <div class="diff-option">
+              <div class="dot"></div>
+              <div class="diff-info">
+                <h4>Hard</h4>
+                <span>3 min of work = 1 min of screen time</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<section class="section social-proof" id="proof">
+  <div class="section-header">
+    <div class="label">What People Say</div>
+    <h2>Real people, real results</h2>
+  </div>
+  <div class="testimonial-grid">
+    <div class="testimonial">
+      <div class="stars">★★★★★</div>
+      <q>I went from 6 hours of TikTok to under 1. Drift made screen time feel like something I actually earned instead of wasted.</q>
+      <div class="author">Alex M. <span>&middot; College Student</span></div>
+    </div>
+    <div class="testimonial">
+      <div class="stars">★★★★★</div>
+      <q>The shield actually works. I can't just dismiss it like every other app. That's what makes Drift different.</q>
+      <div class="author">Priya S. <span>&middot; Software Engineer</span></div>
+    </div>
+    <div class="testimonial">
+      <div class="stars">★★★★★</div>
+      <q>I've tried Opal, One Sec, all of them. Drift is the first one that gave me a reason to put the phone down instead of just guilt.</q>
+      <div class="author">Jordan T. <span>&middot; Freelance Designer</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="cta-section">
+  <h2>Stop scrolling.<br><span class="grad">Start earning.</span></h2>
+  <p>Download Drift and turn your productivity into the screen time you actually deserve.</p>
+  <a href="https://apps.apple.com/app/id6778215875" class="btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+    Download for iOS
+  </a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-logo">Drift</div>
+  <div class="foot-links">
+    <a href="#how">How It Works</a>
+    <a href="#features">Features</a>
+    <a href="mailto:riaan.sanghani@outlook.com">Contact</a>
+    <a href="https://apps.apple.com/app/id6778215875">App Store</a>
+  </div>
+  <div class="foot-copy">&copy; 2026 Drift. All rights reserved.</div>
+</footer>
+
+</body>
+</html>

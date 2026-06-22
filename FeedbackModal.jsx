@@ -1,6 +1,6 @@
 /**
  * FeedbackModal.jsx
- * In-app feedback form for beta testers. Opens a prefilled mailto with
+ * In-app feedback form. Opens a prefilled mailto with
  * the user's feedback so it can be sent to Drift support.
  */
 import React, { useState } from "react";
@@ -20,7 +20,7 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
   const [body, setBody] = useState("");
 
   const openMail = async (message = body.trim()) => {
-    const subject = encodeURIComponent("Drift beta feedback");
+    const subject = encodeURIComponent("Drift feedback");
     const emailBody = encodeURIComponent(
       `${message}\n\n-- App version: 1.0\n-- Device: ${Platform.OS} ${Platform.Version}\n-- Username: @${username || "(none)"}\n-- User ID: ${userId || "(none)"}`
     );
@@ -63,7 +63,7 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
 
         <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
           <Text style={{ fontFamily: FO, fontSize: 9, color: ink.faint, letterSpacing: 2, marginBottom: 6 }}>
-            BETA FEEDBACK
+            FEEDBACK
           </Text>
           <Text style={{ color: ink.mid, fontSize: 13, lineHeight: 18, marginBottom: 14 }}>
             Bug? Feature request? Confusing UI? Tell us anything. We read every message.

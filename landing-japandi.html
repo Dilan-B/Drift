@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drift — Earn Your Screen Time</title>
+<meta name="description" content="Drift turns productivity into screen time. Complete real tasks, earn minutes. A quieter way to take back your attention.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --sand:#f5f0e8;
+  --sand-light:#faf7f2;
+  --clay:#c4a882;
+  --clay-deep:#a68b6b;
+  --sage:#8a9a7b;
+  --sage-muted:#b5c4a8;
+  --charcoal:#2c2c2c;
+  --charcoal-soft:#4a4a4a;
+  --stone:#7a7568;
+  --indigo:#4a5568;
+  --terracotta:#c67d5a;
+  --linen:#ede6da;
+  --cream:#fdfbf7;
+}
+
+html{scroll-behavior:smooth;font-size:17px}
+body{
+  font-family:'DM Sans',system-ui,-apple-system,sans-serif;
+  background:var(--cream);
+  color:var(--charcoal);
+  overflow-x:hidden;
+  line-height:1.7;
+  font-weight:300;
+  letter-spacing:.01em;
+}
+a{color:inherit;text-decoration:none}
+
+/* UTILITY */
+.serif{font-family:'DM Serif Display',Georgia,serif;font-weight:400}
+
+/* SMOOTH REVEALS */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .9s cubic-bezier(.25,.46,.45,.94),transform .9s cubic-bezier(.25,.46,.45,.94)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  padding:1.5rem 3rem;
+  display:flex;align-items:center;justify-content:space-between;
+  transition:background .5s,backdrop-filter .5s,box-shadow .5s;
+}
+nav.scrolled{
+  background:rgba(253,251,247,.85);
+  backdrop-filter:blur(20px);
+  box-shadow:0 1px 0 rgba(0,0,0,.04);
+}
+.nav-logo{
+  font-family:'DM Serif Display',serif;
+  font-size:1.5rem;
+  color:var(--charcoal);
+  letter-spacing:-.01em;
+}
+.nav-links{display:flex;gap:2.5rem;align-items:center}
+.nav-links a{
+  font-size:.8rem;
+  color:var(--stone);
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  transition:color .3s;
+  font-weight:400;
+}
+.nav-links a:hover{color:var(--charcoal)}
+.nav-cta{
+  padding:.6rem 1.6rem;
+  border:1px solid var(--charcoal);
+  border-radius:2px;
+  font-size:.75rem !important;
+  color:var(--charcoal) !important;
+  letter-spacing:.14em !important;
+  transition:background .3s,color .3s !important;
+}
+.nav-cta:hover{background:var(--charcoal);color:var(--cream) !important}
+
+/* HERO */
+.hero{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:8rem 3rem 4rem;
+  max-width:1200px;
+  margin:0 auto;
+}
+.hero-top{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:4rem;
+  margin-bottom:4rem;
+}
+.hero-text{max-width:680px}
+.hero-label{
+  font-size:.7rem;
+  text-transform:uppercase;
+  letter-spacing:.2em;
+  color:var(--stone);
+  margin-bottom:2rem;
+  display:flex;
+  align-items:center;
+  gap:.75rem;
+}
+.hero-label::before{
+  content:'';
+  width:32px;height:1px;
+  background:var(--clay);
+}
+.hero h1{
+  font-family:'DM Serif Display',serif;
+  font-size:clamp(3rem,6.5vw,5.5rem);
+  line-height:1.08;
+  letter-spacing:-.03em;
+  color:var(--charcoal);
+  margin-bottom:2rem;
+  font-weight:400;
+}
+.hero h1 em{
+  font-style:italic;
+  color:var(--terracotta);
+}
+.hero-body{
+  font-size:1.1rem;
+  color:var(--charcoal-soft);
+  max-width:440px;
+  line-height:1.8;
+  font-weight:300;
+}
+.hero-aside{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:.5rem;
+  padding-bottom:.5rem;
+}
+.hero-aside .stat-num{
+  font-family:'DM Serif Display',serif;
+  font-size:3.5rem;
+  color:var(--sage);
+  line-height:1;
+  letter-spacing:-.02em;
+}
+.hero-aside .stat-label{
+  font-size:.7rem;
+  text-transform:uppercase;
+  letter-spacing:.15em;
+  color:var(--stone);
+  text-align:right;
+}
+.hero-divider{
+  width:100%;
+  height:1px;
+  background:linear-gradient(90deg,var(--clay-deep) 0%,transparent 100%);
+  margin-bottom:3rem;
+}
+.hero-bottom{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.hero-cta{
+  display:inline-flex;
+  align-items:center;
+  gap:1rem;
+  font-size:.8rem;
+  text-transform:uppercase;
+  letter-spacing:.15em;
+  color:var(--charcoal);
+  font-weight:400;
+  transition:gap .3s;
+  cursor:pointer;
+}
+.hero-cta:hover{gap:1.5rem}
+.hero-cta .arrow{
+  width:48px;height:48px;
+  border-radius:50%;
+  border:1px solid var(--clay);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .3s,border-color .3s;
+}
+.hero-cta:hover .arrow{background:var(--charcoal);border-color:var(--charcoal)}
+.hero-cta:hover .arrow svg{stroke:var(--cream)}
+.hero-cta .arrow svg{stroke:var(--charcoal);transition:stroke .3s}
+.hero-scroll{
+  font-size:.7rem;
+  text-transform:uppercase;
+  letter-spacing:.2em;
+  color:var(--stone);
+  display:flex;align-items:center;gap:.75rem;
+}
+.hero-scroll::after{
+  content:'';width:1px;height:32px;
+  background:var(--clay);
+  animation:scrollPulse 2s infinite;
+}
+@keyframes scrollPulse{
+  0%,100%{opacity:.3;transform:scaleY(.6)}
+  50%{opacity:1;transform:scaleY(1)}
+}
+
+/* PHILOSOPHY */
+.philosophy{
+  padding:8rem 3rem;
+  background:var(--sand-light);
+  border-top:1px solid rgba(0,0,0,.04);
+  border-bottom:1px solid rgba(0,0,0,.04);
+}
+.philosophy-inner{
+  max-width:1200px;margin:0 auto;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6rem;
+  align-items:center;
+}
+.phil-left .phil-label{
+  font-size:.7rem;
+  text-transform:uppercase;
+  letter-spacing:.2em;
+  color:var(--stone);
+  margin-bottom:2rem;
+  display:flex;align-items:center;gap:.75rem;
+}
+.phil-left .phil-label::before{
+  content:'';width:32px;height:1px;background:var(--clay);
+}
+.phil-left h2{
+  font-family:'DM Serif Display',serif;
+  font-size:clamp(2rem,4vw,3.2rem);
+  line-height:1.15;
+  letter-spacing:-.02em;
+  margin-bottom:2rem;
+  font-weight:400;
+}
+.phil-left p{
+  color:var(--charcoal-soft);
+  font-size:1rem;
+  line-height:1.9;
+  max-width:420px;
+}
+.phil-right{display:flex;flex-direction:column;gap:2.5rem}
+.phil-card{
+  padding:2rem 2.5rem;
+  background:var(--cream);
+  border-left:2px solid var(--clay);
+  transition:border-color .3s;
+}
+.phil-card:hover{border-color:var(--terracotta)}
+.phil-card h3{
+  font-family:'DM Serif Display',serif;
+  font-size:1.25rem;
+  margin-bottom:.5rem;
+  font-weight:400;
+}
+.phil-card p{
+  color:var(--stone);
+  font-size:.9rem;
+  line-height:1.7;
+}
+
+/* HOW IT WORKS */
+.how{
+  padding:8rem 3rem;
+  max-width:1200px;
+  margin:0 auto;
+}
+.how-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  margin-bottom:5rem;
+}
+.how-header h2{
+  font-family:'DM Serif Display',serif;
+  font-size:clamp(2rem,4vw,3rem);
+  line-height:1.15;
+  letter-spacing:-.02em;
+  font-weight:400;
+}
+.how-header p{
+  font-size:.85rem;
+  color:var(--stone);
+  max-width:280px;
+  text-align:right;
+  line-height:1.7;
+}
+.how-steps{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:1px;
+  background:rgba(0,0,0,.06);
+}
+.how-step{
+  background:var(--cream);
+  padding:3rem 2.5rem;
+  position:relative;
+  transition:background .4s;
+}
+.how-step:hover{background:var(--sand-light)}
+.step-num{
+  font-family:'DM Serif Display',serif;
+  font-size:4rem;
+  color:var(--sage-muted);
+  line-height:1;
+  margin-bottom:1.5rem;
+  opacity:.5;
+}
+.how-step h3{
+  font-size:1rem;
+  font-weight:500;
+  letter-spacing:.02em;
+  margin-bottom:1rem;
+}
+.how-step p{
+  color:var(--stone);
+  font-size:.9rem;
+  line-height:1.8;
+}
+
+/* FEATURES */
+.features{
+  padding:0 3rem 8rem;
+  max-width:1200px;
+  margin:0 auto;
+}
+.feature-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1px;
+  background:rgba(0,0,0,.06);
+  margin-bottom:1px;
+}
+.feature-visual{
+  background:var(--sand);
+  padding:4rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:420px;
+}
+.feature-content{
+  background:var(--cream);
+  padding:4rem 3.5rem;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.feature-content .feat-label{
+  font-size:.65rem;
+  text-transform:uppercase;
+  letter-spacing:.2em;
+  color:var(--terracotta);
+  margin-bottom:1.5rem;
+}
+.feature-content h3{
+  font-family:'DM Serif Display',serif;
+  font-size:clamp(1.5rem,2.5vw,2rem);
+  line-height:1.2;
+  letter-spacing:-.01em;
+  margin-bottom:1.25rem;
+  font-weight:400;
+}
+.feature-content p{
+  color:var(--charcoal-soft);
+  font-size:.95rem;
+  line-height:1.8;
+}
+
+/* SHIELD DEMO */
+.shield-visual{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2rem;
+}
+.shield-circle{
+  width:140px;height:140px;
+  border-radius:50%;
+  border:1.5px solid var(--clay);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.shield-circle::after{
+  content:'';
+  position:absolute;inset:8px;
+  border-radius:50%;
+  border:1px solid rgba(0,0,0,.04);
+}
+.shield-circle svg{opacity:.7}
+.shield-grid{display:flex;gap:.75rem}
+.shield-app-icon{
+  width:48px;height:48px;
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.65rem;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-weight:500;
+}
+.shield-app-icon.locked{
+  background:var(--linen);
+  border:1px solid var(--clay);
+  color:var(--clay-deep);
+}
+.shield-app-icon.open{
+  background:var(--sage-muted);
+  border:1px solid var(--sage);
+  color:#fff;
+}
+
+/* TIMER DEMO */
+.timer-visual{text-align:center}
+.timer-display{
+  font-family:'DM Serif Display',serif;
+  font-size:4rem;
+  letter-spacing:.05em;
+  color:var(--charcoal);
+  margin-bottom:.5rem;
+  position:relative;
+}
+.timer-display::after{
+  content:'';
+  position:absolute;
+  bottom:-.25rem;left:50%;transform:translateX(-50%);
+  width:60px;height:1px;
+  background:var(--terracotta);
+}
+.timer-context{
+  font-size:.7rem;
+  text-transform:uppercase;
+  letter-spacing:.15em;
+  color:var(--stone);
+  margin-top:1.25rem;
+}
+.timer-bar-track{
+  width:200px;
+  height:3px;
+  background:var(--linen);
+  border-radius:2px;
+  margin:1.5rem auto 0;
+  overflow:hidden;
+}
+.timer-bar-fill{
+  width:72%;height:100%;
+  background:linear-gradient(90deg,var(--sage),var(--terracotta));
+  border-radius:2px;
+  animation:timerShrink 8s linear infinite;
+}
+@keyframes timerShrink{
+  0%{width:72%}
+  100%{width:65%}
+}
+
+/* DIFFICULTY DEMO */
+.diff-visual{width:100%;max-width:280px}
+.diff-row{
+  display:flex;
+  align-items:center;
+  gap:1.25rem;
+  padding:1.25rem 0;
+  border-bottom:1px solid rgba(0,0,0,.05);
+  cursor:default;
+  transition:padding-left .3s;
+}
+.diff-row:last-child{border-bottom:none}
+.diff-row:hover{padding-left:.5rem}
+.diff-dot{
+  width:8px;height:8px;
+  border-radius:50%;
+  border:1.5px solid var(--stone);
+  flex-shrink:0;
+  transition:all .3s;
+}
+.diff-row.active .diff-dot{
+  background:var(--terracotta);
+  border-color:var(--terracotta);
+  box-shadow:0 0 0 4px rgba(198,125,90,.15);
+}
+.diff-name{
+  font-size:.85rem;
+  font-weight:500;
+  flex:1;
+}
+.diff-ratio{
+  font-size:.75rem;
+  color:var(--stone);
+  letter-spacing:.02em;
+}
+
+/* TESTIMONIALS */
+.testimonials{
+  padding:8rem 3rem;
+  background:var(--sand-light);
+  border-top:1px solid rgba(0,0,0,.04);
+}
+.testimonials-inner{
+  max-width:1200px;
+  margin:0 auto;
+}
+.test-header{
+  margin-bottom:4rem;
+}
+.test-header h2{
+  font-family:'DM Serif Display',serif;
+  font-size:clamp(2rem,4vw,3rem);
+  font-weight:400;
+  letter-spacing:-.02em;
+}
+.test-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:1px;
+  background:rgba(0,0,0,.06);
+}
+.test-card{
+  background:var(--sand-light);
+  padding:2.5rem;
+  transition:background .4s;
+}
+.test-card:hover{background:var(--cream)}
+.test-card q{
+  display:block;
+  font-family:'DM Serif Display',serif;
+  font-size:1.15rem;
+  line-height:1.6;
+  font-style:italic;
+  color:var(--charcoal);
+  margin-bottom:1.5rem;
+}
+.test-author{
+  font-size:.75rem;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  color:var(--stone);
+}
+
+/* CTA */
+.cta{
+  padding:10rem 3rem;
+  text-align:center;
+  position:relative;
+}
+.cta h2{
+  font-family:'DM Serif Display',serif;
+  font-size:clamp(2.5rem,5.5vw,4.5rem);
+  line-height:1.1;
+  letter-spacing:-.03em;
+  margin-bottom:1.5rem;
+  font-weight:400;
+}
+.cta h2 em{font-style:italic;color:var(--terracotta)}
+.cta p{
+  color:var(--charcoal-soft);
+  font-size:1.05rem;
+  max-width:400px;
+  margin:0 auto 3rem;
+  line-height:1.8;
+}
+.cta-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:1rem;
+  padding:1rem 2.5rem;
+  background:var(--charcoal);
+  color:var(--cream);
+  font-size:.8rem;
+  text-transform:uppercase;
+  letter-spacing:.14em;
+  font-weight:400;
+  border:none;
+  cursor:pointer;
+  transition:background .3s;
+  font-family:inherit;
+}
+.cta-btn:hover{background:var(--charcoal-soft)}
+.cta-btn svg{width:18px;height:18px;fill:currentColor}
+.cta-sub{
+  margin-top:2rem;
+  font-size:.75rem;
+  color:var(--stone);
+  letter-spacing:.05em;
+}
+
+/* FOOTER */
+footer{
+  border-top:1px solid rgba(0,0,0,.06);
+  padding:3rem;
+  max-width:1200px;
+  margin:0 auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.foot-left{
+  font-family:'DM Serif Display',serif;
+  font-size:1.2rem;
+}
+.foot-center{
+  display:flex;gap:2.5rem;
+}
+.foot-center a{
+  font-size:.72rem;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  color:var(--stone);
+  transition:color .3s;
+}
+.foot-center a:hover{color:var(--charcoal)}
+.foot-right{
+  font-size:.72rem;
+  color:var(--stone);
+  letter-spacing:.03em;
+}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  nav{padding:1rem 1.5rem}
+  .nav-links a:not(.nav-cta){display:none}
+  .hero{padding:7rem 1.5rem 3rem}
+  .hero-top{flex-direction:column;align-items:flex-start;gap:2rem}
+  .hero-aside{align-items:flex-start}
+  .hero-bottom{flex-direction:column;align-items:flex-start;gap:2rem}
+  .philosophy{padding:5rem 1.5rem}
+  .philosophy-inner{grid-template-columns:1fr;gap:3rem}
+  .how{padding:5rem 1.5rem}
+  .how-header{flex-direction:column;align-items:flex-start;gap:1rem}
+  .how-header p{text-align:left}
+  .how-steps{grid-template-columns:1fr}
+  .features{padding:0 1.5rem 5rem}
+  .feature-row{grid-template-columns:1fr}
+  .feature-visual{min-height:300px;padding:3rem 2rem}
+  .feature-content{padding:2.5rem 2rem}
+  .testimonials{padding:5rem 1.5rem}
+  .test-grid{grid-template-columns:1fr}
+  .cta{padding:6rem 1.5rem}
+  footer{flex-direction:column;gap:1.5rem;text-align:center}
+  .foot-center{flex-wrap:wrap;justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-logo">Drift</div>
+  <div class="nav-links">
+    <a href="#philosophy">Philosophy</a>
+    <a href="#method">Method</a>
+    <a href="#features">Features</a>
+    <a href="https://apps.apple.com/app/id6778215875" class="nav-cta">Download</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-top">
+    <div class="hero-text">
+      <div class="hero-label">A quieter approach to screen time</div>
+      <h1>Earn the time<br>you <em>actually</em><br>deserve.</h1>
+      <p class="hero-body">Drift locks your distracting apps until you've done something meaningful. Not with guilt. Not with limits. With intention.</p>
+    </div>
+    <div class="hero-aside">
+      <div class="stat-num">1h 24m</div>
+      <div class="stat-label">Average daily<br>screen time reclaimed</div>
+    </div>
+  </div>
+  <div class="hero-divider"></div>
+  <div class="hero-bottom">
+    <a href="https://apps.apple.com/app/id6778215875" class="hero-cta">
+      <span class="arrow">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+      </span>
+      Download for iOS
+    </a>
+    <div class="hero-scroll">Scroll to explore</div>
+  </div>
+</section>
+
+<!-- PHILOSOPHY -->
+<section class="philosophy" id="philosophy">
+  <div class="philosophy-inner">
+    <div class="phil-left reveal">
+      <div class="phil-label">Our philosophy</div>
+      <h2>Screen time isn't the enemy. Mindless screen time is.</h2>
+      <p>Most apps try to block you from your phone. Drift gives you a reason to put it down. Complete real tasks, earn real time. The balance is yours to spend however you choose.</p>
+    </div>
+    <div class="phil-right">
+      <div class="phil-card reveal">
+        <h3>Earned, not restricted</h3>
+        <p>Every minute of screen time comes from something you accomplished. A workout, a chapter read, a room tidied. The reward feels different when you've earned it.</p>
+      </div>
+      <div class="phil-card reveal">
+        <h3>Honest accountability</h3>
+        <p>The timer only drains while you're using blocked apps. Switch to something else, and it pauses. No tricks, no hidden penalties.</p>
+      </div>
+      <div class="phil-card reveal">
+        <h3>Your pace, your rules</h3>
+        <p>Set your own difficulty. Choose your tasks. Pick which apps to block. Drift adapts to you, not the other way around.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="method">
+  <div class="how-header reveal">
+    <h2>The method</h2>
+    <p>Three quiet steps between you and a more intentional relationship with your phone.</p>
+  </div>
+  <div class="how-steps">
+    <div class="how-step reveal">
+      <div class="step-num">01</div>
+      <h3>Choose what to block</h3>
+      <p>Select the apps that take more than they give. TikTok, Instagram, X, games &mdash; whatever pulls you in. Drift uses Apple's Screen Time to shield them.</p>
+    </div>
+    <div class="how-step reveal">
+      <div class="step-num">02</div>
+      <h3>Complete real tasks</h3>
+      <p>Pick from suggested tasks or create your own. Work out, read, study, meditate. Each one earns minutes of screen time based on your difficulty setting.</p>
+    </div>
+    <div class="how-step reveal">
+      <div class="step-num">03</div>
+      <h3>Spend what you've earned</h3>
+      <p>Your balance counts down only while blocked apps are open. When it reaches zero, the shield returns. Tomorrow, you begin again.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="feature-row reveal">
+    <div class="feature-visual">
+      <div class="shield-visual">
+        <div class="shield-circle">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--charcoal)" stroke-width="1.2">
+            <path d="M12 2l8 4v5c0 5.25-3.5 10.74-8 12-4.5-1.26-8-6.75-8-12V6l8-4z"/>
+          </svg>
+        </div>
+        <div class="shield-grid">
+          <div class="shield-app-icon locked">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </div>
+          <div class="shield-app-icon locked">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </div>
+          <div class="shield-app-icon locked">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </div>
+          <div class="shield-app-icon open">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="feature-content">
+      <div class="feat-label">App Shield</div>
+      <h3>A real barrier,<br>not a suggestion</h3>
+      <p>Drift uses Apple's native Screen Time API to lock your chosen apps behind a shield you can't dismiss. It's not a notification you swipe away. It's a door that only opens when you've earned the key.</p>
+    </div>
+  </div>
+
+  <div class="feature-row reveal">
+    <div class="feature-content">
+      <div class="feat-label">Live Timer</div>
+      <h3>Every second<br>accounted for</h3>
+      <p>Your earned balance counts down in real time &mdash; but only while blocked apps are in use. Switch to anything else and the clock pauses. You see exactly what you have and exactly where it goes.</p>
+    </div>
+    <div class="feature-visual">
+      <div class="timer-visual">
+        <div class="timer-display">23:41</div>
+        <div class="timer-context">Remaining &middot; draining</div>
+        <div class="timer-bar-track">
+          <div class="timer-bar-fill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature-row reveal">
+    <div class="feature-visual">
+      <div class="diff-visual">
+        <div class="diff-row">
+          <div class="diff-dot"></div>
+          <div class="diff-name">Easy</div>
+          <div class="diff-ratio">1:1 ratio</div>
+        </div>
+        <div class="diff-row active">
+          <div class="diff-dot"></div>
+          <div class="diff-name">Medium</div>
+          <div class="diff-ratio">2:1 ratio</div>
+        </div>
+        <div class="diff-row">
+          <div class="diff-dot"></div>
+          <div class="diff-name">Hard</div>
+          <div class="diff-ratio">3:1 ratio</div>
+        </div>
+      </div>
+    </div>
+    <div class="feature-content">
+      <div class="feat-label">Difficulty</div>
+      <h3>Set the pace<br>that fits your life</h3>
+      <p>Easy rewards generously. Hard makes every minute meaningful. Choose what challenges you without overwhelming you &mdash; and adjust anytime as your habits evolve.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials" id="reviews">
+  <div class="testimonials-inner">
+    <div class="test-header reveal">
+      <h2>Quiet results</h2>
+    </div>
+    <div class="test-grid">
+      <div class="test-card reveal">
+        <q>I went from six hours of TikTok to under one. Drift made screen time feel like something I earned instead of something I wasted.</q>
+        <div class="test-author">Alex M. &mdash; Student</div>
+      </div>
+      <div class="test-card reveal">
+        <q>The shield actually works. I can't just dismiss it like every other app. That's the difference.</q>
+        <div class="test-author">Priya S. &mdash; Engineer</div>
+      </div>
+      <div class="test-card reveal">
+        <q>I've tried every screen time app. Drift is the first one that gave me a reason to put the phone down instead of just guilt.</q>
+        <div class="test-author">Jordan T. &mdash; Designer</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <h2 class="reveal">Put the phone down.<br>Pick <em>yourself</em> up.</h2>
+  <p class="reveal">Download Drift and begin earning the screen time you actually deserve.</p>
+  <a href="https://apps.apple.com/app/id6778215875" class="cta-btn reveal">
+    <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+    Download for iOS
+  </a>
+  <div class="cta-sub reveal">Free to start. Available on the App Store.</div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-left">Drift</div>
+  <div class="foot-center">
+    <a href="#philosophy">Philosophy</a>
+    <a href="#method">Method</a>
+    <a href="#features">Features</a>
+    <a href="mailto:riaan.sanghani@outlook.com">Contact</a>
+  </div>
+  <div class="foot-right">&copy; 2026 Drift</div>
+</footer>
+
+<script>
+// Nav scroll effect
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 40);
+}, { passive: true });
+
+// Reveal on scroll
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => entry.target.classList.add('visible'), i * 80);
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+reveals.forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>

@@ -2257,7 +2257,7 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
             Earned by type
           </Text>
           {Object.entries(catCounts).sort((a, b) => b[1] - a[1]).map(([cat, mins], idx, arr) => {
-            const meta = CATS[cat];
+            const meta = CATS[cat] || { c: "#888", l: cat };
             return (
               <View key={cat} style={{
                 flexDirection: "row", alignItems: "center", gap: 14,
@@ -3370,6 +3370,21 @@ export default function App() {
   }, [screen, userId, proAccess, recurringTasks, tasks, minuteTick]);
 
   // Shared path for password sign-in, OAuth sign-in, and verified email links.
+  const ONBOARDING_TASKS = {
+    make_bed:         { title: "Make your bed",        cat: "life",        minutes: 2 },
+    workout:          { title: "Work out",             cat: "physical",    minutes: 30 },
+    read:             { title: "Read",                 cat: "learning",    minutes: 20 },
+    meditate:         { title: "Meditate",             cat: "life",        minutes: 10 },
+    journal:          { title: "Journal",              cat: "life",        minutes: 10 },
+    walk:             { title: "Go for a walk",        cat: "outdoor",     minutes: 15 },
+    clean:            { title: "Clean / tidy up",      cat: "life",        minutes: 15 },
+    study:            { title: "Study",                cat: "learning",    minutes: 30 },
+    cook:             { title: "Cook a meal",          cat: "life",        minutes: 20 },
+    stretch:          { title: "Stretch",              cat: "physical",    minutes: 5 },
+    no_phone_morning: { title: "No phone for 1 hour",  cat: "life",        minutes: 60 },
+    practice:         { title: "Practice a skill",     cat: "learning",    minutes: 20 },
+  };
+
   const completeAuthenticatedUser = useCallback(async (user, answers = {}) => {
     const authUser = user?.id ? user : (await safeGetSession())?.data?.session?.user;
     if (!authUser?.id) return;
@@ -3398,6 +3413,35 @@ export default function App() {
     setSignInOnly(false);
     const hadOnboarded = await AsyncStorage.getItem("drift_onboarded");
     await AsyncStorage.setItem("drift_onboarded", "1");
+
+    const pickedTasks = answers?.tasks || [];
+    if (pickedTasks.length > 0 && !hadOnboarded) {
+      const seeded = pickedTasks
+        .filter(id => ONBOARDING_TASKS[id])
+        .map(id => {
+          const t = ONBOARDING_TASKS[id];
+          const credits = Math.max(1, Math.round(t.minutes * 0.6));
+          return {
+            id: makeUuid(),
+            title: t.title,
+            cat: t.cat,
+            minutes: t.minutes,
+            done: false,
+            credits,
+            xp: Math.max(1, Math.round(t.minutes * 0.4)),
+            aiCheck: false,
+            aiValued: false,
+            aiReasoning: "",
+            task_date: todayKey(),
+          };
+        });
+      if (seeded.length > 0) {
+        setTasks(seeded);
+        persist({ tasks: seeded });
+        seeded.forEach(t => insertTask(authUser.id, t).catch(() => {}));
+        cacheFullTasks(authUser.id, seeded);
+      }
+    }
     setScreen("app");
     if (!hadOnboarded && !signInOnly) {
       setFirstTimeBlockedApps(true);
@@ -3574,16 +3618,9 @@ export default function App() {
             if (nativeArmFailedSecondsRef.current === currentSeconds) return;
             // Pass exact seconds so iOS's threshold matches the displayed
             // balance — passing minutes rounds the threshold up.
-            const res = await startBalanceMonitoring(seconds + 900);
+            const res = await startBalanceMonitoring(seconds);
             if (res?.started === false) {
-              if (!/unavailable/i.test(res.reason || "")) {
-                nativeArmFailedSecondsRef.current = currentSeconds;
-                await applyBlocking([]);
-                shieldStateRef.current = "on";
-                await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]);
-                setLastArmedSeconds(-1);
-              }
-
+              nativeArmFailedSecondsRef.current = currentSeconds;
             } else {
               nativeArmFailedSecondsRef.current = null;
               await AsyncStorage.setItem("drift_last_armed_seconds", String(currentSeconds));
@@ -3826,19 +3863,13 @@ export default function App() {
     }
 
     await clearBlocking().catch(() => {});
-    const armedSeconds = Math.max(60, currentSeconds);
-    const res = await startBalanceMonitoring(armedSeconds + 900);
-    if (res?.started === false && !/unavailable/i.test(res.reason || "")) {
-      nativeArmFailedSecondsRef.current = armedSeconds;
-      await applyBlocking([]).catch(() => {});
-      shieldStateRef.current = "on";
-      await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
-      setLastArmedSeconds(-1);
-      return;
-    }
     shieldStateRef.current = "off";
-    nativeArmFailedSecondsRef.current = null;
-    if (res?.started !== false) {
+    const armedSeconds = Math.max(60, currentSeconds);
+    const res = await startBalanceMonitoring(armedSeconds);
+    if (res?.started === false) {
+      nativeArmFailedSecondsRef.current = armedSeconds;
+    } else {
+      nativeArmFailedSecondsRef.current = null;
       await AsyncStorage.setItem("drift_last_armed_seconds", String(armedSeconds)).catch(() => {});
       await AsyncStorage.removeItem("drift_last_armed_balance").catch(() => {});
       setLastArmedSeconds(armedSeconds);

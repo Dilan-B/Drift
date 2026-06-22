@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drift — Promo Video</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a14;font-family:'Inter',sans-serif;overflow:hidden;display:flex;align-items:center;justify-content:center;height:100vh;width:100vw}
+
+.viewport{
+  width:390px;height:844px;
+  background:#0e0e1a;
+  position:relative;
+  overflow:hidden;
+}
+
+/* SLIDES */
+.slide{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:48px 36px;
+  text-align:center;
+  opacity:0;
+  transition:none;
+  pointer-events:none;
+  z-index:1;
+}
+.slide.active{opacity:1;z-index:10}
+
+/* SHARED */
+.label{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.2em;
+  color:rgba(255,255,255,.4);
+  margin-bottom:24px;
+}
+.divider{
+  width:40px;height:1px;
+  background:rgba(255,255,255,.15);
+  margin:20px 0;
+}
+h1{font-weight:700;color:#fff;line-height:1.15;letter-spacing:-.03em}
+p{color:rgba(255,255,255,.5);line-height:1.7}
+
+/* INDIVIDUAL ANIMATIONS */
+.fade-up{
+  opacity:0;transform:translateY(30px);
+  transition:opacity .7s cubic-bezier(.25,.46,.45,.94),transform .7s cubic-bezier(.25,.46,.45,.94);
+}
+.slide.active .fade-up{opacity:1;transform:translateY(0)}
+.slide.active .fade-up.d1{transition-delay:.15s}
+.slide.active .fade-up.d2{transition-delay:.3s}
+.slide.active .fade-up.d3{transition-delay:.45s}
+.slide.active .fade-up.d4{transition-delay:.6s}
+.slide.active .fade-up.d5{transition-delay:.75s}
+.slide.active .fade-up.d6{transition-delay:.9s}
+
+.scale-in{
+  opacity:0;transform:scale(.8);
+  transition:opacity .6s ease,transform .6s ease;
+}
+.slide.active .scale-in{opacity:1;transform:scale(1)}
+.slide.active .scale-in.d1{transition-delay:.2s}
+.slide.active .scale-in.d2{transition-delay:.4s}
+
+/* COUNTER ANIMATION */
+.count-up{font-variant-numeric:tabular-nums}
+
+/* PROGRESS BAR */
+.progress-wrap{
+  position:absolute;bottom:0;left:0;right:0;
+  height:3px;background:rgba(255,255,255,.06);z-index:100;
+}
+.progress-fill{
+  height:100%;width:0;
+  background:linear-gradient(90deg,#6c5ce7,#c67d5a);
+  transition:width .3s linear;
+}
+
+/* SLIDE 1: HOOK */
+.s1 h1{font-size:38px}
+.s1 .highlight{color:#c67d5a}
+.s1 .sub{font-size:16px;margin-top:16px}
+
+/* SLIDE 2: STAT */
+.s2 .big-num{
+  font-size:72px;font-weight:800;
+  color:#c67d5a;line-height:1;
+  letter-spacing:-.04em;
+}
+.s2 .reframe{font-size:15px;color:rgba(255,255,255,.55)}
+.s2 .reframe-bold{font-size:18px;color:rgba(255,255,255,.75);font-weight:600;margin-top:8px}
+
+/* SLIDE 3: WHAT IF */
+.s3 h1{font-size:34px}
+.s3 .earn{color:#8a9a7b}
+.s3 .sub{font-size:15px;color:rgba(255,255,255,.4);margin-top:20px;line-height:1.7}
+
+/* SLIDE 4: INTRO */
+.s4 .logo{font-size:56px;font-weight:800;color:#fff;letter-spacing:-.02em}
+.s4 .tagline{font-size:15px;color:rgba(255,255,255,.5);line-height:1.8}
+
+/* SLIDE 5: STEPS */
+.s5{align-items:flex-start;padding:48px 40px}
+.s5 .step-row{
+  display:flex;align-items:flex-start;gap:16px;
+  margin-bottom:24px;text-align:left;
+}
+.s5 .step-num{
+  min-width:32px;height:32px;
+  border-radius:50%;
+  border:1.5px solid rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:rgba(255,255,255,.5);
+  flex-shrink:0;
+}
+.s5 .step-title{font-size:16px;font-weight:600;color:#fff}
+.s5 .step-sub{font-size:13px;color:rgba(255,255,255,.35);margin-top:3px}
+
+/* SLIDE 6: COMPARISON */
+.s6 .comp-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 20px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.06);
+  margin-bottom:10px;
+  width:280px;
+}
+.s6 .comp-label{font-size:14px;color:rgba(255,255,255,.45)}
+.s6 .comp-val{font-size:14px;color:rgba(255,255,255,.3)}
+.s6 .comp-row.drift{
+  border-color:rgba(138,154,123,.3);
+  background:rgba(138,154,123,.08);
+}
+.s6 .comp-row.drift .comp-label,
+.s6 .comp-row.drift .comp-val{color:#8a9a7b}
+.s6 .sep{width:280px;height:1px;background:rgba(255,255,255,.06);margin:6px 0}
+
+/* SLIDE 7: RESULT */
+.s7 .bars{display:flex;gap:28px;align-items:flex-end}
+.s7 .bar-col{text-align:center}
+.s7 .bar{
+  width:70px;border-radius:8px;
+  display:flex;align-items:flex-end;justify-content:center;
+  padding-bottom:10px;
+}
+.s7 .bar.before{height:180px;background:rgba(198,125,90,.2)}
+.s7 .bar.before span{color:#c67d5a;font-size:14px;font-weight:600}
+.s7 .bar.after{height:50px;background:rgba(138,154,123,.2)}
+.s7 .bar.after span{color:#8a9a7b;font-size:14px;font-weight:600}
+.s7 .bar-label{font-size:12px;color:rgba(255,255,255,.3);margin-top:8px}
+.s7 .week-label{font-size:15px;color:rgba(255,255,255,.55);margin-top:28px}
+
+/* SLIDE 8: CTA */
+.s8 h1{font-size:30px}
+.s8 .earn{color:#8a9a7b}
+.s8 .store-btn{
+  margin-top:24px;
+  padding:12px 28px;
+  border:1.5px solid rgba(255,255,255,.2);
+  border-radius:6px;
+  font-size:14px;
+  color:rgba(255,255,255,.7);
+  letter-spacing:.06em;
+  display:flex;align-items:center;gap:10px;
+}
+.s8 .store-btn svg{fill:rgba(255,255,255,.7);width:20px;height:20px}
+.s8 .free{font-size:13px;color:rgba(255,255,255,.35);margin-top:16px}
+
+/* CONTROLS */
+.controls{
+  position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+  display:flex;gap:12px;z-index:200;
+}
+.ctrl-btn{
+  width:44px;height:44px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.05);
+  color:rgba(255,255,255,.6);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px;
+  transition:background .2s;
+  backdrop-filter:blur(8px);
+}
+.ctrl-btn:hover{background:rgba(255,255,255,.12)}
+
+/* WATERMARK */
+.watermark{
+  position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  font-size:10px;letter-spacing:.15em;text-transform:uppercase;
+  color:rgba(255,255,255,.2);z-index:100;
+}
+
+/* FULLSCREEN OPTION */
+@media(max-width:420px){
+  .viewport{width:100vw;height:100vh}
+}
+</style>
+</head>
+<body>
+
+<div class="viewport" id="viewport">
+  <div class="watermark">Drift</div>
+  <div class="progress-wrap"><div class="progress-fill" id="progress"></div></div>
+
+  <!-- SLIDE 1: HOOK -->
+  <div class="slide s1 active" data-duration="3500">
+    <div class="label fade-up">The problem</div>
+    <h1 class="fade-up d1">I built an app that <span class="highlight">locks TikTok</span> until you work out.</h1>
+    <p class="sub fade-up d2">No, seriously.</p>
+  </div>
+
+  <!-- SLIDE 2: STAT -->
+  <div class="slide s2" data-duration="4000">
+    <div class="label fade-up">The average person</div>
+    <div class="big-num fade-up d1" id="counter">4h 37m</div>
+    <p class="reframe fade-up d2">scrolling per day</p>
+    <div class="divider fade-up d3"></div>
+    <p class="reframe-bold fade-up d4">That's 70 full days a year.</p>
+  </div>
+
+  <!-- SLIDE 3: WHAT IF -->
+  <div class="slide s3" data-duration="4000">
+    <div class="label fade-up">What if</div>
+    <h1 class="fade-up d1">You had to <span class="earn">earn</span> your screen time?</h1>
+    <p class="sub fade-up d2">Not restrict it. Not guilt yourself.<br>Actually earn it.</p>
+  </div>
+
+  <!-- SLIDE 4: INTRODUCING -->
+  <div class="slide s4" data-duration="3500">
+    <div class="label fade-up">Introducing</div>
+    <div class="logo scale-in d1">Drift</div>
+    <div class="divider fade-up d2"></div>
+    <p class="tagline fade-up d3">Complete real tasks.<br>Earn screen time.<br>Your apps unlock.</p>
+  </div>
+
+  <!-- SLIDE 5: HOW IT WORKS -->
+  <div class="slide s5" data-duration="5000">
+    <div class="label fade-up" style="margin-bottom:32px">How it works</div>
+    <div class="step-row fade-up d1">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">Block your time-wasters</div>
+        <div class="step-sub">TikTok, Instagram, X, games</div>
+      </div>
+    </div>
+    <div class="step-row fade-up d2">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">Do something real</div>
+        <div class="step-sub">Work out, read, study, cook</div>
+      </div>
+    </div>
+    <div class="step-row fade-up d3">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">Earn your scroll</div>
+        <div class="step-sub">Timer only drains on blocked apps</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: COMPARISON -->
+  <div class="slide s6" data-duration="4500">
+    <div class="label fade-up">The difference</div>
+    <div class="comp-row fade-up d1">
+      <span class="comp-label">Other apps</span>
+      <span class="comp-val">"Set a limit"</span>
+    </div>
+    <div class="comp-row fade-up d2">
+      <span class="comp-label">You</span>
+      <span class="comp-val">"Ignore limit"</span>
+    </div>
+    <div class="sep fade-up d3"></div>
+    <div class="comp-row drift fade-up d4">
+      <span class="comp-label">Drift</span>
+      <span class="comp-val">Apps are locked.</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: RESULTS -->
+  <div class="slide s7" data-duration="4000">
+    <div class="label fade-up">Real results</div>
+    <div class="bars">
+      <div class="bar-col scale-in d1">
+        <div class="bar before"><span>5h 12m</span></div>
+        <div class="bar-label">Before</div>
+      </div>
+      <div class="bar-col scale-in d2">
+        <div class="bar after"><span>47m</span></div>
+        <div class="bar-label">After</div>
+      </div>
+    </div>
+    <p class="week-label fade-up d3">One week with Drift.</p>
+  </div>
+
+  <!-- SLIDE 8: CTA -->
+  <div class="slide s8" data-duration="4000">
+    <h1 class="fade-up">Stop scrolling.<br><span class="earn">Start earning.</span></h1>
+    <div class="divider fade-up d1"></div>
+    <div class="store-btn fade-up d2">
+      <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+      Download for iOS
+    </div>
+    <p class="free fade-up d3">Free on the App Store</p>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls" id="controls">
+    <div class="ctrl-btn" id="prevBtn">&#8592;</div>
+    <div class="ctrl-btn" id="playBtn">&#9654;</div>
+    <div class="ctrl-btn" id="nextBtn">&#8594;</div>
+  </div>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const progress = document.getElementById('progress');
+const playBtn = document.getElementById('playBtn');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const controls = document.getElementById('controls');
+
+let current = 0;
+let playing = false;
+let timer = null;
+let progressTimer = null;
+let progressStart = 0;
+
+function showSlide(index) {
+  slides.forEach(s => s.classList.remove('active'));
+  current = index;
+  slides[current].classList.add('active');
+  updateProgress();
+}
+
+function updateProgress() {
+  const pct = ((current + 1) / slides.length) * 100;
+  progress.style.width = pct + '%';
+}
+
+function nextSlide() {
+  if (current < slides.length - 1) {
+    showSlide(current + 1);
+    if (playing) scheduleNext();
+  } else {
+    stopPlaying();
+  }
+}
+
+function prevSlide() {
+  if (current > 0) showSlide(current - 1);
+}
+
+function scheduleNext() {
+  clearTimeout(timer);
+  const duration = parseInt(slides[current].dataset.duration) || 3500;
+  timer = setTimeout(nextSlide, duration);
+}
+
+function startPlaying() {
+  playing = true;
+  playBtn.innerHTML = '&#9646;&#9646;';
+  controls.style.opacity = '0.3';
+  setTimeout(() => { controls.style.opacity = '1'; }, 500);
+  scheduleNext();
+}
+
+function stopPlaying() {
+  playing = false;
+  playBtn.innerHTML = '&#9654;';
+  clearTimeout(timer);
+}
+
+playBtn.addEventListener('click', () => {
+  if (playing) stopPlaying();
+  else {
+    if (current === slides.length - 1) showSlide(0);
+    startPlaying();
+  }
+});
+
+prevBtn.addEventListener('click', () => { stopPlaying(); prevSlide(); });
+nextBtn.addEventListener('click', () => { stopPlaying(); nextSlide(); });
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') { stopPlaying(); nextSlide(); }
+  if (e.key === 'ArrowLeft') { stopPlaying(); prevSlide(); }
+  if (e.key === ' ') { e.preventDefault(); playing ? stopPlaying() : startPlaying(); }
+});
+
+// Hide controls after 3s of no interaction, show on move
+let hideTimer;
+function hideControls() { controls.style.opacity = '0'; }
+function showControls() {
+  controls.style.opacity = '1';
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(hideControls, 3000);
+}
+document.addEventListener('mousemove', showControls);
+document.addEventListener('touchstart', showControls);
+
+updateProgress();
+</script>
+</body>
+</html>
