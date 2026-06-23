@@ -4,8 +4,8 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator, Alert, FlatList, Image, LayoutAnimation, Modal, Platform, RefreshControl, Share,
-  Pressable, StyleSheet, Text, TextInput, TouchableOpacity, UIManager, View, Vibration,
+  ActivityIndicator, Alert, FlatList, Image, Modal, Platform, RefreshControl, Share,
+  Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View, Vibration,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Path, Circle as SvgCircle, Ellipse, Defs, RadialGradient, Stop } from "react-native-svg";
@@ -20,10 +20,6 @@ import Sprout, { LeafGlyph, Sprig } from "./SproutArt";
 
 let Clipboard = null;
 try { Clipboard = require("expo-clipboard"); } catch { Clipboard = null; }
-
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 const terra = "#2D7A52";
 // Upright, lighter Playfair Display - same family, no slant, slimmer strokes
@@ -132,8 +128,11 @@ const SIX_MONTHS_MS = 183 * 24 * 60 * 60 * 1000;
 const CHALLENGE_CACHE_EPOCH = "challenge-reset-2026-06-05";
 const LOADING_MESSAGES = ["Almost there", "Working on it", "Syncing updates", "Still loading"];
 
+// NOTE: LayoutAnimation was removed here. On the New Architecture (Fabric) it
+// crashes (EXC_BAD_ACCESS in UIManager::animationTick / RCTPerformMountInstructions)
+// when an animating list row is removed/replaced mid-transition. The state
+// update still applies, just without the animated transition.
 function smoothUpdate(fn) {
-  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
   fn();
 }
 
@@ -373,11 +372,12 @@ function ChallengeRow({ item, myId, dark, onPress, onVerify }) {
   const incoming = item.challenged_id === myId && item.status === "pending";
   const outgoingPending = item.challenger_id === myId && item.status === "pending";
   const mineDone = item.challenger_id === myId ? item.challenger_done : item.challenged_done;
-  const label = item.title || item.exercise?.replace(/_/g, " ") || "Challenge";
+  const isDare = item.type === "dare";
+  const label = item.title || item.exercise?.replace(/_/g, " ") || (isDare ? "Dare" : "Challenge");
   const fromName = item.challenger?.username || item.challenger_username || "friend";
   const toName = item.challenged?.username || "friend";
   const stake = getStake(item);
-  const kicker = incoming ? "NEW" : outgoingPending ? "AWAITING REPLY" : item.status === "active" ? "ACTIVE" : "CHALLENGE";
+  const kicker = incoming ? (isDare ? "NEW DARE" : "NEW") : outgoingPending ? "AWAITING REPLY" : item.status === "active" ? "ACTIVE" : (isDare ? "DARE" : "CHALLENGE");
 
   return (
     <TouchableOpacity
@@ -436,7 +436,8 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
   const th = palette(dark);
   if (!challenge) return null;
   const stake = getStake(challenge);
-  const label = challenge.title || challenge.exercise?.replace(/_/g, " ") || "Challenge";
+  const isDare = challenge.type === "dare";
+  const label = challenge.title || challenge.exercise?.replace(/_/g, " ") || (isDare ? "Dare" : "Challenge");
   const fromName = challenge.challenger?.username || "friend";
   const canRespond = challenge.status === "pending" && challenge.challenged_id === myId;
   return (
@@ -467,7 +468,7 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
             fontFamily: FF.kicker, fontSize: 9, color: th.sage,
             letterSpacing: 2.4, marginBottom: 8,
           }}>
-            CHALLENGE FROM @{fromName.toUpperCase()}
+            {isDare ? "DARE" : "CHALLENGE"} FROM @{fromName.toUpperCase()}
           </Text>
           <Text style={{
             fontFamily: FF.display, fontSize: 30, color: th.ink,
@@ -488,10 +489,12 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
             borderWidth: 1, borderColor: th.hairline,
           }}>
             <Text style={{ fontFamily: FF.bodyBold, fontSize: 14, color: th.ink, marginBottom: 4 }}>
-              First verified wins +{stake.xp} XP
+              {isDare ? `Finish before midnight → +${stake.xp} XP` : `First verified wins +${stake.xp} XP`}
             </Text>
             <Text style={{ fontFamily: FF.body, fontSize: 12, color: th.mid, lineHeight: 18 }}>
-              The other person loses {stake.penaltyMins} minutes of screen time.
+              {isDare
+                ? `Miss the deadline and you lose ${stake.penaltyMins} minutes of screen time.`
+                : `The other person loses ${stake.penaltyMins} minutes of screen time.`}
             </Text>
           </View>
 
@@ -566,6 +569,7 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
 function ChallengeOutcomeModal({ outcome, dark, onClose }) {
   const th = palette(dark);
   if (!outcome) return null;
+  const isDare = outcome.challenge?.type === "dare";
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{
@@ -590,7 +594,9 @@ function ChallengeOutcomeModal({ outcome, dark, onClose }) {
             color: outcome.won ? th.sage : th.clay,
             letterSpacing: 2.4, marginBottom: 4,
           }}>
-            {outcome.won ? "CHALLENGE WON" : "CHALLENGE LOST"}
+            {outcome.won
+              ? (isDare ? "DARE DONE" : "CHALLENGE WON")
+              : (isDare ? "DARE FAILED" : "CHALLENGE LOST")}
           </Text>
           <Text style={{
             fontFamily: FF.display, fontSize: 36, color: th.ink,
@@ -603,8 +609,8 @@ function ChallengeOutcomeModal({ outcome, dark, onClose }) {
             textAlign: "center", lineHeight: 20, marginBottom: 22,
           }}>
             {outcome.won
-              ? "You verified first and claimed the reward."
-              : "Your friend verified first, so the stake was applied."}
+              ? (isDare ? "You beat the deadline and claimed the reward." : "You verified first and claimed the reward.")
+              : (isDare ? "You missed the deadline, so the stake was applied." : "Your friend verified first, so the stake was applied.")}
           </Text>
           <TouchableOpacity
             onPress={onClose}
@@ -630,7 +636,8 @@ function ChallengeOutcomeModal({ outcome, dark, onClose }) {
 
 function PastChallengeRow({ item, myId, dark }) {
   const th = palette(dark);
-  const label = item.title || item.exercise?.replace(/_/g, " ") || "Challenge";
+  const isDare = item.type === "dare";
+  const label = item.title || item.exercise?.replace(/_/g, " ") || (isDare ? "Dare" : "Challenge");
   const stake = getStake(item);
   const winnerName =
     item.winner_id === myId ? "you" :

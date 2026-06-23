@@ -190,7 +190,7 @@ export default function ChallengeSheet({
           <View style={[s.leafBadge, { backgroundColor: th.wash }]}>
             <LeafGlyph size={19} color={terra} />
           </View>
-          <Text style={[s.kicker, { color: th.faint }]}>CHALLENGE</Text>
+          <Text style={[s.kicker, { color: th.faint }]}>{type === "dare" ? "DARE" : "CHALLENGE"}</Text>
           <Text style={[s.title, { color: th.ink }]}>@{target.username}</Text>
         </View>
 
@@ -229,7 +229,7 @@ export default function ChallengeSheet({
         >
         {mode === "exercise" ? (
           <>
-            <Text style={[s.pickLabel, { color: th.faint }]}>Choose challenge</Text>
+            <Text style={[s.pickLabel, { color: th.faint }]}>{type === "dare" ? "Choose a dare" : "Choose challenge"}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }} contentContainerStyle={{ paddingBottom: 4 }}>
               {CHALLENGE_OPTIONS.map(opt => (
                 <TouchableOpacity key={opt.id} onPress={() => setExercise(opt)} pointerEvents="box-only" style={[s.exCard, { backgroundColor: th.card, borderColor: th.border }, exercise?.id === opt.id && { borderColor: terra, backgroundColor: th.washStrong }]}>
@@ -246,7 +246,7 @@ export default function ChallengeSheet({
               style={[s.input, { backgroundColor: th.input, borderColor: th.border, color: th.ink }]}
               value={title}
               onChangeText={setTitle}
-              placeholder="Competition title"
+              placeholder={type === "dare" ? "Dare title" : "Competition title"}
               placeholderTextColor={th.faint}
               maxLength={80}
             />
@@ -264,7 +264,7 @@ export default function ChallengeSheet({
                 style={[s.input, { flex: 1, backgroundColor: th.input, borderColor: th.border, color: th.ink }]}
                 value={rules}
                 onChangeText={setRules}
-                placeholder="Rules or proof needed"
+                placeholder={type === "dare" ? "What they must do" : "Rules or proof needed"}
                 placeholderTextColor={th.faint}
                 maxLength={140}
               />

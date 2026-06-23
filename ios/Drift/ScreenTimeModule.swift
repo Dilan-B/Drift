@@ -297,10 +297,20 @@ class ScreenTimeModule: NSObject {
           events: events
         )
         if needsFailsafe {
-          try center.startMonitoring(
-            .driftBalanceFailsafe,
-            during: Self.oneShotSchedule(afterSeconds: totalSec)
-          )
+          // Best-effort only: iOS rejects DeviceActivity schedules shorter than
+          // 15 minutes, so this throws for sub-15-min balances. Isolate it in
+          // its own do/catch so a failsafe failure does NOT tear down the main
+          // .driftBalance monitor. Previously a thrown failsafe hit the outer
+          // catch and stopped BOTH monitors, leaving small balances with NO
+          // background enforcement — the "doesn't block until you reopen" bug.
+          do {
+            try center.startMonitoring(
+              .driftBalanceFailsafe,
+              during: Self.oneShotSchedule(afterSeconds: totalSec)
+            )
+          } catch {
+            UserDefaults(suiteName: DRIFT_APP_GROUP)?.set(false, forKey: "drift_balance_failsafe_active")
+          }
         }
         resolve(nil)
       } catch {
