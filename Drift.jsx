@@ -415,6 +415,34 @@ const cacheFullTasks = async (uid, nextVisibleTasks, knownTasks = []) => {
   return cache.saveTasks(uid, mergeTaskRecords(existing, nextVisibleTasks));
 };
 
+// ── Deleted-task tombstone ───────────────────────────────────
+// The task cache (cacheFullTasks) is append-only and the boot loader merges any
+// cached task missing from the server back into the visible list. After a
+// soft-delete the row is gone from the server but can linger in the cache, so it
+// reappears on reopen. A persisted set of deleted ids, filtered at boot,
+// guarantees a deleted task stays gone regardless of cache/server lag.
+const deletedIdsKey = (uid) => `drift_deleted_ids_${uid}`;
+const loadDeletedIds = async (uid) => {
+  if (!uid) return new Set();
+  try { return new Set(JSON.parse((await AsyncStorage.getItem(deletedIdsKey(uid))) || "[]")); }
+  catch { return new Set(); }
+};
+const addDeletedId = async (uid, id) => {
+  if (!uid || !id) return;
+  try {
+    const ids = await loadDeletedIds(uid);
+    ids.add(id);
+    await AsyncStorage.setItem(deletedIdsKey(uid), JSON.stringify([...ids].slice(-500)));
+  } catch {}
+};
+const removeDeletedId = async (uid, id) => {
+  if (!uid || !id) return;
+  try {
+    const ids = await loadDeletedIds(uid);
+    if (ids.delete(id)) await AsyncStorage.setItem(deletedIdsKey(uid), JSON.stringify([...ids]));
+  } catch {}
+};
+
 const storage = {
   get: async (key) => ({ value: await AsyncStorage.getItem(key) }),
   set: async (key, value) => { await AsyncStorage.setItem(key, value); },
@@ -1967,46 +1995,10 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
       })}
       </Animated.View>
 
-      {done.length > 0 && (
-        <View style={{ marginTop: 22 }}>
-          <Text style={{
-            fontFamily: FF.kicker,
-            fontSize: 10,
-            color: ink.faint,
-            letterSpacing: 2.4,
-            marginBottom: 10,
-          }}>
-            DONE TODAY
-          </Text>
-          {done.map(t => {
-            const cat = CATS[t.cat] || CATS.life;
-            return (
-              <View key={t.id} style={{
-                flexDirection: "row", alignItems: "center", gap: 12,
-                paddingVertical: 12,
-                borderBottomWidth: 0.5, borderBottomColor: ink.hairline,
-              }}>
-                <View style={{
-                  width: 18, height: 18, borderRadius: 9,
-                  alignItems: "center", justifyContent: "center",
-                  backgroundColor: earn.sageLo,
-                }}>
-                  <CheckIcon size={11} color={earn.sage} />
-                </View>
-                <Text style={{
-                  flex: 1, fontFamily: FF.body, fontSize: 13,
-                  color: ink.mid, textDecorationLine: "line-through",
-                }} numberOfLines={1}>
-                  {t.title}
-                </Text>
-                <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: earn.terra }}>
-                  +{fmtMins(t.credits)}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      )}
+      {/* Completed tasks intentionally disappear from Today once finished &
+          confirmed (they live on in Growth / history). The done instances stay
+          in `tasks` state — invisible here — so recurring dedup and earnable
+          math stay correct. */}
     </ScrollView>
     </>
   );
@@ -3327,21 +3319,25 @@ export default function App() {
   useEffect(() => {
     if (screen !== "app" || !userId || !proAccess || !recurringTasks.length) return;
     const today = todayKey();
+    // Dedup against BOTH active tasks and completed history for today. Without
+    // the history check, a recurring task completed earlier today would
+    // re-materialize after the app is closed and reopened.
     const existingRecurring = new Set(
-      tasks
+      [...tasks, ...taskHistory]
         .filter(t => t.recurringTemplateId && t.task_date === today)
         .map(t => `${t.recurringTemplateId}_${t.task_date}`)
     );
     const now = new Date();
     const nowMins = now.getHours() * 60 + now.getMinutes();
+    const RECURRING_APPEAR_MINS = 5 * 60; // 5:00 AM
     const due = recurringTasks
       .filter(t => t?.enabled !== false)
       .filter(t => t.createdDate !== today)
       .filter(t => recurrenceMatchesDate(t, now))
-      .filter(t => {
-        const scheduled = timeToMins(t.time);
-        return scheduled == null || nowMins >= scheduled;
-      })
+      // Appear from 5am for the day, regardless of the template's own "time"
+      // (which is now display-only). The schedule decides WHICH days a task
+      // recurs; 5am decides WHEN it shows up that day.
+      .filter(() => nowMins >= RECURRING_APPEAR_MINS)
       .filter(t => !existingRecurring.has(`${t.id}_${today}`));
     if (!due.length) return;
 
@@ -3367,7 +3363,7 @@ export default function App() {
     created.forEach(t => insertTask(userId, t).catch(e => {
       console.warn("recurring task sync failed:", e?.message);
     }));
-  }, [screen, userId, proAccess, recurringTasks, tasks, minuteTick]);
+  }, [screen, userId, proAccess, recurringTasks, tasks, taskHistory, minuteTick]);
 
   // Shared path for password sign-in, OAuth sign-in, and verified email links.
   const ONBOARDING_TASKS = {
@@ -3678,6 +3674,17 @@ export default function App() {
       try {
         const { data: { session } } = await safeGetSession();
         const uid = session?.user?.id ?? null;
+        const emailVerified = !!(session?.user?.email_confirmed_at || session?.user?.confirmed_at);
+        if (uid && !emailVerified) {
+          await supabase.auth.signOut().catch(() => {});
+          setUserId(null);
+          setUserEmail("");
+          setUserName("");
+          const hasOnboarded = await AsyncStorage.getItem("drift_onboarded");
+          setSignInOnly(hasOnboarded === "1");
+          setOnboarding(true);
+          return;
+        }
         setUserId(uid);
         setUserEmail(session?.user?.email ?? "");
         if (uid) {
@@ -3708,8 +3715,10 @@ export default function App() {
         let remoteTasksApplied = false;
         let cachedTasks = [];
         let cachedXp = 0;
+        // Deleted-task tombstone — never resurrect a locally-deleted task.
+        const deletedIds = await loadDeletedIds(uid);
         try {
-          cachedTasks = await cache.loadTasks(uid);
+          cachedTasks = (await cache.loadTasks(uid)).filter(t => !deletedIds.has(t.id));
           const cachedToday = cachedTasks.filter(t => isTodayTask(t));
           if (cachedToday.length) setTasks(cachedToday);
           cachedXp = await cache.loadXp(uid);
@@ -3719,7 +3728,7 @@ export default function App() {
           const remote = await fetchTasks(uid);
           if (remote) {
             // Only show tasks from today (matches the existing "today's work" model)
-            const today = remote.filter(t => isTodayTask(t));
+            const today = remote.filter(t => isTodayTask(t) && !deletedIds.has(t.id));
 
             // Merge in any local-only tasks (created while offline and not yet synced).
             // We identify local-only tasks by ID not appearing in the remote set.
@@ -3792,7 +3801,7 @@ export default function App() {
             AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
             syncProfileStats(uid, { balanceSeconds: 0 }).catch(() => {});
             if (!remoteTasksApplied) {
-              setTasks(savedTasks.filter(t => isTodayTask(t)));
+              setTasks(savedTasks.filter(t => isTodayTask(t) && !deletedIds.has(t.id)));
               persist({ tasks: savedTasks, taskHistory: history, totalXp: p.totalXp || 0, credits: resetCredits });
             }
           } else {
@@ -3806,7 +3815,7 @@ export default function App() {
               earned:     Math.max(0, rawSc.earned     || 0),
               spent:      Math.max(0, rawSc.spent      || 0),
             };
-            if (!remoteTasksApplied) setTasks(savedTasks.filter(t => isTodayTask(t)));
+            if (!remoteTasksApplied) setTasks(savedTasks.filter(t => isTodayTask(t) && !deletedIds.has(t.id)));
             if (!remoteStatsApplied) {
               setCredits(sc);
               setTotalXp(prev => Math.max(prev, p.totalXp || 0));
@@ -3917,6 +3926,7 @@ export default function App() {
     const nt = [...tasks, t];
     setTasks(nt); persist({ tasks: nt });
     if (userId) {
+      removeDeletedId(userId, t.id).catch(() => {});
       // Sync to Supabase. If offline, the local cache + persisted state still
       // shows the task, and the next foreground will re-sync via fetchTasks.
       insertTask(userId, t).catch(e => {
@@ -3958,6 +3968,7 @@ export default function App() {
     setTasks(nt);
     persist({ tasks: nt });
     if (userId) {
+      addDeletedId(userId, id).catch(() => {});
       softDeleteTask(userId, id).catch(e => console.warn("softDeleteTask:", e?.message));
       cache.loadTasks(userId)
         .then(all => cache.saveTasks(userId, (all || []).filter(t => t.id !== id)))
@@ -3975,8 +3986,20 @@ export default function App() {
     // Warn if no apps are blocked — common foot-gun where users skip the picker
     // and assume the focus session is enforced. Beta testers will report this.
     try {
-      const list = await (await import("./blockedApps")).getBlockedApps();
-      if (!list || list.length === 0) {
+      // Drift In blocks the SAME apps as the balance shield. On iOS the real
+      // selection lives in the native FamilyActivityPicker (UserDefaults), NOT
+      // the JS getBlockedApps() list — so check the native selection first,
+      // otherwise we'd falsely warn users who already picked apps.
+      let hasSelection = false;
+      if (isNativeBlockingAvailable()) {
+        const diag = await getDiagnostics();
+        const picked = (diag?.pickedAppCount || 0) + (diag?.pickedCategoryCount || 0) + (diag?.pickedWebCount || 0);
+        hasSelection = picked > 0 || !!diag?.selectionStored;
+      } else {
+        const list = await (await import("./blockedApps")).getBlockedApps();
+        hasSelection = !!(list && list.length);
+      }
+      if (!hasSelection) {
         Alert.alert(
           "No apps to block",
           "You haven't picked any apps yet. Drift In will still run, but distracting apps won't be blocked. Open Profile → Blocked apps to pick some.",

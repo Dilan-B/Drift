@@ -1,12 +1,9 @@
 /**
  * oauthSignIn.js
- * Apple + Google sign-in. All token validation happens server-side in Supabase;
+ * Google sign-in. All token validation happens server-side in Supabase;
  * we never trust client-side decoded tokens for anything sensitive.
  *
  * SECURITY NOTES
- *  - Apple flow uses a SHA-256-hashed nonce sent to Apple, plaintext nonce sent
- *    to Supabase. Apple signs the token with the hash; Supabase verifies the
- *    raw nonce matches. This blocks token-replay attacks.
  *  - Google flow uses expo-auth-session with PKCE — no client secret ships with
  *    the app. The OAuth code never leaves the device unencrypted.
  *  - All identity tokens are validated against the provider's public keys by
@@ -14,25 +11,14 @@
  *  - We never store or log raw tokens. Supabase sessions are persisted through
  *    the encrypted auth storage adapter configured in supabase.js.
  */
-import { Platform } from "react-native";
-import * as Crypto from "expo-crypto";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import { supabase } from "./supabase";
 import { rateLimited } from "./apiGuards";
 
-// Apple Sign-In is intentionally not imported. To re-enable, restore:
-//   import * as AppleAuthentication from "expo-apple-authentication";
-// and the `signInWithApple` export below.
-
 // expo-auth-session wants this so the redirect resolves cleanly on iOS
 WebBrowser.maybeCompleteAuthSession();
-
-// ── Apple Sign-In (disabled) ──────────────────────────────────
-// export const APPLE_AVAILABLE = Platform.OS === "ios";
-// export async function signInWithApple() { /* see git history */ }
-export const APPLE_AVAILABLE = false;
 
 // ── Google Sign-In (uses expo-auth-session with PKCE) ────────
 // Pass these from app.json/eas secrets — never hard-code in source.
@@ -112,13 +98,6 @@ export async function ensureGoogleConfigured() {
       "Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in .env and the iOS/Android client IDs."
     );
   }
-}
-
-// ── Helpers ───────────────────────────────────────────────────
-async function randomNonce(len = 32) {
-  const bytes = await Crypto.getRandomBytesAsync(len);
-  // Convert to hex — same alphabet works as nonce content
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 // React import lazy so this file works in non-component contexts too

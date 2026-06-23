@@ -12,8 +12,7 @@
 - ✅ Client-side rate limit: 5 attempts per minute per device. Supabase enforces server-side limits too.
 - ✅ Username chosen by user at signup, validated for shape + uniqueness, enforced at DB level via unique index.
 
-### OAuth (Apple + Google)
-- ✅ **Apple Sign-In uses a cryptographic nonce** — random nonce generated client-side, SHA-256 hash sent to Apple, raw nonce sent to Supabase. Apple's signed token must contain hash(rawNonce). Blocks replay attacks.
+### OAuth (Google)
 - ✅ **Google Sign-In uses PKCE** via `expo-auth-session`. Code verifier never leaves the device. No client secret in the app bundle.
 - ✅ **All ID tokens validated against provider public keys** by Supabase Auth before any session is issued.
 - ✅ **OAuth client secrets stay server-side** in Supabase config — never compiled into the app.

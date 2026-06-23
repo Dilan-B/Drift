@@ -164,17 +164,23 @@ serve(async (req: Request) => {
         `Do not judge or penalize based on how long ago the task/challenge was created, ` +
         `how long the user took to submit proof, missing timestamps, or whether the elapsed time seems too long. ` +
         `Only evaluate the content of the task and the submitted proof.\n` +
-        `Be reasonably understanding about the limits of single-photo evidence: the user usually cannot prove the entire action happened, ` +
-        `so accept plausible completion when the image contains concrete after-the-fact clues. Look carefully for small visual details such as ` +
-        `residue, stains, wetness, crumbs, changed object state, empty containers, disturbed surfaces, or other signs that the task likely occurred. ` +
-        `Do not reject just because the photo cannot prove the full before/during/after sequence.\n\n` +
+        `Be lenient and realistic about the limits of single-photo evidence: the user can only submit one picture right now, ` +
+        `so the photo usually cannot prove every rep, minute, or before/during/after step. Verify the task when the image provides plausible, ` +
+        `task-relevant evidence of participation or completion, even if it is not mathematically conclusive. ` +
+        `For physical or repetition-based tasks, accept reasonable visual proof such as the user in the relevant exercise position, ` +
+        `workout context, sweat, flushed/tired facial expression, or other after-the-fact body/environment clues. ` +
+        `For object or consumption tasks, look carefully for small visual details such as residue, stains, wetness, crumbs, changed object state, ` +
+        `empty containers, disturbed surfaces, or other signs that the task likely occurred. ` +
+        `Do not reject just because the photo cannot prove the full sequence; only reject when the evidence is unrelated, clearly contradictory, ` +
+        `or far too vague to connect to the task.\n\n` +
         `Task: "${taskTitle.replace(/"/g, "'")}"` +
         (durationMins ? `\nEstimated duration: ${durationMins} minutes (context only, not a deadline)` : "") +
         (sanitizedProof ? `\nUser's explanation: "${sanitizedProof}"` : "\nNo written explanation.") +
         (imageBase64 ? "\nPhoto evidence provided (see image)." : "\nNo photo.") +
         `\n\nExamples: an empty mug can verify a drink/chug-coffee challenge when it shows plausible coffee evidence, ` +
-        `such as brown residue, ring marks, stains, wetness, or leftover drops. Do not reject it merely because an empty mug alone ` +
-        `cannot mathematically prove the user personally chugged it.` +
+        `such as brown residue, ring marks, stains, wetness, or leftover drops. A photo of a user in push-up position, or visibly tired right after, ` +
+        `can verify a 20 push-ups challenge when it plausibly matches the task context. Do not reject these merely because a single photo ` +
+        `cannot mathematically prove the user personally completed every rep.` +
         `\n\nBe encouraging but honest. Reply ONLY with valid JSON (no markdown, no extra text):\n` +
         `{"verified": true or false, "confidence": "high" or "medium" or "low", "message": "1-2 sentence response"}`,
     });

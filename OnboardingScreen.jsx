@@ -13,8 +13,6 @@ import {
 import { supabase } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
 import { cached, rateLimited } from "./apiGuards";
-// Apple Sign-In is intentionally disabled for now — re-enable by restoring
-// the imports above and the Apple button block in OAuthButtons.
 import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon } from "./Icons";
 import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
 import Sprout, { Sprig, SeedDots } from "./SproutArt";
@@ -283,7 +281,7 @@ function validateUsername(raw) {
   return null;
 }
 
-// ─── OAuth provider buttons (Apple + Google) ─────────────────────────────────
+// ─── Social auth provider button (Google only) ───────────────────────────────
 function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
   // Google sign-in hook — handles PKCE under the hood
   const google = useGoogleSignIn(async (res) => {
@@ -721,6 +719,11 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
           </View>
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {mode === "signup" ? (
+            <Text style={styles.authHint}>
+              Email accounts must be verified before Drift unlocks.
+            </Text>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -738,7 +741,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
         )}
       </TouchableOpacity>
 
-      {/* OAuth providers */}
+      {/* Google sign-in */}
       <OAuthButtons
         mode={mode}
         loading={loading}
@@ -1035,6 +1038,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     lineHeight: 20,
+  },
+  authHint: {
+    color: MUTED,
+    fontFamily: FF.body,
+    fontSize: 12,
+    marginTop: 10,
+    lineHeight: 17,
   },
   verifyNote: {
     color: MUTED,
