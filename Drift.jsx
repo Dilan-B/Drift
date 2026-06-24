@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useContext, createCont
 import {
   View, Text, TouchableOpacity, TextInput, ScrollView,
   StyleSheet, KeyboardAvoidingView,
-  StatusBar, Platform, Alert, AppState, Modal, PanResponder, Animated,
+  StatusBar, Platform, Alert, AppState, Modal, PanResponder, Animated, Easing,
   ActivityIndicator, Linking, Dimensions, Pressable,
 } from "react-native";
 import Constants from "expo-constants";
@@ -58,7 +58,7 @@ import {
 import {
   startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag, consumeUsedSeconds,
   getDiagnostics, updateSharedBalance, startDriftInLiveActivity, updateDriftInLiveActivity,
-  endDriftInLiveActivity, consumePendingHealthEarn,
+  endDriftInLiveActivity, consumePendingHealthEarn, setProStatus,
 } from "./screenTime";
 import { supabase, syncScreenTime, safeGetSession } from "./supabase";
 import { handleSupabaseAuthCallback } from "./authLinks";
@@ -66,6 +66,8 @@ import SocialScreen from "./SocialScreen";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
+import PaywallScreen from "./PaywallScreen";
+import { useSubscription } from "./useSubscription";
 import { cached, rateLimited } from "./apiGuards";
 import {
   TouchTracker, OriginPanel, OriginSheet, Backdrop, Pop, FadeInUp, Pulse, useCountUp, getLastTouch,
@@ -489,10 +491,25 @@ function CreditTicker({ value, seconds, textColor }) {
 // existing default and keeps balance with paid users (whose AI typically lands
 // in the 0.5-1.0 range depending on task quality).
 const FREE_TIER_MULTIPLIER = 0.6;
+const MAX_REWARD_RATIO = 0.5;
+const MIN_REWARD_RATIO = 0.25;
+const FREE_TASK_LIMIT = 5;
 const DIFFICULTY_GRANT = { easy: 15, medium: 7, hard: 3, committed: 1 };
 
+const BLOCKED_TASK_RE = /\b(goon|gooning|fap|fapping|jerk\s*off|jack\s*off|wank|masturbat|porn|hentai|onlyfans|xvideo|xhamster|nhentai|rule\s*34|edg(e|ing)\b(?!.*code)|69|blow\s*job|hand\s*job|sex(?!t)|nud[ei]|xxx|orgasm|boner|erection|cum\b|suck\s*(my|a|it)|eat\s*ass|anal\b|dildo|vibrator|fleshlight)\b/i;
+const VAGUE_TASK_RE = /^(stuff|things?|work|task|do it|idk|whatever|something|nothing|asdf|aaa+|test|hi|hey|lol|bruh|hmm+|ok|yes|no|nah|yep|pls|help|bro|dude|chill|vibe|vibes|blah|meh|ugh|haha|lmao|yolo|swag|based|slay|cap|bet|fr|ngl|tbh|ong|fam|sus|ratio|w|l|x+|z+|\.+|!+|\?+|a{2,}|ha+)$/i;
+const MIN_TASK_TITLE_LEN = 4;
+const MIN_TASK_TITLE_WORDS = 2;
+
+function capReward(credits, mins) {
+  const floor = Math.max(1, Math.ceil(mins * MIN_REWARD_RATIO));
+  const cap = Math.max(1, Math.floor(mins * MAX_REWARD_RATIO));
+  return Math.max(floor, Math.min(credits, cap));
+}
+
 function freeTierCredits(mins) {
-  const credits = Math.max(1, Math.round(mins * FREE_TIER_MULTIPLIER));
+  const raw = Math.max(1, Math.round(mins * FREE_TIER_MULTIPLIER));
+  const credits = capReward(raw, mins);
   const xp      = Math.max(5, Math.round(credits * 0.6 + 8));
   return {
     credits,
@@ -665,6 +682,15 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
 
   const save = async () => {
     if (!title.trim() || evaluating) return;
+    const trimmed = title.trim();
+    if (BLOCKED_TASK_RE.test(trimmed)) {
+      setEvalError("That task isn't allowed. Try something productive!");
+      return;
+    }
+    if (trimmed.length < MIN_TASK_TITLE_LEN || trimmed.split(/\s+/).length < MIN_TASK_TITLE_WORDS || VAGUE_TASK_RE.test(trimmed)) {
+      setEvalError("Be specific! Describe what you'll actually do (e.g. \"Read 20 pages\" not \"stuff\").");
+      return;
+    }
     setEvaluating(true);
     setEvalError("");
 
@@ -1330,48 +1356,117 @@ function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant, grantMins
 }
 
 function FloatingFeedback({ popup }) {
-  const scale = useRef(new Animated.Value(0.88)).current;
+  const scale = useRef(new Animated.Value(0.4)).current;
   const y = useRef(new Animated.Value(18)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const burst = useRef(new Animated.Value(0)).current;
+  const particleRefs = useRef(Array.from({ length: 8 }, () => ({
+    t: new Animated.Value(0),
+    angle: Math.random() * Math.PI * 2,
+    dist: 44 + Math.random() * 30,
+  }))).current;
 
   useEffect(() => {
     if (!popup) return;
-    scale.setValue(0.88);
+    scale.setValue(0.4);
     y.setValue(18);
     opacity.setValue(0);
+    burst.setValue(0);
+    particleRefs.forEach((p) => p.t.setValue(0));
+
     Animated.parallel([
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 120, friction: 8 }),
-      Animated.spring(y, { toValue: 0, useNativeDriver: true, tension: 110, friction: 9 }),
-      Animated.timing(opacity, { toValue: 1, duration: 140, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 120, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 170, friction: 7 }),
+      Animated.spring(y, { toValue: 0, useNativeDriver: true, tension: 140, friction: 9 }),
+      Animated.timing(burst, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.stagger(18, particleRefs.map((p) =>
+        Animated.timing(p.t, { toValue: 1, duration: 580, easing: Easing.out(Easing.quad), useNativeDriver: true })
+      )),
+      Animated.sequence([
+        Animated.delay(2300),
+        Animated.parallel([
+          Animated.timing(opacity, { toValue: 0, duration: 260, useNativeDriver: true }),
+          Animated.timing(y, { toValue: -10, duration: 260, useNativeDriver: true }),
+        ]),
+      ]),
     ]).start();
-  }, [popup, scale, y, opacity]);
+  }, [popup, scale, y, opacity, burst, particleRefs]);
 
   if (!popup) return null;
+  const isLoss = popup.loss > 0 && !(popup.credits > 0 || popup.xp > 0);
+  const tint = isLoss ? "#C0392B" : earn.terra;
+
+  const burstScale = burst.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1.6] });
+  const burstOpacity = burst.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.5, 0.25, 0] });
+  const ringScale = burst.interpolate({ inputRange: [0, 1], outputRange: [0.6, 2.0] });
+  const ringOpacity = burst.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.6, 0.35, 0] });
+  const checkScale = burst.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.5, 1.15, 1] });
+
   return (
-    <Animated.View style={{
+    <View style={{
       position: "absolute", top: "18%", left: 0, right: 0,
       alignItems: "center", zIndex: 300,
-      flexDirection: "row", justifyContent: "center", gap: 8,
       pointerEvents: "none",
-      opacity,
-      transform: [{ translateY: y }, { scale }],
     }}>
-      {popup.credits > 0 && (
-        <View style={{ backgroundColor: earn.green, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
-          <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>+{fmtMins(popup.credits)}</Text>
-        </View>
+      {/* radial burst */}
+      <Animated.View style={{
+        position: "absolute", width: 120, height: 120, borderRadius: 60,
+        backgroundColor: tint, opacity: burstOpacity,
+        transform: [{ scale: burstScale }],
+      }} />
+      <Animated.View style={{
+        position: "absolute", width: 90, height: 90, borderRadius: 45,
+        borderWidth: 3, borderColor: tint, opacity: ringOpacity,
+        transform: [{ scale: ringScale }],
+      }} />
+
+      {/* particle dots */}
+      {particleRefs.map((p, i) => {
+        const tx = p.t.interpolate({ inputRange: [0, 1], outputRange: [0, Math.cos(p.angle) * p.dist] });
+        const ty = p.t.interpolate({ inputRange: [0, 1], outputRange: [0, Math.sin(p.angle) * p.dist] });
+        const pOp = p.t.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 1, 0] });
+        const pSc = p.t.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.3, 1, 0.4] });
+        return (
+          <Animated.View key={i} style={{
+            position: "absolute", top: 28, width: 6, height: 6, borderRadius: 3,
+            backgroundColor: i % 2 === 0 ? tint : earn.green,
+            opacity: pOp, transform: [{ translateX: tx }, { translateY: ty }, { scale: pSc }],
+          }} />
+        );
+      })}
+
+      {/* checkmark badge */}
+      {!isLoss && (
+        <Animated.View style={{
+          width: 44, height: 44, borderRadius: 22, backgroundColor: tint,
+          alignItems: "center", justifyContent: "center", marginBottom: 10,
+          opacity, transform: [{ scale: checkScale }],
+        }}>
+          <Text style={{ color: "#fff", fontSize: 22, fontWeight: "700" }}>✓</Text>
+        </Animated.View>
       )}
-      {popup.loss > 0 && (
-        <View style={{ backgroundColor: "#C0392B", borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
-          <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>-{fmtMins(popup.loss)}</Text>
-        </View>
-      )}
-      {popup.xp > 0 && (
-        <View style={{ backgroundColor: earn.blue, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }}>
-          <Text style={{ fontFamily: FO, fontSize: 11, color: "#fff", letterSpacing: 1 }}>+{popup.xp} XP</Text>
-        </View>
-      )}
-    </Animated.View>
+
+      <Animated.View style={{
+        flexDirection: "row", justifyContent: "center", gap: 8,
+        opacity, transform: [{ translateY: y }, { scale }],
+      }}>
+        {popup.credits > 0 && (
+          <View style={{ backgroundColor: earn.green, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 16 }}>
+            <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 1 }}>+{fmtMins(popup.credits)}</Text>
+          </View>
+        )}
+        {popup.loss > 0 && (
+          <View style={{ backgroundColor: "#C0392B", borderRadius: 20, paddingVertical: 8, paddingHorizontal: 16 }}>
+            <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 1 }}>-{fmtMins(popup.loss)}</Text>
+          </View>
+        )}
+        {popup.xp > 0 && (
+          <View style={{ backgroundColor: earn.blue, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 16 }}>
+            <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 1 }}>+{popup.xp} XP</Text>
+          </View>
+        )}
+      </Animated.View>
+    </View>
   );
 }
 
@@ -1892,10 +1987,11 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
             activeOpacity={0.85}
             style={{
               flexDirection: "row", alignItems: "center",
-              backgroundColor: paper.card, borderRadius: 18,
+              backgroundColor: cat.c + "0F", borderRadius: 18,
               overflow: "hidden",
               borderWidth: 1, borderColor: ink.hairline,
-              paddingVertical: 14, paddingLeft: 16, paddingRight: 34,
+              borderLeftWidth: 4, borderLeftColor: cat.c,
+              paddingVertical: 14, paddingLeft: 14, paddingRight: 34,
             }}
           >
             <Pressable
@@ -1929,51 +2025,63 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
                 x
               </Text>
             </Pressable>
-            {/* Vertical category mark — slim and tall */}
-            <View style={{
-              width: 3,
-              height: 38,
-              backgroundColor: cat.c,
-              borderRadius: 2,
-              marginRight: 14,
-              alignSelf: "center",
-            }} />
-
             <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={{
+                fontFamily: FF.kicker,
+                fontSize: 10,
+                color: cat.c,
+                letterSpacing: 0.6,
+                textTransform: "uppercase",
+                marginBottom: 4,
+              }}>
+                {cat.l}
+              </Text>
               <Text style={{
                 fontFamily: FF.bodyMed,
                 fontSize: 15,
                 color: ink.deep,
                 lineHeight: 20,
-                marginBottom: 4,
+                marginBottom: 6,
               }} numberOfLines={2}>
                 {t.title}
               </Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid }}>
-                  {t.minutes}m
-                </Text>
-                <Text style={{ fontFamily: FF.body, fontSize: 10, color: ink.faint }}>·</Text>
-                <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: earn.terra }}>
-                  +{fmtMins(t.credits)}
-                </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View style={{
+                  paddingVertical: 2, paddingHorizontal: 7,
+                  borderRadius: 7,
+                  backgroundColor: ink.ghost,
+                }}>
+                  <Text style={{ fontFamily: FF.bodyMed, fontSize: 11, color: ink.mid }}>
+                    {t.minutes}m
+                  </Text>
+                </View>
                 {t.aiCheck && (
-                  <>
-                    <Text style={{ fontFamily: FF.body, fontSize: 10, color: ink.faint }}>·</Text>
-                    <View style={{
-                      flexDirection: "row", alignItems: "center", gap: 3,
-                      paddingVertical: 1, paddingHorizontal: 6,
-                      borderRadius: 6,
-                      backgroundColor: earn.blueLo,
-                    }}>
-                      <SparkleIcon size={9} color={earn.blue} />
-                      <Text style={{ fontFamily: FF.bodyMed, fontSize: 9, color: earn.blue, letterSpacing: 0.5 }}>
-                        AI
-                      </Text>
-                    </View>
-                  </>
+                  <View style={{
+                    flexDirection: "row", alignItems: "center", gap: 3,
+                    paddingVertical: 2, paddingHorizontal: 7,
+                    borderRadius: 7,
+                    backgroundColor: earn.blueLo,
+                  }}>
+                    <SparkleIcon size={9} color={earn.blue} />
+                    <Text style={{ fontFamily: FF.bodyMed, fontSize: 9, color: earn.blue, letterSpacing: 0.5 }}>
+                      AI
+                    </Text>
+                  </View>
                 )}
               </View>
+            </View>
+
+            {/* Reward badge — prominent green chip */}
+            <View style={{
+              paddingVertical: 5, paddingHorizontal: 10,
+              borderRadius: 12,
+              backgroundColor: earn.greenLo,
+              marginRight: 12,
+              flexShrink: 0,
+            }}>
+              <Text style={{ fontFamily: FF.bodyBold, fontSize: 13, color: earn.greenD }}>
+                +{fmtMins(t.credits)}
+              </Text>
             </View>
 
             {/* Check circle — minimal, becomes the tap-target */}
@@ -2875,11 +2983,14 @@ export default function App() {
   const quickGrantDayRef = useRef(todayKey());
   const visibleTaskDayRef = useRef(todayKey());
 
-  // ── Pro access ─────────────────────────────────────────────────────────
-  // Payments/IAP are removed for now: everyone gets Pro for free until the app
-  // is approved and Apple in-app purchases can be wired in. The RevenueCat
-  // webhook + schema_v6 (server) remain in place for the eventual re-enable.
-  const proAccess = true;
+  // ── Pro access (RevenueCat) ────────────────────────────────────────────
+  const { proAccess, purchase: purchasePro, restore: restorePro } = useSubscription(userId);
+  const proAccessRef = useRef(proAccess);
+  useEffect(() => {
+    proAccessRef.current = proAccess;
+    setProStatus(proAccess);
+  }, [proAccess]);
+  const [showPaywall, setShowPaywall] = useState(false);
   const [driftInActive,  setDriftInActive]  = useState(false);
   const [darkMode,       setDarkMode]       = useState(false);
 
@@ -3213,6 +3324,10 @@ export default function App() {
             const elapsedSec = Math.floor((Date.now() - bgStart) / 1000);
             drainBy(elapsedSec);
           }
+          if (secRef.current <= 0 && shieldStateRef.current !== "on") {
+            await applyBlocking([], { freeTier: !proAccessRef.current }).catch(() => {});
+            shieldStateRef.current = "on";
+          }
           persistLastAlive();
         }
       }
@@ -3239,6 +3354,10 @@ export default function App() {
           const elapsedSec = Math.floor((Date.now() - last) / 1000);
           const capped = Math.min(elapsedSec, 86_400);
           if (capped > 0) drainBy(capped);
+        }
+        if (secRef.current <= 0 && shieldStateRef.current !== "on") {
+          await applyBlocking([], { freeTier: !proAccessRef.current }).catch(() => {});
+          shieldStateRef.current = "on";
         }
         persistLastAlive();
       } catch {}
@@ -3416,7 +3535,7 @@ export default function App() {
         .filter(id => ONBOARDING_TASKS[id])
         .map(id => {
           const t = ONBOARDING_TASKS[id];
-          const credits = Math.max(1, Math.round(t.minutes * 0.6));
+          const credits = capReward(Math.max(1, Math.round(t.minutes * 0.6)), t.minutes);
           return {
             id: makeUuid(),
             title: t.title,
@@ -3573,7 +3692,7 @@ export default function App() {
       (async () => {
         try {
           await stopBalanceMonitoring();
-          await applyBlocking([]);
+          await applyBlocking([], { freeTier: !proAccessRef.current });
           if (lastArmedSeconds !== -1) {
             await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]);
             setLastArmedSeconds(-1);
@@ -3593,7 +3712,7 @@ export default function App() {
         if (desired === "on") {
           if (prevState !== "on") {
             await stopBalanceMonitoring();
-            await applyBlocking([]);
+            await applyBlocking([], { freeTier: !proAccessRef.current });
             if (lastArmedSeconds !== -1) {
               await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]);
               setLastArmedSeconds(-1);
@@ -3614,7 +3733,10 @@ export default function App() {
             if (nativeArmFailedSecondsRef.current === currentSeconds) return;
             // Pass exact seconds so iOS's threshold matches the displayed
             // balance — passing minutes rounds the threshold up.
-            const res = await startBalanceMonitoring(seconds);
+            let res = await startBalanceMonitoring(seconds);
+            if (res?.started === false && !/unavailable/i.test(res.reason || "")) {
+              res = await startBalanceMonitoring(seconds);
+            }
             if (res?.started === false) {
               nativeArmFailedSecondsRef.current = currentSeconds;
             } else {
@@ -3864,7 +3986,7 @@ export default function App() {
     const currentSeconds = Math.max(0, Math.floor(seconds || 0));
     if (currentSeconds <= 0) {
       await stopBalanceMonitoring().catch(() => {});
-      await applyBlocking([]).catch(() => {});
+      await applyBlocking([], { freeTier: !proAccessRef.current }).catch(() => {});
       shieldStateRef.current = "on";
       await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
       setLastArmedSeconds(-1);
@@ -3874,7 +3996,10 @@ export default function App() {
     await clearBlocking().catch(() => {});
     shieldStateRef.current = "off";
     const armedSeconds = Math.max(60, currentSeconds);
-    const res = await startBalanceMonitoring(armedSeconds);
+    let res = await startBalanceMonitoring(armedSeconds);
+    if (res?.started === false && !/unavailable/i.test(res.reason || "")) {
+      res = await startBalanceMonitoring(armedSeconds);
+    }
     if (res?.started === false) {
       nativeArmFailedSecondsRef.current = armedSeconds;
     } else {
@@ -3921,6 +4046,14 @@ export default function App() {
       unlockAndArmBalance(newSec);
     }
   };
+
+  const tryOpenAddTask = useCallback(() => {
+    if (!proAccess && tasks.filter(t => !t.done).length >= FREE_TASK_LIMIT) {
+      setShowPaywall(true);
+      return;
+    }
+    setOverlay("add");
+  }, [proAccess, tasks]);
 
   const addTask  = (t, recurrence) => {
     const nt = [...tasks, t];
@@ -4011,7 +4144,7 @@ export default function App() {
     try {
       // Always call applyBlocking — on iOS the native side reads the user's
       // FamilyActivityPicker selection from UserDefaults, not AsyncStorage.
-      const res = await applyBlocking([]);
+      const res = await applyBlocking([], { freeTier: !proAccessRef.current });
       if (res && res.applied === false && res.reason) {
         // In Expo Go this always fails — don't bother the user with the alert.
         if (!/Expo Go|unavailable/i.test(res.reason)) {
@@ -4369,7 +4502,7 @@ export default function App() {
               totalXp={totalXp}
               onComplete={completeTask}
               onDelete={deleteTask}
-              onAdd={() => setOverlay("add")}
+              onAdd={tryOpenAddTask}
               onReduceScreenTime={() => setShowReduceTime(true)}
               onQuickGrant={() => setShowQuickGrant(true)}
               quickGrantCount={quickGrantCount}
@@ -4390,13 +4523,13 @@ export default function App() {
             />
           </View>
           <View style={{ width: TAB_W, height: "100%" }}>
-            <ProgressView tasks={statsTasks} totalXp={totalXp} skips={0} onAddTask={() => setOverlay("add")} dark={darkMode} />
+            <ProgressView tasks={statsTasks} totalXp={totalXp} skips={0} onAddTask={tryOpenAddTask} dark={darkMode} />
           </View>
           <View style={{ width: TAB_W, height: "100%" }}>
             <SocialScreen
               userId={userId}
-              isPremium={true}
-              onOpenPaywall={() => {}}
+              isPremium={proAccess}
+              onOpenPaywall={() => setShowPaywall(true)}
               onSwipeLockChange={setChildSwipeLockedNow}
               onChallengeResolved={handleChallengeResolved}
               dark={darkMode}
@@ -4461,10 +4594,20 @@ export default function App() {
               onClose={() => setOverlay(null)}
               userId={userId}
               isSubActive={proAccess}
-              onOpenPaywall={() => {}}
+              onOpenPaywall={() => setShowPaywall(true)}
             />
           )}
         </View>
+      )}
+
+      {/* Paywall */}
+      {showPaywall && (
+        <PaywallScreen
+          onClose={() => setShowPaywall(false)}
+          onPurchase={purchasePro}
+          onRestore={restorePro}
+          dark={darkMode}
+        />
       )}
 
       {/* Blocked apps modal (onboarding + ongoing management) */}

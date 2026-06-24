@@ -83,6 +83,7 @@ export async function setBlockedApps(apps) {
 // Requires the custom dev client (will NOT work in Expo Go).
 import {
   applyShield as nativeApplyShield,
+  applyShieldCategories as nativeApplyShieldCategories,
   clearShield as nativeClearShield,
   isAvailable as nativeIsAvailable,
   requestAuthorization as nativeRequestAuth,
@@ -95,7 +96,7 @@ export const requestScreenTimeAuth     = nativeRequestAuth;
 export const getScreenTimeAuthStatus   = nativeAuthStatus;
 export const pickBlockedAppsNative     = nativePresentPicker;
 
-export async function applyBlocking(_appsList) {
+export async function applyBlocking(_appsList, { freeTier = false } = {}) {
   if (!nativeIsAvailable()) {
     return { applied: false, reason: "Screen Time API unavailable (Expo Go or non-iOS)" };
   }
@@ -104,7 +105,9 @@ export async function applyBlocking(_appsList) {
     const next = await nativeRequestAuth();
     if (next !== "approved") return { applied: false, reason: "Authorization not granted" };
   }
-  const ok = await nativeApplyShield();
+  const ok = freeTier
+    ? await nativeApplyShieldCategories()
+    : await nativeApplyShield();
   return ok ? { applied: true } : { applied: false, reason: "Failed to apply shield" };
 }
 

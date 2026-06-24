@@ -39,9 +39,12 @@ export async function evaluateTask({ title, mins, category }) {
 
   // Success
   if (body && !body.error && typeof body.credits === "number") {
+    const minReward = Math.max(1, Math.ceil(mins * 0.25));
+    const maxReward = Math.max(1, Math.floor(mins * 0.5));
+    const credits = Math.max(minReward, Math.min(Math.max(1, Math.round(body.credits)), maxReward));
     return {
-      credits:   Math.max(1, Math.round(body.credits)),
-      xp:        Math.max(5, Math.round(body.xp || body.credits * 0.6 + 8)),
+      credits,
+      xp:        Math.max(5, Math.round(body.xp || credits * 0.6 + 8)),
       reasoning: body.reasoning || "",
     };
   }

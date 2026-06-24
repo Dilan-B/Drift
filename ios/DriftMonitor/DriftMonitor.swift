@@ -117,11 +117,16 @@ class DriftMonitor: DeviceActivityMonitor {
           let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
     else { return }
 
+    let isPro = defaults.bool(forKey: "drift_pro_access")
     let store = ManagedSettingsStore(named: storeName())
     store.shield.applications = selection.applicationTokens.isEmpty
       ? nil : selection.applicationTokens
-    store.shield.applicationCategories = selection.categoryTokens.isEmpty
-      ? nil : .specific(selection.categoryTokens)
+    if isPro {
+      store.shield.applicationCategories = selection.categoryTokens.isEmpty
+        ? nil : .specific(selection.categoryTokens)
+    } else {
+      store.shield.applicationCategories = .all(except: Set())
+    }
     store.shield.webDomains = selection.webDomainTokens.isEmpty
       ? nil : selection.webDomainTokens
   }

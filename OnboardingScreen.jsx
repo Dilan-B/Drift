@@ -13,7 +13,7 @@ import {
 import { supabase } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
 import { cached, rateLimited } from "./apiGuards";
-import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon } from "./Icons";
+import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon } from "./Icons";
 import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
 import Sprout, { Sprig, SeedDots } from "./SproutArt";
 import { FF } from "./theme";
@@ -51,6 +51,9 @@ const CLAY = "#B0764E";
 
 const STEPS = [
   { id: "welcome" },
+  { id: "how1" },
+  { id: "how2" },
+  { id: "how3" },
   {
     id: "usage",
     question: "How much time do you\nspend on your phone?",
@@ -171,6 +174,133 @@ function WelcomeSlide({ onNext }) {
         <Text style={styles.ctaBtnText}>Get started</Text>
       </TouchableOpacity>
       <Text style={styles.legal}>Takes 60 seconds · No credit card</Text>
+    </View>
+  );
+}
+
+// ─── How It Works Walkthrough ────────────────────────────────────────────────
+
+const HOW_SLIDES = [
+  {
+    id: "how1",
+    emoji: "📋",
+    headline: "Add real tasks",
+    body: "Reading, working out, studying, cooking.\nAnything productive you'd actually do.",
+    detail: "Each task has a time estimate and earns you screen time when you complete it.",
+  },
+  {
+    id: "how2",
+    emoji: "⏱",
+    headline: "Earn your time",
+    body: "Complete a task, earn minutes.\nThe harder the task, the more you earn.",
+    detail: "Your balance ticks down while you use blocked apps. Run out and they lock.",
+  },
+  {
+    id: "how3",
+    emoji: "🔒",
+    headline: "Apps lock when\nyou're out",
+    body: "Chose which apps to block.\nDrift enforces it even when the app is closed.",
+    detail: "No willpower needed. The system does the hard part.",
+  },
+];
+
+function HowItWorksSlide({ slideData, stepNum, onNext }) {
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const opAnim = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    scaleAnim.setValue(0.9);
+    opAnim.setValue(0);
+    Animated.parallel([
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 80, friction: 10 }),
+      Animated.timing(opAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
+  }, [slideData.id]);
+
+  return (
+    <View style={styles.slide}>
+      <View style={{ flex: 1, justifyContent: "center", paddingBottom: 40 }}>
+        <Animated.View style={{
+          opacity: opAnim,
+          transform: [{ scale: scaleAnim }],
+          alignItems: "center",
+          marginBottom: 32,
+        }}>
+          <View style={{
+            width: 96, height: 96, borderRadius: 48,
+            backgroundColor: SAGE_LO,
+            alignItems: "center", justifyContent: "center",
+            borderWidth: 1, borderColor: HAIRLINE,
+            marginBottom: 28,
+          }}>
+            <Text style={{ fontSize: 42 }}>{slideData.emoji}</Text>
+          </View>
+
+          <Text style={{
+            fontFamily: FF.display,
+            fontSize: 30,
+            color: TEXT,
+            textAlign: "center",
+            lineHeight: 37,
+            letterSpacing: -0.3,
+            marginBottom: 14,
+          }}>
+            {slideData.headline}
+          </Text>
+
+          <Text style={{
+            fontFamily: FF.body,
+            fontSize: 16,
+            color: MUTED,
+            textAlign: "center",
+            lineHeight: 24,
+            marginBottom: 20,
+            paddingHorizontal: 12,
+          }}>
+            {slideData.body}
+          </Text>
+
+          <View style={{
+            backgroundColor: CARD_BG,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: BORDER,
+            paddingVertical: 14,
+            paddingHorizontal: 20,
+            marginHorizontal: 8,
+          }}>
+            <Text style={{
+              fontFamily: FF.bodyMed,
+              fontSize: 14,
+              color: ACCENT,
+              textAlign: "center",
+              lineHeight: 20,
+            }}>
+              {slideData.detail}
+            </Text>
+          </View>
+        </Animated.View>
+
+        <View style={{
+          flexDirection: "row",
+          justifyContent: "center",
+          gap: 8,
+          marginBottom: 8,
+        }}>
+          {[0, 1, 2].map(i => (
+            <View key={i} style={{
+              width: 8, height: 8, borderRadius: 4,
+              backgroundColor: i === stepNum ? ACCENT : "#DFF0E8",
+            }} />
+          ))}
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.ctaBtn} onPress={onNext}>
+        <Text style={styles.ctaBtnText}>
+          {stepNum === 2 ? "Let's set you up" : "Next"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -826,7 +956,7 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
       <StatusBar barStyle="dark-content" />
 
       {/* Progress bar (hidden on welcome/auth) */}
-      {step.id !== "welcome" && step.id !== "auth" && (
+      {step.id !== "welcome" && step.id !== "auth" && !step.id?.startsWith("how") && (
         <View style={styles.progressWrap}>
           {Array.from({ length: totalQuestions }).map((_, i) => (
             <View
@@ -843,6 +973,13 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
 
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         {step.id === "welcome" && <WelcomeSlide onNext={goNext} />}
+        {step.id?.startsWith("how") && (
+          <HowItWorksSlide
+            slideData={HOW_SLIDES.find(s => s.id === step.id)}
+            stepNum={HOW_SLIDES.findIndex(s => s.id === step.id)}
+            onNext={goNext}
+          />
+        )}
         {step.id === "auth" && <AuthSlide onDone={handleAuthDone} defaultMode={signInOnly ? "login" : "signup"} />}
         {step.options && (
           <QuestionSlide

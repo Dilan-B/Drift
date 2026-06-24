@@ -40,6 +40,13 @@ export async function presentAppPicker() {
   catch { return false; }
 }
 
+/** Shield all app categories (free tier — blocks social, entertainment, etc.). */
+export async function applyShieldCategories() {
+  if (!isAvailable() || typeof Native.applyShieldCategories !== "function") return false;
+  try { await Native.applyShieldCategories(); return true; }
+  catch { return false; }
+}
+
 /** Shield the user's previously picked apps. Safe to call repeatedly. */
 export async function applyShield() {
   if (!isAvailable()) return false;
@@ -145,6 +152,11 @@ export async function endDriftInLiveActivity() {
   } catch {
     return false;
   }
+}
+
+export async function setProStatus(isPro) {
+  if (!isAvailable() || typeof Native.setProStatus !== "function") return;
+  try { await Native.setProStatus(!!isPro); } catch {}
 }
 
 /** Return a diagnostics dump for debugging the DeviceActivity pipeline. */

@@ -192,6 +192,30 @@ class ScreenTimeModule: NSObject {
     reject("unavailable", "Screen Time API requires iOS 16+", nil)
   }
 
+  @objc(applyShieldCategories:rejecter:)
+  func applyShieldCategories(_ resolve: RCTPromiseResolveBlock,
+                             rejecter reject: RCTPromiseRejectBlock) {
+    #if canImport(FamilyControls) && canImport(ManagedSettings)
+    if #available(iOS 16.0, *) {
+      let store = ManagedSettingsStore(named: driftStoreName())
+      // Block social + entertainment categories (free tier)
+      // Also apply any user-picked apps on top
+      let selection = ScreenTimeSelectionStore.shared.selection
+      store.shield.applications = selection.applicationTokens.isEmpty
+        ? nil : selection.applicationTokens
+      // Free tier: block ALL app categories. The user's specific picks
+      // are applied on top. Messages, Phone, and system apps are excluded
+      // by iOS automatically (Apple never shields essential system apps).
+      store.shield.applicationCategories = .all(except: Set())
+      store.shield.webDomains = selection.webDomainTokens.isEmpty
+        ? nil : selection.webDomainTokens
+      resolve(nil)
+      return
+    }
+    #endif
+    reject("unavailable", "Screen Time API requires iOS 16+", nil)
+  }
+
   @objc(clearShield:rejecter:)
   func clearShield(_ resolve: RCTPromiseResolveBlock,
                    rejecter reject: RCTPromiseRejectBlock) {
@@ -387,6 +411,15 @@ class ScreenTimeModule: NSObject {
     resolve(nil)
   }
 
+  @objc(setProStatus:resolver:rejecter:)
+  func setProStatus(_ isPro: Bool,
+                    resolver resolve: RCTPromiseResolveBlock,
+                    rejecter reject: RCTPromiseRejectBlock) {
+    let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
+    defaults?.set(isPro, forKey: "drift_pro_access")
+    resolve(nil)
+  }
+
   @objc(consumePendingHealthEarn:rejecter:)
   func consumePendingHealthEarn(_ resolve: RCTPromiseResolveBlock,
                                 rejecter reject: RCTPromiseRejectBlock) {
@@ -405,8 +438,8 @@ class ScreenTimeModule: NSObject {
   @objc(startDriftInLiveActivity:seconds:resolver:rejecter:)
   func startDriftInLiveActivity(_ title: NSString,
                                 seconds: NSNumber,
-                                resolver resolve: RCTPromiseResolveBlock,
-                                rejecter reject: RCTPromiseRejectBlock) {
+                                resolver resolve: @escaping RCTPromiseResolveBlock,
+                                rejecter reject: @escaping RCTPromiseRejectBlock) {
     #if canImport(ActivityKit)
     if #available(iOS 16.1, *) {
       guard ActivityAuthorizationInfo().areActivitiesEnabled else {
@@ -452,8 +485,8 @@ class ScreenTimeModule: NSObject {
 
   @objc(updateDriftInLiveActivity:resolver:rejecter:)
   func updateDriftInLiveActivity(_ seconds: NSNumber,
-                                 resolver resolve: RCTPromiseResolveBlock,
-                                 rejecter reject: RCTPromiseRejectBlock) {
+                                 resolver resolve: @escaping RCTPromiseResolveBlock,
+                                 rejecter reject: @escaping RCTPromiseRejectBlock) {
     #if canImport(ActivityKit)
     if #available(iOS 16.1, *) {
       Task {
@@ -474,8 +507,8 @@ class ScreenTimeModule: NSObject {
   }
 
   @objc(endDriftInLiveActivity:rejecter:)
-  func endDriftInLiveActivity(_ resolve: RCTPromiseResolveBlock,
-                              rejecter reject: RCTPromiseRejectBlock) {
+  func endDriftInLiveActivity(_ resolve: @escaping RCTPromiseResolveBlock,
+                              rejecter reject: @escaping RCTPromiseRejectBlock) {
     #if canImport(ActivityKit)
     if #available(iOS 16.1, *) {
       Task {
