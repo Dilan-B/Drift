@@ -66,6 +66,8 @@ import SocialScreen from "./SocialScreen";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
+import ReviewPromptScreen from "./ReviewPromptScreen";
+import TutorialOverlay from "./TutorialOverlay";
 import PaywallScreen from "./PaywallScreen";
 import { useSubscription } from "./useSubscription";
 import { cached, rateLimited } from "./apiGuards";
@@ -1656,9 +1658,10 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
         elevation: 4,
         overflow: "hidden",
       }}>
-        {/* Faint clay-tinted sprig — a subtle warm watermark in the corner */}
-        <View style={{ position: "absolute", left: -18, bottom: -22, pointerEvents: "none" }}>
-          <Sprig size={130} color={earn.clay} opacity={dark ? 0.07 : 0.05} flip />
+        {/* Current-level emblem — the plant reflects the user's tier
+            (Seedling → Old Growth), matching the icon on the Growth page. */}
+        <View style={{ position: "absolute", left: -18, bottom: -22, pointerEvents: "none", opacity: dark ? 0.5 : 0.42 }}>
+          <LevelIcon index={lvIdx} size={132} color={earn.sage} strokeWidth={1.4} />
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
@@ -2967,6 +2970,8 @@ export default function App() {
   const [showBlockedHours,   setShowBlockedHours]   = useState(false);
   const [showRecurringTasks, setShowRecurringTasks] = useState(false);
   const [firstTimeBlockedApps, setFirstTimeBlockedApps] = useState(false);
+  const [showTutorial,       setShowTutorial]       = useState(false);
+  const [showReviewPrompt,   setShowReviewPrompt]   = useState(false);
   const [showUsernameSetup,  setShowUsernameSetup]  = useState(false);
   const [showReduceTime,     setShowReduceTime]     = useState(false);
   const [showQuickGrant,     setShowQuickGrant]     = useState(false);
@@ -4615,8 +4620,27 @@ export default function App() {
         visible={showBlockedApps}
         firstTime={firstTimeBlockedApps}
         dark={darkMode}
-        onClose={() => { setShowBlockedApps(false); setFirstTimeBlockedApps(false); }}
+        onClose={() => {
+          const wasFirstTime = firstTimeBlockedApps;
+          setShowBlockedApps(false);
+          setFirstTimeBlockedApps(false);
+          // Post-signup onboarding sequence: tutorial → review prompt.
+          if (wasFirstTime) setShowTutorial(true);
+        }}
       />
+
+      {/* Post-signup coachmark tour → hands off to the review prompt. */}
+      {showTutorial && (
+        <TutorialOverlay
+          dark={darkMode}
+          onDone={() => { setShowTutorial(false); setShowReviewPrompt(true); }}
+        />
+      )}
+
+      {/* Post-signup review prompt (shown after the tutorial). */}
+      <Modal visible={showReviewPrompt} animationType="slide" onRequestClose={() => setShowReviewPrompt(false)}>
+        <ReviewPromptScreen dark={darkMode} onDone={() => setShowReviewPrompt(false)} />
+      </Modal>
       <BlockedHoursModal
         visible={showBlockedHours}
         rules={blockedHours}

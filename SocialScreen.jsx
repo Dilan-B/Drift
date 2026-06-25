@@ -11,7 +11,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Path, Circle as SvgCircle, Ellipse, Defs, RadialGradient, Stop } from "react-native-svg";
 import AICheckModal from "./AICheckModal";
 import { supabase, getFriendsWithScreenTime } from "./supabase";
-import { CloseIcon, LockIcon, ShareIcon, UsersIcon } from "./Icons";
+import { CloseIcon, LockIcon, ShareIcon, UsersIcon, LevelIcon } from "./Icons";
+import { getLevelIdx, getLevel } from "./levels";
+import { findContactsOnDrift, inviteContacts, contactsAvailable } from "./contacts";
 import ChallengeSheet from "./ChallengeModal";
 import Swipeable from "./Swipeable";
 import { cached, invalidateCache, rateLimited } from "./apiGuards";
@@ -171,8 +173,10 @@ function Avatar({ username = "?", uri, size = 42 }) {
  */
 function FriendPlant({ friend, onPress, dark }) {
   const th = palette(dark);
-  const minutes = friend.minutes || 0;
-  const g = growthState(minutes);
+  // The grove plant now reflects the friend's LEVEL (Seedling → Old Growth from
+  // their XP), the same tier emblem shown on the Growth page — not their daily
+  // screen-time. friend.totalXp comes from getFriendsWithScreenTime.
+  const lvIdx = getLevelIdx(friend.totalXp);
 
   return (
     <TouchableOpacity
@@ -189,7 +193,9 @@ function FriendPlant({ friend, onPress, dark }) {
         }],
       }}
     >
-      <PlantGlyph stage={g.stage} hue={g.hue} size={118} />
+      <View style={{ width: 118, height: 118, alignItems: "center", justifyContent: "center" }}>
+        <LevelIcon index={lvIdx} size={92} color={th.sage} strokeWidth={1.5} />
+      </View>
       <View style={{
         marginTop: -4,
         paddingVertical: 6,
@@ -244,7 +250,8 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, isPremium }) {
   const th = palette(dark);
   if (!friend) return null;
   const fmt = m => !m ? "0m" : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60 ? `${m % 60}m` : ""}`.trim();
-  const g = growthState(friend.minutes || 0);
+  const lvIdx = getLevelIdx(friend.totalXp);
+  const lvl = getLevel(friend.totalXp);
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{
@@ -277,16 +284,16 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, isPremium }) {
             <CloseIcon size={14} color={th.mid} />
           </TouchableOpacity>
 
-          {/* Plant glyph centered */}
+          {/* Level emblem centered — reflects the friend's tier */}
           <View style={{ alignItems: "center", marginBottom: 8 }}>
-            <PlantGlyph stage={g.stage} hue={g.hue} size={110} />
+            <LevelIcon index={lvIdx} size={96} color={th.sage} strokeWidth={1.5} />
           </View>
 
           <Text style={{
             fontFamily: FF.kicker, fontSize: 9, color: th.faint,
             letterSpacing: 2.4, textAlign: "center", marginBottom: 4,
           }}>
-            PLANT
+            LEVEL
           </Text>
           <Text
             numberOfLines={1}
@@ -301,9 +308,9 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, isPremium }) {
             flexDirection: "row", alignItems: "center", justifyContent: "center",
             gap: 6, marginBottom: 22,
           }}>
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: g.hue }} />
+            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th.sage }} />
             <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: th.mid }}>
-              {g.label}
+              {lvl.name}
             </Text>
           </View>
 
@@ -696,12 +703,16 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
   const [outcome, setOutcome] = useState(null);
   const [knownChallengeStatus, setKnownChallengeStatus] = useState({});
   const [statsFriend, setStatsFriend] = useState(null);
+  const [showContacts, setShowContacts] = useState(false);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactsResult, setContactsResult] = useState(null);
+  const [contactAddedIds, setContactAddedIds] = useState({});
   const showedCachedFriendsRef = useRef(false);
 
   useEffect(() => {
-    onSwipeLockChange?.(!!challengeTarget || showAdd || !!selectedChallenge || !!statsFriend || showPast);
+    onSwipeLockChange?.(!!challengeTarget || showAdd || !!selectedChallenge || !!statsFriend || showPast || showContacts);
     return () => onSwipeLockChange?.(false);
-  }, [challengeTarget, showAdd, selectedChallenge, statsFriend, showPast, onSwipeLockChange]);
+  }, [challengeTarget, showAdd, selectedChallenge, statsFriend, showPast, showContacts, onSwipeLockChange]);
 
   useEffect(() => {
     showedCachedFriendsRef.current = false;
@@ -926,6 +937,32 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
       }
     } finally {
       setAdding(false);
+    }
+  };
+
+  const runContactMatch = useCallback(async () => {
+    setShowContacts(true);
+    setContactsLoading(true);
+    setContactsResult(null);
+    setContactAddedIds({});
+    const res = await findContactsOnDrift();
+    setContactsResult(res);
+    setContactsLoading(false);
+  }, []);
+
+  const addFriendById = async (match) => {
+    if (!match?.id || match.id === userId) return;
+    setContactAddedIds(p => ({ ...p, [match.id]: true }));
+    const { error } = await rateLimited(`friend_request_${userId}`, { limit: 20, windowMs: 60_000 }, () =>
+      supabase.from("friendships").insert({ user_id: userId, friend_id: match.id, status: "pending" })
+    );
+    if (error && error.code !== "23505") {
+      setContactAddedIds(p => ({ ...p, [match.id]: false }));
+      Alert.alert("Couldn't add", error.message);
+    } else {
+      setToast(`Request sent to @${match.username}`);
+      setTimeout(() => setToast(""), 2000);
+      loadAll();
     }
   };
 
@@ -1179,6 +1216,25 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
             )}
           </TouchableOpacity>
         </View>
+      )}
+
+      {/* Find friends from contacts (privacy-safe hashed match) */}
+      {showAdd && contactsAvailable() && (
+        <TouchableOpacity
+          onPress={runContactMatch}
+          activeOpacity={0.85}
+          style={{
+            flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+            marginHorizontal: 22, marginBottom: 4, marginTop: 8,
+            paddingVertical: 12, borderRadius: 14,
+            backgroundColor: th.card, borderWidth: 1, borderColor: th.hairline,
+          }}
+        >
+          <UsersIcon size={16} color={th.sage} />
+          <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.ink }}>
+            Find friends from contacts
+          </Text>
+        </TouchableOpacity>
       )}
 
       {loading ? (
@@ -1524,6 +1580,106 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
         onChallenge={handleChallenge}
         isPremium={isPremium}
       />
+
+      {/* Contacts match results */}
+      <Modal visible={showContacts} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowContacts(false)}>
+        <View style={{ flex: 1, backgroundColor: th.bg }}>
+          <View style={{
+            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+            paddingHorizontal: 22, paddingTop: 54, paddingBottom: 16,
+          }}>
+            <View>
+              <Text style={{ fontFamily: FF.kicker, fontSize: 10, color: th.faint, letterSpacing: 2.4, marginBottom: 4 }}>
+                CONTACTS
+              </Text>
+              <Text style={{ fontFamily: FF.display, fontSize: 28, color: th.ink, letterSpacing: -0.4 }}>
+                Friends on Drift
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setShowContacts(false)}
+              style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: th.deep }}
+            >
+              <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: dark ? "#1F3A2A" : "#FAF6EE" }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+          {contactsLoading ? (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
+              <ActivityIndicator color={th.sage} />
+              <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid, marginTop: 14, textAlign: "center" }}>
+                Matching your contacts privately…{"\n"}Emails are hashed on your device.
+              </Text>
+            </View>
+          ) : contactsResult?.denied ? (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
+              <Text style={{ fontFamily: FF.display, fontSize: 22, color: th.ink, marginBottom: 8, textAlign: "center" }}>
+                Contacts access needed
+              </Text>
+              <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid, textAlign: "center", lineHeight: 20 }}>
+                Enable Contacts for Drift in Settings to find friends. Your contacts never leave your device unhashed.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={(contactsResult?.matches || [])}
+              keyExtractor={(m) => String(m.id)}
+              contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 40, flexGrow: 1 }}
+              ListHeaderComponent={
+                <Text style={{ fontFamily: FF.body, fontSize: 12, color: th.mid, marginBottom: 14, lineHeight: 18 }}>
+                  {(contactsResult?.matches?.length || 0) > 0
+                    ? "These contacts are on Drift. Add them to your grove."
+                    : "None of your contacts are on Drift yet — invite them below."}
+                </Text>
+              }
+              renderItem={({ item: m }) => (
+                <View style={{
+                  flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                  backgroundColor: th.card, borderRadius: 16, borderWidth: 1, borderColor: th.hairline,
+                  paddingVertical: 12, paddingHorizontal: 14, marginBottom: 8,
+                }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                    <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: th.wash }}>
+                      <LeafGlyph size={14} color={th.sage} />
+                    </View>
+                    <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: th.ink }} numberOfLines={1}>
+                      @{m.username}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => addFriendById(m)}
+                    disabled={!!contactAddedIds[m.id]}
+                    style={{
+                      paddingVertical: 8, paddingHorizontal: 14, borderRadius: 12,
+                      backgroundColor: contactAddedIds[m.id] ? th.wash : th.deep,
+                    }}
+                  >
+                    <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: contactAddedIds[m.id] ? th.mid : (dark ? "#1F3A2A" : "#FAF6EE") }}>
+                      {contactAddedIds[m.id] ? "Sent" : "Add"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              ListFooterComponent={
+                <TouchableOpacity
+                  onPress={inviteContacts}
+                  activeOpacity={0.85}
+                  style={{
+                    marginTop: 18, paddingVertical: 14, borderRadius: 16,
+                    backgroundColor: th.card, borderWidth: 1, borderColor: th.hairline,
+                    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+                  }}
+                >
+                  <ShareIcon size={16} color={th.sage} strokeWidth={2.1} />
+                  <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.ink }}>
+                    Invite contacts to Drift
+                  </Text>
+                </TouchableOpacity>
+              }
+            />
+          )}
+        </View>
+      </Modal>
 
       <Modal visible={showPast} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPast(false)}>
         <View style={{ flex: 1, backgroundColor: th.bg }}>

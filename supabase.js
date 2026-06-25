@@ -253,14 +253,14 @@ export async function getFriendsWithScreenTime(userId) {
   // avatar_url yet, so fall back without it instead of clearing the list.
   let { data: profiles, error: profileErr } = await supabase
     .from("profiles")
-    .select(`id, username, avatar_seed, avatar_url, screen_time(minutes, unlocks, date)`)
+    .select(`id, username, avatar_seed, avatar_url, total_xp, screen_time(minutes, unlocks, date)`)
     .in("id", friendIds)
     .eq("screen_time.date", today);
 
   if (profileErr && /avatar_url|schema cache/i.test(profileErr.message || "")) {
     const fallback = await supabase
       .from("profiles")
-      .select(`id, username, avatar_seed, screen_time(minutes, unlocks, date)`)
+      .select(`id, username, avatar_seed, total_xp, screen_time(minutes, unlocks, date)`)
       .in("id", friendIds)
       .eq("screen_time.date", today);
     profiles = fallback.data;
@@ -274,6 +274,7 @@ export async function getFriendsWithScreenTime(userId) {
     username: p.username,
     seed:     p.avatar_seed,
     avatar_url: cleanAvatarUrl(p.avatar_url),
+    totalXp:  Number(p.total_xp || 0),
     minutes:  p.screen_time?.find(s => s.date === today)?.minutes ?? 0,
     unlocks:  p.screen_time?.find(s => s.date === today)?.unlocks ?? 0,
   }));
