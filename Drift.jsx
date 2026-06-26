@@ -673,6 +673,12 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
     const hrM  = title.match(/(\d+)\s*(?:hr|h\b)/i);
     if (minM) setMins(parseInt(minM[1]));
     else if (hrM) setMins(parseInt(hrM[1]) * 60);
+    else if (/make.*bed|brush.*teeth|floss|take.*vitamin|drink.*water|unload.*dishwasher|take.*trash|wipe.*counter/i.test(lo)) setMins(2);
+    else if (/stretch|meditate|journal|tidy|pick.*up|fold.*laundry|shower|get.*dressed|pack.*lunch|empty.*trash/i.test(lo)) setMins(5);
+    else if (/clean|dishes|vacuum|laundry|walk.*dog|cook|meal.*prep/i.test(lo)) setMins(15);
+    else if (/read|study|practice|homework|review/i.test(lo)) setMins(20);
+    else if (/gym|run|workout|swim|yoga|hike|work|meeting|code/i.test(lo)) setMins(30);
+    else if (/no.*phone|deep.*clean|meal.*plan/i.test(lo)) setMins(60);
     if      (/gym|run|push|squat|lift|workout|swim|yoga/i.test(lo)) setCat("physical");
     else if (/walk|outside|park|hike|garden/i.test(lo))             setCat("outdoor");
     else if (/work|meeting|email|report|code|call|zoom/i.test(lo))  setCat("work");
@@ -2281,7 +2287,6 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
             paddingVertical: 6, paddingHorizontal: 11, borderRadius: 16,
             backgroundColor: earn.sageLo,
           }}>
-            <Text style={{ fontSize: 13 }}>🔥</Text>
             <Text style={{ fontFamily: FF.bodyBold, fontSize: 13, color: earn.greenD }}>
               {streak}-day streak
             </Text>
@@ -3319,7 +3324,14 @@ export default function App() {
           if (userIdRef.current) flushPendingStats(userIdRef.current).catch(() => {});
           if (nativeArmedRef.current) {
             const used = await consumeUsedSeconds();
-            if (used > 0) drainBy(used);
+            if (used > 0) {
+              drainBy(used);
+            } else {
+              // Checkpoints only fire every 15min; for shorter bg stints,
+              // fall back to wall-clock so the timer visibly moves.
+              const elapsedSec = Math.floor((Date.now() - bgStart) / 1000);
+              if (elapsedSec > 0) drainBy(elapsedSec);
+            }
           } else {
             const elapsedSec = Math.floor((Date.now() - bgStart) / 1000);
             drainBy(elapsedSec);
@@ -3343,16 +3355,21 @@ export default function App() {
     launchDrainRanRef.current = true;
     (async () => {
       try {
+        const lastStr = await AsyncStorage.getItem("drift_last_alive");
+        const last = lastStr ? parseInt(lastStr, 10) : null;
         if (nativeArmedRef.current) {
           const used = await consumeUsedSeconds();
-          if (used > 0) drainBy(used);
+          if (used > 0) {
+            drainBy(used);
+          } else if (Number.isFinite(last)) {
+            const elapsedSec = Math.floor((Date.now() - last) / 1000);
+            const capped = Math.min(Math.max(0, elapsedSec), 86_400);
+            if (capped > 0) drainBy(capped);
+          }
         } else {
-          const lastStr = await AsyncStorage.getItem("drift_last_alive");
-          if (!lastStr) { persistLastAlive(); return; }
-          const last = parseInt(lastStr, 10);
-          if (!Number.isFinite(last)) { persistLastAlive(); return; }
+          if (!last || !Number.isFinite(last)) { persistLastAlive(); return; }
           const elapsedSec = Math.floor((Date.now() - last) / 1000);
-          const capped = Math.min(elapsedSec, 86_400);
+          const capped = Math.min(Math.max(0, elapsedSec), 86_400);
           if (capped > 0) drainBy(capped);
         }
         if (secRef.current <= 0 && shieldStateRef.current !== "on") {
@@ -4480,6 +4497,7 @@ export default function App() {
               Alert.alert("Screen Time", `Status: ${next}. Open Settings -> Screen Time to grant access.`);
             }
           }}
+          onUpgrade={() => setShowPaywall(true)}
           onSignOut={signOut}
           onDeleteAccount={deleteAccount}
         />

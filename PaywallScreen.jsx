@@ -3,19 +3,19 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Platform,
   StatusBar, Animated, Alert, ActivityIndicator,
 } from "react-native";
-
-const FK = Platform.OS === "ios" ? "Avenir-Medium" : "sans-serif-medium";
-const FB = Platform.OS === "ios" ? "Avenir-Book" : "sans-serif";
-const FOM = Platform.OS === "ios" ? "Avenir-Heavy" : "sans-serif-black";
+import { FF } from "./theme";
+import {
+  SparkleIcon, CheckIcon, ClipboardIcon, ShieldKeyIcon, ChartIcon, PhoneIcon,
+} from "./Icons";
 
 const FEATURES = [
-  { icon: "🤖", title: "AI-valued rewards", desc: "Get smarter credit for harder tasks" },
-  { icon: "📸", title: "Photo proof tasks", desc: "Upload photos to verify completion" },
-  { icon: "📋", title: "Unlimited tasks", desc: "Free users are limited to 5 active tasks" },
-  { icon: "🔁", title: "Recurring tasks", desc: "Auto-schedule daily and weekly tasks" },
-  { icon: "🕐", title: "Blocked hours", desc: "Set custom hours to auto-block apps" },
-  { icon: "🏆", title: "Challenges", desc: "Compete with friends on goals" },
-  { icon: "🎯", title: "Choose your apps", desc: "Free blocks all social & entertainment" },
+  { title: "AI-valued rewards", desc: "Get smarter credit for harder tasks" },
+  { title: "Photo proof tasks", desc: "Upload photos to verify completion" },
+  { title: "Unlimited tasks", desc: "Free users are limited to 5 active tasks" },
+  { title: "Recurring tasks", desc: "Auto-schedule daily and weekly tasks" },
+  { title: "Blocked hours", desc: "Set custom hours to auto-block apps" },
+  { title: "Challenges", desc: "Compete with friends on goals" },
+  { title: "Choose your apps", desc: "Free blocks all social & entertainment" },
 ];
 
 export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = false }) {
@@ -29,12 +29,14 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
   }, []);
 
   const paper = dark
-    ? { bg: "#0b1f12", card: "#132b19", border: "#1e3d26" }
-    : { bg: "#f4f9f6", card: "#fff", border: "#d6e6dc" };
+    ? { bg: "#0F1611", card: "#171F18", border: "rgba(255,255,255,0.08)" }
+    : { bg: "#F7F7F4", card: "#FFFFFF", border: "rgba(26,40,32,0.08)" };
   const ink = dark
-    ? { deep: "#e8f0eb", mid: "#8aa694", faint: "#4a6b55" }
-    : { deep: "#0b1a11", mid: "#6b8a76", faint: "#a3b8ab" };
-  const earn = { terra: "#2fac72", terraLo: dark ? "#1a3d28" : "#e3f5ec" };
+    ? { deep: "#E8EEDF", mid: "#9DAE9A", faint: "#566357" }
+    : { deep: "#1A2820", mid: "#6B7A6E", faint: "#A8B0A8" };
+  const earn = dark
+    ? { green: "#7FBE96", greenD: "#A8D9B5", sageLo: "rgba(168,201,154,0.13)", deep: "#D8E8C5" }
+    : { green: "#2D6B47", greenD: "#1F3A2A", sageLo: "#E4ECE0", deep: "#1F3A2A" };
 
   const handlePurchase = async () => {
     setPurchasing(true);
@@ -43,7 +45,7 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
       if (result?.success) {
         onClose();
       } else if (result?.reason === "cancelled") {
-        // user cancelled, do nothing
+        // user cancelled
       } else if (result?.reason) {
         Alert.alert("Purchase failed", result.reason);
       }
@@ -59,7 +61,7 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
     try {
       const result = await onRestore();
       if (result?.success) {
-        Alert.alert("Restored!", "Your Pro access has been restored.");
+        Alert.alert("Restored", "Your Pro access has been restored.");
         onClose();
       } else {
         Alert.alert("No subscription found", "We couldn't find an active subscription for this Apple ID.");
@@ -81,7 +83,7 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
         style={{ opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }] }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Close button */}
+        {/* Close */}
         <TouchableOpacity
           onPress={onClose}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -91,10 +93,10 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
         </TouchableOpacity>
 
         {/* Header */}
-        <Text style={{ fontFamily: FOM, fontSize: 28, color: ink.deep, textAlign: "center", marginBottom: 4 }}>
+        <Text style={{ fontFamily: FF.display, fontSize: 28, color: ink.deep, textAlign: "center", marginBottom: 4 }}>
           Upgrade to Pro
         </Text>
-        <Text style={{ fontFamily: FB, fontSize: 15, color: ink.mid, textAlign: "center", marginBottom: 24 }}>
+        <Text style={{ fontFamily: FF.body, fontSize: 15, color: ink.mid, textAlign: "center", marginBottom: 24 }}>
           Unlock the full Drift experience
         </Text>
 
@@ -107,23 +109,23 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
             style={{
               flex: 1, padding: 16, borderRadius: 16,
               borderWidth: 2,
-              borderColor: isAnnual ? earn.terra : paper.border,
-              backgroundColor: isAnnual ? earn.terraLo : paper.card,
+              borderColor: isAnnual ? earn.green : paper.border,
+              backgroundColor: isAnnual ? earn.sageLo : paper.card,
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <Text style={{ fontFamily: FOM, fontSize: 13, color: isAnnual ? earn.terra : ink.mid, letterSpacing: 0.5 }}>
+              <Text style={{ fontFamily: FF.bodyBold, fontSize: 12, color: isAnnual ? earn.green : ink.mid, letterSpacing: 0.8 }}>
                 ANNUAL
               </Text>
-              <View style={{ backgroundColor: earn.terra, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                <Text style={{ fontFamily: FOM, fontSize: 9, color: "#fff", letterSpacing: 0.5 }}>SAVE 33%</Text>
+              <View style={{ backgroundColor: earn.green, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                <Text style={{ fontFamily: FF.bodyBold, fontSize: 9, color: dark ? "#0F1611" : "#fff", letterSpacing: 0.5 }}>SAVE 33%</Text>
               </View>
             </View>
-            <Text style={{ fontFamily: FOM, fontSize: 22, color: ink.deep }}>
+            <Text style={{ fontFamily: FF.bodyBold, fontSize: 22, color: ink.deep }}>
               $48.49
-              <Text style={{ fontFamily: FB, fontSize: 14, color: ink.mid }}>/year</Text>
+              <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid }}>/year</Text>
             </Text>
-            <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4 }}>
+            <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 4 }}>
               $4.04/mo — best value
             </Text>
           </TouchableOpacity>
@@ -135,18 +137,18 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
             style={{
               flex: 1, padding: 16, borderRadius: 16,
               borderWidth: 2,
-              borderColor: !isAnnual ? earn.terra : paper.border,
-              backgroundColor: !isAnnual ? earn.terraLo : paper.card,
+              borderColor: !isAnnual ? earn.green : paper.border,
+              backgroundColor: !isAnnual ? earn.sageLo : paper.card,
             }}
           >
-            <Text style={{ fontFamily: FOM, fontSize: 13, color: !isAnnual ? earn.terra : ink.mid, letterSpacing: 0.5, marginBottom: 8 }}>
+            <Text style={{ fontFamily: FF.bodyBold, fontSize: 12, color: !isAnnual ? earn.green : ink.mid, letterSpacing: 0.8, marginBottom: 8 }}>
               MONTHLY
             </Text>
-            <Text style={{ fontFamily: FOM, fontSize: 22, color: ink.deep }}>
+            <Text style={{ fontFamily: FF.bodyBold, fontSize: 22, color: ink.deep }}>
               $5.99
-              <Text style={{ fontFamily: FB, fontSize: 14, color: ink.mid }}>/month</Text>
+              <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid }}>/month</Text>
             </Text>
-            <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4 }}>
+            <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 4 }}>
               Flexible, cancel anytime
             </Text>
           </TouchableOpacity>
@@ -161,10 +163,15 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
             borderWidth: 1, borderColor: paper.border,
             marginBottom: 10,
           }}>
-            <Text style={{ fontSize: 24 }}>{f.icon}</Text>
+            <View style={{
+              width: 32, height: 32, borderRadius: 10,
+              backgroundColor: earn.sageLo, alignItems: "center", justifyContent: "center",
+            }}>
+              <CheckIcon size={16} color={earn.green} />
+            </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: FK, fontSize: 15, color: ink.deep }}>{f.title}</Text>
-              <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 2 }}>{f.desc}</Text>
+              <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: ink.deep }}>{f.title}</Text>
+              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 2 }}>{f.desc}</Text>
             </View>
           </View>
         ))}
@@ -178,31 +185,28 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
         backgroundColor: paper.bg,
         borderTopWidth: 1, borderTopColor: paper.border,
       }}>
-        {/* Price summary */}
-        <Text style={{ fontFamily: FB, fontSize: 14, color: ink.mid, textAlign: "center", marginBottom: 12 }}>
+        <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, textAlign: "center", marginBottom: 12 }}>
           1 week free trial, then {isAnnual ? "$48.49/year" : "$5.99/month"}
         </Text>
 
-        {/* Purchase button */}
         <TouchableOpacity
           onPress={handlePurchase}
           disabled={purchasing || restoring}
           activeOpacity={0.8}
           style={{
-            backgroundColor: earn.terra, borderRadius: 16,
+            backgroundColor: earn.deep, borderRadius: 16,
             paddingVertical: 16, alignItems: "center",
             opacity: purchasing ? 0.7 : 1,
           }}
         >
           {purchasing
             ? <ActivityIndicator color="#fff" />
-            : <Text style={{ fontFamily: FOM, fontSize: 16, color: "#fff", letterSpacing: 0.5 }}>
+            : <Text style={{ fontFamily: FF.bodyBold, fontSize: 16, color: dark ? "#0F1611" : "#fff", letterSpacing: 0.3 }}>
                 Start Free Trial
               </Text>
           }
         </TouchableOpacity>
 
-        {/* Restore */}
         <TouchableOpacity
           onPress={handleRestore}
           disabled={purchasing || restoring}
@@ -210,7 +214,7 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
         >
           {restoring
             ? <ActivityIndicator size="small" color={ink.mid} />
-            : <Text style={{ fontFamily: FK, fontSize: 13, color: ink.mid }}>
+            : <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.mid }}>
                 Restore purchase
               </Text>
           }
