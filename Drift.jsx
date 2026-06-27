@@ -1571,7 +1571,7 @@ function LevelUpModal({ level, dark, onClose }) {
   );
 }
 
-function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onReduceScreenTime, onQuickGrant, quickGrantCount, grantMins, onSwipeLockChange, dark, secLeft }) {
+function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, onReduceScreenTime, onQuickGrant, quickGrantCount, grantMins, onSwipeLockChange, dark, secLeft }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Text color that sits on a `deep` (primary) button. In dark mode the deep
@@ -1648,7 +1648,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
       showsVerticalScrollIndicator={false}
     >
       {/* ── HERO CARD ────────────────────────────────────────────── */}
-      <Animated.View style={{
+      <Animated.View ref={heroRef} style={{
         opacity: heroOp,
         transform: [{ translateY: heroY }],
         backgroundColor: paper.card,
@@ -1892,6 +1892,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, onRed
           TODAY
         </Text>
         <TouchableOpacity
+          ref={addRef}
           onPress={onAdd}
           activeOpacity={0.85}
           style={{
@@ -2976,6 +2977,10 @@ export default function App() {
   const [showRecurringTasks, setShowRecurringTasks] = useState(false);
   const [firstTimeBlockedApps, setFirstTimeBlockedApps] = useState(false);
   const [showTutorial,       setShowTutorial]       = useState(false);
+  const [tutorialTargets,    setTutorialTargets]    = useState(null); // measured rects for the coachmark spotlight
+  const tutHeroRef = useRef(null);
+  const tutAddRef  = useRef(null);
+  const tutTabBarRef = useRef(null);
   const [showReviewPrompt,   setShowReviewPrompt]   = useState(false);
   const [showUsernameSetup,  setShowUsernameSetup]  = useState(false);
   const [showReduceTime,     setShowReduceTime]     = useState(false);
@@ -3814,6 +3819,43 @@ export default function App() {
     })();
   }, [showAccount, userId]);
 
+  // Measure the real on-screen targets (balance hero, Add-task button, tab bar)
+  // when the post-signup tutorial opens, so the coachmark overlay can spotlight
+  // each element exactly. Falls back to region anchoring if a measure fails.
+  useEffect(() => {
+    if (!showTutorial) { setTutorialTargets(null); return; }
+    const measure = (ref) => new Promise((resolve) => {
+      const node = ref?.current;
+      if (!node?.measureInWindow) return resolve(null);
+      try {
+        node.measureInWindow((x, y, w, h) => {
+          if ([x, y, w, h].some(n => typeof n !== "number" || Number.isNaN(n)) || w <= 0 || h <= 0) return resolve(null);
+          resolve({ x, y, w, h });
+        });
+      } catch { resolve(null); }
+    });
+    // Delay so the tour's targets (and the tab-bar slide) have settled.
+    const t = setTimeout(async () => {
+      const [balance, add, pill] = await Promise.all([
+        measure(tutHeroRef), measure(tutAddRef), measure(tutTabBarRef),
+      ]);
+      let tabs = null;
+      if (pill) {
+        // The pill has 8px inner padding and 4 equal tab columns.
+        const innerX = pill.x + 8, innerW = pill.w - 16;
+        const colW = innerW / TABS.length;
+        tabs = TABS.map((_, idx) => ({
+          x: innerX + idx * colW,
+          y: pill.y + 6,
+          w: colW,
+          h: pill.h - 12,
+        }));
+      }
+      setTutorialTargets({ balance, add, tabs });
+    }, 380);
+    return () => clearTimeout(t);
+  }, [showTutorial]);
+
   const toggleDark = () => {
     setDarkMode(d => {
       const next = !d;
@@ -4542,6 +4584,8 @@ export default function App() {
               onComplete={completeTask}
               onDelete={deleteTask}
               onAdd={tryOpenAddTask}
+              heroRef={tutHeroRef}
+              addRef={tutAddRef}
               onReduceScreenTime={() => setShowReduceTime(true)}
               onQuickGrant={() => setShowQuickGrant(true)}
               quickGrantCount={quickGrantCount}
@@ -4589,7 +4633,7 @@ export default function App() {
           backgroundColor: "transparent",
           pointerEvents: "box-none",
         }}>
-          <View style={{
+          <View ref={tutTabBarRef} style={{
             flexDirection: "row",
             alignItems: "stretch",
             backgroundColor: th_paper.card,
@@ -4667,6 +4711,7 @@ export default function App() {
       {showTutorial && (
         <TutorialOverlay
           dark={darkMode}
+          targets={tutorialTargets}
           onDone={() => { setShowTutorial(false); setShowReviewPrompt(true); }}
         />
       )}
