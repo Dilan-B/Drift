@@ -522,6 +522,8 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
   const [loading,  setLoading]  = useState(false);
   const [resending, setResending] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const [error,    setError]    = useState("");
   const [notice,   setNotice]   = useState("");
 
@@ -534,7 +536,39 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
     if (canOpen) {
       await Linking.openURL(url).catch(() => {});
     } else {
-      Alert.alert("Open your email", "Open your email app and tap the latest Drift verification link.");
+      Alert.alert("Open your email", "Open your email app and find your 6-digit Drift code.");
+    }
+  }
+
+  async function handleVerifyOtp() {
+    const cleanEmail = verificationEmail.trim().toLowerCase();
+    const code = (verifyCode || "").replace(/\D/g, "").slice(0, 8);
+    if (code.length !== 8) { setError("Enter the 8-digit code from your email."); setNotice(""); return; }
+    setError(""); setNotice(""); setVerifying(true);
+    try {
+      const { data, error: vErr } = await rateLimited(`auth_verify_otp_${cleanEmail}`, { limit: 10, windowMs: 10 * 60_000 }, () =>
+        supabase.auth.verifyOtp({ email: cleanEmail, token: code, type: "signup" })
+      );
+      if (vErr) throw vErr;
+      const user = data?.user || data?.session?.user;
+      if (!user) throw new Error("Verification failed. Try again.");
+      setVerifyCode("");
+      onDone(user);
+    } catch (e) {
+      const raw = (e?.message || "").toLowerCase();
+      // Supabase returns a single combined message ("Token has expired or is
+      // invalid") for both a wrong code AND an expired one — it doesn't tell us
+      // which — so the message must cover both cases.
+      if (raw.includes("expired") || raw.includes("invalid") || raw.includes("token") || raw.includes("otp")) {
+        setError("That code is incorrect or expired. Double-check it, or tap Resend code for a new one.");
+      } else if (raw.includes("network") || raw.includes("fetch")) {
+        setError("Network error. Check your connection.");
+      } else {
+        setError(e?.message || "Could not verify. Try again.");
+      }
+      setNotice("");
+    } finally {
+      setVerifying(false);
     }
   }
 
@@ -637,6 +671,17 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
         );
         if (err) throw err;
 
+        // Supabase does NOT error when the email already has an account (to
+        // prevent enumeration). Instead it returns a "success" with a user whose
+        // `identities` array is EMPTY. Detect that and block the signup with a
+        // clear message instead of silently sending nothing.
+        if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+          setError("An account with that email already exists — switch to Sign in to log in.");
+          setNotice("");
+          setLoading(false);
+          return;
+        }
+
         // Profile row is created by the auth.users trigger (handle_new_user).
         // The trigger handles username collisions automatically by suffixing
         // _2, _3, etc. — so the user always ends up with SOME profile, even
@@ -729,25 +774,36 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
 
         <View style={styles.verifyContent}>
           <View style={styles.stepBadge}><WaveIcon size={24} color={ACCENT} /></View>
-          <Text style={styles.question}>Check your email</Text>
+          <Text style={styles.question}>Enter your code</Text>
           <Text style={styles.questionSub}>
-            We sent a verification link to {verificationEmail}. Tap it on this device to finish creating your Drift account.
+            We sent an 8-digit code to {verificationEmail}. Enter it below to finish creating your Drift account.
           </Text>
 
           <View style={styles.authForm}>
-            <Text style={styles.verifyNote}>
-              Once the link opens Drift, you will be signed in automatically.
-            </Text>
+            <TextInput
+              style={[styles.input, { textAlign: "center", letterSpacing: 6, fontSize: 22 }]}
+              placeholder="00000000"
+              placeholderTextColor={MUTED}
+              value={verifyCode}
+              onChangeText={(t) => setVerifyCode(t.replace(/\D/g, "").slice(0, 8))}
+              keyboardType="number-pad"
+              autoComplete="one-time-code"
+              textContentType="oneTimeCode"
+              maxLength={8}
+              returnKeyType="done"
+              onSubmitEditing={handleVerifyOtp}
+            />
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             {notice ? <Text style={styles.noticeText}>{notice}</Text> : null}
           </View>
         </View>
 
         <TouchableOpacity
-          style={styles.ctaBtn}
-          onPress={handleOpenMail}
+          style={[styles.ctaBtn, (verifying || verifyCode.length !== 8) && styles.ctaBtnDisabled]}
+          onPress={handleVerifyOtp}
+          disabled={verifying || verifyCode.length !== 8}
         >
-          <Text style={styles.ctaBtnText}>Open email app</Text>
+          {verifying ? <ActivityIndicator color="#FAF6EE" /> : <Text style={styles.ctaBtnText}>Verify</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -758,7 +814,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
           {resending ? (
             <ActivityIndicator color={ACCENT} />
           ) : (
-            <Text style={styles.secondaryBtnText}>Resend email</Text>
+            <Text style={styles.secondaryBtnText}>Resend code</Text>
           )}
         </TouchableOpacity>
 
@@ -885,12 +941,12 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
         <Text style={{ marginTop: 14, marginHorizontal: 24, textAlign: "center", color: MUTED, fontFamily: FF.body, fontSize: 11, lineHeight: 16 }}>
           By creating an account you agree to our{" "}
           <Text style={{ color: ACCENT, textDecorationLine: "underline" }}
-            onPress={() => require("react-native").Linking.openURL("https://drift-landing-page-git-main-ridi-labs.vercel.app/terms")}>
+            onPress={() => require("react-native").Linking.openURL("https://driftproductivity.com/terms/")}>
             Terms of Use
           </Text>{" "}
           and{" "}
           <Text style={{ color: ACCENT, textDecorationLine: "underline" }}
-            onPress={() => require("react-native").Linking.openURL("https://drift-landing-page-git-main-ridi-labs.vercel.app/privacy")}>
+            onPress={() => require("react-native").Linking.openURL("https://driftproductivity.com/privacy/")}>
             Privacy Policy
           </Text>.
         </Text>
@@ -912,7 +968,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
 
 // ─── Main Onboarding ──────────────────────────────────────────────────────────
 
-export default function OnboardingScreen({ onComplete, signInOnly = false }) {
+export default function OnboardingScreen({ onComplete, signInOnly = false, onRepeatOnboarding }) {
   // signInOnly: skip welcome + questionnaire, jump straight to auth slide
   const authStepIndex = STEPS.findIndex(s => s.id === "auth");
   const [stepIndex, setStepIndex] = useState(signInOnly ? authStepIndex : 0);
@@ -954,6 +1010,29 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
+
+      {/* Replay the full onboarding (clears the "already onboarded" cache so the
+          questionnaire + post-signup tutorial/review show again). Handy for
+          testing on a device whose cache otherwise skips onboarding. */}
+      {step.id === "auth" && onRepeatOnboarding && (
+        <TouchableOpacity
+          onPress={() => { onRepeatOnboarding(); setStepIndex(0); }}
+          style={{
+            position: "absolute",
+            top: Platform.OS === "ios" ? 54 : 28,
+            alignSelf: "center",
+            zIndex: 20,
+            paddingVertical: 8,
+            paddingHorizontal: 16,
+            borderRadius: 20,
+            backgroundColor: "rgba(46,107,71,0.10)",
+          }}
+        >
+          <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: ACCENT }}>
+            Repeat onboarding
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Progress bar (hidden on welcome/auth) */}
       {step.id !== "welcome" && step.id !== "auth" && !step.id?.startsWith("how") && (

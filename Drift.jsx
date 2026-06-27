@@ -4365,6 +4365,13 @@ export default function App() {
     <OnboardingScreen
       signInOnly={signInOnly}
       onComplete={({ user, answers }) => completeAuthenticatedUser(user, answers)}
+      onRepeatOnboarding={() => {
+        // Replay onboarding: clear the device "onboarded" flag and exit
+        // sign-in-only mode so the questionnaire + post-signup tutorial/review
+        // fire again on the next account.
+        setSignInOnly(false);
+        AsyncStorage.removeItem("drift_onboarded").catch(() => {});
+      }}
     />
   );
 
