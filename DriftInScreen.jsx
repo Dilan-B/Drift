@@ -7,8 +7,9 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, StyleSheet,
   BackHandler, Alert, Animated, Platform, StatusBar,
-  ScrollView, Dimensions,
+  ScrollView, Dimensions, AppState,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import Svg, { Circle as SvgCircle } from "react-native-svg";
 import { useFonts, Oswald_400Regular, Oswald_700Bold } from "@expo-google-fonts/oswald";
@@ -19,6 +20,11 @@ import { SparkleIcon, CheckIcon } from "./Icons";
 import Sprout, { LeafGlyph } from "./SproutArt";
 
 const { width } = Dimensions.get("window");
+
+// Persisted in-progress session so the countdown survives backgrounding and even
+// an app kill — the timer is wall-clock based (an end timestamp), not a ticking
+// counter, so it keeps progressing while Drift is closed.
+const SESSION_KEY = "drift_driftin_session";
 
 // ── Always-dark palette (active session) ─────────────────────
 const BG    = "#0B1A11";
@@ -220,8 +226,72 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
   const [secTotal,setSecTotal]= useState(0);
 
   const timerRef  = useRef(null);
+  const endAtRef  = useRef(0);     // wall-clock timestamp (ms) the session ends
+  const phaseRef  = useRef(phase); // mirror for AppState/listener closures
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim  = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  const persistSession = (data) => { AsyncStorage.setItem(SESSION_KEY, JSON.stringify(data)).catch(() => {}); };
+  const clearPersisted = () => { AsyncStorage.removeItem(SESSION_KEY).catch(() => {}); };
+
+  // Recompute remaining time from the wall clock. Safe to call any time
+  // (foreground, every second, after a kill) — it derives from endAtRef, so it's
+  // correct no matter how long JS was suspended.
+  const recompute = () => {
+    const left = Math.max(0, Math.round((endAtRef.current - Date.now()) / 1000));
+    setSecLeft(left);
+    onSessionTick?.(left);
+    if (left <= 0) {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      clearPersisted();
+      setPhase("done");
+    }
+  };
+
+  const startTicking = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    recompute(); // immediate, so the UI is right the instant we (re)start
+    timerRef.current = setInterval(recompute, 1000);
+  };
+
+  // Restore an in-progress session on mount (e.g. app was killed mid-focus).
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(SESSION_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (!saved?.endAt || !saved?.secTotal) return;
+        endAtRef.current = saved.endAt;
+        setTask(saved.task || "");
+        setSecTotal(saved.secTotal);
+        const left = Math.round((saved.endAt - Date.now()) / 1000);
+        if (left > 0) {
+          setSecLeft(left);
+          setPhase("active");
+          // Re-sync the parent (shield + live activity); applyBlocking is idempotent.
+          onSessionStart?.({ task: saved.task || "Drift In", durationSeconds: left });
+          startTicking();
+        } else {
+          // Finished while we were away — let the user collect what they focused.
+          setSecLeft(0);
+          setPhase("done");
+          clearPersisted();
+        }
+      } catch {}
+    })();
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  // Recompute the moment the app returns to the foreground.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st === "active" && phaseRef.current === "active" && endAtRef.current) recompute();
+    });
+    return () => sub.remove();
+  }, []);
 
   // Pulse + glow during active session
   useEffect(() => {
@@ -266,28 +336,19 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
   const startSession = () => {
     if (!task.trim()) return;
     const secs = dur * 60;
+    endAtRef.current = Date.now() + secs * 1000;
     setSecTotal(secs);
     setSecLeft(secs);
     setPhase("active");
+    persistSession({ task: task.trim(), secTotal: secs, endAt: endAtRef.current });
     onSessionStart?.({ task: task.trim(), durationSeconds: secs });
     onSessionTick?.(secs);
-    timerRef.current = setInterval(() => {
-      setSecLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          setPhase("done");
-          onSessionTick?.(0);
-          return 0;
-        }
-        const next = prev - 1;
-        onSessionTick?.(next);
-        return next;
-      });
-    }, 1000);
+    startTicking();
   };
 
   const abandon = () => {
-    clearInterval(timerRef.current);
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    clearPersisted();
     onSessionEnd?.();
     setPhase("setup");
     setSecLeft(0);
@@ -299,7 +360,11 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
       "You'll earn credits for the time focused so far.",
       [
         { text: "Keep going", style: "cancel" },
-        { text: "Finish", onPress: () => { clearInterval(timerRef.current); setPhase("done"); }},
+        { text: "Finish", onPress: () => {
+          if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+          clearPersisted();
+          setPhase("done");
+        }},
       ]
     );
   };
