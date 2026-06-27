@@ -222,7 +222,7 @@ function FriendPlant({ friend, onPress, dark }) {
         width: 6,
         height: 6,
         borderRadius: 3,
-        backgroundColor: g.hue,
+        backgroundColor: (friend.minutes || 0) > 0 ? th.sage : th.hairline,
         marginTop: 6,
       }} />
     </TouchableOpacity>
