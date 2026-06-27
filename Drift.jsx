@@ -3544,6 +3544,15 @@ export default function App() {
       if (prof?.username) {
         setUserName(prof.username);
         AsyncStorage.setItem("drift_username", prof.username);
+        // OAuth/Google users get a placeholder ("drifter" + random) from the DB
+        // trigger because they never picked a display name. Force them through
+        // username setup right after login so nobody is left as "drifter____".
+        if (/^drifter[a-z0-9]{6,}$/i.test(prof.username)) {
+          setShowUsernameSetup(true);
+        }
+      } else {
+        // No profile row / username at all — also force setup.
+        setShowUsernameSetup(true);
       }
     } catch {}
     setOnboarding(false);
