@@ -112,6 +112,21 @@ export async function scheduleDailyReminder(hour = 10, minute = 0) {
   } catch {}
 }
 
+/** A friend request just arrived. Unique id per sender so several can stack. */
+export async function notifyFriendRequest(fromUsername) {
+  if (!(await ensureGranted())) return;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: `drift-friend-req-${fromUsername || "x"}`,
+      content: {
+        title: "New friend request",
+        body: fromUsername ? `@${fromUsername} wants to grow with you on Drift.` : "Someone wants to add you on Drift.",
+      },
+      trigger: null,
+    });
+  } catch {}
+}
+
 /** Cancel everything Drift scheduled (e.g. on sign-out). */
 export async function cancelAllNotifications() {
   if (!Notifications) return;

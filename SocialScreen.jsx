@@ -11,7 +11,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Path, Circle as SvgCircle, Ellipse, Defs, RadialGradient, Stop } from "react-native-svg";
 import AICheckModal from "./AICheckModal";
 import { supabase, getFriendsWithScreenTime } from "./supabase";
-import { CloseIcon, LockIcon, ShareIcon, UsersIcon } from "./Icons";
+import { CloseIcon, LockIcon, ShareIcon, UsersIcon, LevelIcon } from "./Icons";
+import { getLevelIdx, getLevel } from "./levels";
+import { notifyFriendRequest } from "./notifications";
 import ChallengeSheet from "./ChallengeModal";
 import Swipeable from "./Swipeable";
 import { cached, invalidateCache, rateLimited } from "./apiGuards";
@@ -171,8 +173,9 @@ function Avatar({ username = "?", uri, size = 42 }) {
  */
 function FriendPlant({ friend, onPress, dark }) {
   const th = palette(dark);
-  const minutes = friend.minutes || 0;
-  const g = growthState(minutes);
+  // The grove plant reflects the friend's LEVEL (Seedling → Old Growth from
+  // their XP) — the same tier emblem shown on the Growth page and Today card.
+  const lvIdx = getLevelIdx(friend.totalXp);
 
   return (
     <TouchableOpacity
@@ -189,7 +192,9 @@ function FriendPlant({ friend, onPress, dark }) {
         }],
       }}
     >
-      <PlantGlyph stage={g.stage} hue={g.hue} size={118} />
+      <View style={{ width: 118, height: 118, alignItems: "center", justifyContent: "center" }}>
+        <LevelIcon index={lvIdx} size={92} color={th.sage} strokeWidth={1.5} />
+      </View>
       <View style={{
         marginTop: -4,
         paddingVertical: 6,
@@ -240,11 +245,12 @@ function LoadingState({ elapsedMs, dark }) {
   );
 }
 
-function FriendStatsModal({ friend, dark, onClose, onChallenge, isPremium }) {
+function FriendStatsModal({ friend, dark, onClose, onChallenge, onRemove, isPremium }) {
   const th = palette(dark);
   if (!friend) return null;
   const fmt = m => !m ? "0m" : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60 ? `${m % 60}m` : ""}`.trim();
-  const g = growthState(friend.minutes || 0);
+  const lvIdx = getLevelIdx(friend.totalXp);
+  const lvl = getLevel(friend.totalXp);
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{
@@ -277,16 +283,16 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, isPremium }) {
             <CloseIcon size={14} color={th.mid} />
           </TouchableOpacity>
 
-          {/* Plant glyph centered */}
+          {/* Level emblem centered — reflects the friend's tier */}
           <View style={{ alignItems: "center", marginBottom: 8 }}>
-            <PlantGlyph stage={g.stage} hue={g.hue} size={110} />
+            <LevelIcon index={lvIdx} size={96} color={th.sage} strokeWidth={1.5} />
           </View>
 
           <Text style={{
             fontFamily: FF.kicker, fontSize: 9, color: th.faint,
             letterSpacing: 2.4, textAlign: "center", marginBottom: 4,
           }}>
-            PLANT
+            LEVEL
           </Text>
           <Text
             numberOfLines={1}
@@ -301,9 +307,9 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, isPremium }) {
             flexDirection: "row", alignItems: "center", justifyContent: "center",
             gap: 6, marginBottom: 22,
           }}>
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: g.hue }} />
+            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th.sage }} />
             <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: th.mid }}>
-              {g.label}
+              {lvl.name}
             </Text>
           </View>
 
@@ -359,6 +365,25 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, isPremium }) {
               letterSpacing: 0.2,
             }}>
               {isPremium ? "Challenge" : "Upgrade to challenge"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert(
+                `Remove @${friend.username}?`,
+                "They'll be removed from your grove. You can add them again later.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Remove", style: "destructive", onPress: () => { onClose(); onRemove?.(friend); } },
+                ],
+              );
+            }}
+            activeOpacity={0.85}
+            style={{ paddingVertical: 12, alignItems: "center", marginTop: 4 }}
+          >
+            <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.clay }}>
+              Remove friend
             </Text>
           </TouchableOpacity>
         </Pressable>
@@ -697,6 +722,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
   const [knownChallengeStatus, setKnownChallengeStatus] = useState({});
   const [statsFriend, setStatsFriend] = useState(null);
   const showedCachedFriendsRef = useRef(false);
+  const seenReqIdsRef = useRef(null); // null until first load; then a Set of seen request ids
 
   useEffect(() => {
     onSwipeLockChange?.(!!challengeTarget || showAdd || !!selectedChallenge || !!statsFriend || showPast);
@@ -705,6 +731,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
 
   useEffect(() => {
     showedCachedFriendsRef.current = false;
+    seenReqIdsRef.current = null;
   }, [userId]);
 
   useEffect(() => {
@@ -803,6 +830,18 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
       }
       return data || [];
     });
+    // Notify on genuinely new incoming requests (skip the very first load so we
+    // don't fire for the existing backlog).
+    if (seenReqIdsRef.current === null) {
+      seenReqIdsRef.current = new Set((data || []).map(r => r.id));
+    } else {
+      for (const r of (data || [])) {
+        if (!seenReqIdsRef.current.has(r.id)) {
+          seenReqIdsRef.current.add(r.id);
+          notifyFriendRequest(r.profiles?.username);
+        }
+      }
+    }
     smoothUpdate(() => setFriendRequests(data || []));
   }, [userId]);
 
@@ -860,7 +899,13 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
     const channel = supabase
       .channel(`social:${userId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "challenges" }, loadChallenges)
-      .on("postgres_changes", { event: "*", schema: "public", table: "friendships" }, () => { loadRequests(); loadFriends(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "friendships" }, () => {
+        // Bust the caches first so the request/grove refresh is immediate
+        // instead of serving up to 10s-stale data.
+        invalidateCache(`friend_reqs_${userId}`);
+        invalidateCache(`friends_screen_time_${userId}`);
+        loadRequests(); loadFriends();
+      })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${userId}` }, payload => smoothUpdate(() => setMyProfile(payload.new)))
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -942,6 +987,29 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
   const handleChallenge = (friend) => {
     if (!friend) { onOpenPaywall?.(); return; }
     setChallengeTarget(friend);
+  };
+
+  // Remove a friend (soft delete — set the friendship to 'removed' in either
+  // direction). Optimistic: drop from the grove immediately, roll back on error.
+  const removeFriend = async (friend) => {
+    if (!friend?.id) return;
+    const fid = friend.id;
+    smoothUpdate(() => setFriends(prev => prev.filter(f => f.id !== fid)));
+    invalidateCache(`friends_screen_time_${userId}`);
+    try {
+      const { error } = await rateLimited(`friend_remove_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
+        supabase.from("friendships")
+          .update({ status: "removed" })
+          .or(`and(user_id.eq.${userId},friend_id.eq.${fid}),and(user_id.eq.${fid},friend_id.eq.${userId})`)
+      );
+      if (error) throw error;
+      setToast(`Removed @${friend.username}`);
+      setTimeout(() => setToast(""), 2000);
+      loadAll();
+    } catch (e) {
+      Alert.alert("Couldn't remove", e?.message || "Try again.");
+      loadFriends();
+    }
   };
 
   const markChallengeDone = async (challenge) => {
@@ -1522,6 +1590,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
         dark={dark}
         onClose={() => setStatsFriend(null)}
         onChallenge={handleChallenge}
+        onRemove={removeFriend}
         isPremium={isPremium}
       />
 
