@@ -968,7 +968,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
 
 // ─── Main Onboarding ──────────────────────────────────────────────────────────
 
-export default function OnboardingScreen({ onComplete, signInOnly = false, onRepeatOnboarding }) {
+export default function OnboardingScreen({ onComplete, signInOnly = false }) {
   // signInOnly: skip welcome + questionnaire, jump straight to auth slide
   const authStepIndex = STEPS.findIndex(s => s.id === "auth");
   const [stepIndex, setStepIndex] = useState(signInOnly ? authStepIndex : 0);
@@ -1010,29 +1010,6 @@ export default function OnboardingScreen({ onComplete, signInOnly = false, onRep
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
-
-      {/* Replay the full onboarding (clears the "already onboarded" cache so the
-          questionnaire + post-signup tutorial/review show again). Handy for
-          testing on a device whose cache otherwise skips onboarding. */}
-      {step.id === "auth" && onRepeatOnboarding && (
-        <TouchableOpacity
-          onPress={() => { onRepeatOnboarding(); setStepIndex(0); }}
-          style={{
-            position: "absolute",
-            top: Platform.OS === "ios" ? 54 : 28,
-            alignSelf: "center",
-            zIndex: 20,
-            paddingVertical: 8,
-            paddingHorizontal: 16,
-            borderRadius: 20,
-            backgroundColor: "rgba(46,107,71,0.10)",
-          }}
-        >
-          <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: ACCENT }}>
-            Repeat onboarding
-          </Text>
-        </TouchableOpacity>
-      )}
 
       {/* Progress bar (hidden on welcome/auth) */}
       {step.id !== "welcome" && step.id !== "auth" && !step.id?.startsWith("how") && (

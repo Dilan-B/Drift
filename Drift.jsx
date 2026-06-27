@@ -4421,13 +4421,6 @@ export default function App() {
     <OnboardingScreen
       signInOnly={signInOnly}
       onComplete={({ user, answers }) => completeAuthenticatedUser(user, answers)}
-      onRepeatOnboarding={() => {
-        // Replay onboarding: clear the device "onboarded" flag and exit
-        // sign-in-only mode so the questionnaire + post-signup tutorial/review
-        // fire again on the next account.
-        setSignInOnly(false);
-        AsyncStorage.removeItem("drift_onboarded").catch(() => {});
-      }}
     />
   );
 
@@ -4551,6 +4544,7 @@ export default function App() {
             }
           }}
           onOpenBlockedApps={() => { setFirstTimeBlockedApps(false); setShowBlockedApps(true); }}
+          onReplayTutorial={() => { setShowAccount(false); setTab("today"); setTimeout(() => setShowTutorial(true), 400); }}
           onOpenBlockedHours={() => setShowBlockedHours(true)}
           onOpenRecurringTasks={() => setShowRecurringTasks(true)}
           onRequestScreenTime={async () => {
