@@ -288,7 +288,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
   // Recompute the moment the app returns to the foreground.
   useEffect(() => {
     const sub = AppState.addEventListener("change", (st) => {
-      if (st === "active" && phaseRef.current === "active" && endAtRef.current) recompute();
+      if (st === "active" && phaseRef.current === "active" && endAtRef.current) startTicking();
     });
     return () => sub.remove();
   }, []);
