@@ -22,14 +22,16 @@ struct DriftInLiveActivityWidget: Widget {
             .tint(Color(red: 0.184, green: 0.671, blue: 0.447))
         }
       } compactLeading: {
-        Text("D")
-          .font(.caption.weight(.heavy))
+        Image(systemName: "leaf.fill")
+          .font(.caption)
+          .foregroundStyle(Color(red: 0.184, green: 0.671, blue: 0.447))
       } compactTrailing: {
         Text(shortTime(context.state.remainingSeconds))
           .font(.caption2.monospacedDigit())
       } minimal: {
-        Text("D")
-          .font(.caption2.weight(.heavy))
+        Image(systemName: "leaf.fill")
+          .font(.caption2)
+          .foregroundStyle(Color(red: 0.184, green: 0.671, blue: 0.447))
       }
     }
   }
@@ -41,7 +43,10 @@ struct DriftInLiveActivityWidget: Widget {
   }
 
   private func shortTime(_ seconds: Int) -> String {
-    "\(max(0, seconds) / 60)m"
+    let safe = max(0, seconds)
+    let m = safe / 60
+    let s = safe % 60
+    return "\(m):\(String(format: "%02d", s))"
   }
 }
 

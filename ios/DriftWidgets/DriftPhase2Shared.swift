@@ -27,8 +27,9 @@ enum DriftShared {
     let safe = max(0, seconds)
     let hours = safe / 3600
     let minutes = (safe % 3600) / 60
+    let secs = safe % 60
     if hours > 0 { return "\(hours)h \(minutes)m" }
-    return "\(minutes)m"
+    return "\(minutes)m \(String(format: "%02d", secs))s"
   }
 }
 

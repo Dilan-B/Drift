@@ -85,6 +85,31 @@ export const MountainIcon = make(({ color, strokeWidth }) => (
   <Path d="M3 20l6-11 4 6 3-4 5 9z" stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinejoin="round" />
 ));
 
+export const RedwoodIcon = make(({ color, strokeWidth }) => (
+  <>
+    <Path d="M12 2v20" stroke={color} strokeWidth={strokeWidth + 0.5} strokeLinecap="round" />
+    <Path d="M12 6c-3 1-5 3-6 6 2-1 4-1.5 6-1.5 2 0 4 .5 6 1.5-1-3-3-5-6-6z" stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinejoin="round" />
+    <Path d="M12 11c-4 1-6 4-7 7 2.5-1.5 5-2 7-2s4.5.5 7 2c-1-3-3-6-7-7z" stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinejoin="round" />
+  </>
+));
+
+export const AncientIcon = make(({ color, strokeWidth }) => (
+  <>
+    <Path d="M12 2v20" stroke={color} strokeWidth={strokeWidth + 1} strokeLinecap="round" />
+    <Path d="M12 5c-4 2-7 5-8 9 3-2 5.5-2.5 8-2.5s5 .5 8 2.5c-1-4-4-7-8-9z" stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinejoin="round" />
+    <Path d="M7 22c0-4 2-6 5-7 3 1 5 3 5 7" stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinecap="round" />
+  </>
+));
+
+export const EternalIcon = make(({ color, strokeWidth }) => (
+  <>
+    <Circle cx="12" cy="10" r="8" stroke={color} strokeWidth={strokeWidth} fill="none" />
+    <Path d="M12 2c-2 3-3 5-3 8s1 5 3 8c2-3 3-5 3-8s-1-5-3-8z" stroke={color} strokeWidth={strokeWidth} fill="none" />
+    <Path d="M4 10h16" stroke={color} strokeWidth={strokeWidth} />
+    <Path d="M12 18v4" stroke={color} strokeWidth={strokeWidth + 0.5} strokeLinecap="round" />
+  </>
+));
+
 // ─── UI / utility icons ──────────────────────────────────────
 export const LockIcon = make(({ color, strokeWidth }) => (
   <>
@@ -270,7 +295,7 @@ export const WarnIcon = make(({ color, strokeWidth }) => (
 
 // Level by index (matches LEVELS order)
 export const LevelIcon = ({ index, ...rest }) => {
-  const icons = [SeedlingIcon, SproutIcon, TreeIcon, TentIcon, PineIcon, GrassIcon, MountainIcon];
+  const icons = [SeedlingIcon, SproutIcon, TreeIcon, TentIcon, PineIcon, GrassIcon, MountainIcon, RedwoodIcon, AncientIcon, EternalIcon];
   const Icon = icons[index] || SeedlingIcon;
   return <Icon {...rest} />;
 };
