@@ -114,13 +114,16 @@ const EFFORT = [
 
 
 const LEVELS = [
-  { name: "Seedling",   min: 0    },
-  { name: "Sprout",     min: 150  },
-  { name: "Sapling",    min: 400  },
-  { name: "Grove",      min: 900  },
-  { name: "Canopy",     min: 2000 },
-  { name: "Forest",     min: 4000 },
-  { name: "Old Growth", min: 8000 },
+  { name: "Seedling",   min: 0     },
+  { name: "Sprout",     min: 150   },
+  { name: "Sapling",    min: 400   },
+  { name: "Grove",      min: 900   },
+  { name: "Canopy",     min: 2000  },
+  { name: "Forest",     min: 4000  },
+  { name: "Old Growth", min: 8000  },
+  { name: "Redwood",    min: 15000 },
+  { name: "Ancient",    min: 25000 },
+  { name: "Eternal",    min: 50000 },
 ];
 
 // ── Helpers ──────────────────────────────────────────────────

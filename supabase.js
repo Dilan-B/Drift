@@ -22,7 +22,7 @@ async function getAuthCipherKey() {
   if (!keyHex) {
     keyHex = aes.utils.hex.fromBytes(randomBytes(32));
     await SecureStore.setItemAsync(AUTH_KEYSTORE_KEY, keyHex, {
-      keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
     });
   }
   return aes.utils.hex.toBytes(keyHex);
@@ -45,8 +45,7 @@ const encryptedAuthStorage = {
       const ctr = new aes.ModeOfOperation.ctr(cipherKey, new aes.Counter(iv));
       return aes.utils.utf8.fromBytes(ctr.decrypt(encrypted));
     } catch {
-      await AsyncStorage.removeItem(key).catch(() => {});
-      return null;
+      return raw;
     }
   },
   async setItem(key, value) {
@@ -89,13 +88,15 @@ export async function safeGetSession() {
   try {
     const { data, error } = await supabase.auth.getSession();
     if (error) {
-      // Stale refresh token — wipe and continue
-      await supabase.auth.signOut().catch(() => {});
+      const msg = error?.message || "";
+      if (/invalid.*refresh|refresh.*expired/i.test(msg)) {
+        await supabase.auth.signOut().catch(() => {});
+        return { data: { session: null }, error: null };
+      }
       return { data: { session: null }, error: null };
     }
     return { data, error: null };
-  } catch (e) {
-    await supabase.auth.signOut().catch(() => {});
+  } catch {
     return { data: { session: null }, error: null };
   }
 }
