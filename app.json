@@ -15,7 +15,14 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Drift needs your camera to count reps automatically using pose detection.",
         "NSMotionUsageDescription": "Drift uses motion data to detect exercise movement.",
-        "NSContactsUsageDescription": "Drift can match your contacts to find friends already on Drift. Contact emails are hashed on your device and never uploaded in plain text."
+        "NSContactsUsageDescription": "Drift can match your contacts to find friends already on Drift. Contact emails are hashed on your device and never uploaded in plain text.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.689668327094-a4ih4lefouj6ra6v0t5ht3t0g8jrmoog"
+            ]
+          }
+        ]
       },
       "entitlements": {
         "com.apple.developer.family-controls": true

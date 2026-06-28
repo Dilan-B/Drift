@@ -12,7 +12,6 @@
  *    the encrypted auth storage adapter configured in supabase.js.
  */
 import * as WebBrowser from "expo-web-browser";
-import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import { supabase } from "./supabase";
 import { rateLimited } from "./apiGuards";
@@ -36,13 +35,6 @@ const GOOGLE_EXPO_CLIENT_ID    = process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID  
  * scheme used by Expo Go.
  */
 export function useGoogleSignIn(onSignedIn) {
-  // Force the redirect URI to use the app's custom scheme — must match what
-  // you register in Google Cloud Console for the iOS/Android client.
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "drift",
-    path: "auth-callback",
-  });
-
   // If no client IDs are configured, short-circuit before calling the auth
   // hook — passing undefined client IDs throws "iosClientId must be defined".
   const configured = !!(GOOGLE_IOS_CLIENT_ID || GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID);
@@ -50,12 +42,17 @@ export function useGoogleSignIn(onSignedIn) {
     return { isReady: false, promptAsync: async () => {}, isConfigured: false };
   }
 
+  // IMPORTANT: do NOT force a custom "drift://" redirect here. Google's iOS and
+  // Web OAuth clients reject custom app schemes (Error 400: invalid_request,
+  // redirect_uri=drift://auth-callback). expo-auth-session's Google provider
+  // derives the correct platform redirect from the client ID — on iOS that's
+  // the reversed client ID scheme (com.googleusercontent.apps.<id>:/oauthredirect),
+  // which is registered in app.json -> ios.infoPlist.CFBundleURLTypes.
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     iosClientId:     GOOGLE_IOS_CLIENT_ID || undefined,
     androidClientId: GOOGLE_ANDROID_CLIENT_ID || undefined,
     webClientId:     GOOGLE_WEB_CLIENT_ID || undefined,
     expoClientId:    GOOGLE_EXPO_CLIENT_ID || undefined,
-    redirectUri,
     // Restrict scopes to the minimum we need
     scopes: ["openid", "profile", "email"],
   });
