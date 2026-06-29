@@ -3867,16 +3867,29 @@ export default function App() {
       try {
         const { data: { session } } = await safeGetSession();
         const uid = session?.user?.id ?? null;
-        const emailVerified = !!(session?.user?.email_confirmed_at || session?.user?.confirmed_at);
-        if (uid && !emailVerified) {
-          await supabase.auth.signOut().catch(() => {});
-          setUserId(null);
-          setUserEmail("");
-          setUserName("");
-          const hasOnboarded = await AsyncStorage.getItem("drift_onboarded");
-          setSignInOnly(hasOnboarded === "1");
-          setOnboarding(true);
-          return;
+        const cachedVerified = !!(session?.user?.email_confirmed_at || session?.user?.confirmed_at);
+        if (uid && !cachedVerified) {
+          // Don't sign out a restored session just because the cached user object
+          // is missing the verified-email field (it can be absent/stale on a cold
+          // start). Confirm with the server; only sign out if it POSITIVELY
+          // reports an unverified email. Any error/uncertainty → keep them in.
+          let serverUnverified = false;
+          try {
+            const { data: u, error } = await supabase.auth.getUser();
+            if (!error && u?.user) {
+              serverUnverified = !(u.user.email_confirmed_at || u.user.confirmed_at);
+            }
+          } catch {}
+          if (serverUnverified) {
+            await supabase.auth.signOut().catch(() => {});
+            setUserId(null);
+            setUserEmail("");
+            setUserName("");
+            const hasOnboarded = await AsyncStorage.getItem("drift_onboarded");
+            setSignInOnly(hasOnboarded === "1");
+            setOnboarding(true);
+            return;
+          }
         }
         setUserId(uid);
         setUserEmail(session?.user?.email ?? "");

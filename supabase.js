@@ -18,8 +18,18 @@ function randomBytes(length) {
 }
 
 async function getAuthCipherKey() {
+  // Read the existing key. CRITICAL: a transient Keychain read failure must NOT
+  // cause us to mint a NEW key — that would orphan the already-encrypted session
+  // and sign the user out on every cold start. So we only generate a key when a
+  // read SUCCEEDS and definitively returns null (genuine first run). Read errors
+  // propagate to the caller, which then keeps the stored ciphertext untouched
+  // for a later (successful) read instead of wiping the session.
   let keyHex = await SecureStore.getItemAsync(AUTH_KEYSTORE_KEY);
-  if (!keyHex) {
+  if (keyHex == null) {
+    // One retry in case the very first read was a transient miss.
+    keyHex = await SecureStore.getItemAsync(AUTH_KEYSTORE_KEY);
+  }
+  if (keyHex == null) {
     keyHex = aes.utils.hex.fromBytes(randomBytes(32));
     await SecureStore.setItemAsync(AUTH_KEYSTORE_KEY, keyHex, {
       keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
@@ -35,16 +45,30 @@ const encryptedAuthStorage = {
 
     try {
       const payload = JSON.parse(raw);
+      // Legacy / unencrypted session stored in the clear → migrate to encrypted.
       if (payload?.access_token || payload?.refresh_token || payload?.currentSession) {
         await encryptedAuthStorage.setItem(key, raw);
         return raw;
       }
-      const cipherKey = await getAuthCipherKey();
-      const iv = aes.utils.hex.toBytes(payload.iv);
-      const encrypted = aes.utils.hex.toBytes(payload.value);
-      const ctr = new aes.ModeOfOperation.ctr(cipherKey, new aes.Counter(iv));
-      return aes.utils.utf8.fromBytes(ctr.decrypt(encrypted));
+      // Encrypted blob.
+      if (payload?.iv && payload?.value) {
+        const cipherKey = await getAuthCipherKey();
+        const iv = aes.utils.hex.toBytes(payload.iv);
+        const encrypted = aes.utils.hex.toBytes(payload.value);
+        const ctr = new aes.ModeOfOperation.ctr(cipherKey, new aes.Counter(iv));
+        const decrypted = aes.utils.utf8.fromBytes(ctr.decrypt(encrypted));
+        // AES-CTR with a wrong key silently produces garbage (it doesn't throw).
+        // A real Supabase session is JSON — if it doesn't look like JSON, the key
+        // didn't match. Return null (session appears absent THIS launch) but keep
+        // the ciphertext on disk so a later read with the right key restores it,
+        // instead of handing Supabase junk that it treats as a corrupt session.
+        const t = decrypted.trimStart();
+        return (t.startsWith("{") || t.startsWith("[")) ? decrypted : null;
+      }
+      // Unknown shape — hand back as-is rather than destroying it.
+      return raw;
     } catch {
+      // Never wipe on a transient read/parse error.
       return raw;
     }
   },
@@ -72,15 +96,13 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   },
 });
 
-// Auto-recover from "Invalid Refresh Token" — a stale session in AsyncStorage
-// whose refresh token Supabase no longer recognizes. Sign the user out cleanly
-// so the app falls through to the login screen instead of crashing.
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === "TOKEN_REFRESHED" && !session) {
-    // Refresh failed — clear local session
-    supabase.auth.signOut().catch(() => {});
-  }
-});
+// NOTE: We deliberately do NOT auto-signOut on `TOKEN_REFRESHED && !session`.
+// A failed refresh is usually transient (the app cold-starts before the network
+// is ready, a brief 5xx, etc.); nuking the session there is exactly what logs
+// users out on force-close. Supabase already clears the session itself on a
+// *definitive* invalid_grant (emitting SIGNED_OUT), so transient failures should
+// simply be retried by autoRefreshToken — not destroyed by us.
+supabase.auth.onAuthStateChange(() => {});
 
 // Wrap getSession so a refresh failure during boot doesn't propagate as an
 // unhandled error.
