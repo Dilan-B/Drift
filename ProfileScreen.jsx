@@ -78,7 +78,7 @@ async function uploadAvatar(userId, sourceUri) {
 export default function ProfileScreen({
   userId, userEmail, username, subActive, trialDays, screenTimeStatus,
   dark = false, onClose, onProfileChange, onOpenBlockedApps, onOpenBlockedHours, onOpenRecurringTasks,
-  onRequestScreenTime, onUpgrade, onSignOut, onDeleteAccount, onReplayTutorial,
+  onRequestScreenTime, onUpgrade, onSignOut, onDeleteAccount,
   inAppPage = false,
 }) {
   const theme = getTheme(dark);
@@ -368,16 +368,6 @@ export default function ProfileScreen({
               accent={earn.terra}
               icon={(c) => <SparkleIcon size={20} color={c} />}
               onPress={onUpgrade}
-            />
-          )}
-          {!!onReplayTutorial && (
-            <Row
-              id="replayTutorial"
-              title="Replay tutorial"
-              sub="Re-run the post-signup tour"
-              cta="TEST"
-              icon={(c) => <SparkleIcon size={20} color={c} />}
-              onPress={onReplayTutorial}
             />
           )}
         </View>

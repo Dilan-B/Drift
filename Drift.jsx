@@ -4555,7 +4555,6 @@ export default function App() {
             }
           }}
           onOpenBlockedApps={() => { setFirstTimeBlockedApps(false); setShowBlockedApps(true); }}
-          onReplayTutorial={() => { setShowAccount(false); setTab("today"); setTimeout(() => setShowTutorial(true), 400); }}
           onOpenBlockedHours={() => setShowBlockedHours(true)}
           onOpenRecurringTasks={() => setShowRecurringTasks(true)}
           onRequestScreenTime={async () => {
