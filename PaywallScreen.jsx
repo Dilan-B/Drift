@@ -30,11 +30,14 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, offering
   const offering   = resolveOffering(offerings);
   const annualPkg  = pickPackage(offering, "annual");
   const monthlyPkg = pickPackage(offering, "monthly");
-  const annualPrice  = annualPkg?.product?.priceString || "$48.49";
-  const monthlyPrice = monthlyPkg?.product?.priceString || "$5.99";
-  const annualPerMo  = annualPkg?.product?.price
-    ? `$${(annualPkg.product.price / 12).toFixed(2)}/mo — best value`
-    : "$4.04/mo — best value";
+  // Use the live store price; fall back to current list prices until it loads.
+  const annualNum    = annualPkg?.product?.price ?? 29.99;
+  const monthlyNum   = monthlyPkg?.product?.price ?? 2.99;
+  const annualPrice  = annualPkg?.product?.priceString || "$29.99";
+  const monthlyPrice = monthlyPkg?.product?.priceString || "$2.99";
+  const annualPerMo  = `$${(annualNum / 12).toFixed(2)}/mo — best value`;
+  // Real savings of annual vs paying monthly, computed from the actual prices.
+  const savingsPct   = monthlyNum > 0 ? Math.round((1 - (annualNum / 12) / monthlyNum) * 100) : 0;
 
   const REASON_MSG = {
     no_offering: "Plans aren't available right now. Please try again shortly.",
@@ -137,9 +140,11 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, offering
               <Text style={{ fontFamily: FF.bodyBold, fontSize: 12, color: isAnnual ? earn.green : ink.mid, letterSpacing: 0.8 }}>
                 ANNUAL
               </Text>
-              <View style={{ backgroundColor: earn.green, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                <Text style={{ fontFamily: FF.bodyBold, fontSize: 9, color: dark ? "#0F1611" : "#fff", letterSpacing: 0.5 }}>SAVE 33%</Text>
-              </View>
+              {savingsPct > 0 && (
+                <View style={{ backgroundColor: earn.green, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Text style={{ fontFamily: FF.bodyBold, fontSize: 9, color: dark ? "#0F1611" : "#fff", letterSpacing: 0.5 }}>SAVE {savingsPct}%</Text>
+                </View>
+              )}
             </View>
             <Text style={{ fontFamily: FF.bodyBold, fontSize: 22, color: ink.deep }}>
               {annualPrice}
