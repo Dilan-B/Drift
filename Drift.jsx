@@ -2995,7 +2995,7 @@ export default function App() {
   const visibleTaskDayRef = useRef(todayKey());
 
   // ── Pro access (RevenueCat) ────────────────────────────────────────────
-  const { proAccess, offerings: proOfferings, purchase: purchasePro, restore: restorePro } = useSubscription(userId);
+  const { proAccess, offerings: proOfferings, purchase: purchasePro, restore: restorePro, refresh: refreshPro } = useSubscription(userId);
   const proAccessRef = useRef(proAccess);
   useEffect(() => {
     proAccessRef.current = proAccess;
@@ -4567,6 +4567,7 @@ export default function App() {
           onUpgrade={() => setShowPaywall(true)}
           onSignOut={signOut}
           onDeleteAccount={deleteAccount}
+          onProRedeemed={refreshPro}
         />
       ) : (
       <>

@@ -188,5 +188,29 @@ export function useSubscription(userId) {
     }
   }, [userId]);
 
-  return { proAccess: proAccess || override, loading, offerings, purchase, restore, checkEntitlement };
+  // Re-check both Pro sources (RevenueCat + Supabase override). Call after
+  // redeeming a code so Pro flips on without waiting for the next foreground.
+  const refresh = useCallback(async () => {
+    await Promise.all([checkEntitlement(), checkOverride()]);
+  }, [checkEntitlement, checkOverride]);
+
+  // StoreKit: present Apple's offer-code / promo-code redemption sheet. NOTE
+  // these are Apple-GENERATED codes (created in App Store Connect, tied to the
+  // subscription), not arbitrary custom strings — for your own custom codes use
+  // redeemProCode() in supabase.js. Safe no-op off iOS / if unsupported.
+  const redeemAppStoreCode = useCallback(async () => {
+    if (Platform.OS !== "ios") return { success: false, reason: "ios_only" };
+    try {
+      await ensureConfigured(userId);
+      if (Purchases.presentCodeRedemptionSheet) {
+        await Purchases.presentCodeRedemptionSheet();
+      }
+      await checkEntitlement();
+      return { success: true };
+    } catch (e) {
+      return { success: false, reason: e?.message || "unknown" };
+    }
+  }, [userId, checkEntitlement]);
+
+  return { proAccess: proAccess || override, loading, offerings, purchase, restore, checkEntitlement, refresh, redeemAppStoreCode };
 }

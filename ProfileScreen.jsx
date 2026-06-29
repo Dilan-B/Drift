@@ -12,6 +12,7 @@ import { supabase } from "./supabase";
 import { getTheme } from "./theme";
 import { cached, invalidateCache, rateLimited } from "./apiGuards";
 import FeedbackModal from "./FeedbackModal";
+import RedeemCodeModal from "./RedeemCodeModal";
 import {
   CloseIcon, ShieldKeyIcon, PhoneIcon, SparkleIcon, CheckIcon,
 } from "./Icons";
@@ -78,7 +79,7 @@ async function uploadAvatar(userId, sourceUri) {
 export default function ProfileScreen({
   userId, userEmail, username, subActive, trialDays, screenTimeStatus,
   dark = false, onClose, onProfileChange, onOpenBlockedApps, onOpenBlockedHours, onOpenRecurringTasks,
-  onRequestScreenTime, onUpgrade, onSignOut, onDeleteAccount,
+  onRequestScreenTime, onUpgrade, onSignOut, onDeleteAccount, onProRedeemed,
   inAppPage = false,
 }) {
   const theme = getTheme(dark);
@@ -88,6 +89,7 @@ export default function ProfileScreen({
   const [savingName, setSavingName] = useState(false);
   const [savingPhoto, setSavingPhoto] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [redeemOpen, setRedeemOpen] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [busyActions, setBusyActions] = useState({});
 
@@ -370,6 +372,15 @@ export default function ProfileScreen({
               onPress={onUpgrade}
             />
           )}
+          {!subActive && (
+            <Row
+              id="redeemCode"
+              title="Redeem a code"
+              sub="Have a Pro code? Unlock it here"
+              icon={(c) => <SparkleIcon size={20} color={c} />}
+              onPress={() => setRedeemOpen(true)}
+            />
+          )}
         </View>
 
         {/* Feedback + legal */}
@@ -420,6 +431,12 @@ export default function ProfileScreen({
         onClose={() => setFeedbackOpen(false)}
         userId={userId}
         username={username}
+        dark={dark}
+      />
+      <RedeemCodeModal
+        visible={redeemOpen}
+        onClose={() => setRedeemOpen(false)}
+        onRedeemed={onProRedeemed}
         dark={dark}
       />
     </KeyboardAvoidingView>

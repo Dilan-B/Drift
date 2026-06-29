@@ -235,6 +235,27 @@ create policy "Participants can update" on challenges for update using (
 */
 
 // ─────────────────────────────────────────────────────────────
+// Helper: redeem a custom Pro code. Validated + granted server-side by the
+// `redeem-code` edge function (which writes pro_overrides with the service
+// role). Codes, limits and expiry live in the redeem_codes table — see
+// schema_v10_redeem_codes.sql. Returns { success, reason }.
+// ─────────────────────────────────────────────────────────────
+export async function redeemProCode(code) {
+  const clean = String(code || "").trim().toUpperCase();
+  if (!clean) return { success: false, reason: "empty" };
+  try {
+    const { data, error } = await rateLimited(`redeem_code`, { limit: 8, windowMs: 10 * 60_000 }, () =>
+      supabase.functions.invoke("redeem-code", { body: { code: clean } })
+    );
+    if (error) return { success: false, reason: error.message || "failed" };
+    if (data?.error) return { success: false, reason: data.error };
+    return { success: !!data?.success, reason: data?.reason || (data?.success ? "granted" : "failed") };
+  } catch (e) {
+    return { success: false, reason: e?.message || "failed" };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Helper: persist the pre-signup onboarding answers (analytics).
 // Stores both flattened columns (for easy querying) and the raw object.
 // Requires schema_v9_onboarding.sql. Safe no-op on any error.
