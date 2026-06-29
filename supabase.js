@@ -213,6 +213,34 @@ create policy "Participants can update" on challenges for update using (
 */
 
 // ─────────────────────────────────────────────────────────────
+// Helper: persist the pre-signup onboarding answers (analytics).
+// Stores both flattened columns (for easy querying) and the raw object.
+// Requires schema_v9_onboarding.sql. Safe no-op on any error.
+// ─────────────────────────────────────────────────────────────
+export async function saveOnboardingResponses(userId, answers) {
+  if (!userId || !answers || typeof answers !== "object") return;
+  const keys = ["usage", "wakeup", "distractions", "age", "goals", "tasks", "difficulty"];
+  if (!keys.some(k => answers[k] != null)) return; // nothing meaningful (e.g. sign-in path)
+  const first = (k) => Array.isArray(answers[k]) ? (answers[k][0] ?? null) : (answers[k] ?? null);
+  const arr   = (k) => Array.isArray(answers[k]) ? answers[k] : (answers[k] != null ? [answers[k]] : []);
+  try {
+    await rateLimited(`onboarding_${userId}`, { limit: 5, windowMs: 60_000 }, () =>
+      supabase.from("onboarding_responses").upsert({
+        user_id:      userId,
+        usage:        first("usage"),
+        wakeup:       first("wakeup"),
+        age:          first("age"),
+        difficulty:   first("difficulty"),
+        distractions: arr("distractions"),
+        goals:        arr("goals"),
+        tasks:        arr("tasks"),
+        answers,
+      }, { onConflict: "user_id" })
+    );
+  } catch {}
+}
+
+// ─────────────────────────────────────────────────────────────
 // Helper: sync today's screen time for current user
 // ─────────────────────────────────────────────────────────────
 export async function syncScreenTime(userId, minutesEarned) {

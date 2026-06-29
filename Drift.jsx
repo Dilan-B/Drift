@@ -60,7 +60,7 @@ import {
   getDiagnostics, updateSharedBalance, startDriftInLiveActivity, updateDriftInLiveActivity,
   endDriftInLiveActivity, consumePendingHealthEarn, setProStatus,
 } from "./screenTime";
-import { supabase, syncScreenTime, safeGetSession } from "./supabase";
+import { supabase, syncScreenTime, safeGetSession, saveOnboardingResponses } from "./supabase";
 import { handleSupabaseAuthCallback } from "./authLinks";
 import SocialScreen from "./SocialScreen";
 import OnboardingScreen from "./OnboardingScreen";
@@ -3537,6 +3537,8 @@ export default function App() {
     await AsyncStorage.setItem("drift_difficulty", diff);
     setUserId(authUser.id);
     setUserEmail(authUser.email ?? "");
+    // Persist the pre-signup onboarding answers for analytics (fire-and-forget).
+    saveOnboardingResponses(authUser.id, answers).catch(() => {});
     try {
       const { data: prof } = await cached(`drift_profile_${authUser.id}`, 30_000, () =>
         supabase
