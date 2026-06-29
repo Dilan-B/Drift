@@ -1025,21 +1025,38 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
   const removeFriend = async (friend) => {
     if (!friend?.id) return;
     const fid = friend.id;
+    const orFilter = `and(user_id.eq.${userId},friend_id.eq.${fid}),and(user_id.eq.${fid},friend_id.eq.${userId})`;
     smoothUpdate(() => setFriends(prev => prev.filter(f => f.id !== fid)));
     invalidateCache(`friends_screen_time_${userId}`);
-    try {
-      const { error } = await rateLimited(`friend_remove_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
-        supabase.from("friendships")
-          .update({ status: "removed" })
-          .or(`and(user_id.eq.${userId},friend_id.eq.${fid}),and(user_id.eq.${fid},friend_id.eq.${userId})`)
-      );
-      if (error) throw error;
+    const done = () => {
       setToast(`Removed @${friend.username}`);
       setTimeout(() => setToast(""), 2000);
       loadAll();
+    };
+    try {
+      // Soft-remove (history-preserving). Returning the affected rows lets us
+      // tell "nothing matched" from a real failure.
+      const { data, error } = await rateLimited(`friend_remove_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
+        supabase.from("friendships")
+          .update({ status: "removed", removed_at: new Date().toISOString() })
+          .or(orFilter)
+          .select("id")
+      );
+      if (error) throw error;
+      // If no row matched (e.g. the other account was deleted and its friendship
+      // rows are already gone), the friend is effectively removed — don't revert.
+      done();
     } catch (e) {
-      Alert.alert("Couldn't remove", e?.message || "Try again.");
-      loadFriends();
+      // Fallback: a hard delete. Covers rows the soft-update can't touch (odd
+      // status, deleted/anonymized counterpart). RLS still scopes it to our pair.
+      try {
+        const { error: delErr } = await supabase.from("friendships").delete().or(orFilter);
+        if (delErr) throw delErr;
+        done();
+      } catch (e2) {
+        Alert.alert("Couldn't remove", e2?.message || e?.message || "Try again.");
+        loadFriends();
+      }
     }
   };
 

@@ -615,7 +615,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
   const [title,    setTitle]    = useState("");
   const [cat,      setCat]      = useState("work");
   const [mins,     setMins]     = useState(30);
-  const [aiCheck,  setAiCheck]  = useState(false);
+  const [aiCheck,  setAiCheck]  = useState(true); // AI Check is mandatory for Pro users
   const [evaluating, setEvaluating] = useState(false);
   const [evalError,  setEvalError]  = useState("");
   const [saved,      setSaved]      = useState(false);
@@ -713,7 +713,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
       done:    false,
       credits,
       xp,
-      aiCheck:  aiCheck && isSubActive, // can't claim AI check if not subscribed
+      aiCheck:  isSubActive, // AI Check is mandatory for Pro users (off for free)
       aiValued: !!aiValued,
       aiReasoning: reasoning || "",
       task_date: todayKey(),
@@ -1010,13 +1010,14 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
           </View>
 
           <TouchableOpacity
-            onPress={() => isSubActive ? setAiCheck(v => !v) : onOpenPaywall?.()}
+            onPress={() => { if (!isSubActive) onOpenPaywall?.(); }}
+            activeOpacity={isSubActive ? 1 : 0.7}
             style={{
               flexDirection: "row", alignItems: "center", gap: 12,
               paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, marginBottom: 10,
               borderWidth: 1.5,
-              borderColor: aiCheck && isSubActive ? earn.blue : ink.border,
-              backgroundColor: aiCheck && isSubActive ? earn.blueLo : "transparent",
+              borderColor: isSubActive ? earn.blue : ink.border,
+              backgroundColor: isSubActive ? earn.blueLo : "transparent",
               opacity: isSubActive ? 1 : 0.7,
             }}
           >
@@ -1036,22 +1037,14 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
               </View>
               <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2 }}>
                 {isSubActive
-                  ? "Must submit photo or text proof to earn credits"
+                  ? "Required on Pro — submit photo or text proof to earn credits"
                   : "Subscribe to verify completions with AI"}
               </Text>
             </View>
-            {/* Toggle pill (only when subscribed) */}
+            {/* AI Check is mandatory for Pro — show it locked on, not a toggle. */}
             {isSubActive && (
-              <View style={{
-                width: 40, height: 24, borderRadius: 12,
-                backgroundColor: aiCheck ? earn.blue : ink.ghost,
-                justifyContent: "center",
-                paddingHorizontal: 3,
-              }}>
-                <View style={{
-                  width: 18, height: 18, borderRadius: 9, backgroundColor: "#fff",
-                  alignSelf: aiCheck ? "flex-end" : "flex-start",
-                }} />
+              <View style={{ backgroundColor: earn.blue, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8 }}>
+                <Text style={{ fontFamily: FOM, fontSize: 8, color: "#fff", letterSpacing: 1 }}>REQUIRED</Text>
               </View>
             )}
           </TouchableOpacity>

@@ -270,14 +270,19 @@ export async function getFriendsWithScreenTime(userId) {
   const cleanAvatarUrl = (url) =>
     typeof url === "string" && url.startsWith("data:image/") ? null : url;
 
-  return (profiles || []).map(p => ({
-    id:       p.id,
-    username: p.username,
-    seed:     p.avatar_seed,
-    avatar_url: cleanAvatarUrl(p.avatar_url),
-    totalXp:  Number(p.total_xp || 0),
-    minutes:  p.screen_time?.find(s => s.date === today)?.minutes ?? 0,
-    unlocks:  p.screen_time?.find(s => s.date === today)?.unlocks ?? 0,
-  }));
+  return (profiles || [])
+    // Hide anonymized/deleted accounts (delete-account renames them to
+    // "deleted_<id>"). They shouldn't show as friends, and their friendship
+    // rows are removed on deletion so they can't be re-managed anyway.
+    .filter(p => !/^deleted_/i.test(p.username || ""))
+    .map(p => ({
+      id:       p.id,
+      username: p.username,
+      seed:     p.avatar_seed,
+      avatar_url: cleanAvatarUrl(p.avatar_url),
+      totalXp:  Number(p.total_xp || 0),
+      minutes:  p.screen_time?.find(s => s.date === today)?.minutes ?? 0,
+      unlocks:  p.screen_time?.find(s => s.date === today)?.unlocks ?? 0,
+    }));
   });
 }

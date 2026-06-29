@@ -14,7 +14,7 @@
  * if the module is missing or review isn't available on the device.
  */
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Animated, StyleSheet, Platform } from "react-native";
+import { View, Text, TouchableOpacity, Animated, StyleSheet, Platform, Linking } from "react-native";
 import { getTheme, FF } from "./theme";
 import Sprout from "./SproutArt";
 
@@ -27,6 +27,7 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   const [showContinue, setShowContinue] = useState(false);
+  const [storeUrl, setStoreUrl] = useState(null); // App Store page, when available
 
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(18)).current;
@@ -43,13 +44,27 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
       Animated.spring(s, { toValue: 1, useNativeDriver: true, damping: 9, stiffness: 220, mass: 0.6 })
     )).start();
 
+    // Resolve the App Store page up front so we can offer a manual fallback.
+    // (Requires expo.ios.appStoreUrl in app.json once the app has a listing.)
+    (async () => {
+      try {
+        if (StoreReview?.storeUrl) {
+          const url = await StoreReview.storeUrl();
+          if (url) setStoreUrl(url);
+        }
+      } catch {}
+    })();
+
     // 2. After the user has had a moment to read, auto-request the review.
     let cancelled = false;
     const t = setTimeout(async () => {
       try {
-        if (StoreReview && (await StoreReview.isAvailableAsync())) {
-          await StoreReview.requestReview();
-        }
+        // NOTE: Apple's in-app review prompt only appears in PRODUCTION App
+        // Store builds and is throttled (~3/yr per device). In dev/TestFlight
+        // requestReview() is a silent no-op — that's expected, not a bug. We
+        // don't gate on isAvailableAsync() (it can falsely report false); the
+        // call is a safe no-op if unsupported.
+        if (StoreReview?.requestReview) await StoreReview.requestReview();
       } catch {}
       // 3. Reveal the Continue button (we can't detect the prompt's outcome).
       if (cancelled) return;
@@ -59,6 +74,16 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
 
     return () => { cancelled = true; clearTimeout(t); };
   }, []);
+
+  // Manual fallback — opens the App Store review page directly. Works wherever
+  // the in-app prompt is suppressed (TestFlight, throttled), as long as a store
+  // URL is configured.
+  const openStorePage = async () => {
+    try {
+      const url = storeUrl || (StoreReview?.storeUrl ? await StoreReview.storeUrl() : null);
+      if (url) await Linking.openURL(url);
+    } catch {}
+  };
 
   return (
     <View style={[s.screen, { backgroundColor: paper.warm }]}>
@@ -95,6 +120,11 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
       <View style={s.footer}>
         {showContinue && (
           <Animated.View style={{ opacity: continueFade }}>
+            {!!storeUrl && (
+              <TouchableOpacity onPress={openStorePage} activeOpacity={0.7} style={s.storeLink}>
+                <Text style={[s.storeLinkText, { color: earn.sage }]}>Rate Drift on the App Store</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               onPress={onDone}
               activeOpacity={0.85}
@@ -121,4 +151,6 @@ const s = StyleSheet.create({
   footer: { paddingHorizontal: 32, paddingBottom: Platform.OS === "ios" ? 48 : 28, minHeight: 110, justifyContent: "flex-end" },
   continueBtn: { paddingVertical: 16, borderRadius: 16, alignItems: "center" },
   continueText: { fontFamily: FF.bodyMed, fontSize: 15, letterSpacing: 0.2 },
+  storeLink: { alignItems: "center", paddingVertical: 10, marginBottom: 4 },
+  storeLinkText: { fontFamily: FF.bodyMed, fontSize: 13, letterSpacing: 0.2, textDecorationLine: "underline" },
 });
