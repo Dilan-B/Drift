@@ -7,6 +7,7 @@ import { FF } from "./theme";
 import {
   SparkleIcon, CheckIcon, ClipboardIcon, ShieldKeyIcon, ChartIcon, PhoneIcon,
 } from "./Icons";
+import { resolveOffering, pickPackage } from "./useSubscription";
 
 const FEATURES = [
   { title: "AI-valued rewards", desc: "Get smarter credit for harder tasks" },
@@ -18,11 +19,30 @@ const FEATURES = [
   { title: "Choose your apps", desc: "Free blocks all social & entertainment" },
 ];
 
-export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = false }) {
+export default function PaywallScreen({ onClose, onPurchase, onRestore, offerings, dark = false }) {
   const [plan, setPlan] = useState("annual");
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const entrance = useRef(new Animated.Value(0)).current;
+
+  // Real App Store prices from RevenueCat (falls back to placeholders until the
+  // offering loads). Showing the actual charged price avoids mismatch/rejection.
+  const offering   = resolveOffering(offerings);
+  const annualPkg  = pickPackage(offering, "annual");
+  const monthlyPkg = pickPackage(offering, "monthly");
+  const annualPrice  = annualPkg?.product?.priceString || "$48.49";
+  const monthlyPrice = monthlyPkg?.product?.priceString || "$5.99";
+  const annualPerMo  = annualPkg?.product?.price
+    ? `$${(annualPkg.product.price / 12).toFixed(2)}/mo — best value`
+    : "$4.04/mo — best value";
+
+  const REASON_MSG = {
+    no_offering: "Plans aren't available right now. Please try again shortly.",
+    no_package: "This plan isn't available right now.",
+    monthly_unavailable: "The monthly plan isn't available yet — try Annual.",
+    not_entitled: "That didn't unlock Pro. If you were charged, tap Restore.",
+    ios_only: "Purchases are only available on iOS.",
+  };
 
   useEffect(() => {
     Animated.spring(entrance, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true }).start();
@@ -47,7 +67,7 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
       } else if (result?.reason === "cancelled") {
         // user cancelled
       } else if (result?.reason) {
-        Alert.alert("Purchase failed", result.reason);
+        Alert.alert("Purchase failed", REASON_MSG[result.reason] || result.reason);
       }
     } catch (e) {
       Alert.alert("Error", e?.message || "Something went wrong.");
@@ -122,11 +142,11 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
               </View>
             </View>
             <Text style={{ fontFamily: FF.bodyBold, fontSize: 22, color: ink.deep }}>
-              $48.49
+              {annualPrice}
               <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid }}>/year</Text>
             </Text>
             <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 4 }}>
-              $4.04/mo — best value
+              {annualPerMo}
             </Text>
           </TouchableOpacity>
 
@@ -145,7 +165,7 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, dark = f
               MONTHLY
             </Text>
             <Text style={{ fontFamily: FF.bodyBold, fontSize: 22, color: ink.deep }}>
-              $5.99
+              {monthlyPrice}
               <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid }}>/month</Text>
             </Text>
             <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 4 }}>
