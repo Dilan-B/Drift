@@ -23,28 +23,40 @@ const FOM = "Orbitron_400Regular";
 const FK  = "Oswald_700Bold";
 const FB  = undefined;
 
-export default function BlockedAppsModal({ visible, onClose, dark = false, firstTime = false }) {
+export default function BlockedAppsModal({ visible, onClose, dark = false, firstTime = false, isPro = false, onUpgrade }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
 
-  const openPicker = async () => {
+  const ensureAccess = async () => {
     if (!isNativeBlockingAvailable()) {
       Alert.alert("Not available",
         Platform.OS === "ios"
           ? "Apple Screen Time blocking requires a custom build of Drift. Update Drift and try again."
           : "App blocking via Apple Screen Time is iOS-only.");
-      return;
+      return false;
     }
     const status = await getScreenTimeAuthStatus();
     if (status !== "approved") {
       const next = await requestScreenTimeAuth();
       if (next !== "approved") {
         Alert.alert("Screen Time access denied",
-          "Enable Drift in Settings > Screen Time to pick apps to block.");
-        return;
+          "Enable Drift in Settings > Screen Time so Drift can block apps.");
+        return false;
       }
     }
+    return true;
+  };
+
+  const openPicker = async () => {
+    if (!(await ensureAccess())) return;
     await pickBlockedAppsNative();
+  };
+
+  // Free tier blocks social & entertainment by CATEGORY automatically — there's
+  // no per-app selection, so we just make sure Screen Time access is granted.
+  const enableFreeBlocking = async () => {
+    if (!(await ensureAccess())) return;
+    Alert.alert("You're set", "Drift will block social & entertainment apps when your earned time hits zero.");
   };
 
   return (
@@ -85,28 +97,75 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
             </Text>
           </View>
 
-          {/* Native picker (iOS Screen Time) — the ONLY way to choose */}
-          <TouchableOpacity
-            onPress={openPicker}
-            style={{
-              paddingVertical: 18, paddingHorizontal: 16, borderRadius: 14, marginBottom: 12,
-              borderWidth: 1.5, borderColor: earn.green, backgroundColor: earn.greenLo,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ fontFamily: FK, fontSize: 16, color: earn.green }}>
-              Pick apps with Apple Screen Time
-            </Text>
-            <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4, textAlign: "center" }}>
-              Opens Apple's secure picker. You can pick individual apps,
-              whole categories (Social, Games), or web domains.
-            </Text>
-          </TouchableOpacity>
+          {isPro ? (
+            <>
+              {/* Native picker (iOS Screen Time) — Pro only */}
+              <TouchableOpacity
+                onPress={openPicker}
+                style={{
+                  paddingVertical: 18, paddingHorizontal: 16, borderRadius: 14, marginBottom: 12,
+                  borderWidth: 1.5, borderColor: earn.green, backgroundColor: earn.greenLo,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ fontFamily: FK, fontSize: 16, color: earn.green }}>
+                  Pick apps with Apple Screen Time
+                </Text>
+                <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4, textAlign: "center" }}>
+                  Opens Apple's secure picker. You can pick individual apps,
+                  whole categories (Social, Games), or web domains.
+                </Text>
+              </TouchableOpacity>
 
-          <Text style={{ fontFamily: FB, fontSize: 11, color: ink.faint, textAlign: "center", marginBottom: 24, lineHeight: 16 }}>
-            Tap the button above any time to change what's blocked.{"\n"}
-            Your selection is stored on your device only.
-          </Text>
+              <Text style={{ fontFamily: FB, fontSize: 11, color: ink.faint, textAlign: "center", marginBottom: 24, lineHeight: 16 }}>
+                Tap the button above any time to change what's blocked.{"\n"}
+                Your selection is stored on your device only.
+              </Text>
+            </>
+          ) : (
+            <>
+              {/* Free plan — no app picker (it would do nothing): blocking is by
+                  category automatically. Just grant access + offer upgrade. */}
+              <View style={{
+                backgroundColor: paper.card, padding: 16, borderRadius: 14, marginBottom: 14,
+                borderWidth: 1, borderColor: ink.border,
+              }}>
+                <Text style={{ fontFamily: FOM, fontSize: 9, color: ink.faint, letterSpacing: 1.5, marginBottom: 6 }}>
+                  FREE PLAN
+                </Text>
+                <Text style={{ fontFamily: FB, fontSize: 13, color: ink.deep, lineHeight: 19 }}>
+                  Drift automatically blocks all social & entertainment apps when your earned time runs out. Choosing specific apps is a Pro feature.
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={enableFreeBlocking}
+                style={{
+                  paddingVertical: 18, paddingHorizontal: 16, borderRadius: 14, marginBottom: 12,
+                  borderWidth: 1.5, borderColor: earn.green, backgroundColor: earn.greenLo,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ fontFamily: FK, fontSize: 16, color: earn.green }}>
+                  Enable Screen Time access
+                </Text>
+                <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4, textAlign: "center" }}>
+                  Required for Drift to block apps. No app list to pick.
+                </Text>
+              </TouchableOpacity>
+
+              {!!onUpgrade && (
+                <TouchableOpacity
+                  onPress={() => { onClose?.(); onUpgrade?.(); }}
+                  style={{ paddingVertical: 14, alignItems: "center", marginBottom: 12 }}
+                >
+                  <Text style={{ fontFamily: FB, fontSize: 13, color: earn.green }}>
+                    Upgrade to Pro to choose specific apps
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
 
           {/* Done / Skip — first-time onboarding only */}
           {firstTime && (

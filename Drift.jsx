@@ -60,7 +60,8 @@ import {
   getDiagnostics, updateSharedBalance, startDriftInLiveActivity, updateDriftInLiveActivity,
   endDriftInLiveActivity, consumePendingHealthEarn, setProStatus,
 } from "./screenTime";
-import { supabase, syncScreenTime, safeGetSession, saveOnboardingResponses } from "./supabase";
+import { supabase, syncScreenTime, safeGetSession, saveOnboardingResponses, getAppConfig, isVersionOutdated } from "./supabase";
+import ForceUpdateModal from "./ForceUpdateModal";
 import { handleSupabaseAuthCallback } from "./authLinks";
 import SocialScreen from "./SocialScreen";
 import OnboardingScreen from "./OnboardingScreen";
@@ -2968,6 +2969,8 @@ export default function App() {
   const [onboarding,     setOnboarding]     = useState(false);
   const [signInOnly,     setSignInOnly]     = useState(false); // returning user (skip questionnaire)
   const [showAccount,        setShowAccount]        = useState(false);
+  const [forceUpdate,        setForceUpdate]        = useState(false);
+  const [updateStoreUrl,     setUpdateStoreUrl]     = useState(null);
   const [showBlockedApps,    setShowBlockedApps]    = useState(false);
   const [showBlockedHours,   setShowBlockedHours]   = useState(false);
   const [showRecurringTasks, setShowRecurringTasks] = useState(false);
@@ -3279,9 +3282,15 @@ export default function App() {
     try { diag = await getDiagnostics(); } catch { return; }
     if (!diag) return;
 
-    // (a) Auth revoked — prompt once (non-blocking) to re-grant.
-    if (diag.authStatus && diag.authStatus !== "approved") {
-      if (!authPromptShownRef.current) {
+    // (a) Auth revoked — prompt once (non-blocking) to re-grant. Use the
+    // canonical auth status (same source the rest of the app trusts) rather than
+    // diag.authStatus, whose format differs and was firing this prompt on every
+    // open even when access WAS already granted.
+    let authStatus = "unknown";
+    try { authStatus = await getScreenTimeAuthStatus(); } catch {}
+    if (authStatus !== "approved") {
+      // Only prompt on a KNOWN non-approved state — never on an unknown/failed read.
+      if (!authPromptShownRef.current && authStatus !== "unknown") {
         authPromptShownRef.current = true;
         Alert.alert(
           "Screen Time access needed",
@@ -3539,6 +3548,23 @@ export default function App() {
     setUserEmail(authUser.email ?? "");
     // Persist the pre-signup onboarding answers for analytics (fire-and-forget).
     saveOnboardingResponses(authUser.id, answers).catch(() => {});
+    // Load level/stats immediately so they show on FIRST login. Previously only
+    // the boot path loaded these, so a fresh sign-in showed zeros until the app
+    // was closed and reopened.
+    try {
+      const stats = await fetchProfileStats(authUser.id);
+      if (stats?.totalXp > 0) setTotalXp(prev => Math.max(prev, stats.totalXp));
+      if (stats?.balanceSeconds > 0) {
+        setCredits({
+          balance: Math.ceil(stats.balanceSeconds / 60),
+          balanceSec: stats.balanceSeconds,
+          earned: Math.ceil(stats.balanceSeconds / 60),
+          spent: 0,
+        });
+        secRef.current = stats.balanceSeconds;
+        setSecLeft(stats.balanceSeconds);
+      }
+    } catch {}
     try {
       const { data: prof } = await cached(`drift_profile_${authUser.id}`, 30_000, () =>
         supabase
@@ -3861,6 +3887,26 @@ export default function App() {
       return next;
     });
   };
+
+  // Mandatory-update gate: compare the installed version to the remote minimum
+  // (app_config.min_ios_version). If older, block the app behind ForceUpdateModal.
+  // Re-checks on foreground so a user who updates the requirement mid-session is
+  // caught. Fails open (never blocks) if the config can't be read.
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const cfg = await getAppConfig();
+        const current = Constants.expoConfig?.version || Constants.manifest?.version;
+        if (cfg.min_ios_version && isVersionOutdated(current, cfg.min_ios_version)) {
+          setUpdateStoreUrl(cfg.ios_store_url || null);
+          setForceUpdate(true);
+        }
+      } catch {}
+    };
+    check();
+    const sub = AppState.addEventListener("change", s => { if (s === "active") check(); });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -4699,11 +4745,16 @@ export default function App() {
         />
       )}
 
+      {/* Mandatory update gate — overlays everything, no dismiss */}
+      <ForceUpdateModal visible={forceUpdate} storeUrl={updateStoreUrl} dark={darkMode} />
+
       {/* Blocked apps modal (onboarding + ongoing management) */}
       <BlockedAppsModal
         visible={showBlockedApps}
         firstTime={firstTimeBlockedApps}
         dark={darkMode}
+        isPro={proAccess}
+        onUpgrade={() => setShowPaywall(true)}
         onClose={() => {
           const wasFirstTime = firstTimeBlockedApps;
           setShowBlockedApps(false);

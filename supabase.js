@@ -235,6 +235,35 @@ create policy "Participants can update" on challenges for update using (
 */
 
 // ─────────────────────────────────────────────────────────────
+// Helper: remote app config (force-update gate, store URL). Public, non-
+// sensitive key/value rows in app_config. See schema_v11_app_config.sql.
+// ─────────────────────────────────────────────────────────────
+export async function getAppConfig() {
+  try {
+    const { data, error } = await supabase.from("app_config").select("key, value");
+    if (error) return {};
+    const map = {};
+    (data || []).forEach(r => { if (r?.key != null) map[r.key] = r.value; });
+    return map;
+  } catch {
+    return {};
+  }
+}
+
+// True if `current` semantic version is strictly older than `minimum`.
+export function isVersionOutdated(current, minimum) {
+  if (!current || !minimum) return false;
+  const c = String(current).split(".").map(n => parseInt(n, 10) || 0);
+  const m = String(minimum).split(".").map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(c.length, m.length); i++) {
+    const cc = c[i] || 0, mm = m[i] || 0;
+    if (cc < mm) return true;
+    if (cc > mm) return false;
+  }
+  return false;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Helper: redeem a custom Pro code. Validated + granted server-side by the
 // `redeem-code` edge function (which writes pro_overrides with the service
 // role). Codes, limits and expiry live in the redeem_codes table — see
