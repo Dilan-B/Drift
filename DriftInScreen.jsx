@@ -370,8 +370,9 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
   };
 
   const elapsed       = secTotal - secLeft;
-  const creditsEarned = Math.max(0, Math.floor(elapsed / 60));
-  const xpEarned      = creditsEarned > 0 ? Math.round(creditsEarned * 1.5 * 0.45 + 8) : 0;
+  const focusMins     = Math.max(0, Math.floor(elapsed / 60)); // full minutes focused
+  const creditsEarned = Math.floor(focusMins / 2);             // screen time = HALF the time drifted in
+  const xpEarned      = focusMins > 0 ? Math.round(focusMins * 1.5 * 0.45 + 8) : 0;
   const progress      = secTotal > 0 ? elapsed / secTotal : 0;
 
   // ──────────────────────────────────────────────────────────
@@ -461,7 +462,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
         <RewardCard
           theme={theme}
           accent={theme.earn.sage}
-          value={`${dur}m`}
+          value={`${Math.floor(dur / 2)}m`}
           label="screen time"
           dark={dark}
         />
