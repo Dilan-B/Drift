@@ -211,7 +211,7 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, offering
         borderTopWidth: 1, borderTopColor: paper.border,
       }}>
         <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, textAlign: "center", marginBottom: 12 }}>
-          1 week free trial, then {isAnnual ? "$48.49/year" : "$5.99/month"}
+          1 week free trial, then {isAnnual ? "$29.99/year" : "$2.99/month"}
         </Text>
 
         <TouchableOpacity
