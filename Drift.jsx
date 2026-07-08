@@ -69,8 +69,9 @@ import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
 import ReviewPromptScreen from "./ReviewPromptScreen";
 import TutorialOverlay from "./TutorialOverlay";
-import PaywallScreen from "./PaywallScreen";
-import { useSubscription } from "./useSubscription";
+// PaywallScreen + useSubscription removed — app is fully free for now
+// import PaywallScreen from "./PaywallScreen";
+// import { useSubscription } from "./useSubscription";
 import { cached, rateLimited } from "./apiGuards";
 import {
   TouchTracker, OriginPanel, OriginSheet, Backdrop, Pop, FadeInUp, Pulse, useCountUp, getLastTouch,
@@ -499,7 +500,7 @@ function CreditTicker({ value, seconds, textColor }) {
 const FREE_TIER_MULTIPLIER = 0.6;
 const MAX_REWARD_RATIO = 0.5;
 const MIN_REWARD_RATIO = 0.25;
-const FREE_TASK_LIMIT = 5;
+// const FREE_TASK_LIMIT = 5; // removed — no free tier limits for now
 const DIFFICULTY_GRANT = { easy: 15, medium: 7, hard: 3, committed: 1 };
 
 const BLOCKED_TASK_RE = /\b(goon|gooning|fap|fapping|jerk\s*off|jack\s*off|wank|masturbat|porn|hentai|onlyfans|xvideo|xhamster|nhentai|rule\s*34|edg(e|ing)\b(?!.*code)|69|blow\s*job|hand\s*job|sex(?!t)|nud[ei]|xxx|orgasm|boner|erection|cum\b|suck\s*(my|a|it)|eat\s*ass|anal\b|dildo|vibrator|fleshlight)\b/i;
@@ -609,7 +610,7 @@ function PlantSlider({
   );
 }
 
-function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall }) {
+function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPaywall }) {
   const { dark, theme } = useTheme();
   const { ink, paper, earn } = theme;
 
@@ -2971,14 +2972,10 @@ export default function App() {
   const quickGrantDayRef = useRef(todayKey());
   const visibleTaskDayRef = useRef(todayKey());
 
-  // ── Pro access (RevenueCat) ────────────────────────────────────────────
-  const { proAccess, offerings: proOfferings, purchase: purchasePro, restore: restorePro, refresh: refreshPro } = useSubscription(userId);
-  const proAccessRef = useRef(proAccess);
-  useEffect(() => {
-    proAccessRef.current = proAccess;
-    setProStatus(proAccess);
-  }, [proAccess]);
-  const [showPaywall, setShowPaywall] = useState(false);
+  // ── Pro access — everything is free for now ────────────────────────────
+  const proAccess = true;
+  const proAccessRef = useRef(true);
+  useEffect(() => { setProStatus(true); }, []);
   const [driftInActive,  setDriftInActive]  = useState(false);
   const [darkMode,       setDarkMode]       = useState(false);
 
@@ -4203,12 +4200,8 @@ export default function App() {
   };
 
   const tryOpenAddTask = useCallback(() => {
-    if (!proAccess && tasks.filter(t => !t.done).length >= FREE_TASK_LIMIT) {
-      setShowPaywall(true);
-      return;
-    }
     setOverlay("add");
-  }, [proAccess, tasks]);
+  }, []);
 
   // Background AI valuation for a just-created task. Patches the provisional
   // credits/xp with the real evaluated values once the server responds. Never
@@ -4669,10 +4662,10 @@ export default function App() {
               Alert.alert("Screen Time", `Status: ${next}. Open Settings -> Screen Time to grant access.`);
             }
           }}
-          onUpgrade={() => setShowPaywall(true)}
+          onUpgrade={() => {}}
           onSignOut={signOut}
           onDeleteAccount={deleteAccount}
-          onProRedeemed={refreshPro}
+          onProRedeemed={() => {}}
         />
       ) : (
       <>
@@ -4722,7 +4715,7 @@ export default function App() {
             <SocialScreen
               userId={userId}
               isPremium={proAccess}
-              onOpenPaywall={() => setShowPaywall(true)}
+              onOpenPaywall={() => {}}
               onSwipeLockChange={setChildSwipeLockedNow}
               onChallengeResolved={handleChallengeResolved}
               dark={darkMode}
@@ -4787,24 +4780,11 @@ export default function App() {
               onClose={() => setOverlay(null)}
               userId={userId}
               isSubActive={proAccess}
-              onOpenPaywall={() => setShowPaywall(true)}
+              onOpenPaywall={() => {}}
             />
           )}
         </View>
       )}
-
-      {/* Paywall — disabled while payments are off (everything is free). The
-          PaywallScreen component is kept in the tree, just never rendered, so
-          re-enabling paid Pro later is a matter of restoring this block.
-      {showPaywall && (
-        <PaywallScreen
-          onClose={() => setShowPaywall(false)}
-          onPurchase={purchasePro}
-          onRestore={restorePro}
-          offerings={proOfferings}
-          dark={darkMode}
-        />
-      )} */}
 
       {/* Mandatory update gate — overlays everything, no dismiss */}
       <ForceUpdateModal visible={forceUpdate} storeUrl={updateStoreUrl} dark={darkMode} />
@@ -4815,7 +4795,7 @@ export default function App() {
         firstTime={firstTimeBlockedApps}
         dark={darkMode}
         isPro={proAccess}
-        onUpgrade={() => setShowPaywall(true)}
+        onUpgrade={() => {}}
         onClose={() => {
           const wasFirstTime = firstTimeBlockedApps;
           setShowBlockedApps(false);
