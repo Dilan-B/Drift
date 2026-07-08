@@ -520,7 +520,7 @@ function freeTierCredits(mins) {
   return {
     credits,
     xp,
-    reasoning: "Credits based on duration. Upgrade for AI-valued rewards.",
+    reasoning: "Credits based on task duration.",
   };
 }
 
@@ -1037,9 +1037,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
                 </View>
               </View>
               <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                {isSubActive
-                  ? "Required on Pro — submit photo or text proof to earn credits"
-                  : "Subscribe to verify completions with AI"}
+                Submit a photo or text proof to earn credits
               </Text>
             </View>
             {/* AI Check is mandatory for Pro — show it locked on, not a toggle. */}
@@ -3532,12 +3530,54 @@ export default function App() {
     practice:         { title: "Practice a skill",     cat: "learning",    minutes: 20 },
   };
 
+  // Server-authoritative task restore. Mirrors the boot path so an IN-APP
+  // sign-in (which does not remount the component) rehydrates tasks + history
+  // exactly like a cold launch. Without this, signing out and back in leaves
+  // the task list empty until the app is fully restarted.
+  const hydrateTasksFromServer = useCallback(async (uid) => {
+    if (!uid) return false;
+    const deletedIds = await loadDeletedIds(uid).catch(() => new Set());
+    let cachedTasks = [];
+    try {
+      cachedTasks = (await cache.loadTasks(uid)).filter(t => !deletedIds.has(t.id));
+    } catch {}
+    try {
+      const remote = await fetchTasks(uid);
+      if (!remote) return false;
+      const today = remote.filter(t => isTodayTask(t) && !deletedIds.has(t.id));
+      const remoteIds = new Set(remote.map(t => t.id));
+      const localOnly = cachedTasks.filter(t => !remoteIds.has(t.id) && isTodayTask(t));
+      const merged = [...today, ...localOnly];
+      setTasks(merged);
+      cache.saveTasks(uid, mergeTaskRecords(remote, localOnly));
+      const allDone = remote.filter(t => t.done);
+      setTaskHistory(prev => mergeCompletedTasks(prev, allDone));
+      // Retry-sync any local-only tasks now that we're online.
+      for (const lt of localOnly) {
+        try {
+          const saved = await insertTask(uid, lt);
+          if (saved?.id && saved.id !== lt.id) {
+            setTasks(prev => prev.map(t => t.id === lt.id ? { ...t, id: saved.id } : t));
+          }
+        } catch (e) { console.warn("retry insertTask:", e?.message); }
+      }
+      // Report whether the account actually HAS tasks (not just that the fetch
+      // succeeded) — the caller uses this to decide whether to seed onboarding
+      // picks. A brand-new account returns false here so seeding still runs.
+      return remote.length > 0 || merged.length > 0;
+    } catch (e) { console.warn("hydrateTasksFromServer:", e?.message); return false; }
+  }, []);
+
   const completeAuthenticatedUser = useCallback(async (user, answers = {}) => {
     const authUser = user?.id ? user : (await safeGetSession())?.data?.session?.user;
     if (!authUser?.id) return;
-    if (!(authUser.email_confirmed_at || authUser.confirmed_at)) {
+    // Phone users confirm via SMS OTP (phone_confirmed_at), email users via
+    // email link/code (email_confirmed_at). confirmed_at covers either, but we
+    // check all three so neither method is wrongly treated as unverified.
+    const isVerified = !!(authUser.email_confirmed_at || authUser.phone_confirmed_at || authUser.confirmed_at);
+    if (!isVerified) {
       await supabase.auth.signOut().catch(() => {});
-      Alert.alert("Verify your email", "Check your email and tap the latest Drift verification link before continuing.");
+      Alert.alert("Verify your account", "Confirm your email or phone number before continuing.");
       return;
     }
 
@@ -3589,8 +3629,17 @@ export default function App() {
     const hadOnboarded = await AsyncStorage.getItem("drift_onboarded");
     await AsyncStorage.setItem("drift_onboarded", "1");
 
+    // Restore the user's existing tasks from the server on every sign-in. For a
+    // returning user (or a new device) this brings their task list back; for a
+    // brand-new account it's a cheap no-op (no remote rows yet) and the seeding
+    // block below runs instead.
+    const hadRemoteTasks = await hydrateTasksFromServer(authUser.id);
+
+    // Only seed the picked onboarding tasks for a genuinely new account —
+    // never on top of tasks we just restored (e.g. a returning user who reran
+    // the questionnaire while signing in on a new device).
     const pickedTasks = answers?.tasks || [];
-    if (pickedTasks.length > 0 && !hadOnboarded) {
+    if (pickedTasks.length > 0 && !hadOnboarded && !hadRemoteTasks) {
       const seeded = pickedTasks
         .filter(id => ONBOARDING_TASKS[id])
         .map(id => {
@@ -3913,7 +3962,7 @@ export default function App() {
       try {
         const { data: { session } } = await safeGetSession();
         const uid = session?.user?.id ?? null;
-        const cachedVerified = !!(session?.user?.email_confirmed_at || session?.user?.confirmed_at);
+        const cachedVerified = !!(session?.user?.email_confirmed_at || session?.user?.phone_confirmed_at || session?.user?.confirmed_at);
         if (uid && !cachedVerified) {
           // Don't sign out a restored session just because the cached user object
           // is missing the verified-email field (it can be absent/stale on a cold
@@ -3923,7 +3972,7 @@ export default function App() {
           try {
             const { data: u, error } = await supabase.auth.getUser();
             if (!error && u?.user) {
-              serverUnverified = !(u.user.email_confirmed_at || u.user.confirmed_at);
+              serverUnverified = !(u.user.email_confirmed_at || u.user.phone_confirmed_at || u.user.confirmed_at);
             }
           } catch {}
           if (serverUnverified) {
@@ -4734,7 +4783,9 @@ export default function App() {
         </View>
       )}
 
-      {/* Paywall */}
+      {/* Paywall — disabled while payments are off (everything is free). The
+          PaywallScreen component is kept in the tree, just never rendered, so
+          re-enabling paid Pro later is a matter of restoring this block.
       {showPaywall && (
         <PaywallScreen
           onClose={() => setShowPaywall(false)}
@@ -4743,7 +4794,7 @@ export default function App() {
           offerings={proOfferings}
           dark={darkMode}
         />
-      )}
+      )} */}
 
       {/* Mandatory update gate — overlays everything, no dismiss */}
       <ForceUpdateModal visible={forceUpdate} storeUrl={updateStoreUrl} dark={darkMode} />

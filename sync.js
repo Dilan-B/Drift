@@ -20,18 +20,41 @@ const TTL = {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // ── TASKS ────────────────────────────────────────────────────
-export async function fetchTasks(userId, { sinceDate } = {}) {
+// Boot/hydrate reads default to a BOUNDED window (last year, capped row count)
+// so a multi-year power user's launch fetch stays O(recent) instead of pulling
+// their entire task history every time. This is what keeps per-user payloads
+// flat as both the user base (100 → 10k → 100k) and each user's history grow.
+// Pass { sinceDate: null } to explicitly opt out and fetch all-time.
+const DEFAULT_TASK_WINDOW_DAYS = 365;
+const DEFAULT_TASK_LIMIT = 1000;
+
+function windowStartDate(days) {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+export async function fetchTasks(userId, { sinceDate, limit = DEFAULT_TASK_LIMIT } = {}) {
   if (!userId) return [];
-  return cached(`tasks_${userId}_${sinceDate || "all"}`, TTL.tasks, async () => {
+  // sinceDate === null  → caller explicitly wants all-time (no lower bound).
+  // sinceDate undefined → apply the default bounded window.
+  const since = sinceDate === null ? null : (sinceDate || windowStartDate(DEFAULT_TASK_WINDOW_DAYS));
+  return cached(`tasks_${userId}_${since || "all"}_${limit}`, TTL.tasks, async () => {
     let q = supabase
       .from("tasks")
       .select("*")
       .eq("user_id", userId)
       .is("deleted_at", null)
-      .order("created_at", { ascending: false });
-    if (sinceDate) q = q.gte("task_date", sinceDate);
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (since) q = q.gte("task_date", since);
     const { data, error } = await q;
     if (error) { console.warn("fetchTasks:", error.message); return []; }
+    if (data && data.length === limit) {
+      // Not silent: surface that we stopped at the cap so history gaps are
+      // explainable rather than mysterious.
+      console.warn(`fetchTasks: reached the ${limit}-row cap for ${userId}; older tasks beyond the window were not loaded.`);
+    }
     return (data || []).map(rowToTask);
   });
 }

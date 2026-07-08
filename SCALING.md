@@ -71,3 +71,36 @@ Stripe retries failed deliveries automatically (up to 3 days).
 - ✅ Idempotent webhooks
 - ✅ No raw IPs stored (hashed, gives us abuse detection without PII)
 - ✅ All AI calls server-side (rate limits can't be bypassed by reverse-engineering the app)
+
+## 2026-07-07 audit (100 → 1k → 10k+ users)
+
+Growing the number of *users* is mostly handled: auth is stateless JWT, every
+per-user query is RLS-scoped and hits an index, edge functions auto-scale, and
+AI/subscription work is rate-limited + cached server-side. The load from "more
+users" is fan-out of independent, indexed, per-user queries — exactly what
+Postgres + PostgREST handle well. Promote to Supabase **Pro** and confirm
+**Supavisor** pooling is on before ~10k MAU (see above).
+
+The one thing that was *not* bounded was **per-user payload growth**:
+
+- **Boot task fetch was all-time.** `fetchTasks(uid)` selected every
+  non-deleted task a user had ever created, on every launch. Fine at signup,
+  but a multi-year power user would fetch thousands of rows each cold start.
+  **Fixed** in `sync.js`: `fetchTasks` now defaults to a bounded window
+  (last 365 days) with a 1000-row cap and logs if the cap is hit. Pass
+  `{ sinceDate: null }` to opt back into an all-time read. The hot query is
+  covered by the partial index `tasks_user_active (user_id, task_date desc)
+  where deleted_at is null` (schema_v3).
+
+- **`fetchBalanceFromLedger` is a full per-user ledger scan.** It sums every
+  `credit_ledger` row for a user client-side. It is currently **dead code**
+  (imported nowhere) — `balance_seconds` on `profiles` is the live source of
+  truth. If it's ever revived, replace the client-side sum with a server-side
+  aggregate (a SQL view or RPC `sum(delta)`), or maintain a running
+  `balance_after` snapshot, before shipping it on a hot path.
+
+### Welcome-bonus note (schema_v12)
+New accounts get 30 min seeded at profile creation via `handle_new_user`:
+`profiles.balance_seconds = 1800` plus a one-time `credit_ledger` row
+(`reason = 'welcome_bonus'`). The `NOT EXISTS` guard makes it exactly-once, so
+it adds zero ongoing per-request cost and can't be farmed by reinstalling.
