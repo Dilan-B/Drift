@@ -304,11 +304,8 @@ export default function ProfileScreen({
           </TouchableOpacity>
           <Text style={[s.username, { color: ink.deep }]}>@{currentUsername}</Text>
           <Text style={[s.email, { color: ink.mid }]}>{userEmail || "Not signed in"}</Text>
-          <View style={[s.statusPill, { backgroundColor: subActive ? earn.terraLo : paper.warm }]}>
-            <Text style={{ color: subActive ? earn.greenD : ink.mid, fontWeight: "800", fontSize: 12 }}>
-              {subActive ? "Pro active" : trialDays > 0 ? `${trialDays} trial days left` : "Free"}
-            </Text>
-          </View>
+          {/* Plan status pill removed while payments are off — no plan tiers are
+              surfaced to the user, so the profile reads like a normal free app. */}
         </View>
 
         <View style={[s.section, { borderColor: ink.border }]}>

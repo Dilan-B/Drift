@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { supabase } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
+import { AppleSignInButton } from "./appleSignIn";
 import { cached, rateLimited } from "./apiGuards";
 import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon } from "./Icons";
 import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
@@ -54,68 +55,12 @@ const STEPS = [
   { id: "how1" },
   { id: "how2" },
   { id: "how3" },
-  {
-    id: "usage",
-    question: "How much time do you\nspend on your phone?",
-    subtitle: "Be honest — no judgment here.",
-    type: "single",
-    options: [
-      { id: "1-2", label: "1–2 hours", sub: "Pretty good" },
-      { id: "2-4", label: "2–4 hours", sub: "Average" },
-      { id: "4-6", label: "4–6 hours", sub: "Getting up there" },
-      { id: "6+", label: "6+ hours", sub: "Let's fix this" },
-    ],
-  },
-  {
-    id: "wakeup",
-    question: "When do you usually\nwake up?",
-    subtitle: "Drift locks your phone until you earn it.",
-    type: "single",
-    options: [
-      { id: "5-6", label: "5:00 – 6:00 AM", sub: "Early bird" },
-      { id: "6-7", label: "6:00 – 7:00 AM", sub: "Morning person" },
-      { id: "7-8", label: "7:00 – 8:00 AM", sub: "Standard" },
-      { id: "8+", label: "8:00 AM or later", sub: "Night owl" },
-    ],
-  },
-  {
-    id: "distractions",
-    question: "What pulls you in\nfirst thing?",
-    subtitle: "Select all that apply.",
-    type: "multi",
-    options: [
-      { id: "social", label: "Social Media", sub: "Instagram, X, Threads" },
-      { id: "news", label: "News", sub: "Doomscrolling headlines" },
-      { id: "youtube", label: "YouTube", sub: "One more video…" },
-      { id: "tiktok", label: "TikTok", sub: "The infinite scroll" },
-      { id: "games", label: "Games", sub: "Quick match turns into hours" },
-      { id: "messages", label: "Messages", sub: "Texts, DMs, replies" },
-    ],
-  },
-  {
-    id: "age",
-    question: "How old are you?",
-    subtitle: "Sets your baseline.",
-    type: "single",
-    options: [
-      { id: "under18", label: "Under 18" },
-      { id: "18-24", label: "18 – 24" },
-      { id: "25-34", label: "25 – 34" },
-      { id: "35+", label: "35 or older" },
-    ],
-  },
-  {
-    id: "goals",
-    question: "What do you want\nfrom Drift?",
-    subtitle: "Pick any.",
-    type: "multi",
-    options: [
-      { id: "cut", label: "Cut screen time", sub: "Reclaim hours" },
-      { id: "mornings", label: "Better mornings", sub: "Own the first hour" },
-      { id: "focus", label: "More focus", sub: "Fewer interruptions" },
-      { id: "addiction", label: "Break the addiction", sub: "Stop checking" },
-    ],
-  },
+  // Auth now comes BEFORE the questionnaire. Users create their account first,
+  // then answer the two questions that actually configure the app (which daily
+  // tasks to seed, and how strict the Take button is). The old pre-signup
+  // profiling questions (usage / wakeup / distractions / age / goals) were
+  // dropped — too many questions before signup was driving people away.
+  { id: "auth" },
   {
     id: "tasks",
     question: "Pick your daily\ntasks",
@@ -148,7 +93,6 @@ const STEPS = [
       { id: "committed", label: "Committed", sub: "1 min per tap — earn everything" },
     ],
   },
-  { id: "auth" },
 ];
 
 // ─── Welcome Screen ──────────────────────────────────────────────────────────
@@ -173,7 +117,7 @@ function WelcomeSlide({ onNext }) {
       <TouchableOpacity style={styles.ctaBtn} onPress={onNext}>
         <Text style={styles.ctaBtnText}>Get started</Text>
       </TouchableOpacity>
-      <Text style={styles.legal}>Takes 60 seconds · No credit card</Text>
+      <Text style={styles.legal}>Takes 60 seconds</Text>
     </View>
   );
 }
@@ -927,6 +871,16 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
         )}
       </TouchableOpacity>
 
+      {/* Sign in with Apple — first among social options per Apple's HIG.
+          Renders nothing on non-iOS / when unavailable. */}
+      <View style={{ marginTop: 16 }}>
+        <AppleSignInButton
+          mode={mode}
+          onDone={onDone}
+          onError={(e) => setError(prettyAuthError(e?.message) || "Apple sign-in failed. Try again.")}
+        />
+      </View>
+
       {/* Google sign-in */}
       <OAuthButtons
         mode={mode}
@@ -973,11 +927,16 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
   const authStepIndex = STEPS.findIndex(s => s.id === "auth");
   const [stepIndex, setStepIndex] = useState(signInOnly ? authStepIndex : 0);
   const [answers, setAnswers] = useState({});
+  // The authenticated user is captured at the auth step, then carried through
+  // the post-signup questionnaire until we finish and hand it to onComplete.
+  const authedUserRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const step = STEPS[stepIndex];
-  const totalQuestions = STEPS.filter((s) => s.id !== "welcome" && s.id !== "auth").length;
-  const questionIndex = STEPS.slice(1, stepIndex).filter((s) => s.id !== "auth").length;
+  // Progress reflects only the real questions (tasks + difficulty), not the
+  // welcome / how-it-works / auth slides.
+  const totalQuestions = STEPS.filter((s) => s.options).length;
+  const questionIndex = STEPS.slice(0, stepIndex).filter((s) => s.options).length;
 
   function canContinue() {
     if (!step.options) return true;
@@ -995,16 +954,28 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
     });
   }
 
+  function finish() {
+    onComplete({ user: authedUserRef.current, answers });
+  }
+
   function goNext() {
+    const nextIndex = stepIndex + 1;
     Animated.sequence([
       Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
       Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
     ]).start();
-    setTimeout(() => setStepIndex((i) => i + 1), 150);
+    setTimeout(() => {
+      if (nextIndex >= STEPS.length) { finish(); return; }
+      setStepIndex(nextIndex);
+    }, 150);
   }
 
   function handleAuthDone(user) {
-    onComplete({ user, answers });
+    authedUserRef.current = user;
+    // Returning users (sign-in only) never see the questionnaire — finish now.
+    if (signInOnly) { onComplete({ user, answers: {} }); return; }
+    // New signups continue into the shortened post-signup questionnaire.
+    goNext();
   }
 
   return (

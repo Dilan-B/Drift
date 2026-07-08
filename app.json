@@ -12,6 +12,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.drift.app",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Drift needs your camera to count reps automatically using pose detection.",
         "NSMotionUsageDescription": "Drift uses motion data to detect exercise movement.",
@@ -47,7 +48,8 @@
       "@react-native-community/datetimepicker",
       "expo-secure-store",
       "expo-background-task",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-apple-authentication"
     ],
     "extra": {
       "eas": {

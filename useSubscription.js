@@ -16,6 +16,13 @@ import { Platform, AppState } from "react-native";
 import Purchases, { PACKAGE_TYPE } from "react-native-purchases";
 import { supabase } from "./supabase";
 
+// ── Payments kill-switch ─────────────────────────────────────
+// Payments are turned OFF for now: every user gets full access for free and no
+// paywall / upgrade / purchase UI is shown anywhere. All the RevenueCat + Apple
+// IAP machinery below is left intact but dormant (its effects no-op) so we can
+// bring paid Pro back later by flipping this single flag to `true`.
+const PAYMENTS_ENABLED = false;
+
 const RC_APPLE_KEY = "appl_OetkgVkCSGdSfmrXdrqCElOjgIs";
 const ENTITLEMENT_ID = "Pro";
 // Product identifiers — must match App Store Connect + RevenueCat exactly.
@@ -125,6 +132,7 @@ export function useSubscription(userId) {
 
   // Initial check + fetch offerings
   useEffect(() => {
+    if (!PAYMENTS_ENABLED) return;
     if (!userId || checkedRef.current) return;
     checkedRef.current = true;
     (async () => {
@@ -139,6 +147,7 @@ export function useSubscription(userId) {
 
   // Re-check on foreground
   useEffect(() => {
+    if (!PAYMENTS_ENABLED) return;
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "active") { checkEntitlement(); checkOverride(); }
     });
@@ -147,6 +156,7 @@ export function useSubscription(userId) {
 
   // Listen for RevenueCat updates (restore, subscription change)
   useEffect(() => {
+    if (!PAYMENTS_ENABLED) return;
     if (Platform.OS !== "ios") return;
     const listener = (info) => {
       const active = hasProEntitlement(info);
@@ -211,6 +221,22 @@ export function useSubscription(userId) {
       return { success: false, reason: e?.message || "unknown" };
     }
   }, [userId, checkEntitlement]);
+
+  if (!PAYMENTS_ENABLED) {
+    // Free-for-all: full access, no purchase surface. Callbacks are safe no-ops
+    // so any lingering call site does nothing instead of erroring.
+    const noop = async () => ({ success: false, reason: "payments_disabled" });
+    return {
+      proAccess: true,
+      loading: false,
+      offerings: null,
+      purchase: noop,
+      restore: noop,
+      checkEntitlement: async () => {},
+      refresh: async () => {},
+      redeemAppStoreCode: noop,
+    };
+  }
 
   return { proAccess: proAccess || override, loading, offerings, purchase, restore, checkEntitlement, refresh, redeemAppStoreCode };
 }
