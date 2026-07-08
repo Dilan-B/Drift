@@ -458,218 +458,6 @@ function prettyAuthError(msg) {
   return msg || null;
 }
 
-// ─── Phone auth ──────────────────────────────────────────────────────────────
-// Passwordless SMS OTP. Supabase's signInWithOtp({ phone }) both signs up and
-// signs in — it creates the user on first use — so there's no separate
-// signup/login branch here. Requires an SMS provider (e.g. Twilio Verify)
-// configured in the Supabase dashboard; see docs/PHONE_AUTH_SETUP.md.
-
-// Keep a leading "+" and digits only; enforce E.164-ish shape.
-function normalizePhone(raw) {
-  let s = (raw || "").replace(/[^\d+]/g, "");
-  if (s && !s.startsWith("+")) s = "+" + s;
-  // collapse any stray "+" that aren't leading
-  s = "+" + s.replace(/\+/g, "");
-  return s.slice(0, 16);
-}
-
-function validatePhone(raw) {
-  const s = normalizePhone(raw);
-  // E.164: "+" then 8–15 digits, first digit non-zero.
-  if (!/^\+[1-9]\d{7,14}$/.test(s)) {
-    return "Enter your number with country code, e.g. +14155551234.";
-  }
-  return null;
-}
-
-function PhoneAuthSlide({ onDone, onBack, mode }) {
-  const [phone,   setPhone]   = useState("");
-  const [stage,   setStage]   = useState("enter"); // "enter" | "verify"
-  const [sentTo,  setSentTo]  = useState("");
-  const [code,    setCode]    = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState("");
-  const [notice,  setNotice]  = useState("");
-  const resendRef = useRef([]);
-
-  async function sendCode() {
-    setError(""); setNotice("");
-    const p = normalizePhone(phone);
-    const err = validatePhone(p);
-    if (err) { setError(err); return; }
-
-    // Client-side anti-spam (not a security boundary — Supabase/Twilio also cap).
-    const now = Date.now();
-    resendRef.current = resendRef.current.filter(t => now - t < 60_000);
-    if (resendRef.current.length >= 3) {
-      setError("Too many attempts. Wait a minute and try again.");
-      return;
-    }
-    resendRef.current.push(now);
-
-    setLoading(true);
-    try {
-      const { error: e } = await rateLimited(`phone_otp_${p}`, { limit: 5, windowMs: 15 * 60_000 }, () =>
-        supabase.auth.signInWithOtp({ phone: p })
-      );
-      if (e) throw e;
-      setSentTo(p);
-      setStage("verify");
-      setNotice("We texted you a 6-digit code.");
-    } catch (e) {
-      const raw = (e?.message || "").toLowerCase();
-      if (raw.includes("disabled") || raw.includes("not enabled") || raw.includes("provider") || raw.includes("sms")) {
-        setError("Phone sign-in isn't enabled for this build yet.");
-      } else if (raw.includes("rate") || raw.includes("too many")) {
-        setError("Too many attempts. Try again in a few minutes.");
-      } else if (raw.includes("network") || raw.includes("fetch")) {
-        setError("Network error. Check your connection.");
-      } else if (raw.includes("invalid") && raw.includes("phone")) {
-        setError("That phone number doesn't look right. Include your country code.");
-      } else {
-        setError(e?.message || "Could not send the code. Try again.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function verify() {
-    setError(""); setNotice("");
-    const token = (code || "").replace(/\D/g, "").slice(0, 6);
-    if (token.length !== 6) { setError("Enter the 6-digit code we texted you."); return; }
-    setLoading(true);
-    try {
-      const { data, error: e } = await rateLimited(`phone_verify_${sentTo}`, { limit: 10, windowMs: 10 * 60_000 }, () =>
-        supabase.auth.verifyOtp({ phone: sentTo, token, type: "sms" })
-      );
-      if (e) throw e;
-      const user = data?.user || data?.session?.user;
-      if (!user) throw new Error("Verification failed. Try again.");
-      setCode("");
-      onDone(user);
-    } catch (e) {
-      const raw = (e?.message || "").toLowerCase();
-      if (raw.includes("expired") || raw.includes("invalid") || raw.includes("token") || raw.includes("otp")) {
-        setError("That code is incorrect or expired. Tap Resend for a new one.");
-      } else if (raw.includes("network") || raw.includes("fetch")) {
-        setError("Network error. Check your connection.");
-      } else {
-        setError(e?.message || "Could not verify. Try again.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (stage === "verify") {
-    return (
-      <View style={styles.slide}>
-        <View pointerEvents="none" style={styles.authSeeds}>
-          <SeedDots size={170} color={ACCENT} opacity={0.045} />
-        </View>
-        <View style={styles.verifyContent}>
-          <View style={styles.stepBadge}><PhoneIcon size={24} color={ACCENT} /></View>
-          <Text style={styles.question}>Enter your code</Text>
-          <Text style={styles.questionSub}>
-            We texted a 6-digit code to {sentTo}. Enter it below to continue.
-          </Text>
-          <View style={styles.authForm}>
-            <TextInput
-              style={[styles.input, { textAlign: "center", letterSpacing: 6, fontSize: 22 }]}
-              placeholder="000000"
-              placeholderTextColor={MUTED}
-              value={code}
-              onChangeText={(t) => setCode(t.replace(/\D/g, "").slice(0, 6))}
-              keyboardType="number-pad"
-              autoComplete="one-time-code"
-              textContentType="oneTimeCode"
-              maxLength={6}
-              returnKeyType="done"
-              onSubmitEditing={verify}
-            />
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-            {notice ? <Text style={styles.noticeText}>{notice}</Text> : null}
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.ctaBtn, (loading || code.length !== 6) && styles.ctaBtnDisabled]}
-          onPress={verify}
-          disabled={loading || code.length !== 6}
-        >
-          {loading ? <ActivityIndicator color="#FAF6EE" /> : <Text style={styles.ctaBtnText}>Verify</Text>}
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.secondaryBtn} onPress={sendCode} disabled={loading}>
-          <Text style={styles.secondaryBtnText}>Resend code</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => { setStage("enter"); setCode(""); setError(""); setNotice(""); }}
-          style={{ marginTop: 14, marginBottom: 32, alignItems: "center" }}
-        >
-          <Text style={styles.switchMode}>Use a different number</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  return (
-    <KeyboardAvoidingView style={styles.slide} behavior={Platform.OS === "ios" ? "height" : undefined}>
-      <View pointerEvents="none" style={styles.authSeeds}>
-        <SeedDots size={170} color={ACCENT} opacity={0.045} />
-      </View>
-      <View pointerEvents="none" style={styles.authSprig}>
-        <Sprig size={130} color={CLAY} opacity={0.052} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <View style={styles.stepBadge}><PhoneIcon size={24} color={ACCENT} /></View>
-        <Text style={styles.question}>
-          {mode === "signup" ? "Sign up with your phone" : "Sign in with your phone"}
-        </Text>
-        <Text style={styles.questionSub}>
-          We'll text you a code — no password to remember.
-        </Text>
-        <View style={styles.authForm}>
-          <View style={styles.inputWrap}>
-            <Text style={styles.inputLabel}>Phone number</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="+1 415 555 1234"
-              placeholderTextColor={MUTED}
-              value={phone}
-              onChangeText={(t) => setPhone(t.replace(/[^\d+ ()-]/g, ""))}
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              textContentType="telephoneNumber"
-              returnKeyType="done"
-              onSubmitEditing={sendCode}
-              maxLength={20}
-            />
-          </View>
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          <Text style={styles.authHint}>
-            Standard message and data rates may apply.
-          </Text>
-        </View>
-      </View>
-
-      <TouchableOpacity
-        style={[styles.ctaBtn, loading && styles.ctaBtnDisabled]}
-        onPress={sendCode}
-        disabled={loading}
-      >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaBtnText}>Text me a code</Text>}
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={onBack} style={{ marginTop: 14, marginBottom: 32, alignItems: "center" }}>
-        <Text style={styles.switchMode}>Use email instead</Text>
-      </TouchableOpacity>
-    </KeyboardAvoidingView>
-  );
-}
-
 function AuthSlide({ onDone, defaultMode = "signup" }) {
   const [mode,     setMode]     = useState(defaultMode); // "signup" | "login"
   const [email,    setEmail]    = useState("");
@@ -682,7 +470,6 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
   const [verifying, setVerifying] = useState(false);
   const [error,    setError]    = useState("");
   const [notice,   setNotice]   = useState("");
-  const [usePhone, setUsePhone] = useState(false); // toggle to the SMS OTP flow
 
   // Client-side rate limiting (anti-spam, not a security boundary)
   const resendAttemptsRef = useRef([]);
@@ -919,10 +706,6 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
     }
   }
 
-  if (usePhone) {
-    return <PhoneAuthSlide onDone={onDone} onBack={() => setUsePhone(false)} mode={mode} />;
-  }
-
   if (verificationEmail) {
     return (
       <View style={styles.slide}>
@@ -1106,23 +889,6 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
         setError={setError}
         onDone={onDone}
       />
-
-      {/* Phone (SMS OTP) sign-in */}
-      <TouchableOpacity
-        onPress={() => { setError(""); setNotice(""); setUsePhone(true); }}
-        disabled={loading}
-        style={{
-          height: 52, borderRadius: 14, backgroundColor: CARD_BG,
-          borderWidth: 1, borderColor: BORDER, marginTop: 10,
-          alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10,
-          opacity: loading ? 0.6 : 1,
-        }}
-      >
-        <PhoneIcon size={18} color={TEXT} />
-        <Text style={{ color: TEXT, fontSize: 15, fontFamily: FF.bodyMed }}>
-          {mode === "signup" ? "Sign up with phone" : "Sign in with phone"}
-        </Text>
-      </TouchableOpacity>
 
       {/* Terms + privacy disclosure shown to anyone creating an account */}
       {mode === "signup" && (
