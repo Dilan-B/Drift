@@ -110,9 +110,7 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
         </View>
 
         <Text style={[s.body, { color: ink.mid }]}>
-          Drift is built by a tiny team. A 5-star review takes ten seconds and
-          genuinely helps more people reclaim their focus — it's the single
-          biggest thing you can do to support us.
+          Built by a tiny team. A 5-star review takes ten seconds and genuinely helps.
         </Text>
       </Animated.View>
 

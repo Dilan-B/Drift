@@ -17,25 +17,49 @@ function randomBytes(length) {
   return bytes;
 }
 
-async function getAuthCipherKey() {
-  // Read the existing key. CRITICAL: a transient Keychain read failure must NOT
-  // cause us to mint a NEW key — that would orphan the already-encrypted session
-  // and sign the user out on every cold start. So we only generate a key when a
-  // read SUCCEEDS and definitively returns null (genuine first run). Read errors
-  // propagate to the caller, which then keeps the stored ciphertext untouched
-  // for a later (successful) read instead of wiping the session.
-  let keyHex = await SecureStore.getItemAsync(AUTH_KEYSTORE_KEY);
-  if (keyHex == null) {
-    // One retry in case the very first read was a transient miss.
-    keyHex = await SecureStore.getItemAsync(AUTH_KEYSTORE_KEY);
+// Single-flight, process-memoized cipher-key resolution. CRITICAL: at sign-in
+// Supabase writes the session several times in quick succession, and getItem may
+// run concurrently too — each call hits getAuthCipherKey independently. Without
+// serialization, two concurrent calls on a fresh install both read a null key,
+// each MINT A DIFFERENT AES key, and race to persist it: the session gets
+// encrypted with one key while the Keychain keeps the other, so every later cold
+// start decrypts to garbage and signs the user out. Memoizing one shared promise
+// guarantees the key is read/generated exactly once per process and every caller
+// uses the same bytes. On failure we clear the memo so a later call can retry
+// (and never cache a key born from a transient miss).
+let cipherKeyPromise = null;
+
+function getAuthCipherKey() {
+  if (!cipherKeyPromise) {
+    cipherKeyPromise = (async () => {
+      // A transient Keychain read failure must NOT cause us to mint a NEW key —
+      // that would orphan the already-encrypted session. Only generate when a
+      // read SUCCEEDS and definitively returns null (genuine first run); read
+      // errors throw out of here so the memo is cleared and the ciphertext is
+      // left untouched for a later (successful) read instead of being wiped.
+      let keyHex = await SecureStore.getItemAsync(AUTH_KEYSTORE_KEY);
+      if (keyHex == null) {
+        // One retry in case the very first read was a transient miss.
+        keyHex = await SecureStore.getItemAsync(AUTH_KEYSTORE_KEY);
+      }
+      if (keyHex == null) {
+        keyHex = aes.utils.hex.fromBytes(randomBytes(32));
+        await SecureStore.setItemAsync(AUTH_KEYSTORE_KEY, keyHex, {
+          keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+        });
+        // Adopt whatever actually persisted. If a concurrent first-run path (or a
+        // prior process) already wrote a key, the Keychain is the source of truth
+        // and we use its bytes rather than our just-generated ones — so all
+        // ciphertext and all readers converge on a single key.
+        const persisted = await SecureStore.getItemAsync(AUTH_KEYSTORE_KEY);
+        if (persisted != null) keyHex = persisted;
+      }
+      return aes.utils.hex.toBytes(keyHex);
+    })();
+    // Don't cache a rejected promise — let the next caller retry the read.
+    cipherKeyPromise.catch(() => { cipherKeyPromise = null; });
   }
-  if (keyHex == null) {
-    keyHex = aes.utils.hex.fromBytes(randomBytes(32));
-    await SecureStore.setItemAsync(AUTH_KEYSTORE_KEY, keyHex, {
-      keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
-    });
-  }
-  return aes.utils.hex.toBytes(keyHex);
+  return cipherKeyPromise;
 }
 
 const encryptedAuthStorage = {

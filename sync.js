@@ -83,6 +83,20 @@ export async function insertTask(userId, task) {
   return rowToTask(data);
 }
 
+// Patch an already-inserted task with its finalized AI-assigned credits/xp.
+// Used by the async create flow: the task is inserted instantly with provisional
+// credits, then updated here once the evaluator finishes.
+export async function updateTaskCredits(userId, taskId, { credits, xp, reasoning, aiValued }) {
+  if (!userId || !taskId) return;
+  const patch = { credits, xp, ai_valued: !!aiValued };
+  if (reasoning != null) patch.ai_reasoning = reasoning;
+  const { error } = await rateLimited(`update_task_${userId}`, { limit: 60, windowMs: 60_000 }, () =>
+    supabase.from("tasks").update(patch).eq("id", taskId).eq("user_id", userId)
+  );
+  if (error) console.warn("updateTaskCredits:", error.message);
+  invalidateCache(`tasks_${userId}`);
+}
+
 export async function completeTaskRow(userId, taskId) {
   if (!userId || !taskId) return;
   const { error } = await rateLimited(`complete_task_${userId}`, { limit: 60, windowMs: 60_000 }, () =>

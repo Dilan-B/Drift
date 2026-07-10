@@ -164,6 +164,9 @@ serve(async (req: Request) => {
         `Do not judge or penalize based on how long ago the task/challenge was created, ` +
         `how long the user took to submit proof, missing timestamps, or whether the elapsed time seems too long. ` +
         `Only evaluate the content of the task and the submitted proof.\n` +
+        `Do NOT rely solely on a photo. A clear, specific written explanation is valid proof on its own: if the user describes ` +
+        `what they did in convincing, task-relevant detail — and, when there is no photo, gives a plausible reason a photo isn't ` +
+        `available or simply describes completion credibly — verify the task on the strength of that description alone. ` +
         `Be lenient and realistic about the limits of single-photo evidence: the user can only submit one picture right now, ` +
         `so the photo usually cannot prove every rep, minute, or before/during/after step. Verify the task when the image provides plausible, ` +
         `task-relevant evidence of participation or completion, even if it is not mathematically conclusive. ` +
@@ -176,7 +179,7 @@ serve(async (req: Request) => {
         `Task: "${taskTitle.replace(/"/g, "'")}"` +
         (durationMins ? `\nEstimated duration: ${durationMins} minutes (context only, not a deadline)` : "") +
         (sanitizedProof ? `\nUser's explanation: "${sanitizedProof}"` : "\nNo written explanation.") +
-        (imageBase64 ? "\nPhoto evidence provided (see image)." : "\nNo photo.") +
+        (imageBase64 ? "\nPhoto evidence provided (see image)." : "\nNo photo — judge on the written explanation, which is sufficient when specific and credible.") +
         `\n\nExamples: an empty mug can verify a drink/chug-coffee challenge when it shows plausible coffee evidence, ` +
         `such as brown residue, ring marks, stains, wetness, or leftover drops. A photo of a user in push-up position, or visibly tired right after, ` +
         `can verify a 20 push-ups challenge when it plausibly matches the task context. Do not reject these merely because a single photo ` +

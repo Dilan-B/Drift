@@ -39,8 +39,14 @@ export async function evaluateTask({ title, mins, category }) {
 
   // Success
   if (body && !body.error && typeof body.credits === "number") {
-    const minReward = Math.max(1, Math.ceil(mins * 0.25));
-    const maxReward = Math.max(1, Math.floor(mins * 0.5));
+    // Non-productive tasks are HARD-capped at 1/5 of the duration (e.g. 30 min
+    // "eating" → 6 max). Productive tasks earn 1/4–1/2. Enforced here too so the
+    // cap holds even if the server response is stale/bypassed.
+    const nonProductive = body.productive === false;
+    const minReward = nonProductive ? 1 : Math.max(1, Math.ceil(mins * 0.25));
+    const maxReward = nonProductive
+      ? Math.max(1, Math.floor(mins * 0.2))
+      : Math.max(1, Math.floor(mins * 0.5));
     const credits = Math.max(minReward, Math.min(Math.max(1, Math.round(body.credits)), maxReward));
     return {
       credits,
