@@ -143,7 +143,7 @@ const HOW_SLIDES = [
     id: "how3",
     emoji: "🔒",
     headline: "Apps lock when\nyou're out",
-    body: "Chose which apps to block.\nDrift enforces it even when the app is closed.",
+    body: "Choose which apps to block.\nDrift enforces it even when closed.",
     detail: "No willpower needed. The system does the hard part.",
   },
 ];

@@ -14,7 +14,7 @@ import BlockedAppsModal from "./BlockedAppsModal";
 import UsernameSetupModal from "./UsernameSetupModal";
 import Swipeable from "./Swipeable";
 import {
-  fetchTasks, insertTask, completeTaskRow, softDeleteTask,
+  fetchTasks, insertTask, updateTaskCredits, completeTaskRow, softDeleteTask,
   appendLedgerEntry, syncProfileStats, fetchProfileStats, flushPendingStats,
   cache,
 } from "./sync";
@@ -706,7 +706,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
     setEvaluating(true);
     setEvalError("");
 
-    const buildTask = ({ credits, xp, reasoning, aiValued }) => ({
+    const buildTask = ({ credits, xp, reasoning, aiValued, aiPending }) => ({
       id: makeUuid(),
       title:   title.trim(),
       cat,
@@ -716,6 +716,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
       xp,
       aiCheck:  isSubActive, // AI Check is mandatory for Pro users (off for free)
       aiValued: !!aiValued,
+      aiPending: !!aiPending, // credits are provisional until the bg evaluator finishes
       aiReasoning: reasoning || "",
       task_date: todayKey(),
     });
@@ -732,27 +733,15 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
       return;
     }
 
-    // Subscribed → server-side AI eval
-    try {
-      const { credits, xp, reasoning } = await evaluateTask({
-        title:    title.trim(),
-        mins,
-        category: cat,
-      });
-      onSave(buildTask({ credits, xp, reasoning, aiValued: true }), recurrence);
-      closeWithAnimation(true);
-    } catch (e) {
-      if (e?.code === "subscription_required") {
-        // Server told us their sub lapsed mid-session — fall back to the
-        // free-tier duration formula (same path a free user would take).
-        const { credits, xp, reasoning } = freeTierCredits(mins);
-        onSave(buildTask({ credits, xp, reasoning, aiValued: false }), recurrence);
-        closeWithAnimation(true);
-        return;
-      }
-      setEvalError(e?.message || "AI evaluation failed. Try again.");
-      setEvaluating(false);
-    }
+    // Subscribed → don't block the UI on the AI eval. Add the task instantly with
+    // provisional credits and an aiPending flag; the parent runs the evaluator in
+    // the background and patches the real value in when it finishes.
+    const provisional = freeTierCredits(mins);
+    onSave(
+      buildTask({ credits: provisional.credits, xp: provisional.xp, reasoning: "", aiValued: true, aiPending: true }),
+      recurrence,
+    );
+    closeWithAnimation(true);
   };
 
   const safeTop = Platform.OS === "ios" ? 54 : (StatusBar.currentHeight || 24) + 8;
@@ -1014,37 +1003,24 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
             onPress={() => { if (!isSubActive) onOpenPaywall?.(); }}
             activeOpacity={isSubActive ? 1 : 0.7}
             style={{
-              flexDirection: "row", alignItems: "center", gap: 12,
-              paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, marginBottom: 10,
-              borderWidth: 1.5,
-              borderColor: isSubActive ? earn.blue : ink.border,
+              flexDirection: "row", alignItems: "center", gap: 10,
+              paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, marginBottom: 10,
+              borderWidth: 1,
+              borderColor: ink.border,
               backgroundColor: isSubActive ? earn.blueLo : "transparent",
               opacity: isSubActive ? 1 : 0.7,
             }}
           >
             {isSubActive
-              ? <SparkleIcon size={20} color={aiCheck ? earn.blue : ink.mid} />
-              : <LockIcon size={20} color={ink.mid} />}
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={{ fontFamily: FK, fontSize: 14, fontWeight: "600", color: aiCheck && isSubActive ? earn.blue : ink.deep }}>
-                  AI Check
-                </Text>
-                <View style={{ backgroundColor: isSubActive ? earn.blueLo : ink.ghost, borderRadius: 6, paddingVertical: 1, paddingHorizontal: 6 }}>
-                  <Text style={{ fontFamily: FOM, fontSize: 8, color: isSubActive ? earn.blue : ink.mid, letterSpacing: 1 }}>
-                    PRO
-                  </Text>
-                </View>
-              </View>
-              <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                Submit a photo or text proof to earn credits
-              </Text>
-            </View>
-            {/* AI Check is mandatory for Pro — show it locked on, not a toggle. */}
-            {isSubActive && (
-              <View style={{ backgroundColor: earn.blue, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8 }}>
-                <Text style={{ fontFamily: FOM, fontSize: 8, color: "#fff", letterSpacing: 1 }}>REQUIRED</Text>
-              </View>
+              ? <SparkleIcon size={16} color={earn.blue} />
+              : <LockIcon size={16} color={ink.mid} />}
+            <Text style={{ flex: 1, fontFamily: FB, fontSize: 12, color: ink.mid }}>
+              {isSubActive
+                ? "AI Check verifies your proof to earn credits."
+                : "AI Check is a Pro feature."}
+            </Text>
+            {!isSubActive && (
+              <Text style={{ fontFamily: FOM, fontSize: 9, color: earn.terra, letterSpacing: 1 }}>UPGRADE</Text>
             )}
           </TouchableOpacity>
 
@@ -2085,7 +2061,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
               flexShrink: 0,
             }}>
               <Text style={{ fontFamily: FF.bodyBold, fontSize: 13, color: earn.greenD }}>
-                +{fmtMins(t.credits)}
+                +{fmtMins(t.credits)}{t.aiPending ? "*" : ""}
               </Text>
             </View>
 
@@ -4234,6 +4210,36 @@ export default function App() {
     setOverlay("add");
   }, [proAccess, tasks]);
 
+  // Background AI valuation for a just-created task. Patches the provisional
+  // credits/xp with the real evaluated values once the server responds. Never
+  // throws — on failure the task simply keeps its provisional credits.
+  const finalizeTaskCredits = async (t) => {
+    let result;
+    try {
+      result = await evaluateTask({ title: t.title, mins: t.minutes, category: t.cat });
+    } catch (e) {
+      // Sub lapsed or eval unavailable → keep provisional credits, just clear the
+      // pending flag so nothing shows as perpetually "evaluating".
+      setTasks(prev => {
+        const nt = prev.map(x => x.id === t.id ? { ...x, aiPending: false, aiValued: false } : x);
+        persist({ tasks: nt });
+        if (userId) cacheFullTasks(userId, nt);
+        return nt;
+      });
+      return;
+    }
+    const { credits, xp, reasoning } = result;
+    setTasks(prev => {
+      const nt = prev.map(x =>
+        x.id === t.id ? { ...x, credits, xp, aiReasoning: reasoning || "", aiValued: true, aiPending: false } : x
+      );
+      persist({ tasks: nt });
+      if (userId) cacheFullTasks(userId, nt);
+      return nt;
+    });
+    if (userId) updateTaskCredits(userId, t.id, { credits, xp, reasoning, aiValued: true }).catch(() => {});
+  };
+
   const addTask  = (t, recurrence) => {
     const nt = [...tasks, t];
     setTasks(nt); persist({ tasks: nt });
@@ -4246,6 +4252,10 @@ export default function App() {
       });
       cacheFullTasks(userId, nt);
     }
+    // Async AI valuation: the task is already on screen with provisional credits.
+    // Evaluate in the background and patch the real credits/xp in when it lands,
+    // so the user is never stuck on a "AI is evaluating…" spinner.
+    if (t.aiPending) finalizeTaskCredits(t);
     if (userId && proAccess && recurrence?.frequency && recurrence.frequency !== "none") {
       const template = {
         id: makeUuid(),

@@ -66,7 +66,7 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
             FEEDBACK
           </Text>
           <Text style={{ color: ink.mid, fontSize: 13, lineHeight: 18, marginBottom: 14 }}>
-            Bug? Feature request? Confusing UI? Tell us anything. We read every message.
+            Bugs, ideas, anything. We read every message.
           </Text>
           <TextInput
             value={body}
