@@ -3937,26 +3937,30 @@ export default function App() {
         const uid = session?.user?.id ?? null;
         const cachedVerified = !!(session?.user?.email_confirmed_at || session?.user?.phone_confirmed_at || session?.user?.confirmed_at);
         if (uid && !cachedVerified) {
-          // Don't sign out a restored session just because the cached user object
-          // is missing the verified-email field (it can be absent/stale on a cold
-          // start). Confirm with the server; only sign out if it POSITIVELY
-          // reports an unverified email. Any error/uncertainty → keep them in.
-          let serverUnverified = false;
-          try {
-            const { data: u, error } = await supabase.auth.getUser();
-            if (!error && u?.user) {
-              serverUnverified = !(u.user.email_confirmed_at || u.user.phone_confirmed_at || u.user.confirmed_at);
+          // OAuth users (Google, Apple) are always verified — they authenticated
+          // with the provider. Only check email verification for email/password
+          // signups. The cached session often lacks confirmed_at on cold start;
+          // signing out on that false negative is the #1 cause of unwanted logouts.
+          const provider = session?.user?.app_metadata?.provider;
+          const isOAuth = provider && provider !== "email";
+          if (!isOAuth) {
+            let serverUnverified = false;
+            try {
+              const { data: u, error } = await supabase.auth.getUser();
+              if (!error && u?.user) {
+                serverUnverified = !(u.user.email_confirmed_at || u.user.phone_confirmed_at || u.user.confirmed_at);
+              }
+            } catch {}
+            if (serverUnverified) {
+              await supabase.auth.signOut().catch(() => {});
+              setUserId(null);
+              setUserEmail("");
+              setUserName("");
+              const hasOnboarded = await AsyncStorage.getItem("drift_onboarded");
+              setSignInOnly(hasOnboarded === "1");
+              setOnboarding(true);
+              return;
             }
-          } catch {}
-          if (serverUnverified) {
-            await supabase.auth.signOut().catch(() => {});
-            setUserId(null);
-            setUserEmail("");
-            setUserName("");
-            const hasOnboarded = await AsyncStorage.getItem("drift_onboarded");
-            setSignInOnly(hasOnboarded === "1");
-            setOnboarding(true);
-            return;
           }
         }
         setUserId(uid);

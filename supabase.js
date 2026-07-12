@@ -139,7 +139,9 @@ export async function safeGetSession() {
         await supabase.auth.signOut().catch(() => {});
         return { data: { session: null }, error: null };
       }
-      return { data: { session: null }, error: null };
+      // Transient errors (network, 5xx) — return whatever data we got so the
+      // cached session (if any) isn't thrown away on a flaky cold start.
+      return { data: data || { session: null }, error: null };
     }
     return { data, error: null };
   } catch {

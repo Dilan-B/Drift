@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { supabase } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
-import { AppleSignInButton } from "./appleSignIn";
+// import { AppleSignInButton } from "./appleSignIn";
 import { cached, rateLimited } from "./apiGuards";
 import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon } from "./Icons";
 import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
@@ -870,16 +870,6 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
           </Text>
         )}
       </TouchableOpacity>
-
-      {/* Sign in with Apple — first among social options per Apple's HIG.
-          Renders nothing on non-iOS / when unavailable. */}
-      <View style={{ marginTop: 16 }}>
-        <AppleSignInButton
-          mode={mode}
-          onDone={onDone}
-          onError={(e) => setError(prettyAuthError(e?.message) || "Apple sign-in failed. Try again.")}
-        />
-      </View>
 
       {/* Google sign-in */}
       <OAuthButtons
