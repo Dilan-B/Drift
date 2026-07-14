@@ -198,6 +198,26 @@ async function mergePendingStats(userId, fields) {
   } catch {}
 }
 
+// Drop any QUEUED balance from the pending record (keeping pending XP). The
+// daily reset calls this so a stale pre-reset balance from a failed offline
+// sync yesterday can't be resurrected onto the server by a later
+// flushPendingStats — which is exactly what caused "random screen time in the
+// morning" after the balance was supposed to reset to 0.
+export async function clearPendingBalance(userId) {
+  if (!userId) return;
+  try {
+    const raw = await AsyncStorage.getItem(pendingKey(userId));
+    if (!raw) return;
+    const prev = JSON.parse(raw);
+    delete prev.balanceSeconds;
+    if (typeof prev.totalXp === "number") {
+      await AsyncStorage.setItem(pendingKey(userId), JSON.stringify(prev));
+    } else {
+      await AsyncStorage.removeItem(pendingKey(userId));
+    }
+  } catch {}
+}
+
 async function writeProfileStats(userId, { totalXp, balanceSeconds }) {
   const patch = {};
   if (typeof totalXp === "number") {
