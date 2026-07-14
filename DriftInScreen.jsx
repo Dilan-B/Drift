@@ -483,7 +483,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
         style={[
           s.ctaBtn,
           !task.trim() && {
-            backgroundColor: dark ? "rgba(127,190,150,0.18)" : "#D7CDBA",
+            backgroundColor: dark ? "rgba(140,212,164,0.18)" : "#D7CDBA",
           },
         ]}
         activeOpacity={0.85}

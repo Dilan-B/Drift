@@ -15,7 +15,7 @@ import { useGoogleSignIn } from "./oauthSignIn";
 // import { AppleSignInButton } from "./appleSignIn";
 import { joinFamily, normalizeFamilyCode } from "./family";
 import { cached, rateLimited } from "./apiGuards";
-import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon } from "./Icons";
+import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon, ClipboardIcon, SparkleIcon, UsersIcon } from "./Icons";
 import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
 import Sprout, { Sprig, SeedDots } from "./SproutArt";
 import { FF } from "./theme";
@@ -104,16 +104,28 @@ const STEPS = [
 
 function WelcomeSlide({ onNext }) {
   const [fontsLoaded] = useFonts({ Orbitron_700Bold, Orbitron_400Regular, Oswald_700Bold });
+  const heroAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(heroAnim, { toValue: 1, useNativeDriver: true, tension: 50, friction: 9 }).start();
+  }, []);
   return (
     <View style={styles.slide}>
-      <View pointerEvents="none" style={styles.welcomeSprout}>
-        <Sprout size={210} tone="fresh" />
-      </View>
       <View pointerEvents="none" style={styles.welcomeSprig}>
         <Sprig size={150} color={CLAY} opacity={0.055} flip />
       </View>
+      <View pointerEvents="none" style={styles.welcomeSeeds}>
+        <SeedDots size={160} color={ACCENT} opacity={0.05} />
+      </View>
       <View style={styles.welcomeContent}>
         <Text style={[styles.welcomeLogo, { fontFamily: "Orbitron_700Bold" }]}>DRIFT</Text>
+        <Animated.View style={[styles.welcomeHero, {
+          opacity: heroAnim,
+          transform: [{ scale: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }],
+        }]}>
+          <View style={styles.welcomeHeroRing}>
+            <Sprout size={150} tone="fresh" />
+          </View>
+        </Animated.View>
         <Text style={[styles.welcomeHeadline, { fontFamily: FF.display }]}>{"Welcome to\nDrift"}</Text>
         <Text style={styles.welcomeSub}>
           Earn your screen time by getting real things done. Your phone unlocks when you do.
@@ -132,21 +144,21 @@ function WelcomeSlide({ onNext }) {
 const HOW_SLIDES = [
   {
     id: "how1",
-    emoji: "📋",
+    Icon: ClipboardIcon,
     headline: "Add real tasks",
     body: "Reading, working out, studying, cooking.\nAnything productive you'd actually do.",
     detail: "Each task has a time estimate and earns you screen time when you complete it.",
   },
   {
     id: "how2",
-    emoji: "⏱",
+    Icon: SparkleIcon,
     headline: "Earn your time",
     body: "Complete a task, earn minutes.\nThe harder the task, the more you earn.",
     detail: "Your balance ticks down while you use blocked apps. Run out and they lock.",
   },
   {
     id: "how3",
-    emoji: "🔒",
+    Icon: LockIcon,
     headline: "Apps lock when\nyou're out",
     body: "Choose which apps to block.\nDrift enforces it even when closed.",
     detail: "No willpower needed. The system does the hard part.",
@@ -175,15 +187,13 @@ function HowItWorksSlide({ slideData, stepNum, onNext }) {
           alignItems: "center",
           marginBottom: 32,
         }}>
-          <View style={{
-            width: 96, height: 96, borderRadius: 48,
-            backgroundColor: SAGE_LO,
-            alignItems: "center", justifyContent: "center",
-            borderWidth: 1, borderColor: HAIRLINE,
-            marginBottom: 28,
-          }}>
-            <Text style={{ fontSize: 42 }}>{slideData.emoji}</Text>
+          <View style={styles.howIconRing}>
+            <View style={styles.howIconDisc}>
+              <slideData.Icon size={30} color={ACCENT} strokeWidth={1.8} />
+            </View>
           </View>
+
+          <Text style={styles.howKicker}>STEP {stepNum + 1} OF 3</Text>
 
           <Text style={{
             fontFamily: FF.display,
@@ -203,25 +213,17 @@ function HowItWorksSlide({ slideData, stepNum, onNext }) {
             color: MUTED,
             textAlign: "center",
             lineHeight: 24,
-            marginBottom: 20,
+            marginBottom: 22,
             paddingHorizontal: 12,
           }}>
             {slideData.body}
           </Text>
 
-          <View style={{
-            backgroundColor: CARD_BG,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: BORDER,
-            paddingVertical: 14,
-            paddingHorizontal: 20,
-            marginHorizontal: 8,
-          }}>
+          <View style={styles.howDetail}>
             <Text style={{
               fontFamily: FF.bodyMed,
               fontSize: 14,
-              color: ACCENT,
+              color: "#2D5A3E",
               textAlign: "center",
               lineHeight: 20,
             }}>
@@ -233,13 +235,14 @@ function HowItWorksSlide({ slideData, stepNum, onNext }) {
         <View style={{
           flexDirection: "row",
           justifyContent: "center",
-          gap: 8,
+          gap: 7,
           marginBottom: 8,
         }}>
           {[0, 1, 2].map(i => (
             <View key={i} style={{
-              width: 8, height: 8, borderRadius: 4,
-              backgroundColor: i === stepNum ? ACCENT : "#DFF0E8",
+              width: i === stepNum ? 22 : 7,
+              height: 7, borderRadius: 4,
+              backgroundColor: i === stepNum ? ACCENT : "#DCE5DC",
             }} />
           ))}
         </View>
@@ -360,6 +363,26 @@ function validateUsername(raw) {
   return null;
 }
 
+// ─── Form field with focus ring ──────────────────────────────────────────────
+// Inputs sit slightly inset on the white form card; focusing lifts them to
+// white with a green ring so it's always obvious where you're typing.
+function Field({ label, inputRef, style, ...props }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={styles.inputWrap}>
+      {label ? <Text style={styles.inputLabel}>{label}</Text> : null}
+      <TextInput
+        ref={inputRef}
+        style={[styles.input, focused && styles.inputFocused, style]}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholderTextColor={FAINT}
+        {...props}
+      />
+    </View>
+  );
+}
+
 // ─── Social auth provider button (Google only) ───────────────────────────────
 function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
   // Google sign-in hook — handles PKCE under the hood
@@ -417,7 +440,7 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
         onPress={handleGoogle}
         disabled={loading || !google.isReady}
         style={{
-          height: 52, borderRadius: 14, backgroundColor: CARD_BG,
+          height: 54, borderRadius: 16, backgroundColor: CARD_BG,
           borderWidth: 1, borderColor: BORDER,
           alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10,
           opacity: loading ? 0.6 : 1,
@@ -741,10 +764,9 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           </Text>
 
           <View style={styles.authForm}>
-            <TextInput
-              style={[styles.input, { textAlign: "center", letterSpacing: 6, fontSize: 22 }]}
+            <Field
+              style={{ textAlign: "center", letterSpacing: 8, fontSize: 24, paddingVertical: 16 }}
               placeholder="00000000"
-              placeholderTextColor={MUTED}
               value={verifyCode}
               onChangeText={(t) => setVerifyCode(t.replace(/\D/g, "").slice(0, 8))}
               keyboardType="number-pad"
@@ -756,6 +778,9 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
             />
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             {notice ? <Text style={styles.noticeText}>{notice}</Text> : null}
+            <TouchableOpacity onPress={handleOpenMail} style={{ alignSelf: "center", marginTop: 2, padding: 6 }}>
+              <Text style={styles.linkText}>Open my email app</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -818,58 +843,46 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
 
         <View style={styles.authForm}>
           {mode === "signup" && (
-            <View style={styles.inputWrap}>
-              <Text style={styles.inputLabel}>Username</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="3–20 chars, letters/numbers/_"
-                placeholderTextColor={MUTED}
-                value={username}
-                onChangeText={(t) => setUsername(normalizeUsername(t))}
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="next"
-                onSubmitEditing={() => emailRef.current?.focus()}
-                blurOnSubmit={false}
-                maxLength={20}
-              />
-            </View>
+            <Field
+              label="Username"
+              placeholder="3–20 chars, letters/numbers/_"
+              value={username}
+              onChangeText={(t) => setUsername(normalizeUsername(t))}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="next"
+              onSubmitEditing={() => emailRef.current?.focus()}
+              blurOnSubmit={false}
+              maxLength={20}
+            />
           )}
 
-          <View style={styles.inputWrap}>
-            <Text style={styles.inputLabel}>Email</Text>
-            <TextInput
-              ref={emailRef}
-              style={styles.input}
-              placeholder="you@example.com"
-              placeholderTextColor={MUTED}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-              blurOnSubmit={false}
-              maxLength={100}
-            />
-          </View>
+          <Field
+            label="Email"
+            inputRef={emailRef}
+            placeholder="you@example.com"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoComplete="email"
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+            blurOnSubmit={false}
+            maxLength={100}
+          />
 
-          <View style={styles.inputWrap}>
-            <Text style={styles.inputLabel}>Password</Text>
-            <TextInput
-              ref={passwordRef}
-              style={styles.input}
-              placeholder="12+ chars, number, symbol"
-              placeholderTextColor={MUTED}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              returnKeyType={mode === "signup" ? "done" : "go"}
-              onSubmitEditing={handleSubmit}
-              maxLength={72}
-            />
-          </View>
+          <Field
+            label="Password"
+            inputRef={passwordRef}
+            placeholder="12+ chars, number, symbol"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            returnKeyType={mode === "signup" ? "done" : "go"}
+            onSubmitEditing={handleSubmit}
+            maxLength={72}
+          />
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
           {mode === "signup" ? (
@@ -956,7 +969,7 @@ function AccountTypeSlide({ selected, onSelect, onNext }) {
   return (
     <View style={styles.slide}>
       <View style={{ flex: 1 }}>
-        <View style={styles.stepBadge}><WaveIcon size={24} color={ACCENT} /></View>
+        <View style={styles.stepBadge}><UsersIcon size={24} color={ACCENT} /></View>
         <Text style={styles.question}>Who's using{"\n"}Drift?</Text>
         <Text style={styles.questionSub}>Pick the one that fits — this can't be changed later.</Text>
         <ScrollView style={styles.optionsScroll} showsVerticalScrollIndicator={false}>
@@ -1037,35 +1050,28 @@ function ChildJoinSlide({ onDone }) {
           Type your name and the family code your parent gives you. No email needed.
         </Text>
         <View style={styles.authForm}>
-          <View style={styles.inputWrap}>
-            <Text style={styles.inputLabel}>Your name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Alex"
-              placeholderTextColor={MUTED}
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-              autoCorrect={false}
-              returnKeyType="next"
-              maxLength={40}
-            />
-          </View>
-          <View style={styles.inputWrap}>
-            <Text style={styles.inputLabel}>Family code</Text>
-            <TextInput
-              style={[styles.input, { letterSpacing: 4, textAlign: "center", fontSize: 20 }]}
-              placeholder="ABC123"
-              placeholderTextColor={MUTED}
-              value={code}
-              onChangeText={(t) => setCode(normalizeFamilyCode(t))}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              returnKeyType="done"
-              onSubmitEditing={submit}
-              maxLength={12}
-            />
-          </View>
+          <Field
+            label="Your name"
+            placeholder="Alex"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+            autoCorrect={false}
+            returnKeyType="next"
+            maxLength={40}
+          />
+          <Field
+            label="Family code"
+            style={{ letterSpacing: 4, textAlign: "center", fontSize: 20 }}
+            placeholder="ABC123"
+            value={code}
+            onChangeText={(t) => setCode(normalizeFamilyCode(t))}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            returnKeyType="done"
+            onSubmitEditing={submit}
+            maxLength={12}
+          />
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
       </View>
@@ -1272,17 +1278,16 @@ const styles = StyleSheet.create({
   },
 
   // Welcome
-  welcomeContent: { flex: 1, justifyContent: "center", paddingBottom: 36 },
-  welcomeSprout: {
-    position: "absolute",
-    right: -58,
-    bottom: 118,
-    opacity: 0.13,
-  },
+  welcomeContent: { flex: 1, justifyContent: "center", alignItems: "center", paddingBottom: 28 },
   welcomeSprig: {
     position: "absolute",
     left: -32,
     top: 52,
+  },
+  welcomeSeeds: {
+    position: "absolute",
+    right: -30,
+    bottom: 130,
   },
   welcomeLogo: {
     fontFamily: FF.kicker,
@@ -1290,35 +1295,96 @@ const styles = StyleSheet.create({
     color: ACCENT,
     letterSpacing: 4.2,
     textTransform: "uppercase",
-    marginBottom: 34,
+    marginBottom: 30,
+  },
+  welcomeHero: {
+    marginBottom: 30,
+  },
+  welcomeHeroRing: {
+    width: 186,
+    height: 186,
+    borderRadius: 93,
+    backgroundColor: SAGE_LO,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: HAIRLINE,
   },
   welcomeHeadline: {
     fontFamily: FF.display,
-    fontSize: 42,
+    fontSize: 40,
     color: TEXT,
-    lineHeight: 48,
+    lineHeight: 47,
     letterSpacing: -0.2,
-    marginBottom: 18,
+    marginBottom: 14,
+    textAlign: "center",
   },
   welcomeSub: {
     fontFamily: FF.body,
     fontSize: 16,
     color: MUTED,
     lineHeight: 24,
+    textAlign: "center",
+    paddingHorizontal: 14,
+  },
+
+  // How-it-works
+  howIconRing: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: SAGE_LO,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  howIconDisc: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: CARD_BG,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    shadowColor: "#1F3A2A",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  howKicker: {
+    fontFamily: FF.kicker,
+    fontSize: 11,
+    color: ACCENT,
+    letterSpacing: 3,
+    marginBottom: 12,
+  },
+  howDetail: {
+    backgroundColor: SAGE_LO,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginHorizontal: 8,
   },
 
   // Question
   stepBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: SAGE_LO,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: CARD_BG,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 22,
+    marginBottom: 20,
     marginTop: 6,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: BORDER,
+    shadowColor: "#1F3A2A",
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   question: {
     fontFamily: FF.display,
@@ -1340,36 +1406,43 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: CARD_BG,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: BORDER,
-    paddingVertical: 15,
-    paddingHorizontal: 16,
-    marginBottom: 9,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: 10,
+    shadowColor: "#1F3A2A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
   optionCardSelected: {
     borderColor: ACCENT,
     backgroundColor: SAGE_LO,
+    shadowOpacity: 0.09,
   },
   optionLabel: {
     fontFamily: FF.bodyMed,
     fontSize: 15,
     color: TEXT,
   },
-  optionLabelSelected: { color: ACCENT },
+  optionLabelSelected: { color: "#1F3A2A" },
   optionSub: {
     fontFamily: FF.body,
     fontSize: 13,
     color: MUTED,
     marginTop: 3,
   },
-  optionSubSelected: { color: "#1A8050" },
+  optionSubSelected: { color: "#2D5A3E" },
   check: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: BORDER,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    borderColor: "#D3DCD3",
+    backgroundColor: CARD_BG,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 12,
@@ -1397,31 +1470,39 @@ const styles = StyleSheet.create({
   },
   authForm: {
     marginTop: 8,
-    padding: 14,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.72)",
+    padding: 18,
+    borderRadius: 22,
+    backgroundColor: CARD_BG,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: HAIRLINE,
+    shadowColor: "#1F3A2A",
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   inputWrap: { marginBottom: 14 },
   inputLabel: {
-    fontFamily: FF.kicker,
+    fontFamily: FF.bodyMed,
     fontSize: 13,
-    color: FAINT,
-    marginBottom: 8,
-    textTransform: "uppercase",
-    letterSpacing: 1.4,
+    color: MUTED,
+    marginBottom: 7,
+    letterSpacing: 0.2,
   },
   input: {
-    backgroundColor: CARD_BG,
-    borderWidth: 1,
-    borderColor: BORDER,
+    backgroundColor: BG,
+    borderWidth: 1.5,
+    borderColor: "transparent",
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontFamily: FF.body,
     fontSize: 16,
     color: TEXT,
+  },
+  inputFocused: {
+    borderColor: ACCENT,
+    backgroundColor: CARD_BG,
   },
   errorText: {
     color: "#E05050",
@@ -1455,21 +1536,33 @@ const styles = StyleSheet.create({
     color: MUTED,
     fontSize: 14,
   },
+  linkText: {
+    fontFamily: FF.bodyMed,
+    color: ACCENT,
+    fontSize: 14,
+  },
 
   // Buttons
   ctaBtn: {
     backgroundColor: "#1F3A2A",
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 17,
     alignItems: "center",
     marginTop: 16,
+    shadowColor: "#1F3A2A",
+    shadowOpacity: 0.24,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   ctaBtnDisabled: {
     backgroundColor: "#C7D5C9",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   secondaryBtn: {
     backgroundColor: CARD_BG,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: BORDER,
     paddingVertical: 16,
@@ -1484,8 +1577,8 @@ const styles = StyleSheet.create({
   ctaBtnText: {
     color: "#FAF6EE",
     fontFamily: FF.bodyMed,
-    fontSize: 15,
-    letterSpacing: 0,
+    fontSize: 16,
+    letterSpacing: 0.2,
   },
   legal: {
     fontFamily: FF.body,
@@ -1505,10 +1598,10 @@ const styles = StyleSheet.create({
   },
   progressDot: {
     flex: 1,
-    height: 3,
+    height: 4,
     borderRadius: 2,
-    backgroundColor: "#DFF0E8",
+    backgroundColor: "#E2E9E1",
   },
-  progressDotDone: { backgroundColor: "#1A8050" },
+  progressDotDone: { backgroundColor: "#5B8A6D" },
   progressDotActive: { backgroundColor: ACCENT },
 });

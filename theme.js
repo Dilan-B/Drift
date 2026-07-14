@@ -49,41 +49,50 @@ export const LIGHT = {
   },
 };
 
+// Dark mode: "evening greenhouse". Not light-mode-inverted, but its own
+// place — deep pine-black ground with REAL elevation steps (canvas → inset →
+// card → cream each visibly lighter), warm paper-white ink, and accents that
+// glow like plants under moonlight: luminous spring green, fresh sage, and a
+// candlelight clay. Washes run slightly stronger than light mode so tinted
+// chips/pills stay visible against the dark ground.
 export const DARK = {
   ink: {
-    void:   "#080F0B",
-    deep:   "#E8EEDF",
-    mid:    "#9DAE9A",
-    faint:  "#566357",
-    ghost:  "rgba(255,255,255,0.05)",
-    border: "rgba(255,255,255,0.08)",
-    hairline: "rgba(255,255,255,0.06)",
+    void:   "#060B08",
+    deep:   "#F1F5E9",    // warm paper-white — crisp primary text
+    mid:    "#AFC0AA",    // secondary text — readable, still soft
+    faint:  "#71836F",    // tertiary — lifted well off the ground
+    ghost:  "rgba(222,240,216,0.06)",
+    border: "rgba(222,240,216,0.11)",
+    hairline: "rgba(222,240,216,0.07)",
   },
   paper: {
-    warm:   "#0F1611",
-    card:   "#171F18",
-    cream:  "#1A2320",
-    sand:   "#19231C",    // neutral dark inset (NOT brown)
-    dash:   "rgba(255,255,255,0.18)",
+    warm:   "#0C1310",    // canvas — deep pine, a breath of blue-green
+    card:   "#1A241C",    // raised surfaces — clearly lifted off canvas
+    cream:  "#212D24",    // soft top layer (inputs on cards, hovers)
+    sand:   "#121B15",    // inset wells — sit BELOW the canvas
+    dash:   "rgba(222,240,216,0.22)",
   },
   earn: {
-    deep:    "#D8E8C5",
-    deepHi:  "#E4F0D0",
-    sage:    "#A8C99A",
-    sageLo:  "rgba(168,201,154,0.13)",
-    sageDot: "#8FB585",
-    terra:   "#7FBE96",
-    terraLo: "rgba(127,190,150,0.14)",
-    green:   "#7FBE96",
-    greenLo: "rgba(127,190,150,0.14)",
-    greenD:  "#A8D9B5",
-    blue:    "#9BC4D2",
-    blueLo:  "rgba(155,196,210,0.13)",
-    clay:    "#CCA07E",   // warm clay glow — graphic accents only
-    clayLo:  "rgba(204,160,126,0.14)",
-    bark:    "#A38C78",
-    barkLo:  "rgba(163,140,120,0.13)",
-    barkInk: "#C9B49E",
+    // Luminous spring green = primary CTAs (dark text sits on these)
+    deep:    "#D9EFAD",
+    deepHi:  "#E7F8C6",
+    // Sage — fresher and more saturated than before
+    sage:    "#B5D9A0",
+    sageLo:  "rgba(181,217,160,0.16)",
+    sageDot: "#98C687",
+    // Mint accent for stat dots, progress fills
+    terra:   "#8CD4A4",
+    terraLo: "rgba(140,212,164,0.16)",
+    green:   "#8CD4A4",
+    greenLo: "rgba(140,212,164,0.16)",
+    greenD:  "#BFE9C9",
+    blue:    "#A6D2E2",
+    blueLo:  "rgba(166,210,226,0.15)",
+    clay:    "#E2B084",   // candlelight clay — graphic accents only
+    clayLo:  "rgba(226,176,132,0.16)",
+    bark:    "#B69C83",
+    barkLo:  "rgba(182,156,131,0.15)",
+    barkInk: "#DCC6AC",
   },
 };
 

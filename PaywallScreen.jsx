@@ -52,13 +52,13 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, offering
   }, []);
 
   const paper = dark
-    ? { bg: "#0F1611", card: "#171F18", border: "rgba(255,255,255,0.08)" }
+    ? { bg: "#0C1310", card: "#1A241C", border: "rgba(222,240,216,0.11)" }
     : { bg: "#F7F7F4", card: "#FFFFFF", border: "rgba(26,40,32,0.08)" };
   const ink = dark
-    ? { deep: "#E8EEDF", mid: "#9DAE9A", faint: "#566357" }
+    ? { deep: "#F1F5E9", mid: "#AFC0AA", faint: "#71836F" }
     : { deep: "#1A2820", mid: "#6B7A6E", faint: "#A8B0A8" };
   const earn = dark
-    ? { green: "#7FBE96", greenD: "#A8D9B5", sageLo: "rgba(168,201,154,0.13)", deep: "#D8E8C5" }
+    ? { green: "#8CD4A4", greenD: "#BFE9C9", sageLo: "rgba(181,217,160,0.16)", deep: "#D9EFAD" }
     : { green: "#2D6B47", greenD: "#1F3A2A", sageLo: "#E4ECE0", deep: "#1F3A2A" };
 
   const handlePurchase = async () => {
@@ -142,7 +142,7 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, offering
               </Text>
               {savingsPct > 0 && (
                 <View style={{ backgroundColor: earn.green, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                  <Text style={{ fontFamily: FF.bodyBold, fontSize: 9, color: dark ? "#0F1611" : "#fff", letterSpacing: 0.5 }}>SAVE {savingsPct}%</Text>
+                  <Text style={{ fontFamily: FF.bodyBold, fontSize: 9, color: dark ? "#16261C" : "#fff", letterSpacing: 0.5 }}>SAVE {savingsPct}%</Text>
                 </View>
               )}
             </View>
@@ -226,7 +226,7 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, offering
         >
           {purchasing
             ? <ActivityIndicator color="#fff" />
-            : <Text style={{ fontFamily: FF.bodyBold, fontSize: 16, color: dark ? "#0F1611" : "#fff", letterSpacing: 0.3 }}>
+            : <Text style={{ fontFamily: FF.bodyBold, fontSize: 16, color: dark ? "#16261C" : "#fff", letterSpacing: 0.3 }}>
                 Start Free Trial
               </Text>
           }
