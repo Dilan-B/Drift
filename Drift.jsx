@@ -2946,6 +2946,7 @@ export default function App() {
   const [onboarding,     setOnboarding]     = useState(false);
   const [signInOnly,     setSignInOnly]     = useState(false); // returning user (skip questionnaire)
   const [appMode,        setAppMode]        = useState("personal"); // 'personal' | 'parent' | 'child'
+  const [childBlockMode, setChildBlockMode] = useState("categories"); // 'categories' | 'custom'
   const [showAccount,        setShowAccount]        = useState(false);
   const [forceUpdate,        setForceUpdate]        = useState(false);
   const [updateStoreUrl,     setUpdateStoreUrl]     = useState(null);
@@ -4198,20 +4199,45 @@ export default function App() {
     return () => { supabase.removeChannel(ch); sub.remove(); };
   }, [appMode, userId, applyChildBalance]);
 
-  // ── CHILD: enforce the shield (category block by default) ─────
+  // ── CHILD: track the blocking mode (categories vs custom-picked apps) ──
+  // 'custom' means the parent picked specific apps on this device via the native
+  // picker; the shield below then blocks those instead of whole categories.
+  useEffect(() => {
+    if (appMode !== "child" || !userId) return;
+    let cancelled = false;
+    const loadPolicy = async () => {
+      try {
+        const { data } = await supabase
+          .from("family_members").select("app_policy")
+          .eq("user_id", userId).is("removed_at", null).maybeSingle();
+        if (!cancelled) setChildBlockMode(data?.app_policy?.mode === "custom" ? "custom" : "categories");
+      } catch {}
+    };
+    loadPolicy();
+    const ch = supabase
+      .channel(`child_policy:${userId}`)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "family_members", filter: `user_id=eq.${userId}` },
+        loadPolicy)
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [appMode, userId]);
+
+  // ── CHILD: enforce the shield ─────────────────────────────────
   // Personal accounts run the richer shield effect above; a child uses a
-  // simpler mapping: time left → apps open, out of time → block standard
-  // categories. Applies only on state crossings so we don't reset the native
-  // monitor's counter every drain tick. (Per-app allow-list is stored in
-  // family_members.app_policy; exempting specific apps from a category block
-  // needs native support and is a follow-up.)
+  // simpler mapping: time left → apps open, out of time → block. In
+  // 'categories' mode we block standard app categories (freeTier); in 'custom'
+  // mode we block the specific apps a parent picked on this device via the
+  // native FamilyActivityPicker. Guarded by a composite key so it re-applies
+  // when the mode changes, but not on every drain tick.
   const childShieldRef = useRef(null);
   useEffect(() => {
     if (appMode !== "child") return;
     if (!isNativeBlockingAvailable()) return;
     const desired = secLeft > 0 ? "off" : "on";
-    if (childShieldRef.current === desired) return;
-    childShieldRef.current = desired;
+    const key = `${desired}:${childBlockMode}`;
+    if (childShieldRef.current === key) return;
+    childShieldRef.current = key;
     (async () => {
       try {
         if (desired === "off") {
@@ -4222,12 +4248,14 @@ export default function App() {
           nativeArmedRef.current = isNativeBlockingAvailable() && res?.started !== false;
         } else {
           await stopBalanceMonitoring().catch(() => {});
-          await applyBlocking([], { freeTier: true }).catch(() => {});
+          // custom → block the parent-picked apps; categories → block whole
+          // categories (freeTier path).
+          await applyBlocking([], { freeTier: childBlockMode !== "custom" }).catch(() => {});
           nativeArmedRef.current = false;
         }
       } catch {}
     })();
-  }, [appMode, secLeft]);
+  }, [appMode, secLeft, childBlockMode]);
 
   const persist = async upd => {
     try {

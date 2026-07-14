@@ -138,9 +138,68 @@ export function rejectChildTask(taskId) {
   return invokeFamilyFn("reject-child-task", { task_id: taskId });
 }
 
-export function setChildAppPolicy(childId, allow) {
+export function setChildAppPolicy(childId, allow, mode = "categories") {
   return invokeFamilyFn("set-child-app-policy",
-    { child_id: childId, app_policy: { mode: "categories", allow: allow || [] } });
+    { child_id: childId, app_policy: { mode, allow: allow || [] } });
+}
+
+// ── App-access requests (child asks, parent approves) ────────
+// Child creates a request directly (RLS: own insert).
+export async function createAppRequest(familyId, childId, appLabel, kind = "allow") {
+  const label = (appLabel || "").trim().slice(0, 80);
+  if (!familyId || !childId || !label) return { ok: false, reason: "bad_input" };
+  const { data, error } = await supabase
+    .from("app_requests")
+    .insert({ family_id: familyId, child_id: childId, app_label: label, kind })
+    .select().single();
+  if (error) { console.warn("createAppRequest:", error.message); return { ok: false, reason: "failed" }; }
+  return { ok: true, request: data };
+}
+
+// Child: their own requests + statuses.
+export async function fetchMyAppRequests(childId) {
+  if (!childId) return [];
+  const { data, error } = await supabase
+    .from("app_requests")
+    .select("id, app_label, kind, status, created_at")
+    .eq("child_id", childId).is("removed_at", null)
+    .order("created_at", { ascending: false }).limit(50);
+  if (error) { console.warn("fetchMyAppRequests:", error.message); return []; }
+  return data || [];
+}
+
+// Parent: pending requests across their kids.
+export async function fetchAppRequests(childIds) {
+  if (!childIds?.length) return [];
+  const { data, error } = await supabase
+    .from("app_requests")
+    .select("id, child_id, app_label, kind, status, created_at")
+    .in("child_id", childIds).eq("status", "pending").is("removed_at", null)
+    .order("created_at", { ascending: true });
+  if (error) { console.warn("fetchAppRequests:", error.message); return []; }
+  return data || [];
+}
+
+export function resolveAppRequest(requestId, approve) {
+  return invokeFamilyFn("resolve-app-request", { request_id: requestId, approve: !!approve });
+}
+
+// ── Parent PIN (gates the native app picker on the child device) ──
+export function setFamilyPin(pin) {
+  return invokeFamilyFn("family-pin", { action: "set", pin });
+}
+
+export async function verifyFamilyPin(familyId, pin, setMode) {
+  try {
+    const { data, error } = await supabase.functions.invoke("family-pin", {
+      body: { action: "verify", family_id: familyId, pin, set_mode: setMode },
+    });
+    if (error) return { ok: false, reason: "network" };
+    if (!data?.success) return { ok: false, reason: data?.reason || "failed" };
+    return { ok: !!data.ok, reason: data.reason };
+  } catch (e) {
+    return { ok: false, reason: e?.message || "failed" };
+  }
 }
 
 // Parent: tasks the children have submitted and are waiting on approval.

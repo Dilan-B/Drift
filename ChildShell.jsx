@@ -16,6 +16,7 @@ import { supabase } from "./supabase";
 import { notifyTaskApproved } from "./notifications";
 import { fetchChildFamily, fetchChildTasks, submitChildTask } from "./family";
 import FamilyProfileModal from "./FamilyProfile";
+import ChildAppsModal from "./ChildAppsModal";
 import { FamilyDock, HistoryList, shortDate } from "./FamilyUI";
 
 const ACTIVE = ["assigned", "submitted", "rejected"];
@@ -28,6 +29,9 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [showApps, setShowApps] = useState(false);
+  const [familyId, setFamilyId] = useState(null);
+  const [blockMode, setBlockMode] = useState("categories");
   const [tab, setTab] = useState("home");
   const [refreshing, setRefreshing] = useState(false);
   const seenApprovedRef = useRef(null); // approved task ids seen on previous load
@@ -51,7 +55,11 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
     (async () => {
       if (!userId) return;
       const fam = await fetchChildFamily(userId);
-      if (mounted && fam?.display_name) setName(fam.display_name);
+      if (mounted && fam) {
+        if (fam.display_name) setName(fam.display_name);
+        setFamilyId(fam.family_id || null);
+        setBlockMode(fam.app_policy?.mode === "custom" ? "custom" : "categories");
+      }
       await loadTasks();
     })();
     return () => { mounted = false; };
@@ -120,6 +128,14 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
 
         {tab === "home" ? (
           <>
+            <TouchableOpacity
+              style={[c.appAccessBtn, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}
+              onPress={() => setShowApps(true)}
+            >
+              <Text style={[c.appAccessText, { color: t.ink.deep }]}>Manage app access</Text>
+              <Text style={{ color: t.ink.faint, fontFamily: FF.serifReg, fontSize: 20 }}>›</Text>
+            </TouchableOpacity>
+
             <Text style={[c.section, { color: t.ink.faint }]}>YOUR TASKS</Text>
             {loading ? (
               <ActivityIndicator color={t.earn.sage} style={{ marginTop: 20 }} />
@@ -182,6 +198,15 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
         onSignOut={onSignOut}
         onDeleteAccount={onDeleteAccount}
       />
+
+      <ChildAppsModal
+        visible={showApps}
+        onClose={() => setShowApps(false)}
+        dark={dark}
+        familyId={familyId}
+        childId={userId}
+        mode={blockMode}
+      />
     </View>
   );
 }
@@ -197,6 +222,8 @@ const c = StyleSheet.create({
   timeBig: { fontFamily: FF.display, fontSize: 72, lineHeight: 78 },
   timeUnit: { fontFamily: FF.bodyMed, fontSize: 16, marginTop: 2 },
   section: { fontFamily: FF.kicker, fontSize: 11, letterSpacing: 2, marginBottom: 12 },
+  appAccessBtn: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderRadius: 16, paddingVertical: 15, paddingHorizontal: 16, marginBottom: 22 },
+  appAccessText: { fontFamily: FF.bodyMed, fontSize: 15 },
   msgCard: { borderRadius: 18, padding: 20 },
   msgTitle: { fontFamily: FF.bodyBold, fontSize: 17, marginBottom: 6 },
   msgBody: { fontFamily: FF.body, fontSize: 14, lineHeight: 21 },
