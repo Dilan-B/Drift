@@ -90,10 +90,8 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
               HOW THIS WORKS
             </Text>
             <Text style={{ fontFamily: FB, fontSize: 12, color: "#2A7FA0", lineHeight: 18 }}>
-              Pick the apps you want Drift to block when your screen-time balance hits zero.
-              Selection happens in Apple's secure picker — Drift itself never sees your app list.
-              iOS enforces the block even if Drift is closed. Because Apple checks usage in
-              ~15-minute windows, blocking can kick in slightly after your time runs out.
+              Pick apps to block when your balance hits zero. iOS enforces it even when Drift is
+              closed, and may kick in up to ~15 min late.
             </Text>
           </View>
 
@@ -112,14 +110,12 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
                   Pick apps with Apple Screen Time
                 </Text>
                 <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4, textAlign: "center" }}>
-                  Opens Apple's secure picker. You can pick individual apps,
-                  whole categories (Social, Games), or web domains.
+                  Apps, categories, or web domains.
                 </Text>
               </TouchableOpacity>
 
               <Text style={{ fontFamily: FB, fontSize: 11, color: ink.faint, textAlign: "center", marginBottom: 24, lineHeight: 16 }}>
-                Tap the button above any time to change what's blocked.{"\n"}
-                Your selection is stored on your device only.
+                Tap again anytime to change what's blocked. Stored on your device only.
               </Text>
             </>
           ) : (
@@ -134,7 +130,7 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
                   FREE PLAN
                 </Text>
                 <Text style={{ fontFamily: FB, fontSize: 13, color: ink.deep, lineHeight: 19 }}>
-                  Drift automatically blocks all social & entertainment apps when your earned time runs out. Choosing specific apps is a Pro feature.
+                  Social & entertainment apps are blocked automatically when your time runs out. Pick specific apps with Pro.
                 </Text>
               </View>
 
@@ -150,7 +146,7 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
                   Enable Screen Time access
                 </Text>
                 <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4, textAlign: "center" }}>
-                  Required for Drift to block apps. No app list to pick.
+                  Needed to block apps.
                 </Text>
               </TouchableOpacity>
 

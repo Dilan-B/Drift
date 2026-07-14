@@ -92,7 +92,7 @@ export default function UsernameSetupModal({ visible, userId, onDone, dark = fal
               Pick your username
             </Text>
             <Text style={{ fontSize: 14, color: ink.mid, marginBottom: 32, lineHeight: 20 }}>
-              This is how friends will find you on Drift. You can't change it later.
+              How friends find you. Can't be changed later.
             </Text>
 
             <Text style={{ fontFamily: FOM, fontSize: 9, color: ink.faint, letterSpacing: 2, marginBottom: 8 }}>

@@ -94,9 +94,14 @@ serve(async (req: Request) => {
     if (!openaiKey) return json({ error: "Service misconfigured" }, 500);
 
     const prompt =
-      `You evaluate tasks for a productivity app called Drift. ` +
+      `You evaluate tasks for a productivity app called Drift. Users earn screen-time credits for time spent. ` +
       `Be fair but not generous — credits should match real effort.\n\n` +
-      `Guidelines:\n` +
+      `FIRST decide "productive": true only if the task is DIRECTLY productive or self-improving ` +
+      `(work, study, exercise, chores, skill-building, errands). Set it false for maintenance/leisure/consumption ` +
+      `(eating, resting, watching, browsing, grooming, casual socializing).\n\n` +
+      `HARD RULE: if productive is false, credits MUST NOT exceed 1/5 of the duration (${Math.floor(mins * 0.2)} max). ` +
+      `Example: "eating food" for 30 min → 6 credits max. Never exceed this cap for non-productive tasks.\n\n` +
+      `For productive tasks:\n` +
       `- Trivial: ~0.3-0.5 cr/min\n` +
       `- Light: ~0.5-0.75 cr/min\n` +
       `- Focused: ~0.75-1.0 cr/min\n` +
@@ -105,7 +110,7 @@ serve(async (req: Request) => {
       `Duration: ${mins} min\nCategory: ${category}\n\n` +
       `XP ≈ credits × 0.6 + 8 (round to integer)\n\n` +
       `Reply ONLY this JSON (no markdown):\n` +
-      `{"credits":<int>,"xp":<int>,"reasoning":"one short sentence"}`;
+      `{"productive":<bool>,"credits":<int>,"xp":<int>,"reasoning":"one short sentence"}`;
 
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -128,9 +133,19 @@ serve(async (req: Request) => {
     const raw  = data.choices?.[0]?.message?.content || "{}";
     const content = raw.replace(/^```[\w]*\n?/m, "").replace(/```$/m, "").trim();
 
-    let result: { credits: number; xp: number; reasoning: string };
+    let result: { productive?: boolean; credits: number; xp: number; reasoning: string };
     try { result = JSON.parse(content); }
     catch { return json({ error: "AI returned malformed response" }, 502); }
+
+    // Server-authoritative hard cap: non-productive tasks can never earn more than
+    // 1/5 of their duration, regardless of what the model returned.
+    if (result.productive === false) {
+      const cap = Math.max(1, Math.floor(mins * 0.2));
+      if (result.credits > cap) {
+        result.credits = cap;
+        result.xp = Math.round(cap * 0.6 + 8);
+      }
+    }
 
     supabase.from("ai_check_usage").insert({ user_id: user.id }).then(() => {}, () => {});
     return json(result);

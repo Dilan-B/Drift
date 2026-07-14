@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { supabase } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
-import { AppleSignInButton } from "./appleSignIn";
+// import { AppleSignInButton } from "./appleSignIn";
 import { joinFamily, normalizeFamilyCode } from "./family";
 import { cached, rateLimited } from "./apiGuards";
 import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon } from "./Icons";
@@ -148,7 +148,7 @@ const HOW_SLIDES = [
     id: "how3",
     emoji: "🔒",
     headline: "Apps lock when\nyou're out",
-    body: "Chose which apps to block.\nDrift enforces it even when the app is closed.",
+    body: "Choose which apps to block.\nDrift enforces it even when closed.",
     detail: "No willpower needed. The system does the hard part.",
   },
 ];
@@ -876,16 +876,6 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal" })
           </Text>
         )}
       </TouchableOpacity>
-
-      {/* Sign in with Apple — first among social options per Apple's HIG.
-          Renders nothing on non-iOS / when unavailable. */}
-      <View style={{ marginTop: 16 }}>
-        <AppleSignInButton
-          mode={mode}
-          onDone={onDone}
-          onError={(e) => setError(prettyAuthError(e?.message) || "Apple sign-in failed. Try again.")}
-        />
-      </View>
 
       {/* Google sign-in */}
       <OAuthButtons

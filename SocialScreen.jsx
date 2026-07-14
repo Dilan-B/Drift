@@ -1697,7 +1697,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
                 Contacts access needed
               </Text>
               <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid, textAlign: "center", lineHeight: 20 }}>
-                Enable Contacts for Drift in Settings to find friends. Your contacts never leave your device unhashed.
+                Enable Contacts in Settings to find friends. They never leave your device unhashed.
               </Text>
             </View>
           ) : (

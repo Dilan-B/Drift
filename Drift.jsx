@@ -14,7 +14,7 @@ import BlockedAppsModal from "./BlockedAppsModal";
 import UsernameSetupModal from "./UsernameSetupModal";
 import Swipeable from "./Swipeable";
 import {
-  fetchTasks, insertTask, completeTaskRow, softDeleteTask,
+  fetchTasks, insertTask, updateTaskCredits, completeTaskRow, softDeleteTask,
   appendLedgerEntry, syncProfileStats, fetchProfileStats, flushPendingStats,
   cache,
 } from "./sync";
@@ -69,10 +69,11 @@ import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
 import ReviewPromptScreen from "./ReviewPromptScreen";
 import TutorialOverlay from "./TutorialOverlay";
-import PaywallScreen from "./PaywallScreen";
+// PaywallScreen + useSubscription removed — app is fully free for now
+// import PaywallScreen from "./PaywallScreen";
+// import { useSubscription } from "./useSubscription";
 import ParentShell from "./ParentShell";
 import ChildShell from "./ChildShell";
-import { useSubscription } from "./useSubscription";
 import { cached, rateLimited } from "./apiGuards";
 import {
   TouchTracker, OriginPanel, OriginSheet, Backdrop, Pop, FadeInUp, Pulse, useCountUp, getLastTouch,
@@ -501,7 +502,7 @@ function CreditTicker({ value, seconds, textColor }) {
 const FREE_TIER_MULTIPLIER = 0.6;
 const MAX_REWARD_RATIO = 0.5;
 const MIN_REWARD_RATIO = 0.25;
-const FREE_TASK_LIMIT = 5;
+// const FREE_TASK_LIMIT = 5; // removed — no free tier limits for now
 const DIFFICULTY_GRANT = { easy: 15, medium: 7, hard: 3, committed: 1 };
 
 const BLOCKED_TASK_RE = /\b(goon|gooning|fap|fapping|jerk\s*off|jack\s*off|wank|masturbat|porn|hentai|onlyfans|xvideo|xhamster|nhentai|rule\s*34|edg(e|ing)\b(?!.*code)|69|blow\s*job|hand\s*job|sex(?!t)|nud[ei]|xxx|orgasm|boner|erection|cum\b|suck\s*(my|a|it)|eat\s*ass|anal\b|dildo|vibrator|fleshlight)\b/i;
@@ -611,7 +612,7 @@ function PlantSlider({
   );
 }
 
-function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall }) {
+function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPaywall }) {
   const { dark, theme } = useTheme();
   const { ink, paper, earn } = theme;
 
@@ -708,7 +709,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
     setEvaluating(true);
     setEvalError("");
 
-    const buildTask = ({ credits, xp, reasoning, aiValued }) => ({
+    const buildTask = ({ credits, xp, reasoning, aiValued, aiPending }) => ({
       id: makeUuid(),
       title:   title.trim(),
       cat,
@@ -718,6 +719,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
       xp,
       aiCheck:  isSubActive, // AI Check is mandatory for Pro users (off for free)
       aiValued: !!aiValued,
+      aiPending: !!aiPending, // credits are provisional until the bg evaluator finishes
       aiReasoning: reasoning || "",
       task_date: todayKey(),
     });
@@ -734,27 +736,15 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
       return;
     }
 
-    // Subscribed → server-side AI eval
-    try {
-      const { credits, xp, reasoning } = await evaluateTask({
-        title:    title.trim(),
-        mins,
-        category: cat,
-      });
-      onSave(buildTask({ credits, xp, reasoning, aiValued: true }), recurrence);
-      closeWithAnimation(true);
-    } catch (e) {
-      if (e?.code === "subscription_required") {
-        // Server told us their sub lapsed mid-session — fall back to the
-        // free-tier duration formula (same path a free user would take).
-        const { credits, xp, reasoning } = freeTierCredits(mins);
-        onSave(buildTask({ credits, xp, reasoning, aiValued: false }), recurrence);
-        closeWithAnimation(true);
-        return;
-      }
-      setEvalError(e?.message || "AI evaluation failed. Try again.");
-      setEvaluating(false);
-    }
+    // Subscribed → don't block the UI on the AI eval. Add the task instantly with
+    // provisional credits and an aiPending flag; the parent runs the evaluator in
+    // the background and patches the real value in when it finishes.
+    const provisional = freeTierCredits(mins);
+    onSave(
+      buildTask({ credits: provisional.credits, xp: provisional.xp, reasoning: "", aiValued: true, aiPending: true }),
+      recurrence,
+    );
+    closeWithAnimation(true);
   };
 
   const safeTop = Platform.OS === "ios" ? 54 : (StatusBar.currentHeight || 24) + 8;
@@ -1016,37 +1006,24 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive, onOpenPaywall })
             onPress={() => { if (!isSubActive) onOpenPaywall?.(); }}
             activeOpacity={isSubActive ? 1 : 0.7}
             style={{
-              flexDirection: "row", alignItems: "center", gap: 12,
-              paddingVertical: 13, paddingHorizontal: 14, borderRadius: 12, marginBottom: 10,
-              borderWidth: 1.5,
-              borderColor: isSubActive ? earn.blue : ink.border,
+              flexDirection: "row", alignItems: "center", gap: 10,
+              paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, marginBottom: 10,
+              borderWidth: 1,
+              borderColor: ink.border,
               backgroundColor: isSubActive ? earn.blueLo : "transparent",
               opacity: isSubActive ? 1 : 0.7,
             }}
           >
             {isSubActive
-              ? <SparkleIcon size={20} color={aiCheck ? earn.blue : ink.mid} />
-              : <LockIcon size={20} color={ink.mid} />}
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={{ fontFamily: FK, fontSize: 14, fontWeight: "600", color: aiCheck && isSubActive ? earn.blue : ink.deep }}>
-                  AI Check
-                </Text>
-                <View style={{ backgroundColor: isSubActive ? earn.blueLo : ink.ghost, borderRadius: 6, paddingVertical: 1, paddingHorizontal: 6 }}>
-                  <Text style={{ fontFamily: FOM, fontSize: 8, color: isSubActive ? earn.blue : ink.mid, letterSpacing: 1 }}>
-                    PRO
-                  </Text>
-                </View>
-              </View>
-              <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                Submit a photo or text proof to earn credits
-              </Text>
-            </View>
-            {/* AI Check is mandatory for Pro — show it locked on, not a toggle. */}
-            {isSubActive && (
-              <View style={{ backgroundColor: earn.blue, borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8 }}>
-                <Text style={{ fontFamily: FOM, fontSize: 8, color: "#fff", letterSpacing: 1 }}>REQUIRED</Text>
-              </View>
+              ? <SparkleIcon size={16} color={earn.blue} />
+              : <LockIcon size={16} color={ink.mid} />}
+            <Text style={{ flex: 1, fontFamily: FB, fontSize: 12, color: ink.mid }}>
+              {isSubActive
+                ? "AI Check verifies your proof to earn credits."
+                : "AI Check is a Pro feature."}
+            </Text>
+            {!isSubActive && (
+              <Text style={{ fontFamily: FOM, fontSize: 9, color: earn.terra, letterSpacing: 1 }}>UPGRADE</Text>
             )}
           </TouchableOpacity>
 
@@ -2087,7 +2064,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
               flexShrink: 0,
             }}>
               <Text style={{ fontFamily: FF.bodyBold, fontSize: 13, color: earn.greenD }}>
-                +{fmtMins(t.credits)}
+                +{fmtMins(t.credits)}{t.aiPending ? "*" : ""}
               </Text>
             </View>
 
@@ -2998,14 +2975,10 @@ export default function App() {
   const quickGrantDayRef = useRef(todayKey());
   const visibleTaskDayRef = useRef(todayKey());
 
-  // ── Pro access (RevenueCat) ────────────────────────────────────────────
-  const { proAccess, offerings: proOfferings, purchase: purchasePro, restore: restorePro, refresh: refreshPro } = useSubscription(userId);
-  const proAccessRef = useRef(proAccess);
-  useEffect(() => {
-    proAccessRef.current = proAccess;
-    setProStatus(proAccess);
-  }, [proAccess]);
-  const [showPaywall, setShowPaywall] = useState(false);
+  // ── Pro access — everything is free for now ────────────────────────────
+  const proAccess = true;
+  const proAccessRef = useRef(true);
+  useEffect(() => { setProStatus(true); }, []);
   const [driftInActive,  setDriftInActive]  = useState(false);
   const [darkMode,       setDarkMode]       = useState(false);
 
@@ -3978,26 +3951,30 @@ export default function App() {
         const uid = session?.user?.id ?? null;
         const cachedVerified = !!(session?.user?.email_confirmed_at || session?.user?.phone_confirmed_at || session?.user?.confirmed_at);
         if (uid && !cachedVerified) {
-          // Don't sign out a restored session just because the cached user object
-          // is missing the verified-email field (it can be absent/stale on a cold
-          // start). Confirm with the server; only sign out if it POSITIVELY
-          // reports an unverified email. Any error/uncertainty → keep them in.
-          let serverUnverified = false;
-          try {
-            const { data: u, error } = await supabase.auth.getUser();
-            if (!error && u?.user) {
-              serverUnverified = !(u.user.email_confirmed_at || u.user.phone_confirmed_at || u.user.confirmed_at);
+          // OAuth users (Google, Apple) are always verified — they authenticated
+          // with the provider. Only check email verification for email/password
+          // signups. The cached session often lacks confirmed_at on cold start;
+          // signing out on that false negative is the #1 cause of unwanted logouts.
+          const provider = session?.user?.app_metadata?.provider;
+          const isOAuth = provider && provider !== "email";
+          if (!isOAuth) {
+            let serverUnverified = false;
+            try {
+              const { data: u, error } = await supabase.auth.getUser();
+              if (!error && u?.user) {
+                serverUnverified = !(u.user.email_confirmed_at || u.user.phone_confirmed_at || u.user.confirmed_at);
+              }
+            } catch {}
+            if (serverUnverified) {
+              await supabase.auth.signOut().catch(() => {});
+              setUserId(null);
+              setUserEmail("");
+              setUserName("");
+              const hasOnboarded = await AsyncStorage.getItem("drift_onboarded");
+              setSignInOnly(hasOnboarded === "1");
+              setOnboarding(true);
+              return;
             }
-          } catch {}
-          if (serverUnverified) {
-            await supabase.auth.signOut().catch(() => {});
-            setUserId(null);
-            setUserEmail("");
-            setUserName("");
-            const hasOnboarded = await AsyncStorage.getItem("drift_onboarded");
-            setSignInOnly(hasOnboarded === "1");
-            setOnboarding(true);
-            return;
           }
         }
         setUserId(uid);
@@ -4333,12 +4310,38 @@ export default function App() {
   };
 
   const tryOpenAddTask = useCallback(() => {
-    if (!proAccess && tasks.filter(t => !t.done).length >= FREE_TASK_LIMIT) {
-      setShowPaywall(true);
+    setOverlay("add");
+  }, []);
+
+  // Background AI valuation for a just-created task. Patches the provisional
+  // credits/xp with the real evaluated values once the server responds. Never
+  // throws — on failure the task simply keeps its provisional credits.
+  const finalizeTaskCredits = async (t) => {
+    let result;
+    try {
+      result = await evaluateTask({ title: t.title, mins: t.minutes, category: t.cat });
+    } catch (e) {
+      // Sub lapsed or eval unavailable → keep provisional credits, just clear the
+      // pending flag so nothing shows as perpetually "evaluating".
+      setTasks(prev => {
+        const nt = prev.map(x => x.id === t.id ? { ...x, aiPending: false, aiValued: false } : x);
+        persist({ tasks: nt });
+        if (userId) cacheFullTasks(userId, nt);
+        return nt;
+      });
       return;
     }
-    setOverlay("add");
-  }, [proAccess, tasks]);
+    const { credits, xp, reasoning } = result;
+    setTasks(prev => {
+      const nt = prev.map(x =>
+        x.id === t.id ? { ...x, credits, xp, aiReasoning: reasoning || "", aiValued: true, aiPending: false } : x
+      );
+      persist({ tasks: nt });
+      if (userId) cacheFullTasks(userId, nt);
+      return nt;
+    });
+    if (userId) updateTaskCredits(userId, t.id, { credits, xp, reasoning, aiValued: true }).catch(() => {});
+  };
 
   const addTask  = (t, recurrence) => {
     const nt = [...tasks, t];
@@ -4352,6 +4355,10 @@ export default function App() {
       });
       cacheFullTasks(userId, nt);
     }
+    // Async AI valuation: the task is already on screen with provisional credits.
+    // Evaluate in the background and patch the real credits/xp in when it lands,
+    // so the user is never stuck on a "AI is evaluating…" spinner.
+    if (t.aiPending) finalizeTaskCredits(t);
     if (userId && proAccess && recurrence?.frequency && recurrence.frequency !== "none") {
       const template = {
         id: makeUuid(),
@@ -4774,10 +4781,10 @@ export default function App() {
               Alert.alert("Screen Time", `Status: ${next}. Open Settings -> Screen Time to grant access.`);
             }
           }}
-          onUpgrade={() => setShowPaywall(true)}
+          onUpgrade={() => {}}
           onSignOut={signOut}
           onDeleteAccount={deleteAccount}
-          onProRedeemed={refreshPro}
+          onProRedeemed={() => {}}
         />
       ) : (
       <>
@@ -4827,7 +4834,7 @@ export default function App() {
             <SocialScreen
               userId={userId}
               isPremium={proAccess}
-              onOpenPaywall={() => setShowPaywall(true)}
+              onOpenPaywall={() => {}}
               onSwipeLockChange={setChildSwipeLockedNow}
               onChallengeResolved={handleChallengeResolved}
               dark={darkMode}
@@ -4892,24 +4899,11 @@ export default function App() {
               onClose={() => setOverlay(null)}
               userId={userId}
               isSubActive={proAccess}
-              onOpenPaywall={() => setShowPaywall(true)}
+              onOpenPaywall={() => {}}
             />
           )}
         </View>
       )}
-
-      {/* Paywall — disabled while payments are off (everything is free). The
-          PaywallScreen component is kept in the tree, just never rendered, so
-          re-enabling paid Pro later is a matter of restoring this block.
-      {showPaywall && (
-        <PaywallScreen
-          onClose={() => setShowPaywall(false)}
-          onPurchase={purchasePro}
-          onRestore={restorePro}
-          offerings={proOfferings}
-          dark={darkMode}
-        />
-      )} */}
 
       {/* Mandatory update gate — overlays everything, no dismiss */}
       <ForceUpdateModal visible={forceUpdate} storeUrl={updateStoreUrl} dark={darkMode} />
@@ -4920,7 +4914,7 @@ export default function App() {
         firstTime={firstTimeBlockedApps}
         dark={darkMode}
         isPro={proAccess}
-        onUpgrade={() => setShowPaywall(true)}
+        onUpgrade={() => {}}
         onClose={() => {
           const wasFirstTime = firstTimeBlockedApps;
           setShowBlockedApps(false);
