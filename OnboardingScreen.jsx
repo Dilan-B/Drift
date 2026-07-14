@@ -13,6 +13,7 @@ import {
 import { supabase } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
 // import { AppleSignInButton } from "./appleSignIn";
+import { joinFamily, normalizeFamilyCode } from "./family";
 import { cached, rateLimited } from "./apiGuards";
 import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon } from "./Icons";
 import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
@@ -55,6 +56,10 @@ const STEPS = [
   { id: "how1" },
   { id: "how2" },
   { id: "how3" },
+  // Account type is chosen here — PERMANENTLY — before auth. It decides the
+  // whole downstream flow: personal → normal signup + questionnaire; parent →
+  // signup only (management account); child → passwordless join by family code.
+  { id: "account_type" },
   // Auth now comes BEFORE the questionnaire. Users create their account first,
   // then answer the two questions that actually configure the app (which daily
   // tasks to seed, and how strict the Take button is). The old pre-signup
@@ -458,7 +463,7 @@ function prettyAuthError(msg) {
   return msg || null;
 }
 
-function AuthSlide({ onDone, defaultMode = "signup" }) {
+function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal" }) {
   const [mode,     setMode]     = useState(defaultMode); // "signup" | "login"
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
@@ -608,6 +613,7 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
             data: {
               username:  cleanUsername,
               full_name: cleanUsername, // keep full_name for backwards-compat
+              account_type: accountType, // 'personal' | 'parent' — read by handle_new_user
             },
             emailRedirectTo: "drift://auth-callback",
           },
@@ -910,6 +916,142 @@ function AuthSlide({ onDone, defaultMode = "signup" }) {
   );
 }
 
+// ─── Account-type selection ──────────────────────────────────────────────────
+
+const ACCOUNT_TYPES = [
+  { id: "personal", label: "Just me", sub: "Earn your own screen time by completing tasks." },
+  { id: "parent",   label: "I'm a parent", sub: "Set tasks for your kids and approve their screen time." },
+  { id: "child",    label: "I'm a kid", sub: "Join your family with a code from your parent." },
+];
+
+function AccountTypeSlide({ selected, onSelect, onNext }) {
+  return (
+    <View style={styles.slide}>
+      <View style={{ flex: 1 }}>
+        <View style={styles.stepBadge}><WaveIcon size={24} color={ACCENT} /></View>
+        <Text style={styles.question}>Who's using{"\n"}Drift?</Text>
+        <Text style={styles.questionSub}>Pick the one that fits — this can't be changed later.</Text>
+        <ScrollView style={styles.optionsScroll} showsVerticalScrollIndicator={false}>
+          {ACCOUNT_TYPES.map((opt) => {
+            const sel = selected === opt.id;
+            return (
+              <TouchableOpacity
+                key={opt.id}
+                style={[styles.optionCard, sel && styles.optionCardSelected]}
+                onPress={() => onSelect(opt.id)}
+                activeOpacity={0.75}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.optionLabel, sel && styles.optionLabelSelected]}>{opt.label}</Text>
+                  <Text style={[styles.optionSub, sel && styles.optionSubSelected]}>{opt.sub}</Text>
+                </View>
+                <View style={[styles.check, sel && styles.checkSelected]}>
+                  {sel && <CheckIcon size={14} color="#fff" />}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+        <Text style={styles.authHint}>You can't switch account types after your account is created.</Text>
+      </View>
+      <TouchableOpacity
+        style={[styles.ctaBtn, !selected && styles.ctaBtnDisabled]}
+        onPress={selected ? onNext : null}
+        activeOpacity={selected ? 0.8 : 1}
+      >
+        <Text style={styles.ctaBtnText}>Continue</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── Child join (name + family code, no email/password) ──────────────────────
+
+function ChildJoinSlide({ onDone }) {
+  const [name,    setName]    = useState("");
+  const [code,    setCode]    = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState("");
+
+  async function submit() {
+    setError("");
+    const n = name.trim();
+    const c = normalizeFamilyCode(code);
+    if (n.length < 1) { setError("Enter your name."); return; }
+    if (c.length < 4) { setError("Enter the family code from your parent."); return; }
+    setLoading(true);
+    const res = await joinFamily(c, n);
+    setLoading(false);
+    if (!res.ok) {
+      const map = {
+        invalid_code: "That family code doesn't exist. Double-check it with your parent.",
+        inactive:     "That family code isn't active anymore.",
+        family_full:  "This family already has the maximum number of kids.",
+        bad_name:     "Enter your name.",
+        network:      "Network error. Check your connection.",
+        session:      "Couldn't finish signing in. Try again.",
+      };
+      setError(map[res.reason] || "Couldn't join the family. Try again.");
+      return;
+    }
+    onDone(res.user);
+  }
+
+  return (
+    <KeyboardAvoidingView style={styles.slide} behavior={Platform.OS === "ios" ? "height" : undefined}>
+      <View pointerEvents="none" style={styles.authSeeds}>
+        <SeedDots size={170} color={ACCENT} opacity={0.045} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={styles.stepBadge}><WaveIcon size={24} color={ACCENT} /></View>
+        <Text style={styles.question}>Join your{"\n"}family</Text>
+        <Text style={styles.questionSub}>
+          Type your name and the family code your parent gives you. No email needed.
+        </Text>
+        <View style={styles.authForm}>
+          <View style={styles.inputWrap}>
+            <Text style={styles.inputLabel}>Your name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Alex"
+              placeholderTextColor={MUTED}
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              autoCorrect={false}
+              returnKeyType="next"
+              maxLength={40}
+            />
+          </View>
+          <View style={styles.inputWrap}>
+            <Text style={styles.inputLabel}>Family code</Text>
+            <TextInput
+              style={[styles.input, { letterSpacing: 4, textAlign: "center", fontSize: 20 }]}
+              placeholder="ABC123"
+              placeholderTextColor={MUTED}
+              value={code}
+              onChangeText={(t) => setCode(normalizeFamilyCode(t))}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={submit}
+              maxLength={12}
+            />
+          </View>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        </View>
+      </View>
+      <TouchableOpacity
+        style={[styles.ctaBtn, loading && styles.ctaBtnDisabled]}
+        onPress={submit}
+        disabled={loading}
+      >
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaBtnText}>Join family</Text>}
+      </TouchableOpacity>
+    </KeyboardAvoidingView>
+  );
+}
+
 // ─── Main Onboarding ──────────────────────────────────────────────────────────
 
 export default function OnboardingScreen({ onComplete, signInOnly = false }) {
@@ -917,6 +1059,10 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
   const authStepIndex = STEPS.findIndex(s => s.id === "auth");
   const [stepIndex, setStepIndex] = useState(signInOnly ? authStepIndex : 0);
   const [answers, setAnswers] = useState({});
+  // Chosen at the account_type step (personal | parent | child). Drives auth
+  // rendering and whether the post-signup questionnaire runs. Returning sign-ins
+  // skip selection and inherit their real type from the profile server-side.
+  const [accountType, setAccountType] = useState("personal");
   // The authenticated user is captured at the auth step, then carried through
   // the post-signup questionnaire until we finish and hand it to onComplete.
   const authedUserRef = useRef(null);
@@ -945,7 +1091,7 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
   }
 
   function finish() {
-    onComplete({ user: authedUserRef.current, answers });
+    onComplete({ user: authedUserRef.current, answers: { ...answers, account_type: accountType } });
   }
 
   function goNext() {
@@ -963,8 +1109,15 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
   function handleAuthDone(user) {
     authedUserRef.current = user;
     // Returning users (sign-in only) never see the questionnaire — finish now.
+    // Their real account type is resolved from the profile server-side.
     if (signInOnly) { onComplete({ user, answers: {} }); return; }
-    // New signups continue into the shortened post-signup questionnaire.
+    // Parents and children are management/child accounts — they skip the
+    // personal task/difficulty questionnaire entirely.
+    if (accountType === "parent" || accountType === "child") {
+      onComplete({ user, answers: { account_type: accountType } });
+      return;
+    }
+    // Personal signups continue into the shortened post-signup questionnaire.
     goNext();
   }
 
@@ -972,8 +1125,8 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Progress bar (hidden on welcome/auth) */}
-      {step.id !== "welcome" && step.id !== "auth" && !step.id?.startsWith("how") && (
+      {/* Progress bar (hidden on welcome/account-type/auth/how slides) */}
+      {step.id !== "welcome" && step.id !== "auth" && step.id !== "account_type" && !step.id?.startsWith("how") && (
         <View style={styles.progressWrap}>
           {Array.from({ length: totalQuestions }).map((_, i) => (
             <View
@@ -997,7 +1150,23 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
             onNext={goNext}
           />
         )}
-        {step.id === "auth" && <AuthSlide onDone={handleAuthDone} defaultMode={signInOnly ? "login" : "signup"} />}
+        {step.id === "account_type" && (
+          <AccountTypeSlide
+            selected={accountType}
+            onSelect={setAccountType}
+            onNext={goNext}
+          />
+        )}
+        {step.id === "auth" && accountType === "child" && !signInOnly && (
+          <ChildJoinSlide onDone={handleAuthDone} />
+        )}
+        {step.id === "auth" && !(accountType === "child" && !signInOnly) && (
+          <AuthSlide
+            onDone={handleAuthDone}
+            defaultMode={signInOnly ? "login" : "signup"}
+            accountType={accountType}
+          />
+        )}
         {step.options && (
           <QuestionSlide
             step={step}

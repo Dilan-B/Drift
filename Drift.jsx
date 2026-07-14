@@ -72,6 +72,8 @@ import TutorialOverlay from "./TutorialOverlay";
 // PaywallScreen + useSubscription removed — app is fully free for now
 // import PaywallScreen from "./PaywallScreen";
 // import { useSubscription } from "./useSubscription";
+import ParentShell from "./ParentShell";
+import ChildShell from "./ChildShell";
 import { cached, rateLimited } from "./apiGuards";
 import {
   TouchTracker, OriginPanel, OriginSheet, Backdrop, Pop, FadeInUp, Pulse, useCountUp, getLastTouch,
@@ -2943,6 +2945,7 @@ export default function App() {
   const [userId,         setUserId]         = useState(null);
   const [onboarding,     setOnboarding]     = useState(false);
   const [signInOnly,     setSignInOnly]     = useState(false); // returning user (skip questionnaire)
+  const [appMode,        setAppMode]        = useState("personal"); // 'personal' | 'parent' | 'child'
   const [showAccount,        setShowAccount]        = useState(false);
   const [forceUpdate,        setForceUpdate]        = useState(false);
   const [updateStoreUrl,     setUpdateStoreUrl]     = useState(null);
@@ -2998,6 +3001,7 @@ export default function App() {
   const totalXpRef     = useRef(0);
   const creditsRef     = useRef({ balance: 0, earned: 0, spent: 0 });
   const userIdRef      = useRef(null);
+  const appModeRef     = useRef("personal"); // gates the personal screen-time subsystem
   useEffect(() => {
     const idx = getLevelIdx(totalXp);
     if (screen !== "app") {
@@ -3248,6 +3252,9 @@ export default function App() {
   // methods — no new Swift.
   const authPromptShownRef = useRef(false);
   const reconcileMonitoring = useCallback(async () => {
+    // Only personal accounts enforce the shield here. Parents are never blocked;
+    // child enforcement is wired with the family economy (later phase).
+    if (appModeRef.current !== "personal") return;
     if (!isNativeBlockingAvailable()) return;
     let diag;
     try { diag = await getDiagnostics(); } catch { return; }
@@ -3322,7 +3329,7 @@ export default function App() {
             const elapsedSec = Math.floor((Date.now() - bgStart) / 1000);
             drainBy(elapsedSec);
           }
-          if (secRef.current <= 0 && shieldStateRef.current !== "on") {
+          if (appModeRef.current === "personal" && secRef.current <= 0 && shieldStateRef.current !== "on") {
             await applyBlocking([], { freeTier: !proAccessRef.current }).catch(() => {});
             shieldStateRef.current = "on";
           }
@@ -3358,7 +3365,7 @@ export default function App() {
           const capped = Math.min(Math.max(0, elapsedSec), 86_400);
           if (capped > 0) drainBy(capped);
         }
-        if (secRef.current <= 0 && shieldStateRef.current !== "on") {
+        if (appModeRef.current === "personal" && secRef.current <= 0 && shieldStateRef.current !== "on") {
           await applyBlocking([], { freeTier: !proAccessRef.current }).catch(() => {});
           shieldStateRef.current = "on";
         }
@@ -3578,69 +3585,73 @@ export default function App() {
         setSecLeft(stats.balanceSeconds);
       }
     } catch {}
+    let acctType = answers?.account_type || "personal";
     try {
       const { data: prof } = await cached(`drift_profile_${authUser.id}`, 30_000, () =>
         supabase
-          .from("profiles").select("username").eq("id", authUser.id).maybeSingle()
+          .from("profiles").select("username, account_type").eq("id", authUser.id).maybeSingle()
       );
+      // Server is the source of truth for account type (immutable once set).
+      if (prof?.account_type) acctType = prof.account_type;
       if (prof?.username) {
         setUserName(prof.username);
         AsyncStorage.setItem("drift_username", prof.username);
         // OAuth/Google users get a placeholder ("drifter" + random) from the DB
-        // trigger because they never picked a display name. Force them through
-        // username setup right after login so nobody is left as "drifter____".
-        if (/^drifter[a-z0-9]{6,}$/i.test(prof.username)) {
+        // trigger. Force personal/parent users through username setup so nobody
+        // is left as "drifter____". Children keep their auto username (they're
+        // shown by display name), so never prompt them.
+        if (acctType !== "child" && /^drifter[a-z0-9]{6,}$/i.test(prof.username)) {
           setShowUsernameSetup(true);
         }
-      } else {
-        // No profile row / username at all — also force setup.
+      } else if (acctType !== "child") {
+        // No profile row / username at all — also force setup (non-children).
         setShowUsernameSetup(true);
       }
     } catch {}
+    setAppMode(acctType);
     setOnboarding(false);
     setSignInOnly(false);
     const hadOnboarded = await AsyncStorage.getItem("drift_onboarded");
     await AsyncStorage.setItem("drift_onboarded", "1");
 
-    // Restore the user's existing tasks from the server on every sign-in. For a
-    // returning user (or a new device) this brings their task list back; for a
-    // brand-new account it's a cheap no-op (no remote rows yet) and the seeding
-    // block below runs instead.
-    const hadRemoteTasks = await hydrateTasksFromServer(authUser.id);
-
-    // Only seed the picked onboarding tasks for a genuinely new account —
-    // never on top of tasks we just restored (e.g. a returning user who reran
-    // the questionnaire while signing in on a new device).
-    const pickedTasks = answers?.tasks || [];
-    if (pickedTasks.length > 0 && !hadOnboarded && !hadRemoteTasks) {
-      const seeded = pickedTasks
-        .filter(id => ONBOARDING_TASKS[id])
-        .map(id => {
-          const t = ONBOARDING_TASKS[id];
-          const credits = capReward(Math.max(1, Math.round(t.minutes * 0.6)), t.minutes);
-          return {
-            id: makeUuid(),
-            title: t.title,
-            cat: t.cat,
-            minutes: t.minutes,
-            done: false,
-            credits,
-            xp: Math.max(1, Math.round(t.minutes * 0.4)),
-            aiCheck: false,
-            aiValued: false,
-            aiReasoning: "",
-            task_date: todayKey(),
-          };
-        });
-      if (seeded.length > 0) {
-        setTasks(seeded);
-        persist({ tasks: seeded });
-        seeded.forEach(t => insertTask(authUser.id, t).catch(() => {}));
-        cacheFullTasks(authUser.id, seeded);
+    // Personal accounts restore/seed their own task list and pick blocked apps.
+    // Parent (management) and child accounts use their own shells and skip all
+    // of this — their task/economy plumbing is handled there.
+    if (acctType === "personal") {
+      // Restore existing tasks from the server on every sign-in (returning user
+      // or new device). For a brand-new account it's a cheap no-op.
+      const hadRemoteTasks = await hydrateTasksFromServer(authUser.id);
+      const pickedTasks = answers?.tasks || [];
+      if (pickedTasks.length > 0 && !hadOnboarded && !hadRemoteTasks) {
+        const seeded = pickedTasks
+          .filter(id => ONBOARDING_TASKS[id])
+          .map(id => {
+            const t = ONBOARDING_TASKS[id];
+            const credits = capReward(Math.max(1, Math.round(t.minutes * 0.6)), t.minutes);
+            return {
+              id: makeUuid(),
+              title: t.title,
+              cat: t.cat,
+              minutes: t.minutes,
+              done: false,
+              credits,
+              xp: Math.max(1, Math.round(t.minutes * 0.4)),
+              aiCheck: false,
+              aiValued: false,
+              aiReasoning: "",
+              task_date: todayKey(),
+            };
+          });
+        if (seeded.length > 0) {
+          setTasks(seeded);
+          persist({ tasks: seeded });
+          seeded.forEach(t => insertTask(authUser.id, t).catch(() => {}));
+          cacheFullTasks(authUser.id, seeded);
+        }
       }
     }
     setScreen("app");
-    if (!hadOnboarded && !signInOnly) {
+    if (acctType === "personal" && !hadOnboarded && !signInOnly) {
       setFirstTimeBlockedApps(true);
       setShowBlockedApps(true);
     }
@@ -3769,6 +3780,9 @@ export default function App() {
   }, [lastArmedSeconds]);
 
   useEffect(() => {
+    // The personal balance→shield mapping never runs for family accounts in
+    // Phase 1 (parents are never blocked; child enforcement comes later).
+    if (appMode !== "personal") return;
     if (driftInActive) return; // session handler controls shield
     if (blockedHoursActive) {
       (async () => {
@@ -3832,7 +3846,7 @@ export default function App() {
         shieldStateRef.current = desired;
       } catch {}
     })();
-  }, [credits.balance, credits.balanceSec, driftInActive, blockedHoursActive, lastArmedSeconds]);
+  }, [appMode, credits.balance, credits.balanceSec, driftInActive, blockedHoursActive, lastArmedSeconds]);
 
   // Refresh Screen Time auth status when the account sheet opens
   useEffect(() => {
@@ -3965,13 +3979,15 @@ export default function App() {
         }
         setUserId(uid);
         setUserEmail(session?.user?.email ?? "");
+        let bootAcctType = "personal";
         if (uid) {
           try {
             const { data: prof, error: pErr } = await cached(`drift_profile_${uid}`, 30_000, () =>
               supabase
-                .from("profiles").select("username").eq("id", uid).maybeSingle()
+                .from("profiles").select("username, account_type").eq("id", uid).maybeSingle()
             );
             if (pErr) console.warn("profile fetch:", pErr.message);
+            if (prof?.account_type) bootAcctType = prof.account_type;
             if (prof?.username) {
               setUserName(prof.username);
               AsyncStorage.setItem("drift_username", prof.username);
@@ -3986,6 +4002,29 @@ export default function App() {
           const hasOnboarded = await AsyncStorage.getItem("drift_onboarded");
           setSignInOnly(hasOnboarded === "1");
           setOnboarding(true);
+          return;
+        }
+        setAppMode(bootAcctType);
+        // Parent (management) and child accounts render their own shells and
+        // manage their own data. Children still need their balance restored so
+        // the Screen-Time shield reflects any time their parent has granted.
+        if (bootAcctType !== "personal") {
+          if (bootAcctType === "child") {
+            try {
+              const stats = await fetchProfileStats(uid);
+              if (stats.balanceSeconds > 0) {
+                setCredits({
+                  balance: Math.ceil(stats.balanceSeconds / 60),
+                  balanceSec: stats.balanceSeconds,
+                  earned: Math.ceil(stats.balanceSeconds / 60),
+                  spent: 0,
+                });
+                secRef.current = stats.balanceSeconds;
+                setSecLeft(stats.balanceSeconds);
+              }
+            } catch (e) { console.warn("child balance restore:", e?.message); }
+          }
+          setScreen("app");
           return;
         }
         // ── Server-authoritative state: tasks come from Supabase ──
@@ -4120,10 +4159,75 @@ export default function App() {
   totalXpRef.current     = totalXp;
   creditsRef.current     = credits;
   userIdRef.current      = userId;
+  appModeRef.current     = appMode;
 
   useEffect(() => {
     updateSharedBalance(secLeft).catch(() => {});
   }, [secLeft]);
+
+  // ── CHILD: apply parent grants live ──────────────────────────
+  // A child's balance only changes when a parent approves a task (server-side
+  // increment). Subscribe to the child's own profile row and re-pull the
+  // authoritative balance whenever it changes, so granted time appears without
+  // a relaunch.
+  const applyChildBalance = useCallback(async () => {
+    if (appModeRef.current !== "child" || !userIdRef.current) return;
+    try {
+      // Read the authoritative balance directly (bypass fetchProfileStats' 20s
+      // cache) so a fresh parent grant is reflected immediately.
+      const { data } = await supabase
+        .from("profiles").select("balance_seconds").eq("id", userIdRef.current).maybeSingle();
+      const sec = Math.max(0, Number(data?.balance_seconds || 0));
+      secRef.current = sec;
+      setSecLeft(sec);
+      setCredits({ balance: Math.ceil(sec / 60), balanceSec: sec, earned: Math.ceil(sec / 60), spent: 0 });
+    } catch (e) { console.warn("applyChildBalance:", e?.message); }
+  }, []);
+
+  useEffect(() => {
+    if (appMode !== "child" || !userId) return;
+    const ch = supabase
+      .channel(`child_profile:${userId}`)
+      .on("postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${userId}` },
+        () => { applyChildBalance(); })
+      .subscribe();
+    // Also pull once on mount / foreground.
+    applyChildBalance();
+    const sub = AppState.addEventListener("change", (st) => { if (st === "active") applyChildBalance(); });
+    return () => { supabase.removeChannel(ch); sub.remove(); };
+  }, [appMode, userId, applyChildBalance]);
+
+  // ── CHILD: enforce the shield (category block by default) ─────
+  // Personal accounts run the richer shield effect above; a child uses a
+  // simpler mapping: time left → apps open, out of time → block standard
+  // categories. Applies only on state crossings so we don't reset the native
+  // monitor's counter every drain tick. (Per-app allow-list is stored in
+  // family_members.app_policy; exempting specific apps from a category block
+  // needs native support and is a follow-up.)
+  const childShieldRef = useRef(null);
+  useEffect(() => {
+    if (appMode !== "child") return;
+    if (!isNativeBlockingAvailable()) return;
+    const desired = secLeft > 0 ? "off" : "on";
+    if (childShieldRef.current === desired) return;
+    childShieldRef.current = desired;
+    (async () => {
+      try {
+        if (desired === "off") {
+          await clearBlocking().catch(() => {});
+          const res = await startBalanceMonitoring(Math.max(60, secLeft)).catch(() => ({ started: false }));
+          // Mark armed so the drain effects charge actual blocked-app usage
+          // (consumeUsedSeconds) rather than wall-clock time.
+          nativeArmedRef.current = isNativeBlockingAvailable() && res?.started !== false;
+        } else {
+          await stopBalanceMonitoring().catch(() => {});
+          await applyBlocking([], { freeTier: true }).catch(() => {});
+          nativeArmedRef.current = false;
+        }
+      } catch {}
+    })();
+  }, [appMode, secLeft]);
 
   const persist = async upd => {
     try {
@@ -4138,6 +4242,8 @@ export default function App() {
   };
 
   const unlockAndArmBalance = useCallback(async (seconds) => {
+    // Family shells don't run the personal shield/arming in Phase 1.
+    if (appModeRef.current !== "personal") return;
     if (driftInActRef.current) return;
     const currentSeconds = Math.max(0, Math.floor(seconds || 0));
     if (currentSeconds <= 0) {
@@ -4493,6 +4599,7 @@ export default function App() {
     setUserId(null);
     setUserEmail("");
     setUserName("");
+    setAppMode("personal"); // next account on this device starts fresh
     // Clear ALL user-scoped local state so the next account on this device
     // starts with a clean slate (no preview-toggle bleed, no stale balance, etc.).
     await AsyncStorage.multiRemove([
@@ -4543,6 +4650,14 @@ export default function App() {
       <Text style={{ fontFamily: "Georgia", fontSize: 52, color: "#2FAB72" }}>D</Text>
       <Text style={{ fontFamily: "Georgia", fontSize: 12, color: "#4A8060", letterSpacing: 5, marginTop: 4 }}>DRIFT</Text>
     </View>
+  );
+
+  // Family accounts render their own shells instead of the personal app.
+  if (appMode === "parent") return (
+    <ParentShell userId={userId} dark={darkMode} onSignOut={signOut} />
+  );
+  if (appMode === "child") return (
+    <ChildShell userId={userId} username={myUsername} secLeft={secLeft} dark={darkMode} onSignOut={signOut} />
   );
 
   const activeTheme = getTheme(darkMode);
