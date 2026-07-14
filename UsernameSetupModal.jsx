@@ -127,8 +127,8 @@ export default function UsernameSetupModal({ visible, userId, onDone, dark = fal
             }}
           >
             {busy
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={{ fontFamily: FO, fontSize: 13, color: "#fff", letterSpacing: 2 }}>
+              ? <ActivityIndicator color={dark ? "#16261C" : "#fff"} />
+              : <Text style={{ fontFamily: FO, fontSize: 13, color: dark ? "#16261C" : "#fff", letterSpacing: 2 }}>
                   CLAIM USERNAME
                 </Text>}
           </TouchableOpacity>

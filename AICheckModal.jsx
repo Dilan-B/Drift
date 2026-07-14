@@ -334,8 +334,8 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                 }}
               >
                 {loading
-                  ? <Spinner size={22} color="#fff" />
-                  : <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 2 }}>
+                  ? <Spinner size={22} color={dark ? "#16261C" : "#fff"} />
+                  : <Text style={{ fontFamily: FO, fontSize: 12, color: dark ? "#16261C" : "#fff", letterSpacing: 2 }}>
                       SUBMIT FOR VERIFICATION
                     </Text>
                 }
@@ -389,7 +389,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                   style={{ paddingVertical: 15, borderRadius: 14, backgroundColor: GRN, alignItems: "center" }}
                 >
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 2 }}>
+                    <Text style={{ fontFamily: FO, fontSize: 12, color: dark ? "#16261C" : "#fff", letterSpacing: 2 }}>
                       CLAIM {task.credits}m CREDITS
                     </Text>
                     <CheckIcon size={14} color="#fff" />
