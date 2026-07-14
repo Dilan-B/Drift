@@ -15,15 +15,18 @@ import Sprout from "./SproutArt";
 import { supabase } from "./supabase";
 import { notifyTaskApproved } from "./notifications";
 import { fetchChildFamily, fetchChildTasks, submitChildTask } from "./family";
+import FamilyProfileModal from "./FamilyProfile";
 
 const ACTIVE = ["assigned", "submitted", "rejected"];
 
-export default function ChildShell({ userId, username, secLeft = 0, dark = false, onSignOut }) {
+export default function ChildShell({ userId, username, secLeft = 0, dark = false, onSignOut, onToggleTheme, onDeleteAccount }) {
   const t = getTheme(dark);
+  const onDeep = dark ? t.ink.void : "#FAF6EE"; // legible text on earn.deep buttons
   const [name, setName] = useState(username || "");
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
   const seenApprovedRef = useRef(null); // approved task ids seen on previous load
 
   const loadTasks = useCallback(async () => {
@@ -82,7 +85,12 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
     <View style={[c.root, { backgroundColor: t.paper.warm, paddingTop: Platform.OS === "ios" ? 64 : 40 }]}>
       <StatusBar barStyle={dark ? "light-content" : "dark-content"} />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
-        <Text style={[c.hi, { color: t.ink.deep }]}>Hi{name ? `, ${name}` : ""}! 👋</Text>
+        <View style={c.topRow}>
+          <Text style={[c.hi, { color: t.ink.deep }]}>Hi{name ? `, ${name}` : ""}! 👋</Text>
+          <TouchableOpacity style={[c.profileBtn, { backgroundColor: t.earn.sageLo }]} onPress={() => setShowProfile(true)}>
+            <Text style={[c.profileInitial, { color: t.earn.sage }]}>{(name || "?").slice(0, 1).toUpperCase()}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Big time card */}
         <View style={[c.timeCard, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
@@ -128,8 +136,8 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
                     disabled={busyId === task.id}
                   >
                     {busyId === task.id
-                      ? <ActivityIndicator color="#FAF6EE" />
-                      : <Text style={[c.doneText, { color: "#FAF6EE" }]}>Done</Text>}
+                      ? <ActivityIndicator color={onDeep} />
+                      : <Text style={[c.doneText, { color: onDeep }]}>Done</Text>}
                   </TouchableOpacity>
                 )}
               </View>
@@ -137,17 +145,28 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
           })
         )}
 
-        <TouchableOpacity style={c.signOut} onPress={onSignOut}>
-          <Text style={[c.signOutText, { color: t.ink.faint }]}>Sign out</Text>
-        </TouchableOpacity>
       </ScrollView>
+
+      <FamilyProfileModal
+        visible={showProfile}
+        onClose={() => setShowProfile(false)}
+        dark={dark}
+        onToggleTheme={onToggleTheme}
+        name={name}
+        subtitle="Drift kid account"
+        onSignOut={onSignOut}
+        onDeleteAccount={onDeleteAccount}
+      />
     </View>
   );
 }
 
 const c = StyleSheet.create({
   root: { flex: 1 },
-  hi: { fontFamily: FF.display, fontSize: 32, letterSpacing: -0.3, marginBottom: 20, marginTop: 8 },
+  topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20, marginTop: 8 },
+  profileBtn: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
+  profileInitial: { fontFamily: FF.bodyBold, fontSize: 17 },
+  hi: { fontFamily: FF.display, fontSize: 32, letterSpacing: -0.3, flex: 1 },
   timeCard: { borderRadius: 24, borderWidth: 1, paddingVertical: 30, alignItems: "center", marginBottom: 24, overflow: "hidden" },
   timeLabel: { fontFamily: FF.kicker, fontSize: 11, letterSpacing: 2, marginBottom: 10 },
   timeBig: { fontFamily: FF.display, fontSize: 72, lineHeight: 78 },

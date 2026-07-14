@@ -4654,10 +4654,18 @@ export default function App() {
 
   // Family accounts render their own shells instead of the personal app.
   if (appMode === "parent") return (
-    <ParentShell userId={userId} dark={darkMode} onSignOut={signOut} />
+    <ParentShell
+      userId={userId} userEmail={userEmail} username={myUsername}
+      dark={darkMode} onToggleTheme={toggleDark}
+      onSignOut={signOut} onDeleteAccount={deleteAccount}
+    />
   );
   if (appMode === "child") return (
-    <ChildShell userId={userId} username={myUsername} secLeft={secLeft} dark={darkMode} onSignOut={signOut} />
+    <ChildShell
+      userId={userId} username={myUsername} secLeft={secLeft}
+      dark={darkMode} onToggleTheme={toggleDark}
+      onSignOut={signOut} onDeleteAccount={deleteAccount}
+    />
   );
 
   const activeTheme = getTheme(darkMode);
