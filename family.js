@@ -157,6 +157,21 @@ export async function fetchPendingApprovals(childIds) {
   return data || [];
 }
 
+// Parent: approved (completed + granted) tasks across their kids, newest first.
+export async function fetchFamilyHistory(childIds) {
+  if (!childIds?.length) return [];
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("id, user_id, title, minutes, completed_at")
+    .in("user_id", childIds)
+    .eq("status", "approved")
+    .is("deleted_at", null)
+    .order("completed_at", { ascending: false })
+    .limit(100);
+  if (error) { console.warn("fetchFamilyHistory:", error.message); return []; }
+  return data || [];
+}
+
 // Parent: current remaining balance (seconds) for each child. RLS: parent reads
 // their children's profiles.
 export async function fetchChildrenBalances(childIds) {

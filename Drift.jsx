@@ -4637,6 +4637,16 @@ export default function App() {
     }
   };
 
+  // Gate on fonts FIRST so onboarding (welcome / account-type / auth) always
+  // renders in the real Drift typefaces, never a system-font fallback flash.
+  if (!fontsLoaded) return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: ink.void }}>
+      <StatusBar barStyle="light-content" />
+      <Text style={{ fontFamily: "Georgia", fontSize: 52, color: "#2FAB72" }}>D</Text>
+      <Text style={{ fontFamily: "Georgia", fontSize: 12, color: "#4A8060", letterSpacing: 5, marginTop: 4 }}>DRIFT</Text>
+    </View>
+  );
+
   if (onboarding) return (
     <OnboardingScreen
       signInOnly={signInOnly}
@@ -4644,7 +4654,7 @@ export default function App() {
     />
   );
 
-  if (screen === "loading" || !fontsLoaded) return (
+  if (screen === "loading") return (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: ink.void }}>
       <StatusBar barStyle="light-content" />
       <Text style={{ fontFamily: "Georgia", fontSize: 52, color: "#2FAB72" }}>D</Text>
