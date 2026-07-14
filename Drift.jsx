@@ -1630,7 +1630,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
         padding: 22,
         marginBottom: 26,
         borderWidth: 1,
-        borderColor: ink.hairline,
+        borderColor: dark ? ink.border : ink.hairline,
         shadowColor: dark ? "#000" : "#1F3A2A",
         shadowOffset: { width: 0, height: 14 },
         shadowOpacity: dark ? 0.35 : 0.06,
@@ -1638,6 +1638,22 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
         elevation: 4,
         overflow: "hidden",
       }}>
+        {/* Night aurora — soft mint pools behind the sprout so the dark hero
+            has atmosphere instead of a flat panel. Dark mode only. */}
+        {dark && (
+          <>
+            <View pointerEvents="none" style={{
+              position: "absolute", top: -95, right: -70,
+              width: 250, height: 250, borderRadius: 125,
+              backgroundColor: "rgba(127,227,165,0.10)",
+            }} />
+            <View pointerEvents="none" style={{
+              position: "absolute", bottom: -110, left: -60,
+              width: 220, height: 220, borderRadius: 110,
+              backgroundColor: "rgba(240,185,132,0.055)",
+            }} />
+          </>
+        )}
         {/* Current-level emblem — the plant reflects the user's tier
             (Seedling → Old Growth), matching the icon on the Growth page. */}
         <View style={{ position: "absolute", left: -18, bottom: -22, pointerEvents: "none", opacity: dark ? 0.5 : 0.42 }}>
@@ -1661,7 +1677,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
             <CreditTicker
               value={Math.max(0, credits.balance)}
               seconds={secLeft}
-              textColor={inDebt ? "#C0392B" : ink.deep}
+              textColor={inDebt ? "#C0392B" : dark ? earn.deepHi : ink.deep}
             />
 
             <Text style={{
@@ -1877,6 +1893,12 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
             paddingHorizontal: 16,
             borderRadius: 14,
             backgroundColor: earn.deep,
+            // In the dark greenhouse the CTA is a light source — let it glow.
+            shadowColor: earn.deep,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: dark ? 0.35 : 0,
+            shadowRadius: 12,
+            elevation: dark ? 6 : 0,
           }}
         >
           <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
@@ -1938,6 +1960,11 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
               paddingVertical: 14, paddingHorizontal: 22, borderRadius: 14,
               backgroundColor: earn.deep,
               flexDirection: "row", alignItems: "center", gap: 8,
+              shadowColor: earn.deep,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: dark ? 0.35 : 0,
+              shadowRadius: 12,
+              elevation: dark ? 6 : 0,
             }}
           >
             <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
@@ -4912,10 +4939,12 @@ export default function App() {
             paddingVertical: 8,
             paddingHorizontal: 8,
             borderWidth: 1,
-            borderColor: th_ink.hairline,
+            // Dark mode: mint glass edge so the island reads as lit glass
+            // floating over the forest, not a gray slab.
+            borderColor: darkMode ? th_ink.border : th_ink.hairline,
             shadowColor: darkMode ? "#000" : "#1F3A2A",
             shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: darkMode ? 0.45 : 0.07,
+            shadowOpacity: darkMode ? 0.5 : 0.07,
             shadowRadius: 22,
             elevation: 8,
           }}>

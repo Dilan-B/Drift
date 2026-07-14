@@ -49,50 +49,50 @@ export const LIGHT = {
   },
 };
 
-// Dark mode: "evening greenhouse". Not light-mode-inverted, but its own
-// place — deep pine-black ground with REAL elevation steps (canvas → inset →
-// card → cream each visibly lighter), warm paper-white ink, and accents that
-// glow like plants under moonlight: luminous spring green, fresh sage, and a
-// candlelight clay. Washes run slightly stronger than light mode so tinted
-// chips/pills stay visible against the dark ground.
+// Dark mode: "the greenhouse at night". Deliberately NOT light-mode-dimmed —
+// the ground is a visibly GREEN botanical dark (you should be able to tell
+// the canvas is forest, not charcoal), borders are mint-tinted glass lines
+// instead of white hairlines, and the accents run vivid: chartreuse-mint
+// CTAs, glowing mint progress, apricot warmth. Surfaces step clearly:
+// inset well → canvas → card → top layer.
 export const DARK = {
   ink: {
-    void:   "#060B08",
-    deep:   "#F1F5E9",    // warm paper-white — crisp primary text
-    mid:    "#AFC0AA",    // secondary text — readable, still soft
-    faint:  "#71836F",    // tertiary — lifted well off the ground
-    ghost:  "rgba(222,240,216,0.06)",
-    border: "rgba(222,240,216,0.11)",
-    hairline: "rgba(222,240,216,0.07)",
+    void:   "#081209",
+    deep:   "#F0F7EA",    // warm paper-white — crisp primary text
+    mid:    "#A9C4AB",    // secondary — soft green-white, clearly readable
+    faint:  "#6E8A74",    // tertiary — muted but never invisible
+    ghost:  "rgba(160,230,170,0.07)",
+    border: "rgba(160,230,170,0.15)",   // mint glass line — visible on cards
+    hairline: "rgba(160,230,170,0.09)",
   },
   paper: {
-    warm:   "#0C1310",    // canvas — deep pine, a breath of blue-green
-    card:   "#1A241C",    // raised surfaces — clearly lifted off canvas
-    cream:  "#212D24",    // soft top layer (inputs on cards, hovers)
-    sand:   "#121B15",    // inset wells — sit BELOW the canvas
-    dash:   "rgba(222,240,216,0.22)",
+    warm:   "#0E1A13",    // canvas — deep forest green, unmistakably green
+    card:   "#17291D",    // raised surfaces — botanical, not gray
+    cream:  "#1E3325",    // top layer (inputs on cards, hovers)
+    sand:   "#122117",    // inset wells — sit BELOW the canvas
+    dash:   "rgba(160,230,170,0.26)",
   },
   earn: {
-    // Luminous spring green = primary CTAs (dark text sits on these)
-    deep:    "#D9EFAD",
-    deepHi:  "#E7F8C6",
-    // Sage — fresher and more saturated than before
-    sage:    "#B5D9A0",
-    sageLo:  "rgba(181,217,160,0.16)",
-    sageDot: "#98C687",
-    // Mint accent for stat dots, progress fills
-    terra:   "#8CD4A4",
-    terraLo: "rgba(140,212,164,0.16)",
-    green:   "#8CD4A4",
-    greenLo: "rgba(140,212,164,0.16)",
-    greenD:  "#BFE9C9",
-    blue:    "#A6D2E2",
-    blueLo:  "rgba(166,210,226,0.15)",
-    clay:    "#E2B084",   // candlelight clay — graphic accents only
-    clayLo:  "rgba(226,176,132,0.16)",
-    bark:    "#B69C83",
-    barkLo:  "rgba(182,156,131,0.15)",
-    barkInk: "#DCC6AC",
+    // Vivid chartreuse-mint = primary CTAs (dark text sits on these)
+    deep:    "#C6F2A0",
+    deepHi:  "#DDFBBC",
+    // Living sage — the pale gray-sage is gone
+    sage:    "#A5E39B",
+    sageLo:  "rgba(165,227,155,0.17)",
+    sageDot: "#8BD489",
+    // Glowing mint for stat dots, progress fills
+    terra:   "#7FE3A5",
+    terraLo: "rgba(127,227,165,0.16)",
+    green:   "#7FE3A5",
+    greenLo: "rgba(127,227,165,0.16)",
+    greenD:  "#B4F0C4",
+    blue:    "#9FD8EC",
+    blueLo:  "rgba(159,216,236,0.15)",
+    clay:    "#F0B984",   // glowing apricot — graphic accents only
+    clayLo:  "rgba(240,185,132,0.16)",
+    bark:    "#C2A184",
+    barkLo:  "rgba(194,161,132,0.15)",
+    barkInk: "#E5CDB0",
   },
 };
 

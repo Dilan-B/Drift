@@ -52,13 +52,13 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, offering
   }, []);
 
   const paper = dark
-    ? { bg: "#0C1310", card: "#1A241C", border: "rgba(222,240,216,0.11)" }
+    ? { bg: "#0E1A13", card: "#17291D", border: "rgba(160,230,170,0.15)" }
     : { bg: "#F7F7F4", card: "#FFFFFF", border: "rgba(26,40,32,0.08)" };
   const ink = dark
-    ? { deep: "#F1F5E9", mid: "#AFC0AA", faint: "#71836F" }
+    ? { deep: "#F0F7EA", mid: "#A9C4AB", faint: "#6E8A74" }
     : { deep: "#1A2820", mid: "#6B7A6E", faint: "#A8B0A8" };
   const earn = dark
-    ? { green: "#8CD4A4", greenD: "#BFE9C9", sageLo: "rgba(181,217,160,0.16)", deep: "#D9EFAD" }
+    ? { green: "#7FE3A5", greenD: "#B4F0C4", sageLo: "rgba(165,227,155,0.17)", deep: "#C6F2A0" }
     : { green: "#2D6B47", greenD: "#1F3A2A", sageLo: "#E4ECE0", deep: "#1F3A2A" };
 
   const handlePurchase = async () => {

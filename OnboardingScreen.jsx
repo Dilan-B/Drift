@@ -48,6 +48,12 @@ const BORDER = "rgba(26,40,32,0.08)";
 const HAIRLINE = "rgba(26,40,32,0.06)";
 const SAGE_LO = "#E4ECE0";
 const CLAY = "#B0764E";
+// Welcome "cover" — the first screen is a deep-forest moment with light type,
+// like a book cover; the rest of the flow opens up into the cream interior.
+const COVER_BG = "#16301F";
+const COVER_INK = "#F0F7EA";
+const COVER_MID = "#AFC7AF";
+const COVER_MINT = "#C6F2A0";
 
 // ─── Step data ──────────────────────────────────────────────────────────────
 
@@ -110,11 +116,14 @@ function WelcomeSlide({ onNext }) {
   }, []);
   return (
     <View style={styles.slide}>
+      {/* aurora pools — soft light in the forest */}
+      <View pointerEvents="none" style={styles.welcomeAuroraA} />
+      <View pointerEvents="none" style={styles.welcomeAuroraB} />
       <View pointerEvents="none" style={styles.welcomeSprig}>
-        <Sprig size={150} color={CLAY} opacity={0.055} flip />
+        <Sprig size={150} color={COVER_MINT} opacity={0.09} flip />
       </View>
       <View pointerEvents="none" style={styles.welcomeSeeds}>
-        <SeedDots size={160} color={ACCENT} opacity={0.05} />
+        <SeedDots size={160} color={COVER_MINT} opacity={0.09} />
       </View>
       <View style={styles.welcomeContent}>
         <Text style={[styles.welcomeLogo, { fontFamily: "Orbitron_700Bold" }]}>DRIFT</Text>
@@ -131,10 +140,10 @@ function WelcomeSlide({ onNext }) {
           Earn your screen time by getting real things done. Your phone unlocks when you do.
         </Text>
       </View>
-      <TouchableOpacity style={styles.ctaBtn} onPress={onNext} activeOpacity={0.85}>
-        <Text style={styles.ctaBtnText}>Get Started</Text>
+      <TouchableOpacity style={[styles.ctaBtn, styles.ctaBtnCover]} onPress={onNext} activeOpacity={0.85}>
+        <Text style={[styles.ctaBtnText, { color: "#16261C" }]}>Get Started</Text>
       </TouchableOpacity>
-      <Text style={styles.legal}>Takes 60 seconds</Text>
+      <Text style={[styles.legal, { color: COVER_MID }]}>Takes 60 seconds</Text>
     </View>
   );
 }
@@ -1188,9 +1197,11 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
     goNext();
   }
 
+  const onCover = step.id === "welcome";
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={[styles.container, onCover && { backgroundColor: COVER_BG }]}>
+      <StatusBar barStyle={onCover ? "light-content" : "dark-content"} />
 
       {/* Back button — lets users undo a step (e.g. change account type). */}
       <View style={styles.backRow}>
@@ -1277,8 +1288,26 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  // Welcome
+  // Welcome (forest cover)
   welcomeContent: { flex: 1, justifyContent: "center", alignItems: "center", paddingBottom: 28 },
+  welcomeAuroraA: {
+    position: "absolute",
+    top: -110,
+    right: -90,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: "rgba(127,227,165,0.10)",
+  },
+  welcomeAuroraB: {
+    position: "absolute",
+    bottom: -70,
+    left: -110,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: "rgba(240,185,132,0.07)",
+  },
   welcomeSprig: {
     position: "absolute",
     left: -32,
@@ -1292,7 +1321,7 @@ const styles = StyleSheet.create({
   welcomeLogo: {
     fontFamily: FF.kicker,
     fontSize: 12,
-    color: ACCENT,
+    color: COVER_MINT,
     letterSpacing: 4.2,
     textTransform: "uppercase",
     marginBottom: 30,
@@ -1304,16 +1333,16 @@ const styles = StyleSheet.create({
     width: 186,
     height: 186,
     borderRadius: 93,
-    backgroundColor: SAGE_LO,
+    backgroundColor: "rgba(240,247,234,0.07)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: "rgba(198,242,160,0.24)",
   },
   welcomeHeadline: {
     fontFamily: FF.display,
     fontSize: 40,
-    color: TEXT,
+    color: COVER_INK,
     lineHeight: 47,
     letterSpacing: -0.2,
     marginBottom: 14,
@@ -1322,7 +1351,7 @@ const styles = StyleSheet.create({
   welcomeSub: {
     fontFamily: FF.body,
     fontSize: 16,
-    color: MUTED,
+    color: COVER_MID,
     lineHeight: 24,
     textAlign: "center",
     paddingHorizontal: 14,
@@ -1559,6 +1588,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#C7D5C9",
     shadowOpacity: 0,
     elevation: 0,
+  },
+  // Cover variant — a light source against the forest
+  ctaBtnCover: {
+    backgroundColor: COVER_MINT,
+    shadowColor: COVER_MINT,
+    shadowOpacity: 0.3,
   },
   secondaryBtn: {
     backgroundColor: CARD_BG,
