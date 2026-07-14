@@ -19,6 +19,7 @@ import { FamilyDock, HistoryList, shortDate } from "./FamilyUI";
 import {
   fetchMyFamily, fetchFamilyChildren, fetchPendingApprovals, fetchChildrenBalances,
   fetchFamilyHistory, assignChildTask, approveChildTask, rejectChildTask, setChildAppPolicy,
+  fetchAppRequests, resolveAppRequest, setFamilyPin,
 } from "./family";
 
 // Curated apps a parent can choose to keep available even when time runs out.
@@ -54,6 +55,11 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
   const [tab, setTab] = useState("home");
   const [refreshing, setRefreshing] = useState(false);
   const [history, setHistory] = useState([]);
+  const [appReqs, setAppReqs] = useState([]);
+  const [showPin, setShowPin] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pinBusy, setPinBusy] = useState(false);
+  const [pinMsg, setPinMsg] = useState("");
 
   const childIds = children.map((c) => c.user_id);
   const seenApprovalsRef = useRef(null); // ids seen on the previous reload
@@ -74,6 +80,9 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
   const reloadHistory = useCallback(async (ids) => {
     setHistory(await fetchFamilyHistory(ids));
   }, []);
+  const reloadAppReqs = useCallback(async (ids) => {
+    setAppReqs(await fetchAppRequests(ids));
+  }, []);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -83,10 +92,10 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
       const kids = await fetchFamilyChildren(fam.id);
       setChildren(kids);
       const ids = kids.map((c) => c.user_id);
-      await Promise.all([reloadApprovals(ids), reloadBalances(ids), reloadHistory(ids)]);
+      await Promise.all([reloadApprovals(ids), reloadBalances(ids), reloadHistory(ids), reloadAppReqs(ids)]);
     }
     setLoading(false);
-  }, [userId, reloadApprovals, reloadBalances, reloadHistory]);
+  }, [userId, reloadApprovals, reloadBalances, reloadHistory, reloadAppReqs]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -107,10 +116,12 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
         () => { reloadApprovals(childIds); reloadHistory(childIds); })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" },
         () => { reloadBalances(childIds); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_requests" },
+        () => { reloadAppReqs(childIds); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, childIds.join(","), reloadApprovals, reloadBalances, reloadHistory]);
+  }, [userId, childIds.join(","), reloadApprovals, reloadBalances, reloadHistory, reloadAppReqs]);
 
   // Live: a kid joining/leaving the family (family_members change) → reload the
   // roster so new kids appear WITHOUT a manual refresh. Runs even with zero kids
@@ -158,6 +169,23 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
     setBusyId(null);
   }
 
+  async function doResolveApp(id, approve) {
+    setAppReqs((prev) => prev.filter((r) => r.id !== id)); // optimistic
+    const res = await resolveAppRequest(id, approve);
+    if (!res.ok) reloadAppReqs(childIds);
+    else { reloadAppReqs(childIds); reloadBalances(childIds); }
+  }
+
+  async function savePin() {
+    setPinMsg("");
+    if (pin.length < 4) { setPinMsg("Enter at least 4 digits."); return; }
+    setPinBusy(true);
+    const res = await setFamilyPin(pin);
+    setPinBusy(false);
+    if (!res.ok) { setPinMsg("Couldn't save the PIN. Try again."); return; }
+    setPin(""); setShowPin(false); setPinMsg("");
+  }
+
   async function submitAssign() {
     setAssignErr("");
     const m = Math.round(Number(minutes));
@@ -174,10 +202,11 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
     const current = child.app_policy?.allow || [];
     const next = current.includes(appId) ? current.filter((a) => a !== appId) : [...current, appId];
     // optimistic
+    const currentMode = child.app_policy?.mode || "categories";
     setChildren((prev) => prev.map((c) => c.user_id === child.user_id
-      ? { ...c, app_policy: { ...(c.app_policy || {}), mode: "categories", allow: next } } : c));
+      ? { ...c, app_policy: { ...(c.app_policy || {}), mode: currentMode, allow: next } } : c));
     setAppsFor((prev) => prev ? { ...prev, app_policy: { ...(prev.app_policy || {}), allow: next } } : prev);
-    await setChildAppPolicy(child.user_id, next);
+    await setChildAppPolicy(child.user_id, next, currentMode);
   }
 
   const mins = (id) => Math.max(0, Math.ceil((balances[id] || 0) / 60));
@@ -227,6 +256,53 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
             <Text style={[s.shareBtnText, { color: onDeep }]}>Share code</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Parent PIN — gates the app picker on a kid's device */}
+        {showPin ? (
+          <View style={[s.pinCard, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
+            <Text style={[s.pinLabel, { color: t.ink.mid }]}>Set a PIN. You'll enter it on your kid's phone to pick which apps get blocked.</Text>
+            <TextInput
+              style={[s.input, { borderColor: t.ink.border, color: t.ink.deep, backgroundColor: t.paper.warm, textAlign: "center", letterSpacing: 8, fontSize: 22 }]}
+              placeholder="••••" placeholderTextColor={t.ink.faint}
+              value={pin} onChangeText={(v) => setPin(v.replace(/\D/g, "").slice(0, 8))}
+              keyboardType="number-pad" secureTextEntry maxLength={8}
+            />
+            {pinMsg ? <Text style={s.err}>{pinMsg}</Text> : null}
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+              <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.paper.warm, flex: 1 }]} onPress={() => { setShowPin(false); setPin(""); setPinMsg(""); }}>
+                <Text style={[s.modalBtnText, { color: t.ink.mid }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, flex: 1 }]} onPress={savePin} disabled={pinBusy}>
+                {pinBusy ? <ActivityIndicator color={onDeep} /> : <Text style={[s.modalBtnText, { color: onDeep }]}>Save PIN</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity style={[s.linkRow, { borderColor: t.ink.hairline }]} onPress={() => { setShowPin(true); setPinMsg(""); }}>
+            <Text style={[s.linkText, { color: t.ink.mid }]}>Set parent PIN (for picking a kid's apps)</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* App requests */}
+        {appReqs.length > 0 && (
+          <>
+            <Text style={[s.sectionLabel, { color: t.ink.faint }]}>APP REQUESTS</Text>
+            {appReqs.map((r) => (
+              <View key={r.id} style={[s.approvalCard, { backgroundColor: t.paper.card, borderColor: t.earn.sage }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.childName, { color: t.ink.deep }]}>{childName(r.child_id)}</Text>
+                  <Text style={[s.approvalTask, { color: t.ink.mid }]}>Wants to use "{r.app_label}"</Text>
+                </View>
+                <TouchableOpacity style={[s.rejectBtn, { borderColor: t.ink.border }]} onPress={() => doResolveApp(r.id, false)}>
+                  <Text style={[s.rejectText, { color: t.ink.mid }]}>Deny</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.approveBtn, { backgroundColor: t.earn.deep }]} onPress={() => doResolveApp(r.id, true)}>
+                  <Text style={[s.approveText, { color: onDeep }]}>Allow</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </>
+        )}
 
         {/* Approvals */}
         {approvals.length > 0 && (
@@ -359,6 +435,10 @@ const s = StyleSheet.create({
   root: { flex: 1 },
   profileBtn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   profileInitial: { fontFamily: FF.bodyBold, fontSize: 18 },
+  pinCard: { borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 20 },
+  pinLabel: { fontFamily: FF.body, fontSize: 13, lineHeight: 19, marginBottom: 12 },
+  linkRow: { borderTopWidth: 1, paddingVertical: 14, marginBottom: 8, marginTop: -6 },
+  linkText: { fontFamily: FF.bodyMed, fontSize: 13 },
   kicker: { fontFamily: FF.kicker, fontSize: 12, letterSpacing: 2.5, marginBottom: 8 },
   title: { fontFamily: FF.display, fontSize: 34, letterSpacing: -0.3, marginBottom: 20 },
   card: { borderRadius: 20, borderWidth: 1, padding: 22, alignItems: "center", marginBottom: 26 },

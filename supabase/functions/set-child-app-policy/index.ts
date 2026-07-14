@@ -40,7 +40,9 @@ serve(async (req: Request) => {
       .map((a: unknown) => String(a).slice(0, 120))
       .filter(Boolean)
       .slice(0, 100);
-    const policy = { mode: "categories", allow };
+    const rawMode = String(body.app_policy?.mode ?? "categories");
+    const mode = rawMode === "custom" ? "custom" : "categories";
+    const policy = { mode, allow };
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
