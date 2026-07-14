@@ -8,7 +8,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  Platform, StatusBar, ActivityIndicator,
+  Platform, StatusBar, ActivityIndicator, RefreshControl,
 } from "react-native";
 import { getTheme, FF } from "./theme";
 import Sprout from "./SproutArt";
@@ -16,6 +16,7 @@ import { supabase } from "./supabase";
 import { notifyTaskApproved } from "./notifications";
 import { fetchChildFamily, fetchChildTasks, submitChildTask } from "./family";
 import FamilyProfileModal from "./FamilyProfile";
+import { FamilyDock, HistoryList, shortDate } from "./FamilyUI";
 
 const ACTIVE = ["assigned", "submitted", "rejected"];
 
@@ -27,6 +28,8 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [tab, setTab] = useState("home");
+  const [refreshing, setRefreshing] = useState(false);
   const seenApprovedRef = useRef(null); // approved task ids seen on previous load
 
   const loadTasks = useCallback(async () => {
@@ -78,21 +81,34 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
   }
 
   const active = tasks.filter((x) => ACTIVE.includes(x.status) && !x.done);
+  const history = tasks
+    .filter((x) => x.status === "approved")
+    .map((x) => ({ id: x.id, title: x.title, minutes: x.minutes, subtitle: shortDate(x.completed_at) }));
   const mins = Math.max(0, Math.ceil((secLeft || 0) / 60));
   const hasTime = mins > 0;
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await loadTasks();
+    setRefreshing(false);
+  }
 
   return (
     <View style={[c.root, { backgroundColor: t.paper.warm, paddingTop: Platform.OS === "ios" ? 64 : 40 }]}>
       <StatusBar barStyle={dark ? "light-content" : "dark-content"} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.earn.sage} />}
+      >
         <View style={c.topRow}>
-          <Text style={[c.hi, { color: t.ink.deep }]}>Hi{name ? `, ${name}` : ""}! 👋</Text>
+          <Text style={[c.hi, { color: t.ink.deep }]}>Hi{name ? `, ${name}` : ""}</Text>
           <TouchableOpacity style={[c.profileBtn, { backgroundColor: t.earn.sageLo }]} onPress={() => setShowProfile(true)}>
             <Text style={[c.profileInitial, { color: t.earn.sage }]}>{(name || "?").slice(0, 1).toUpperCase()}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Big time card */}
+        {/* Big time card (always shown) */}
         <View style={[c.timeCard, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
           <View pointerEvents="none" style={{ position: "absolute", right: -30, bottom: -20, opacity: 0.12 }}>
             <Sprout size={150} tone="fresh" />
@@ -102,50 +118,59 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
           <Text style={[c.timeUnit, { color: t.ink.mid }]}>{mins === 1 ? "minute" : "minutes"}</Text>
         </View>
 
-        <Text style={[c.section, { color: t.ink.faint }]}>YOUR TASKS</Text>
-
-        {loading ? (
-          <ActivityIndicator color={t.earn.sage} style={{ marginTop: 20 }} />
-        ) : active.length === 0 ? (
-          <View style={[c.msgCard, { backgroundColor: t.earn.sageLo }]}>
-            <Text style={[c.msgTitle, { color: t.earn.greenD }]}>All caught up! 🌱</Text>
-            <Text style={[c.msgBody, { color: t.earn.green }]}>
-              No tasks right now. When a parent gives you one, it'll pop up here.
-            </Text>
-          </View>
-        ) : (
-          active.map((task) => {
-            const submitted = task.status === "submitted";
-            const rejected = task.status === "rejected";
-            return (
-              <View key={task.id} style={[c.taskCard, { backgroundColor: t.paper.card, borderColor: submitted ? t.earn.sage : t.ink.border }]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[c.taskTitle, { color: t.ink.deep }]}>{task.title}</Text>
-                  <Text style={[c.taskReward, { color: t.earn.sage }]}>
-                    +{task.minutes} min{rejected ? " · sent back, try again" : ""}
-                  </Text>
-                </View>
-                {submitted ? (
-                  <View style={[c.waitPill, { backgroundColor: t.earn.sageLo }]}>
-                    <Text style={[c.waitText, { color: t.earn.greenD }]}>Waiting ⏳</Text>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={[c.doneBtn, { backgroundColor: t.earn.deep }]}
-                    onPress={() => markDone(task)}
-                    disabled={busyId === task.id}
-                  >
-                    {busyId === task.id
-                      ? <ActivityIndicator color={onDeep} />
-                      : <Text style={[c.doneText, { color: onDeep }]}>Done</Text>}
-                  </TouchableOpacity>
-                )}
+        {tab === "home" ? (
+          <>
+            <Text style={[c.section, { color: t.ink.faint }]}>YOUR TASKS</Text>
+            {loading ? (
+              <ActivityIndicator color={t.earn.sage} style={{ marginTop: 20 }} />
+            ) : active.length === 0 ? (
+              <View style={[c.msgCard, { backgroundColor: t.earn.sageLo }]}>
+                <Text style={[c.msgTitle, { color: t.earn.greenD }]}>All caught up</Text>
+                <Text style={[c.msgBody, { color: t.earn.green }]}>
+                  No tasks right now. When a parent gives you one, it'll show up here.
+                </Text>
               </View>
-            );
-          })
+            ) : (
+              active.map((task) => {
+                const submitted = task.status === "submitted";
+                const rejected = task.status === "rejected";
+                return (
+                  <View key={task.id} style={[c.taskCard, { backgroundColor: t.paper.card, borderColor: submitted ? t.earn.sage : t.ink.border }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[c.taskTitle, { color: t.ink.deep }]}>{task.title}</Text>
+                      <Text style={[c.taskReward, { color: t.earn.sage }]}>
+                        +{task.minutes} min{rejected ? " · sent back, try again" : ""}
+                      </Text>
+                    </View>
+                    {submitted ? (
+                      <View style={[c.waitPill, { backgroundColor: t.earn.sageLo }]}>
+                        <Text style={[c.waitText, { color: t.earn.greenD }]}>Waiting</Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={[c.doneBtn, { backgroundColor: t.earn.deep }]}
+                        onPress={() => markDone(task)}
+                        disabled={busyId === task.id}
+                      >
+                        {busyId === task.id
+                          ? <ActivityIndicator color={onDeep} />
+                          : <Text style={[c.doneText, { color: onDeep }]}>Done</Text>}
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })
+            )}
+          </>
+        ) : (
+          <>
+            <Text style={[c.section, { color: t.ink.faint }]}>COMPLETED</Text>
+            <HistoryList items={history} dark={dark} emptyText="No completed tasks yet. Finish a task to see it here." />
+          </>
         )}
-
       </ScrollView>
+
+      <FamilyDock tab={tab} onTab={setTab} dark={dark} />
 
       <FamilyProfileModal
         visible={showProfile}

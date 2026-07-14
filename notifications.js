@@ -148,7 +148,7 @@ export async function notifyChildSubmittedTask(taskTitle) {
 /** A parent approved the child's task — the child earned time. */
 export async function notifyTaskApproved(minutes) {
   const m = Math.max(1, Math.round(minutes || 0));
-  await fireImmediate("drift-task-approved", "Approved! 🎉", `You earned ${m} more minutes of screen time.`);
+  await fireImmediate("drift-task-approved", "Task approved", `You earned ${m} more minutes of screen time.`);
 }
 
 /** Cancel everything Drift scheduled (e.g. on sign-out). */

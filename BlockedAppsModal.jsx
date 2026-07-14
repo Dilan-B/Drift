@@ -174,7 +174,7 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
                   backgroundColor: earn.green, alignItems: "center",
                 }}
               >
-                <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 2 }}>
+                <Text style={{ fontFamily: FO, fontSize: 12, color: dark ? "#16261C" : "#fff", letterSpacing: 2 }}>
                   DONE
                 </Text>
               </TouchableOpacity>

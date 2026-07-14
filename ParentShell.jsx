@@ -8,16 +8,17 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  Share, Platform, StatusBar, ActivityIndicator, Modal, TextInput,
+  Share, Platform, StatusBar, ActivityIndicator, Modal, TextInput, RefreshControl,
 } from "react-native";
 import { getTheme, FF } from "./theme";
 import Sprout from "./SproutArt";
 import { supabase } from "./supabase";
 import { notifyChildSubmittedTask } from "./notifications";
 import FamilyProfileModal from "./FamilyProfile";
+import { FamilyDock, HistoryList, shortDate } from "./FamilyUI";
 import {
   fetchMyFamily, fetchFamilyChildren, fetchPendingApprovals, fetchChildrenBalances,
-  assignChildTask, approveChildTask, rejectChildTask, setChildAppPolicy,
+  fetchFamilyHistory, assignChildTask, approveChildTask, rejectChildTask, setChildAppPolicy,
 } from "./family";
 
 // Curated apps a parent can choose to keep available even when time runs out.
@@ -50,6 +51,9 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
   const [assignErr, setAssignErr] = useState("");
 
   const [appsFor, setAppsFor] = useState(null); // child object
+  const [tab, setTab] = useState("home");
+  const [refreshing, setRefreshing] = useState(false);
+  const [history, setHistory] = useState([]);
 
   const childIds = children.map((c) => c.user_id);
   const seenApprovalsRef = useRef(null); // ids seen on the previous reload
@@ -67,6 +71,9 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
   const reloadBalances = useCallback(async (ids) => {
     setBalances(await fetchChildrenBalances(ids));
   }, []);
+  const reloadHistory = useCallback(async (ids) => {
+    setHistory(await fetchFamilyHistory(ids));
+  }, []);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -76,27 +83,53 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
       const kids = await fetchFamilyChildren(fam.id);
       setChildren(kids);
       const ids = kids.map((c) => c.user_id);
-      await Promise.all([reloadApprovals(ids), reloadBalances(ids)]);
+      await Promise.all([reloadApprovals(ids), reloadBalances(ids), reloadHistory(ids)]);
     }
     setLoading(false);
-  }, [userId, reloadApprovals, reloadBalances]);
+  }, [userId, reloadApprovals, reloadBalances, reloadHistory]);
 
   useEffect(() => { load(); }, [load]);
 
-  // Live: any child task change → refresh the approval queue; any readable
-  // profile change → refresh balances. RLS delivers only this parent's children.
+  async function onRefresh() {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }
+
+  // Live: any child task change → refresh the approval queue + history; any
+  // readable profile change → refresh balances. RLS delivers only this parent's
+  // children.
   useEffect(() => {
     if (!userId || childIds.length === 0) return;
     const ch = supabase
       .channel(`parent:${userId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "tasks" },
-        () => { reloadApprovals(childIds); })
+        () => { reloadApprovals(childIds); reloadHistory(childIds); })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" },
         () => { reloadBalances(childIds); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, childIds.join(","), reloadApprovals, reloadBalances]);
+  }, [userId, childIds.join(","), reloadApprovals, reloadBalances, reloadHistory]);
+
+  // Live: a kid joining/leaving the family (family_members change) → reload the
+  // roster so new kids appear WITHOUT a manual refresh. Runs even with zero kids
+  // so the very first join is caught.
+  useEffect(() => {
+    if (!family?.id) return;
+    const ch = supabase
+      .channel(`family_members:${family.id}`)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "family_members", filter: `family_id=eq.${family.id}` },
+        async () => {
+          const kids = await fetchFamilyChildren(family.id);
+          setChildren(kids);
+          const ids = kids.map((c) => c.user_id);
+          reloadBalances(ids); reloadApprovals(ids); reloadHistory(ids);
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [family?.id, reloadBalances, reloadApprovals, reloadHistory]);
 
   async function shareCode() {
     if (!family?.code) return;
@@ -152,7 +185,11 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
   return (
     <View style={[s.root, { backgroundColor: t.paper.warm, paddingTop: Platform.OS === "ios" ? 64 : 40 }]}>
       <StatusBar barStyle={dark ? "light-content" : "dark-content"} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.earn.sage} />}
+      >
         <View pointerEvents="none" style={{ position: "absolute", right: -50, top: -10, opacity: 0.1 }}>
           <Sprout size={180} tone="fresh" />
         </View>
@@ -167,6 +204,20 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
           </TouchableOpacity>
         </View>
 
+        {tab === "history" ? (
+          <>
+            <Text style={[s.sectionLabel, { color: t.ink.faint }]}>COMPLETED</Text>
+            <HistoryList
+              items={history.map((h) => ({
+                id: h.id, title: h.title, minutes: h.minutes,
+                subtitle: `${childName(h.user_id)} · ${shortDate(h.completed_at)}`,
+              }))}
+              dark={dark}
+              emptyText="No completed tasks yet. Approved tasks show up here."
+            />
+          </>
+        ) : (
+        <>
         {/* Family code */}
         <View style={[s.card, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
           <Text style={[s.cardLabel, { color: t.ink.faint }]}>FAMILY CODE</Text>
@@ -225,8 +276,11 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
             </View>
           ))
         )}
-
+        </>
+        )}
       </ScrollView>
+
+      <FamilyDock tab={tab} onTab={setTab} dark={dark} />
 
       {/* Assign task modal */}
       <Modal visible={!!assignFor} transparent animationType="fade" onRequestClose={() => setAssignFor(null)}>

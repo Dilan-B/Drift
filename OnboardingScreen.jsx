@@ -113,14 +113,14 @@ function WelcomeSlide({ onNext }) {
         <Sprig size={150} color={CLAY} opacity={0.055} flip />
       </View>
       <View style={styles.welcomeContent}>
-        <Text style={[styles.welcomeLogo, fontsLoaded && { fontFamily: "Orbitron_700Bold" }]}>DRIFT</Text>
-        <Text style={[styles.welcomeHeadline, fontsLoaded && { fontFamily: FF.display }]}>{"Your phone unlocks\nwhen you earn it."}</Text>
+        <Text style={[styles.welcomeLogo, { fontFamily: "Orbitron_700Bold" }]}>DRIFT</Text>
+        <Text style={[styles.welcomeHeadline, { fontFamily: FF.display }]}>{"Welcome to\nDrift"}</Text>
         <Text style={styles.welcomeSub}>
-          Earn screen time before it starts.
+          Earn your screen time by getting real things done. Your phone unlocks when you do.
         </Text>
       </View>
-      <TouchableOpacity style={styles.ctaBtn} onPress={onNext}>
-        <Text style={styles.ctaBtnText}>Get started</Text>
+      <TouchableOpacity style={styles.ctaBtn} onPress={onNext} activeOpacity={0.85}>
+        <Text style={styles.ctaBtnText}>Get Started</Text>
       </TouchableOpacity>
       <Text style={styles.legal}>Takes 60 seconds</Text>
     </View>
