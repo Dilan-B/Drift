@@ -16,7 +16,7 @@ import Swipeable from "./Swipeable";
 import {
   fetchTasks, insertTask, updateTaskCredits, completeTaskRow, softDeleteTask,
   appendLedgerEntry, syncProfileStats, fetchProfileStats, flushPendingStats,
-  cache,
+  clearPendingBalance, cache,
 } from "./sync";
 import { registerBackgroundRefresh } from "./backgroundRefresh";
 import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, scheduleDailyReminder, cancelAllNotifications } from "./notifications";
@@ -4118,6 +4118,9 @@ export default function App() {
             setSecLeft(0);
             AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
             syncProfileStats(uid, { balanceSeconds: 0 }).catch(() => {});
+            // Also drop any queued balance so a stale pre-reset value can't be
+            // flushed back onto the server and resurrected next launch.
+            clearPendingBalance(uid).catch(() => {});
             if (!remoteTasksApplied) {
               setTasks(savedTasks.filter(t => isTodayTask(t) && !deletedIds.has(t.id)));
               persist({ tasks: savedTasks, taskHistory: history, totalXp: p.totalXp || 0, credits: resetCredits });

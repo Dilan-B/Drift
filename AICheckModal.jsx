@@ -201,6 +201,12 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
       Alert.alert("Verification failed", "Unexpected response from the AI service.");
     } catch (e) {
       const raw = (e?.message || "").toLowerCase();
+      // The client-side rate limiter throws with code "rate_limited" — surface
+      // that as a rate limit, not a bogus "check your connection".
+      if (e?.code === "rate_limited" || raw.includes("too many attempts")) {
+        setRateLimitMsg(e?.message || "You've done a lot of AI Checks. Try again in a little while.");
+        return;
+      }
       let msg = "Could not reach the AI. Check your connection and try again.";
       if (raw.includes("aborted") || raw.includes("timeout")) {
         msg = "AI took too long. Try a smaller photo.";
