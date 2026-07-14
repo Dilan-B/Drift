@@ -14,6 +14,7 @@ import { getTheme, FF } from "./theme";
 import Sprout from "./SproutArt";
 import { supabase } from "./supabase";
 import { notifyChildSubmittedTask } from "./notifications";
+import FamilyProfileModal from "./FamilyProfile";
 import {
   fetchMyFamily, fetchFamilyChildren, fetchPendingApprovals, fetchChildrenBalances,
   assignChildTask, approveChildTask, rejectChildTask, setChildAppPolicy,
@@ -31,8 +32,10 @@ const ALLOWABLE_APPS = [
   { id: "school",   label: "School apps" },
 ];
 
-export default function ParentShell({ userId, dark = false, onSignOut }) {
+export default function ParentShell({ userId, userEmail, username, dark = false, onSignOut, onToggleTheme, onDeleteAccount }) {
   const t = getTheme(dark);
+  const onDeep = dark ? t.ink.void : "#FAF6EE"; // legible text on earn.deep buttons
+  const [showProfile, setShowProfile] = useState(false);
   const [family, setFamily] = useState(null);
   const [children, setChildren] = useState([]);
   const [balances, setBalances] = useState({});
@@ -154,8 +157,15 @@ export default function ParentShell({ userId, dark = false, onSignOut }) {
           <Sprout size={180} tone="fresh" />
         </View>
 
-        <Text style={[s.kicker, { color: t.earn.sage }]}>YOUR FAMILY</Text>
-        <Text style={[s.title, { color: t.ink.deep }]}>Welcome home</Text>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.kicker, { color: t.earn.sage }]}>YOUR FAMILY</Text>
+            <Text style={[s.title, { color: t.ink.deep }]}>Welcome home</Text>
+          </View>
+          <TouchableOpacity style={[s.profileBtn, { backgroundColor: t.earn.sageLo }]} onPress={() => setShowProfile(true)}>
+            <Text style={[s.profileInitial, { color: t.earn.sage }]}>{(username || "?").slice(0, 1).toUpperCase()}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Family code */}
         <View style={[s.card, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
@@ -163,7 +173,7 @@ export default function ParentShell({ userId, dark = false, onSignOut }) {
           {loading ? <ActivityIndicator color={t.earn.sage} style={{ marginVertical: 14 }} />
             : <Text style={[s.code, { color: t.ink.deep }]}>{family?.code || "—"}</Text>}
           <TouchableOpacity style={[s.shareBtn, { backgroundColor: t.earn.deep }]} onPress={shareCode} disabled={!family?.code}>
-            <Text style={[s.shareBtnText]}>Share code</Text>
+            <Text style={[s.shareBtnText, { color: onDeep }]}>Share code</Text>
           </TouchableOpacity>
         </View>
 
@@ -181,7 +191,7 @@ export default function ParentShell({ userId, dark = false, onSignOut }) {
                   <Text style={[s.rejectText, { color: t.ink.mid }]}>Not yet</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.approveBtn, { backgroundColor: t.earn.deep }]} onPress={() => doApprove(a.id)} disabled={busyId === a.id}>
-                  {busyId === a.id ? <ActivityIndicator color="#FAF6EE" /> : <Text style={s.approveText}>Approve</Text>}
+                  {busyId === a.id ? <ActivityIndicator color={onDeep} /> : <Text style={[s.approveText, { color: onDeep }]}>Approve</Text>}
                 </TouchableOpacity>
               </View>
             ))}
@@ -210,15 +220,12 @@ export default function ParentShell({ userId, dark = false, onSignOut }) {
                 <Text style={[s.smallBtnText, { color: t.earn.greenD }]}>Apps</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.smallBtn, { backgroundColor: t.earn.deep, marginLeft: 8 }]} onPress={() => { setAssignFor(cc); setAssignErr(""); }}>
-                <Text style={[s.smallBtnText, { color: "#FAF6EE" }]}>+ Task</Text>
+                <Text style={[s.smallBtnText, { color: onDeep }]}>+ Task</Text>
               </TouchableOpacity>
             </View>
           ))
         )}
 
-        <TouchableOpacity style={s.signOut} onPress={onSignOut}>
-          <Text style={[s.signOutText, { color: t.ink.mid }]}>Sign out</Text>
-        </TouchableOpacity>
       </ScrollView>
 
       {/* Assign task modal */}
@@ -245,7 +252,7 @@ export default function ParentShell({ userId, dark = false, onSignOut }) {
                 <Text style={[s.modalBtnText, { color: t.ink.mid }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, flex: 1 }]} onPress={submitAssign} disabled={assigning}>
-                {assigning ? <ActivityIndicator color="#FAF6EE" /> : <Text style={[s.modalBtnText, { color: "#FAF6EE" }]}>Assign</Text>}
+                {assigning ? <ActivityIndicator color={onDeep} /> : <Text style={[s.modalBtnText, { color: onDeep }]}>Assign</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -266,7 +273,7 @@ export default function ParentShell({ userId, dark = false, onSignOut }) {
                 <TouchableOpacity key={app.id} style={[s.allowRow, { borderColor: t.ink.hairline }]} onPress={() => toggleAllow(appsFor, app.id)}>
                   <Text style={[s.allowLabel, { color: t.ink.deep }]}>{app.label}</Text>
                   <View style={[s.toggle, { backgroundColor: on ? t.earn.deep : t.ink.ghost }]}>
-                    <Text style={{ color: on ? "#FAF6EE" : t.ink.faint, fontFamily: FF.bodyMed, fontSize: 12 }}>
+                    <Text style={{ color: on ? onDeep : t.ink.faint, fontFamily: FF.bodyMed, fontSize: 12 }}>
                       {on ? "Allowed" : "Blocked"}
                     </Text>
                   </View>
@@ -274,17 +281,30 @@ export default function ParentShell({ userId, dark = false, onSignOut }) {
               );
             })}
             <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, marginTop: 16 }]} onPress={() => setAppsFor(null)}>
-              <Text style={[s.modalBtnText, { color: "#FAF6EE" }]}>Done</Text>
+              <Text style={[s.modalBtnText, { color: onDeep }]}>Done</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
+      <FamilyProfileModal
+        visible={showProfile}
+        onClose={() => setShowProfile(false)}
+        dark={dark}
+        onToggleTheme={onToggleTheme}
+        name={username || "Parent"}
+        subtitle={userEmail || "Drift parent account"}
+        onSignOut={onSignOut}
+        onDeleteAccount={onDeleteAccount}
+      />
     </View>
   );
 }
 
 const s = StyleSheet.create({
   root: { flex: 1 },
+  profileBtn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  profileInitial: { fontFamily: FF.bodyBold, fontSize: 18 },
   kicker: { fontFamily: FF.kicker, fontSize: 12, letterSpacing: 2.5, marginBottom: 8 },
   title: { fontFamily: FF.display, fontSize: 34, letterSpacing: -0.3, marginBottom: 20 },
   card: { borderRadius: 20, borderWidth: 1, padding: 22, alignItems: "center", marginBottom: 26 },
