@@ -80,6 +80,21 @@ serve(async (req: Request) => {
     // Keep screen_time aggregate rows but detach behaviorally sensitive counts.
     await admin.from("screen_time").update({ minutes: 0, unlocks: 0 }).eq("user_id", user.id);
 
+    // Family cleanup. If this account owns families (a parent), deactivate them
+    // and unlink every member — the children become inert (no new grants) but
+    // their own data is untouched. If this account is itself a member (a child),
+    // unlink that membership.
+    const { data: ownedFamilies } = await admin
+      .from("families").select("id").eq("parent_id", user.id);
+    const famIds = (ownedFamilies || []).map((f: { id: string }) => f.id);
+    if (famIds.length) {
+      await admin.from("families").update({ active: false, deleted_at: now }).in("id", famIds);
+      await admin.from("family_members").update({ removed_at: now })
+        .in("family_id", famIds).is("removed_at", null);
+    }
+    await admin.from("family_members").update({ removed_at: now })
+      .eq("user_id", user.id).is("removed_at", null);
+
     // Supabase Auth soft delete obfuscates auth identity instead of hard
     // deleting/cascading through public tables.
     const { error: deleteErr } = await admin.auth.admin.deleteUser(user.id, true);

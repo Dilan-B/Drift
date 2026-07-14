@@ -127,6 +127,30 @@ export async function notifyFriendRequest(fromUsername) {
   } catch {}
 }
 
+/** A child submitted a task — the parent should approve it. Local, so it only
+ *  fires while the parent's app is alive (realtime keeps it connected). True
+ *  background push would need push tokens + a server send (follow-up). */
+export async function notifyChildSubmittedTask(taskTitle) {
+  if (!(await ensureGranted())) return;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: `drift-child-submit-${taskTitle || "task"}`,
+      content: {
+        title: "Task ready to check",
+        body: taskTitle ? `Your kid finished "${taskTitle}". Approve it to grant screen time.`
+                        : "Your kid finished a task. Approve it to grant screen time.",
+      },
+      trigger: null,
+    });
+  } catch {}
+}
+
+/** A parent approved the child's task — the child earned time. */
+export async function notifyTaskApproved(minutes) {
+  const m = Math.max(1, Math.round(minutes || 0));
+  await fireImmediate("drift-task-approved", "Approved! 🎉", `You earned ${m} more minutes of screen time.`);
+}
+
 /** Cancel everything Drift scheduled (e.g. on sign-out). */
 export async function cancelAllNotifications() {
   if (!Notifications) return;
