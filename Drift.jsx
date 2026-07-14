@@ -60,7 +60,7 @@ import {
   getDiagnostics, updateSharedBalance, startDriftInLiveActivity, updateDriftInLiveActivity,
   endDriftInLiveActivity, consumePendingHealthEarn, setProStatus,
 } from "./screenTime";
-import { supabase, syncScreenTime, safeGetSession, saveOnboardingResponses, getAppConfig, isVersionOutdated } from "./supabase";
+import { supabase, syncScreenTime, safeGetSession, saveOnboardingResponses, getAppConfig, isVersionOutdated, fetchAppStoreLatest } from "./supabase";
 import ForceUpdateModal from "./ForceUpdateModal";
 import { handleSupabaseAuthCallback } from "./authLinks";
 import SocialScreen from "./SocialScreen";
@@ -3932,8 +3932,27 @@ export default function App() {
   useEffect(() => {
     const check = async () => {
       try {
-        const cfg = await getAppConfig();
         const current = Constants.expoConfig?.version || Constants.manifest?.version;
+
+        // 1) AUTOMATIC: any newer version live on the App Store is mandatory —
+        //    the moment we ship an update, older installs get blocked until they
+        //    update. Only in real production iOS builds (skip Expo Go / dev so
+        //    it doesn't nag us while developing).
+        const isExpoGo = Constants.appOwnership === "expo";
+        if (Platform.OS === "ios" && !__DEV__ && !isExpoGo) {
+          const bundleId = Constants.expoConfig?.ios?.bundleIdentifier
+            || Constants.manifest?.ios?.bundleIdentifier || "com.drift.app";
+          const store = await fetchAppStoreLatest(bundleId);
+          if (store?.version && isVersionOutdated(current, store.version)) {
+            setUpdateStoreUrl(store.url || null);
+            setForceUpdate(true);
+            return;
+          }
+        }
+
+        // 2) MANUAL override via app_config.min_ios_version — force a specific
+        //    minimum (e.g. an emergency hotfix) even beyond the App Store check.
+        const cfg = await getAppConfig();
         if (cfg.min_ios_version && isVersionOutdated(current, cfg.min_ios_version)) {
           setUpdateStoreUrl(cfg.ios_store_url || null);
           setForceUpdate(true);
@@ -4678,6 +4697,14 @@ export default function App() {
     </View>
   );
 
+  // Mandatory-update gate — blocks the ENTIRE app (onboarding, personal, parent,
+  // child) with no way past it but updating. Placed before every other screen.
+  if (forceUpdate) return (
+    <View style={{ flex: 1, backgroundColor: getTheme(darkMode).paper.warm }}>
+      <ForceUpdateModal visible={true} storeUrl={updateStoreUrl} dark={darkMode} />
+    </View>
+  );
+
   if (onboarding) return (
     <OnboardingScreen
       signInOnly={signInOnly}
@@ -4954,8 +4981,6 @@ export default function App() {
         </View>
       )}
 
-      {/* Mandatory update gate — overlays everything, no dismiss */}
-      <ForceUpdateModal visible={forceUpdate} storeUrl={updateStoreUrl} dark={darkMode} />
 
       {/* Blocked apps modal (onboarding + ongoing management) */}
       <BlockedAppsModal

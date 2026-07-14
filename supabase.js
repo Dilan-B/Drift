@@ -289,6 +289,37 @@ export function isVersionOutdated(current, minimum) {
   return false;
 }
 
+// Look up the version currently LIVE on the App Store via Apple's public iTunes
+// lookup API (no auth, no user data sent). Lets the app auto-detect a new
+// release and force an update without us bumping anything in the database.
+// Fails open (returns the last known value or null) so a lookup hiccup never
+// locks anyone out. External data is untrusted → the version is validated to a
+// dotted-numeric string before use.
+let _storeVersionCache = { ts: 0, value: null };
+export async function fetchAppStoreLatest(bundleId) {
+  if (!bundleId) return null;
+  const now = Date.now();
+  if (_storeVersionCache.value && now - _storeVersionCache.ts < 30 * 60_000) {
+    return _storeVersionCache.value;
+  }
+  try {
+    const res = await fetch(
+      `https://itunes.apple.com/lookup?bundleId=${encodeURIComponent(bundleId)}&t=${now}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (!res.ok) return _storeVersionCache.value;
+    const json = await res.json();
+    const app = Array.isArray(json?.results) ? json.results[0] : null;
+    const version = app?.version;
+    if (!version || !/^\d+(\.\d+){0,3}$/.test(String(version))) return _storeVersionCache.value;
+    const value = { version: String(version), url: app.trackViewUrl || null };
+    _storeVersionCache = { ts: now, value };
+    return value;
+  } catch {
+    return _storeVersionCache.value;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Helper: redeem a custom Pro code. Validated + granted server-side by the
 // `redeem-code` edge function (which writes pro_overrides with the service
