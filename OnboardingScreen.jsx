@@ -2,13 +2,13 @@
  * OnboardingScreen.jsx
  * Opal-style onboarding: stats → goals → login
  */
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useFonts, Orbitron_700Bold, Orbitron_400Regular } from "@expo-google-fonts/orbitron";
 import { Oswald_700Bold } from "@expo-google-fonts/oswald";
 import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions,
   ScrollView, Animated, StatusBar, TextInput, KeyboardAvoidingView,
-  Platform, ActivityIndicator, Alert, Linking,
+  Platform, ActivityIndicator, Alert, Linking, Keyboard,
 } from "react-native";
 import { supabase } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
@@ -475,6 +475,17 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
   const [verifying, setVerifying] = useState(false);
   const [error,    setError]    = useState("");
   const [notice,   setNotice]   = useState("");
+  // When the keyboard is up we hide the social buttons / terms / switch link so
+  // they don't crowd the form the user is typing into.
+  const [keyboardUp, setKeyboardUp] = useState(false);
+  const emailRef    = useRef(null);
+  const passwordRef = useRef(null);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", () => setKeyboardUp(true));
+    const hide = Keyboard.addListener("keyboardDidHide", () => setKeyboardUp(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   // Client-side rate limiting (anti-spam, not a security boundary)
   const resendAttemptsRef = useRef([]);
@@ -818,6 +829,8 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
                 autoCapitalize="none"
                 autoCorrect={false}
                 returnKeyType="next"
+                onSubmitEditing={() => emailRef.current?.focus()}
+                blurOnSubmit={false}
                 maxLength={20}
               />
             </View>
@@ -826,6 +839,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           <View style={styles.inputWrap}>
             <Text style={styles.inputLabel}>Email</Text>
             <TextInput
+              ref={emailRef}
               style={styles.input}
               placeholder="you@example.com"
               placeholderTextColor={MUTED}
@@ -835,6 +849,8 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
               keyboardType="email-address"
               autoComplete="email"
               returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              blurOnSubmit={false}
               maxLength={100}
             />
           </View>
@@ -842,13 +858,14 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           <View style={styles.inputWrap}>
             <Text style={styles.inputLabel}>Password</Text>
             <TextInput
+              ref={passwordRef}
               style={styles.input}
               placeholder="12+ chars, number, symbol"
               placeholderTextColor={MUTED}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              returnKeyType="done"
+              returnKeyType={mode === "signup" ? "done" : "go"}
               onSubmitEditing={handleSubmit}
               maxLength={72}
             />
@@ -877,7 +894,9 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
         )}
       </TouchableOpacity>
 
-      {/* Google sign-in */}
+      {/* Social + terms + switch link — hidden while typing so they don't crowd
+          the form. The primary button above stays, and Enter/Return submits. */}
+      {!keyboardUp && (
       <OAuthButtons
         mode={mode}
         loading={loading}
@@ -885,9 +904,10 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
         setError={setError}
         onDone={onDone}
       />
+      )}
 
       {/* Terms + privacy disclosure shown to anyone creating an account */}
-      {mode === "signup" && (
+      {!keyboardUp && mode === "signup" && (
         <Text style={{ marginTop: 14, marginHorizontal: 24, textAlign: "center", color: MUTED, fontFamily: FF.body, fontSize: 11, lineHeight: 16 }}>
           By creating an account you agree to our{" "}
           <Text style={{ color: ACCENT, textDecorationLine: "underline" }}
@@ -902,6 +922,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
         </Text>
       )}
 
+      {!keyboardUp && (
       <TouchableOpacity
         onPress={() => {
           setError("");
@@ -918,6 +939,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
             : "No account yet? Sign up"}
         </Text>
       </TouchableOpacity>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -1085,6 +1107,29 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
   }
 
   const step = STEPS[stepIndex];
+
+  // Back navigation. Auth (during signup) returns to the account-type picker so
+  // a wrong pick is easy to undo; the picker itself returns to sign-in if the
+  // user came from there, otherwise to the previous slide.
+  const canGoBack =
+    step.id?.startsWith("how") ||
+    step.id === "account_type" ||
+    (step.id === "auth" && isNewSignup) ||
+    step.id === "difficulty";
+
+  function goBack() {
+    Keyboard.dismiss();
+    if (step.id === "auth") {
+      setStepIndex(STEPS.findIndex((s) => s.id === "account_type"));
+      return;
+    }
+    if (step.id === "account_type" && forceSignup) {
+      setForceSignup(false);
+      setStepIndex(STEPS.findIndex((s) => s.id === "auth"));
+      return;
+    }
+    setStepIndex((i) => Math.max(0, i - 1));
+  }
   // Progress reflects only the real questions (tasks + difficulty), not the
   // welcome / how-it-works / auth slides.
   const totalQuestions = STEPS.filter((s) => s.options).length;
@@ -1140,6 +1185,17 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
+
+      {/* Back button — lets users undo a step (e.g. change account type). */}
+      <View style={styles.backRow}>
+        {canGoBack && (
+          <TouchableOpacity onPress={goBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.backBtn}>
+            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+              <SvgPath d="M15 5l-7 7 7 7" stroke={TEXT} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Progress bar (hidden on welcome/account-type/auth/how slides) */}
       {step.id !== "welcome" && step.id !== "auth" && step.id !== "account_type" && !step.id?.startsWith("how") && (
@@ -1206,6 +1262,8 @@ const styles = StyleSheet.create({
     backgroundColor: BG,
     paddingTop: Platform.OS === "ios" ? 56 : 34,
   },
+  backRow: { height: 34, justifyContent: "center", paddingHorizontal: 12 },
+  backBtn: { width: 40, height: 34, justifyContent: "center" },
   slide: {
     flex: 1,
     paddingHorizontal: 22,
