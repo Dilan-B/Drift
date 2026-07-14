@@ -463,7 +463,7 @@ function prettyAuthError(msg) {
   return msg || null;
 }
 
-function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal" }) {
+function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", onNewAccount }) {
   const [mode,     setMode]     = useState(defaultMode); // "signup" | "login"
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
@@ -903,7 +903,13 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal" })
       )}
 
       <TouchableOpacity
-        onPress={() => { setMode(mode === "signup" ? "login" : "signup"); setError(""); }}
+        onPress={() => {
+          setError("");
+          if (mode === "signup") { setMode("login"); return; }
+          // Switching to "create account": go pick an account type first (so a
+          // returning device isn't locked into a personal-only signup).
+          if (onNewAccount) onNewAccount(); else setMode("signup");
+        }}
         style={{ marginTop: 14, marginBottom: 32, alignItems: "center" }}
       >
         <Text style={styles.switchMode}>
@@ -1063,10 +1069,20 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
   // rendering and whether the post-signup questionnaire runs. Returning sign-ins
   // skip selection and inherit their real type from the profile server-side.
   const [accountType, setAccountType] = useState("personal");
+  // A returning device opens on the sign-in slide (signInOnly). If that user
+  // chooses to CREATE a new account, we flip this so they run the real signup
+  // flow — account-type picker included — instead of being stuck on sign-in.
+  const [forceSignup, setForceSignup] = useState(false);
+  const isNewSignup = !signInOnly || forceSignup;
   // The authenticated user is captured at the auth step, then carried through
   // the post-signup questionnaire until we finish and hand it to onComplete.
   const authedUserRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  function goToAccountType() {
+    setForceSignup(true);
+    setStepIndex(STEPS.findIndex((s) => s.id === "account_type"));
+  }
 
   const step = STEPS[stepIndex];
   // Progress reflects only the real questions (tasks + difficulty), not the
@@ -1108,9 +1124,9 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
 
   function handleAuthDone(user) {
     authedUserRef.current = user;
-    // Returning users (sign-in only) never see the questionnaire — finish now.
+    // Pure sign-in (returning user, not creating a new account) — finish now.
     // Their real account type is resolved from the profile server-side.
-    if (signInOnly) { onComplete({ user, answers: {} }); return; }
+    if (!isNewSignup) { onComplete({ user, answers: {} }); return; }
     // Parents and children are management/child accounts — they skip the
     // personal task/difficulty questionnaire entirely.
     if (accountType === "parent" || accountType === "child") {
@@ -1157,14 +1173,15 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
             onNext={goNext}
           />
         )}
-        {step.id === "auth" && accountType === "child" && !signInOnly && (
+        {step.id === "auth" && accountType === "child" && isNewSignup && (
           <ChildJoinSlide onDone={handleAuthDone} />
         )}
-        {step.id === "auth" && !(accountType === "child" && !signInOnly) && (
+        {step.id === "auth" && !(accountType === "child" && isNewSignup) && (
           <AuthSlide
             onDone={handleAuthDone}
-            defaultMode={signInOnly ? "login" : "signup"}
+            defaultMode={isNewSignup ? "signup" : "login"}
             accountType={accountType}
+            onNewAccount={goToAccountType}
           />
         )}
         {step.options && (
