@@ -426,6 +426,48 @@ const cacheFullTasks = async (uid, nextVisibleTasks, knownTasks = []) => {
   return cache.saveTasks(uid, mergeTaskRecords(existing, nextVisibleTasks));
 };
 
+// Fields that only ever live on the client — the tasks table doesn't have
+// columns for them, so a server fetch (rowToTask) returns them undefined. When
+// we re-apply fetched rows we must NOT let that undefined clobber the values we
+// still hold in the local cache, or a materialized recurring instance would
+// lose its template link and get re-created on the next sync.
+const CLIENT_ONLY_TASK_FIELDS = ["recurringTemplateId", "scheduledTime"];
+const rehydrateClientFields = (remoteTasks, cachedTasks) => {
+  const cachedById = new Map((cachedTasks || []).map(t => [t.id, t]));
+  return (remoteTasks || []).map(t => {
+    const c = cachedById.get(t.id);
+    if (!c) return t;
+    const merged = { ...t };
+    for (const f of CLIENT_ONLY_TASK_FIELDS) {
+      if (merged[f] == null && c[f] != null) merged[f] = c[f];
+    }
+    return merged;
+  });
+};
+
+// Collapse accidental duplicate instances of the same task on the same day.
+// An older dedup bug let a recurring template materialize several times (the
+// template link was stripped by the server round-trip, so the guard missed
+// it), leaving the user with the same task repeated in one day's list. Keep the
+// earliest pending instance per signature; return the extra ids so callers can
+// tombstone them. Completed tasks are never collapsed — they're history.
+const collapseDuplicateTasks = (list) => {
+  const seen = new Set();
+  const kept = [];
+  const removedIds = [];
+  for (const t of (list || [])) {
+    if (t.done) { kept.push(t); continue; }
+    // Signature is content + day only — NOT the template link, because existing
+    // duplicate rows have that link in mixed states (past syncs stripped it from
+    // some copies). Two identical pending tasks on the same day collapse to one.
+    const sig = `${t.title}|${t.cat}|${t.minutes}|${t.task_date || ""}`;
+    if (seen.has(sig)) { removedIds.push(t.id); continue; }
+    seen.add(sig);
+    kept.push(t);
+  }
+  return { kept, removedIds };
+};
+
 // ── Deleted-task tombstone ───────────────────────────────────
 // The task cache (cacheFullTasks) is append-only and the boot loader merges any
 // cached task missing from the server back into the visible list. After a
@@ -2993,6 +3035,11 @@ export default function App() {
   const [minuteTick,         setMinuteTick]         = useState(0);
   const quickGrantDayRef = useRef(todayKey());
   const visibleTaskDayRef = useRef(todayKey());
+  // Authoritative anti-duplicate / anti-resurrect guard for recurring tasks.
+  // Records which recurring template ids have already been materialized OR
+  // dismissed today, persisted independently of the task rows (which lose their
+  // template link on a server round-trip). Shape: { day, ids: Set }.
+  const recurringHandledRef = useRef({ day: todayKey(), ids: new Set() });
 
   // ── Pro access — everything is free for now ────────────────────────────
   const proAccess = true;
@@ -3431,7 +3478,7 @@ export default function App() {
       if (day === visibleTaskDayRef.current) return;
       visibleTaskDayRef.current = day;
       const allCached = userId ? await cache.loadTasks(userId).catch(() => []) : tasks;
-      setTasks((allCached || []).filter(t => isTodayTask(t, day)));
+      setTasks(collapseDuplicateTasks((allCached || []).filter(t => isTodayTask(t, day))).kept);
     };
     const id = setInterval(refreshVisibleTasksForDay, 60_000);
     return () => clearInterval(id);
@@ -3464,12 +3511,52 @@ export default function App() {
     return () => clearInterval(id);
   }, [blockedHours, proAccess]);
 
+  // Hydrate the persisted per-day recurring guard when the user changes.
+  // `recurringGuardReady` gates the materialize effect so it can't run against
+  // an empty guard before the persisted dismissals have loaded (which would
+  // briefly resurrect a deleted-for-the-day task on cold boot).
+  const [recurringGuardReady, setRecurringGuardReady] = useState(false);
+  useEffect(() => {
+    setRecurringGuardReady(false);
+    if (!userId) { recurringHandledRef.current = { day: todayKey(), ids: new Set() }; return; }
+    AsyncStorage.getItem(`drift_recurring_handled_${userId}`).then(raw => {
+      const today = todayKey();
+      try {
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (parsed && parsed.day === today && Array.isArray(parsed.ids)) {
+          recurringHandledRef.current = { day: today, ids: new Set(parsed.ids) };
+        } else {
+          recurringHandledRef.current = { day: today, ids: new Set() };
+        }
+      } catch {
+        recurringHandledRef.current = { day: today, ids: new Set() };
+      }
+    }).catch(() => {}).finally(() => setRecurringGuardReady(true));
+  }, [userId]);
+
+  // Mark recurring template ids as handled for today (materialized OR dismissed)
+  // so they won't be (re-)created for the rest of the day. Persisted so it
+  // survives reopen and doesn't depend on the task rows keeping their template
+  // link (which the server round-trip strips).
+  const markRecurringHandled = useCallback((templateIds) => {
+    const today = todayKey();
+    const rec = recurringHandledRef.current;
+    if (rec.day !== today) { rec.day = today; rec.ids = new Set(); }
+    let changed = false;
+    for (const id of templateIds) { if (id && !rec.ids.has(id)) { rec.ids.add(id); changed = true; } }
+    if (changed && userId) {
+      AsyncStorage.setItem(`drift_recurring_handled_${userId}`, JSON.stringify({ day: today, ids: [...rec.ids] })).catch(() => {});
+    }
+  }, [userId]);
+
   useEffect(() => {
     if (screen !== "app" || !userId || !proAccess || !recurringTasks.length) return;
+    if (!recurringGuardReady) return; // wait for persisted dismissals to load
     const today = todayKey();
-    // Dedup against BOTH active tasks and completed history for today. Without
-    // the history check, a recurring task completed earlier today would
-    // re-materialize after the app is closed and reopened.
+    // Reset the guard on a new day so today's occurrences can appear.
+    const rec = recurringHandledRef.current;
+    if (rec.day !== today) { rec.day = today; rec.ids = new Set(); }
+    // Dedup against active tasks + completed history for today as a first pass…
     const existingRecurring = new Set(
       [...tasks, ...taskHistory]
         .filter(t => t.recurringTemplateId && t.task_date === today)
@@ -3486,7 +3573,12 @@ export default function App() {
       // (which is now display-only). The schedule decides WHICH days a task
       // recurs; 5am decides WHEN it shows up that day.
       .filter(() => nowMins >= RECURRING_APPEAR_MINS)
-      .filter(t => !existingRecurring.has(`${t.id}_${today}`));
+      .filter(t => !existingRecurring.has(`${t.id}_${today}`))
+      // …but the persisted guard is the authority: if a template was already
+      // materialized OR dismissed today, never re-create it. This is what keeps
+      // a deleted-for-the-day task from resurrecting and stops the duplicate
+      // pile-up when a sync strips the template link off the task rows.
+      .filter(t => !rec.ids.has(t.id));
     if (!due.length) return;
 
     const created = due.map(t => ({
@@ -3504,6 +3596,7 @@ export default function App() {
       recurringTemplateId: t.id,
       scheduledTime: t.time,
     }));
+    markRecurringHandled(due.map(t => t.id));
     const nt = [...created, ...tasks];
     setTasks(nt);
     persist({ tasks: nt });
@@ -3511,7 +3604,7 @@ export default function App() {
     created.forEach(t => insertTask(userId, t).catch(e => {
       console.warn("recurring task sync failed:", e?.message);
     }));
-  }, [screen, userId, proAccess, recurringTasks, tasks, taskHistory, minuteTick]);
+  }, [screen, userId, proAccess, recurringTasks, tasks, taskHistory, minuteTick, markRecurringHandled, recurringGuardReady]);
 
   // Shared path for password sign-in, OAuth sign-in, and verified email links.
   const ONBOARDING_TASKS = {
@@ -3543,12 +3636,22 @@ export default function App() {
     try {
       const remote = await fetchTasks(uid);
       if (!remote) return false;
-      const today = remote.filter(t => isTodayTask(t) && !deletedIds.has(t.id));
-      const remoteIds = new Set(remote.map(t => t.id));
+      // Re-attach client-only fields (e.g. recurringTemplateId) that the server
+      // doesn't store, so materialized recurring instances keep their identity.
+      const remoteHydrated = rehydrateClientFields(remote, cachedTasks);
+      const today = remoteHydrated.filter(t => isTodayTask(t) && !deletedIds.has(t.id));
+      const remoteIds = new Set(remoteHydrated.map(t => t.id));
       const localOnly = cachedTasks.filter(t => !remoteIds.has(t.id) && isTodayTask(t));
-      const merged = [...today, ...localOnly];
+      // Collapse any leftover duplicate instances from the old dedup bug and
+      // tombstone the extras so they stop coming back.
+      const { kept: merged, removedIds: dupeIds } = collapseDuplicateTasks([...today, ...localOnly]);
       setTasks(merged);
-      cache.saveTasks(uid, mergeTaskRecords(remote, localOnly));
+      cache.saveTasks(uid, mergeTaskRecords(cachedTasks, remoteHydrated, localOnly)
+        .filter(t => !dupeIds.includes(t.id)));
+      dupeIds.forEach(dupId => {
+        addDeletedId(uid, dupId).catch(() => {});
+        softDeleteTask(uid, dupId).catch(() => {});
+      });
       const allDone = remote.filter(t => t.done);
       setTaskHistory(prev => mergeCompletedTasks(prev, allDone));
       // Retry-sync any local-only tasks now that we're online.
@@ -4055,7 +4158,9 @@ export default function App() {
         const deletedIds = await loadDeletedIds(uid);
         try {
           cachedTasks = (await cache.loadTasks(uid)).filter(t => !deletedIds.has(t.id));
-          const cachedToday = cachedTasks.filter(t => isTodayTask(t));
+          // Collapse duplicates for the instant paint too, so the user never
+          // sees the repeated rows flash before the remote sync tidies them.
+          const cachedToday = collapseDuplicateTasks(cachedTasks.filter(t => isTodayTask(t))).kept;
           if (cachedToday.length) setTasks(cachedToday);
           cachedXp = await cache.loadXp(uid);
           if (cachedXp) setTotalXp(prev => Math.max(prev, cachedXp));
@@ -4063,19 +4168,27 @@ export default function App() {
         try {
           const remote = await fetchTasks(uid);
           if (remote) {
+            // Re-attach client-only fields the server doesn't store (see above).
+            const remoteHydrated = rehydrateClientFields(remote, cachedTasks);
             // Only show tasks from today (matches the existing "today's work" model)
-            const today = remote.filter(t => isTodayTask(t) && !deletedIds.has(t.id));
+            const today = remoteHydrated.filter(t => isTodayTask(t) && !deletedIds.has(t.id));
 
             // Merge in any local-only tasks (created while offline and not yet synced).
             // We identify local-only tasks by ID not appearing in the remote set.
-            const remoteIds = new Set(remote.map(t => t.id));
+            const remoteIds = new Set(remoteHydrated.map(t => t.id));
             const localOnly = (cachedTasks.length ? cachedTasks : await cache.loadTasks(uid).catch(() => []))?.filter(
               t => !remoteIds.has(t.id) && isTodayTask(t)
             ) || [];
-            const merged = [...today, ...localOnly];
+            // Collapse leftover duplicates from the old bug; tombstone extras.
+            const { kept: merged, removedIds: dupeIds } = collapseDuplicateTasks([...today, ...localOnly]);
 
             setTasks(merged);
-            cache.saveTasks(uid, mergeTaskRecords(remote, localOnly));
+            cache.saveTasks(uid, mergeTaskRecords(cachedTasks, remoteHydrated, localOnly)
+              .filter(t => !dupeIds.includes(t.id)));
+            dupeIds.forEach(dupId => {
+              addDeletedId(uid, dupId).catch(() => {});
+              softDeleteTask(uid, dupId).catch(() => {});
+            });
             remoteTasksApplied = true;
             // Build history from completed tasks across all dates
             const allDone = remote.filter(t => t.done);
@@ -4087,7 +4200,7 @@ export default function App() {
                 const saved = await insertTask(uid, lt);
                 if (saved?.id && saved.id !== lt.id) {
                   setTasks(prev => prev.map(t => t.id === lt.id ? { ...t, id: saved.id } : t));
-                  cache.saveTasks(uid, mergeTaskRecords(remote, localOnly.map(t => t.id === lt.id ? { ...t, id: saved.id } : t)));
+                  cache.saveTasks(uid, mergeTaskRecords(cachedTasks, remoteHydrated, localOnly.map(t => t.id === lt.id ? { ...t, id: saved.id } : t)));
                 }
               } catch (e) {
                 console.warn("retry insertTask:", e?.message);
@@ -4438,6 +4551,10 @@ export default function App() {
   const deleteTask = id => {
     const target = tasks.find(t => t.id === id);
     if (!target) return;
+    // If this is a recurring instance, record the template as handled for today
+    // so the materialize effect won't immediately re-create it (delete-for-the-
+    // day). The next occurrence day starts fresh.
+    if (target.recurringTemplateId) markRecurringHandled([target.recurringTemplateId]);
     const nt = tasks.filter(t => t.id !== id);
     setTasks(nt);
     persist({ tasks: nt });
