@@ -337,6 +337,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                   paddingVertical: 15, borderRadius: 14,
                   backgroundColor: loading ? "rgba(47,171,114,0.4)" : GRN,
                   alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8,
+                  ...(loading ? null : theme.fx.glow),
                 }}
               >
                 {loading

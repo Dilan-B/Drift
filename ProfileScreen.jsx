@@ -321,7 +321,7 @@ export default function ProfileScreen({
               maxLength={20}
               style={[s.nameInput, { backgroundColor: paper.warm, borderColor: ink.border, color: ink.deep }]}
             />
-            <TouchableOpacity onPress={saveUsername} disabled={savingName} style={[s.saveBtn, { backgroundColor: earn.green }]}>
+            <TouchableOpacity onPress={saveUsername} disabled={savingName} style={[s.saveBtn, { backgroundColor: earn.green }, theme.fx.glow]}>
               {savingName ? <ActivityIndicator color="#fff" /> : <CheckIcon size={18} color="#fff" />}
             </TouchableOpacity>
           </View>

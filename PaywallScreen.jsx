@@ -222,6 +222,11 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, offering
             backgroundColor: earn.deep, borderRadius: 16,
             paddingVertical: 16, alignItems: "center",
             opacity: purchasing ? 0.7 : 1,
+            shadowColor: earn.deep,
+            shadowOffset: { width: 0, height: dark ? 4 : 5 },
+            shadowOpacity: dark ? 0.35 : 0.22,
+            shadowRadius: 12,
+            elevation: 5,
           }}
         >
           {purchasing

@@ -123,6 +123,7 @@ export default function UsernameSetupModal({ visible, userId, onDone, dark = fal
             disabled={busy || !value}
             style={{
               backgroundColor: value && !busy ? earn.green : "#C2DDD3",
+              ...(value && !busy ? theme.fx.glow : null),
               paddingVertical: 16, borderRadius: 14, alignItems: "center",
             }}
           >

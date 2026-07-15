@@ -154,7 +154,7 @@ export default function TutorialOverlay({ dark = false, targets, onDone }) {
                 <View key={d} style={[s.dot, { backgroundColor: d === i ? earn.sage : ink.hairline }]} />
               ))}
             </View>
-            <TouchableOpacity onPress={next} activeOpacity={0.85} style={[s.nextBtn, { backgroundColor: earn.deep }]}>
+            <TouchableOpacity onPress={next} activeOpacity={0.85} style={[s.nextBtn, { backgroundColor: earn.deep }, theme.fx.glow]}>
               <Text style={[s.nextText, { color: dark ? "#16261C" : "#FAF6EE" }]}>
                 {isLast ? "Done" : "Next"}
               </Text>

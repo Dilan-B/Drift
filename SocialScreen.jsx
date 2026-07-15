@@ -48,6 +48,7 @@ const palette = (dark) => dark ? {
   deep:    "#C6F2A0",
   clay:    "#F0B984",
   clayLo:  "rgba(240,185,132,0.16)",
+  glow: { shadowColor: "#C6F2A0", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6 },
 } : {
   bg: "#F7F7F4",
   card: "#FFFFFF",
@@ -65,6 +66,7 @@ const palette = (dark) => dark ? {
   deep:    "#1F3A2A",
   clay:    "#B0764E",
   clayLo:  "#EEE0CF",
+  glow: { shadowColor: "#1F3A2A", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.22, shadowRadius: 12, elevation: 5 },
 };
 
 /**
@@ -351,7 +353,7 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, onRemove, isPrem
             style={{
               paddingVertical: 14,
               borderRadius: 16,
-              backgroundColor: th.deep,
+              backgroundColor: th.deep, ...th.glow,
               alignItems: "center",
               flexDirection: "row",
               justifyContent: "center",
@@ -558,7 +560,7 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
                 disabled={accepting}
                 style={{
                   flex: 1, paddingVertical: 14, borderRadius: 14,
-                  backgroundColor: th.deep,
+                  backgroundColor: th.deep, ...th.glow,
                   alignItems: "center",
                 }}
               >
@@ -575,7 +577,7 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
               onPress={onClose}
               style={{
                 marginTop: 18, paddingVertical: 14, borderRadius: 14,
-                backgroundColor: th.deep, alignItems: "center",
+                backgroundColor: th.deep, ...th.glow, alignItems: "center",
               }}
             >
               <Text style={{
@@ -643,7 +645,7 @@ function ChallengeOutcomeModal({ outcome, dark, onClose }) {
             style={{
               paddingVertical: 14, paddingHorizontal: 28,
               borderRadius: 14,
-              backgroundColor: th.deep,
+              backgroundColor: th.deep, ...th.glow,
               width: "100%", alignItems: "center",
             }}
           >
@@ -1203,7 +1205,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
       {!!toast && (
         <View style={{
           position: "absolute", top: 14, left: 18, right: 18, zIndex: 50,
-          backgroundColor: th.deep, borderRadius: 16,
+          backgroundColor: th.deep, ...th.glow, borderRadius: 16,
           paddingVertical: 12, paddingHorizontal: 16, alignItems: "center",
           shadowColor: "#1F3A2A", shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.12, shadowRadius: 14, elevation: 4,
@@ -1235,7 +1237,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
             activeOpacity={0.85}
             style={{
               width: 42, height: 42,
-              borderRadius: 14, backgroundColor: th.deep,
+              borderRadius: 14, backgroundColor: th.deep, ...th.glow,
               alignItems: "center", justifyContent: "center",
             }}
           >
@@ -1281,7 +1283,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
             style={{
               paddingHorizontal: 18,
               borderRadius: 14,
-              backgroundColor: th.deep,
+              backgroundColor: th.deep, ...th.glow,
               alignItems: "center", justifyContent: "center",
             }}
           >
@@ -1418,7 +1420,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
                         style={{
                           paddingVertical: 8, paddingHorizontal: 14,
                           borderRadius: 12,
-                          backgroundColor: th.deep,
+                          backgroundColor: th.deep, ...th.glow,
                         }}
                       >
                         <Text style={{
@@ -1588,7 +1590,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
                   activeOpacity={0.85}
                   style={{
                     paddingVertical: 12, paddingHorizontal: 18, borderRadius: 13,
-                    backgroundColor: th.deep,
+                    backgroundColor: th.deep, ...th.glow,
                     flexDirection: "row", alignItems: "center", gap: 8,
                   }}
                 >
@@ -1678,7 +1680,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
             </View>
             <TouchableOpacity
               onPress={() => setShowContacts(false)}
-              style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: th.deep }}
+              style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: th.deep, ...th.glow }}
             >
               <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: dark ? "#1F3A2A" : "#FAF6EE" }}>Close</Text>
             </TouchableOpacity>
@@ -1784,7 +1786,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
               style={{
                 paddingHorizontal: 14, paddingVertical: 9,
                 borderRadius: 12,
-                backgroundColor: th.deep,
+                backgroundColor: th.deep, ...th.glow,
               }}
             >
               <Text style={{

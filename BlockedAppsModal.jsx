@@ -172,6 +172,7 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
                 style={{
                   paddingVertical: 14, borderRadius: 14,
                   backgroundColor: earn.green, alignItems: "center",
+                  ...theme.fx.glow,
                 }}
               >
                 <Text style={{ fontFamily: FO, fontSize: 12, color: dark ? "#16261C" : "#fff", letterSpacing: 2 }}>

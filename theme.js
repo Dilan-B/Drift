@@ -96,6 +96,33 @@ export const DARK = {
   },
 };
 
+// ── Shared effects ───────────────────────────────────────────
+// The same visual language in both modes: primary CTAs are light sources
+// (soft colored glow, not gray drop shadows), and hero surfaces get quiet
+// "aurora" pools — mint + clay — behind their content.
+LIGHT.fx = {
+  glow: {
+    shadowColor: "#1F3A2A",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  auroraMint: "rgba(62,107,78,0.06)",
+  auroraClay: "rgba(176,118,78,0.05)",
+};
+DARK.fx = {
+  glow: {
+    shadowColor: "#C6F2A0",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  auroraMint: "rgba(127,227,165,0.10)",
+  auroraClay: "rgba(240,185,132,0.055)",
+};
+
 export const getTheme = (dark) => dark ? DARK : LIGHT;
 
 // ── Typography tokens ────────────────────────────────────────

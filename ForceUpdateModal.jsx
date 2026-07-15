@@ -10,7 +10,7 @@ import { getTheme, FF } from "./theme";
 import Sprout from "./SproutArt";
 
 export default function ForceUpdateModal({ visible, storeUrl, dark = false }) {
-  const { ink, paper, earn } = getTheme(dark);
+  const { ink, paper, earn, fx } = getTheme(dark);
   const open = () => {
     Linking.openURL(storeUrl || "https://apps.apple.com").catch(() => {});
   };
@@ -33,7 +33,7 @@ export default function ForceUpdateModal({ visible, storeUrl, dark = false }) {
         <TouchableOpacity
           onPress={open}
           activeOpacity={0.85}
-          style={{ backgroundColor: earn.deep, paddingVertical: 16, paddingHorizontal: 48, borderRadius: 16 }}
+          style={{ backgroundColor: earn.deep, paddingVertical: 16, paddingHorizontal: 48, borderRadius: 16, ...fx.glow }}
         >
           <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: dark ? "#16261C" : "#FAF6EE" }}>
             Update now

@@ -1203,6 +1203,15 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
     <View style={[styles.container, onCover && { backgroundColor: COVER_BG }]}>
       <StatusBar barStyle={onCover ? "light-content" : "dark-content"} />
 
+      {/* Quiet aurora pools behind the cream interior — same language as the
+          forest cover and the in-app hero card. */}
+      {!onCover && (
+        <>
+          <View pointerEvents="none" style={styles.interiorAuroraA} />
+          <View pointerEvents="none" style={styles.interiorAuroraB} />
+        </>
+      )}
+
       {/* Back button — lets users undo a step (e.g. change account type). */}
       <View style={styles.backRow}>
         {canGoBack && (
@@ -1286,6 +1295,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingBottom: Platform.OS === "ios" ? 72 : 52,
     overflow: "hidden",
+  },
+
+  // Interior aurora (all non-cover slides)
+  interiorAuroraA: {
+    position: "absolute",
+    top: -120,
+    right: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: "rgba(62,107,78,0.05)",
+  },
+  interiorAuroraB: {
+    position: "absolute",
+    bottom: -100,
+    left: -120,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: "rgba(176,118,78,0.04)",
   },
 
   // Welcome (forest cover)

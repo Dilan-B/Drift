@@ -482,7 +482,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
         disabled={!task.trim()}
         style={[
           s.ctaBtn,
-          !task.trim() && {
+          task.trim() ? theme.fx.glow : {
             backgroundColor: dark ? "rgba(140,212,164,0.18)" : "#D7CDBA",
           },
         ]}
@@ -505,6 +505,18 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
   if (phase === "active") return (
     <View style={[s.focusScreen, { backgroundColor: focusInk.void }]}>
       <StatusBar barStyle="light-content" />
+
+      {/* Aurora — the focus room breathes the same night-greenhouse air */}
+      <View pointerEvents="none" style={{
+        position: "absolute", top: -110, right: -80,
+        width: 280, height: 280, borderRadius: 140,
+        backgroundColor: focusTheme.fx.auroraMint,
+      }} />
+      <View pointerEvents="none" style={{
+        position: "absolute", bottom: -120, left: -90,
+        width: 260, height: 260, borderRadius: 130,
+        backgroundColor: focusTheme.fx.auroraClay,
+      }} />
 
       <View style={s.focusHeader}>
         <Text style={[s.focusKicker, { color: focusInk.faint }]}>DEEP FOCUS</Text>
@@ -557,7 +569,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
       </View>
 
       <View style={s.focusActions}>
-        <TouchableOpacity onPress={completeEarly} style={[s.completeBtn, { backgroundColor: focusEarn.deep }]}>
+        <TouchableOpacity onPress={completeEarly} style={[s.completeBtn, { backgroundColor: focusEarn.deep }, focusTheme.fx.glow]}>
           <Text style={[s.completeBtnText, { color: focusInk.void }]}>Complete early</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -583,6 +595,17 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
   return (
     <View style={[s.doneScreen, { backgroundColor: focusInk.void }]}>
       <StatusBar barStyle="light-content" />
+
+      <View pointerEvents="none" style={{
+        position: "absolute", top: -100, right: -80,
+        width: 260, height: 260, borderRadius: 130,
+        backgroundColor: focusTheme.fx.auroraMint,
+      }} />
+      <View pointerEvents="none" style={{
+        position: "absolute", bottom: -110, left: -80,
+        width: 240, height: 240, borderRadius: 120,
+        backgroundColor: focusTheme.fx.auroraClay,
+      }} />
 
       <View style={[s.doneHero, { backgroundColor: focusEarn.sageLo, borderColor: focusInk.border }]}>
         <Sprout size={116} tone="night" />
@@ -611,7 +634,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
           setTask("");
           setDur(25);
         }}
-        style={[s.collectBtn, { backgroundColor: focusEarn.deep }]}
+        style={[s.collectBtn, { backgroundColor: focusEarn.deep }, focusTheme.fx.glow]}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Text style={[s.collectBtnText, { color: focusInk.void }]}>Collect rewards</Text>

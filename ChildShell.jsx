@@ -164,7 +164,7 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
                       </View>
                     ) : (
                       <TouchableOpacity
-                        style={[c.doneBtn, { backgroundColor: t.earn.deep }]}
+                        style={[c.doneBtn, { backgroundColor: t.earn.deep }, t.fx.glow]}
                         onPress={() => markDone(task)}
                         disabled={busyId === task.id}
                       >

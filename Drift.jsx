@@ -1049,6 +1049,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
               paddingVertical: 14, borderRadius: 14,
               backgroundColor: !title.trim() ? ink.faint : (evaluating ? "rgba(47,171,114,0.5)" : earn.terra),
               flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
+              ...(title.trim() && !evaluating ? theme.fx.glow : null),
             }}
           >
             {evaluating && <Spinner size={20} color={dark ? "#16261C" : "#fff"} />}
@@ -1126,6 +1127,7 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
 
       <Pop onPress={confirm} style={{
         paddingVertical: 15, borderRadius: 14, backgroundColor: earn.green, alignItems: "center", marginBottom: 10,
+        ...theme.fx.glow,
       }}>
         <Text style={{ fontFamily: FK, fontSize: 16, color: dark ? "#16261C" : "#fff" }}>
           {step < QUESTIONS.length - 1 ? "Yes" : "Claim credits"}
@@ -1204,7 +1206,7 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
         <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, s2.quickActionBtn, { borderColor: ink.border }]}>
           <Text numberOfLines={1} style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={confirm} disabled={!selected} style={[s2.solidBtn, s2.quickActionBtn, { backgroundColor: selected ? earn.deep : ink.faint }]}>
+        <TouchableOpacity onPress={confirm} disabled={!selected} style={[s2.solidBtn, s2.quickActionBtn, { backgroundColor: selected ? earn.deep : ink.faint }, selected && theme.fx.glow]}>
           <Text numberOfLines={1} style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Reduce</Text>
         </TouchableOpacity>
       </View>
@@ -1327,7 +1329,7 @@ function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant, grantMins
             <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, s2.quickActionBtn, { borderColor: ink.border }]}>
               <Text numberOfLines={1} style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={breathing ? finish : next} disabled={breathing && seconds > 0} style={[s2.solidBtn, s2.quickActionBtn, { backgroundColor: breathing && seconds > 0 ? disabledBtn : earn.deep }]}>
+            <TouchableOpacity onPress={breathing ? finish : next} disabled={breathing && seconds > 0} style={[s2.solidBtn, s2.quickActionBtn, { backgroundColor: breathing && seconds > 0 ? disabledBtn : earn.deep }, !(breathing && seconds > 0) && theme.fx.glow]}>
               <Text numberOfLines={1} adjustsFontSizeToFit style={[s2.solidText, { color: breathing && seconds > 0 ? disabledBtnText : (dark ? "#1F3A2A" : "#FAF6EE") }]}>{breathing ? `Claim ${grantMins}m` : "Continue"}</Text>
             </TouchableOpacity>
           </View>
@@ -1536,7 +1538,7 @@ function LevelUpModal({ level, dark, onClose }) {
           <Text style={[s2.panelText, { color: ink.mid, textAlign: "center", marginBottom: 20 }]}>
             Nice work. Your progress grew into a new tier.
           </Text>
-          <Pop onPress={onClose} style={[s2.solidBtn, { width: "100%", backgroundColor: earn.deep }]}>
+          <Pop onPress={onClose} style={[s2.solidBtn, { width: "100%", backgroundColor: earn.deep }, theme.fx.glow]}>
             <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Continue</Text>
           </Pop>
         </Animated.View>
@@ -1638,22 +1640,18 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
         elevation: 4,
         overflow: "hidden",
       }}>
-        {/* Night aurora — soft mint pools behind the sprout so the dark hero
-            has atmosphere instead of a flat panel. Dark mode only. */}
-        {dark && (
-          <>
-            <View pointerEvents="none" style={{
-              position: "absolute", top: -95, right: -70,
-              width: 250, height: 250, borderRadius: 125,
-              backgroundColor: "rgba(127,227,165,0.10)",
-            }} />
-            <View pointerEvents="none" style={{
-              position: "absolute", bottom: -110, left: -60,
-              width: 220, height: 220, borderRadius: 110,
-              backgroundColor: "rgba(240,185,132,0.055)",
-            }} />
-          </>
-        )}
+        {/* Aurora — soft mint + clay pools behind the sprout so the hero has
+            atmosphere instead of a flat panel. Both modes, tuned per theme. */}
+        <View pointerEvents="none" style={{
+          position: "absolute", top: -95, right: -70,
+          width: 250, height: 250, borderRadius: 125,
+          backgroundColor: theme.fx.auroraMint,
+        }} />
+        <View pointerEvents="none" style={{
+          position: "absolute", bottom: -110, left: -60,
+          width: 220, height: 220, borderRadius: 110,
+          backgroundColor: theme.fx.auroraClay,
+        }} />
         {/* Current-level emblem — the plant reflects the user's tier
             (Seedling → Old Growth), matching the icon on the Growth page. */}
         <View style={{ position: "absolute", left: -18, bottom: -22, pointerEvents: "none", opacity: dark ? 0.5 : 0.42 }}>
@@ -1893,12 +1891,8 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
             paddingHorizontal: 16,
             borderRadius: 14,
             backgroundColor: earn.deep,
-            // In the dark greenhouse the CTA is a light source — let it glow.
-            shadowColor: earn.deep,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: dark ? 0.35 : 0,
-            shadowRadius: 12,
-            elevation: dark ? 6 : 0,
+            // The primary CTA is a light source — let it glow in both modes.
+            ...theme.fx.glow,
           }}
         >
           <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
@@ -1960,11 +1954,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
               paddingVertical: 14, paddingHorizontal: 22, borderRadius: 14,
               backgroundColor: earn.deep,
               flexDirection: "row", alignItems: "center", gap: 8,
-              shadowColor: earn.deep,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: dark ? 0.35 : 0,
-              shadowRadius: 12,
-              elevation: dark ? 6 : 0,
+              ...theme.fx.glow,
             }}
           >
             <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
@@ -2187,6 +2177,7 @@ function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
             paddingVertical: 14, paddingHorizontal: 22, borderRadius: 14,
             backgroundColor: earn.deep,
             flexDirection: "row", alignItems: "center", gap: 8,
+            ...theme.fx.glow,
           }}
         >
           <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
@@ -2542,7 +2533,7 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
             <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, { borderColor: ink.border }]}>
               <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={save} style={[s2.solidBtn, { backgroundColor: earn.green }]}>
+            <TouchableOpacity onPress={save} style={[s2.solidBtn, { backgroundColor: earn.green }, theme.fx.glow]}>
               <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Save</Text>
             </TouchableOpacity>
           </View>
@@ -2628,7 +2619,7 @@ function RecurringTasksModal({ visible, templates, dark, onClose, onSave }) {
             <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, { borderColor: ink.border }]}>
               <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={save} style={[s2.solidBtn, { backgroundColor: earn.green }]}>
+            <TouchableOpacity onPress={save} style={[s2.solidBtn, { backgroundColor: earn.green }, theme.fx.glow]}>
               <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Save</Text>
             </TouchableOpacity>
           </View>
