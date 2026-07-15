@@ -23,7 +23,7 @@ const REASON_MSG = {
 };
 
 export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = false }) {
-  const { ink, paper, earn } = getTheme(dark);
+  const { ink, paper, earn, fx } = getTheme(dark);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -106,6 +106,7 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
                   marginTop: 22,
                   backgroundColor: code.trim() && !busy ? earn.deep : "#C2DDD3",
                   paddingVertical: 16, borderRadius: 14, alignItems: "center",
+                  ...(code.trim() && !busy ? fx.glow : null),
                 }}
               >
                 {busy

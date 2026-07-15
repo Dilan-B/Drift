@@ -49,42 +49,78 @@ export const LIGHT = {
   },
 };
 
+// Dark mode: "the greenhouse at night". Deliberately NOT light-mode-dimmed —
+// the ground is a visibly GREEN botanical dark (you should be able to tell
+// the canvas is forest, not charcoal), borders are mint-tinted glass lines
+// instead of white hairlines, and the accents run vivid: chartreuse-mint
+// CTAs, glowing mint progress, apricot warmth. Surfaces step clearly:
+// inset well → canvas → card → top layer.
 export const DARK = {
   ink: {
-    void:   "#080F0B",
-    deep:   "#E8EEDF",
-    mid:    "#9DAE9A",
-    faint:  "#566357",
-    ghost:  "rgba(255,255,255,0.05)",
-    border: "rgba(255,255,255,0.08)",
-    hairline: "rgba(255,255,255,0.06)",
+    void:   "#081209",
+    deep:   "#F0F7EA",    // warm paper-white — crisp primary text
+    mid:    "#A9C4AB",    // secondary — soft green-white, clearly readable
+    faint:  "#6E8A74",    // tertiary — muted but never invisible
+    ghost:  "rgba(160,230,170,0.07)",
+    border: "rgba(160,230,170,0.15)",   // mint glass line — visible on cards
+    hairline: "rgba(160,230,170,0.09)",
   },
   paper: {
-    warm:   "#0F1611",
-    card:   "#171F18",
-    cream:  "#1A2320",
-    sand:   "#19231C",    // neutral dark inset (NOT brown)
-    dash:   "rgba(255,255,255,0.18)",
+    warm:   "#0E1A13",    // canvas — deep forest green, unmistakably green
+    card:   "#17291D",    // raised surfaces — botanical, not gray
+    cream:  "#1E3325",    // top layer (inputs on cards, hovers)
+    sand:   "#122117",    // inset wells — sit BELOW the canvas
+    dash:   "rgba(160,230,170,0.26)",
   },
   earn: {
-    deep:    "#D8E8C5",
-    deepHi:  "#E4F0D0",
-    sage:    "#A8C99A",
-    sageLo:  "rgba(168,201,154,0.13)",
-    sageDot: "#8FB585",
-    terra:   "#7FBE96",
-    terraLo: "rgba(127,190,150,0.14)",
-    green:   "#7FBE96",
-    greenLo: "rgba(127,190,150,0.14)",
-    greenD:  "#A8D9B5",
-    blue:    "#9BC4D2",
-    blueLo:  "rgba(155,196,210,0.13)",
-    clay:    "#CCA07E",   // warm clay glow — graphic accents only
-    clayLo:  "rgba(204,160,126,0.14)",
-    bark:    "#A38C78",
-    barkLo:  "rgba(163,140,120,0.13)",
-    barkInk: "#C9B49E",
+    // Vivid chartreuse-mint = primary CTAs (dark text sits on these)
+    deep:    "#C6F2A0",
+    deepHi:  "#DDFBBC",
+    // Living sage — the pale gray-sage is gone
+    sage:    "#A5E39B",
+    sageLo:  "rgba(165,227,155,0.17)",
+    sageDot: "#8BD489",
+    // Glowing mint for stat dots, progress fills
+    terra:   "#7FE3A5",
+    terraLo: "rgba(127,227,165,0.16)",
+    green:   "#7FE3A5",
+    greenLo: "rgba(127,227,165,0.16)",
+    greenD:  "#B4F0C4",
+    blue:    "#9FD8EC",
+    blueLo:  "rgba(159,216,236,0.15)",
+    clay:    "#F0B984",   // glowing apricot — graphic accents only
+    clayLo:  "rgba(240,185,132,0.16)",
+    bark:    "#C2A184",
+    barkLo:  "rgba(194,161,132,0.15)",
+    barkInk: "#E5CDB0",
   },
+};
+
+// ── Shared effects ───────────────────────────────────────────
+// The same visual language in both modes: primary CTAs are light sources
+// (soft colored glow, not gray drop shadows), and hero surfaces get quiet
+// "aurora" pools — mint + clay — behind their content.
+LIGHT.fx = {
+  glow: {
+    shadowColor: "#1F3A2A",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  auroraMint: "rgba(62,107,78,0.06)",
+  auroraClay: "rgba(176,118,78,0.05)",
+};
+DARK.fx = {
+  glow: {
+    shadowColor: "#C6F2A0",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  auroraMint: "rgba(127,227,165,0.10)",
+  auroraClay: "rgba(240,185,132,0.055)",
 };
 
 export const getTheme = (dark) => dark ? DARK : LIGHT;

@@ -252,7 +252,7 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
           <Text style={[s.cardLabel, { color: t.ink.faint }]}>FAMILY CODE</Text>
           {loading ? <ActivityIndicator color={t.earn.sage} style={{ marginVertical: 14 }} />
             : <Text style={[s.code, { color: t.ink.deep }]}>{family?.code || "—"}</Text>}
-          <TouchableOpacity style={[s.shareBtn, { backgroundColor: t.earn.deep }]} onPress={shareCode} disabled={!family?.code}>
+          <TouchableOpacity style={[s.shareBtn, { backgroundColor: t.earn.deep }, t.fx.glow]} onPress={shareCode} disabled={!family?.code}>
             <Text style={[s.shareBtnText, { color: onDeep }]}>Share code</Text>
           </TouchableOpacity>
         </View>
@@ -272,7 +272,7 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
               <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.paper.warm, flex: 1 }]} onPress={() => { setShowPin(false); setPin(""); setPinMsg(""); }}>
                 <Text style={[s.modalBtnText, { color: t.ink.mid }]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, flex: 1 }]} onPress={savePin} disabled={pinBusy}>
+              <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, flex: 1 }, t.fx.glow]} onPress={savePin} disabled={pinBusy}>
                 {pinBusy ? <ActivityIndicator color={onDeep} /> : <Text style={[s.modalBtnText, { color: onDeep }]}>Save PIN</Text>}
               </TouchableOpacity>
             </View>
@@ -296,7 +296,7 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
                 <TouchableOpacity style={[s.rejectBtn, { borderColor: t.ink.border }]} onPress={() => doResolveApp(r.id, false)}>
                   <Text style={[s.rejectText, { color: t.ink.mid }]}>Deny</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[s.approveBtn, { backgroundColor: t.earn.deep }]} onPress={() => doResolveApp(r.id, true)}>
+                <TouchableOpacity style={[s.approveBtn, { backgroundColor: t.earn.deep }, t.fx.glow]} onPress={() => doResolveApp(r.id, true)}>
                   <Text style={[s.approveText, { color: onDeep }]}>Allow</Text>
                 </TouchableOpacity>
               </View>
@@ -317,7 +317,7 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
                 <TouchableOpacity style={[s.rejectBtn, { borderColor: t.ink.border }]} onPress={() => doReject(a.id)} disabled={busyId === a.id}>
                   <Text style={[s.rejectText, { color: t.ink.mid }]}>Not yet</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[s.approveBtn, { backgroundColor: t.earn.deep }]} onPress={() => doApprove(a.id)} disabled={busyId === a.id}>
+                <TouchableOpacity style={[s.approveBtn, { backgroundColor: t.earn.deep }, t.fx.glow]} onPress={() => doApprove(a.id)} disabled={busyId === a.id}>
                   {busyId === a.id ? <ActivityIndicator color={onDeep} /> : <Text style={[s.approveText, { color: onDeep }]}>Approve</Text>}
                 </TouchableOpacity>
               </View>
@@ -346,7 +346,7 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
               <TouchableOpacity style={[s.smallBtn, { backgroundColor: t.earn.sageLo }]} onPress={() => setAppsFor(cc)}>
                 <Text style={[s.smallBtnText, { color: t.earn.greenD }]}>Apps</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.smallBtn, { backgroundColor: t.earn.deep, marginLeft: 8 }]} onPress={() => { setAssignFor(cc); setAssignErr(""); }}>
+              <TouchableOpacity style={[s.smallBtn, { backgroundColor: t.earn.deep, marginLeft: 8 }, t.fx.glow]} onPress={() => { setAssignFor(cc); setAssignErr(""); }}>
                 <Text style={[s.smallBtnText, { color: onDeep }]}>+ Task</Text>
               </TouchableOpacity>
             </View>
@@ -381,7 +381,7 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
               <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.paper.warm, flex: 1 }]} onPress={() => setAssignFor(null)}>
                 <Text style={[s.modalBtnText, { color: t.ink.mid }]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, flex: 1 }]} onPress={submitAssign} disabled={assigning}>
+              <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, flex: 1 }, t.fx.glow]} onPress={submitAssign} disabled={assigning}>
                 {assigning ? <ActivityIndicator color={onDeep} /> : <Text style={[s.modalBtnText, { color: onDeep }]}>Assign</Text>}
               </TouchableOpacity>
             </View>
@@ -410,7 +410,7 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
                 </TouchableOpacity>
               );
             })}
-            <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, marginTop: 16 }]} onPress={() => setAppsFor(null)}>
+            <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, marginTop: 16 }, t.fx.glow]} onPress={() => setAppsFor(null)}>
               <Text style={[s.modalBtnText, { color: onDeep }]}>Done</Text>
             </TouchableOpacity>
           </View>

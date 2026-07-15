@@ -102,7 +102,7 @@ export default function ChildAppsModal({ visible, onClose, dark, familyId, child
               placeholder="e.g. Duolingo" placeholderTextColor={t.ink.faint}
               value={label} onChangeText={setLabel} maxLength={80} returnKeyType="send" onSubmitEditing={submitRequest}
             />
-            <TouchableOpacity style={[s.sendBtn, { backgroundColor: t.earn.deep }]} onPress={submitRequest} disabled={busy}>
+            <TouchableOpacity style={[s.sendBtn, { backgroundColor: t.earn.deep }, t.fx.glow]} onPress={submitRequest} disabled={busy}>
               {busy ? <ActivityIndicator color={onDeep} /> : <Text style={[s.sendText, { color: onDeep }]}>Ask</Text>}
             </TouchableOpacity>
           </View>
@@ -139,7 +139,7 @@ export default function ChildAppsModal({ visible, onClose, dark, familyId, child
                 <TouchableOpacity style={[s.pinBtn, { backgroundColor: t.paper.warm, flex: 1 }]} onPress={() => { setPinFor(null); setPin(""); setErr(""); }}>
                   <Text style={[s.pinBtnText, { color: t.ink.mid }]}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[s.pinBtn, { backgroundColor: t.earn.deep, flex: 1 }]} onPress={submitPin} disabled={busy}>
+                <TouchableOpacity style={[s.pinBtn, { backgroundColor: t.earn.deep, flex: 1 }, t.fx.glow]} onPress={submitPin} disabled={busy}>
                   {busy ? <ActivityIndicator color={onDeep} /> : <Text style={[s.pinBtnText, { color: onDeep }]}>Confirm</Text>}
                 </TouchableOpacity>
               </View>

@@ -52,13 +52,13 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, offering
   }, []);
 
   const paper = dark
-    ? { bg: "#0F1611", card: "#171F18", border: "rgba(255,255,255,0.08)" }
+    ? { bg: "#0E1A13", card: "#17291D", border: "rgba(160,230,170,0.15)" }
     : { bg: "#F7F7F4", card: "#FFFFFF", border: "rgba(26,40,32,0.08)" };
   const ink = dark
-    ? { deep: "#E8EEDF", mid: "#9DAE9A", faint: "#566357" }
+    ? { deep: "#F0F7EA", mid: "#A9C4AB", faint: "#6E8A74" }
     : { deep: "#1A2820", mid: "#6B7A6E", faint: "#A8B0A8" };
   const earn = dark
-    ? { green: "#7FBE96", greenD: "#A8D9B5", sageLo: "rgba(168,201,154,0.13)", deep: "#D8E8C5" }
+    ? { green: "#7FE3A5", greenD: "#B4F0C4", sageLo: "rgba(165,227,155,0.17)", deep: "#C6F2A0" }
     : { green: "#2D6B47", greenD: "#1F3A2A", sageLo: "#E4ECE0", deep: "#1F3A2A" };
 
   const handlePurchase = async () => {
@@ -142,7 +142,7 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, offering
               </Text>
               {savingsPct > 0 && (
                 <View style={{ backgroundColor: earn.green, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                  <Text style={{ fontFamily: FF.bodyBold, fontSize: 9, color: dark ? "#0F1611" : "#fff", letterSpacing: 0.5 }}>SAVE {savingsPct}%</Text>
+                  <Text style={{ fontFamily: FF.bodyBold, fontSize: 9, color: dark ? "#16261C" : "#fff", letterSpacing: 0.5 }}>SAVE {savingsPct}%</Text>
                 </View>
               )}
             </View>
@@ -222,11 +222,16 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, offering
             backgroundColor: earn.deep, borderRadius: 16,
             paddingVertical: 16, alignItems: "center",
             opacity: purchasing ? 0.7 : 1,
+            shadowColor: earn.deep,
+            shadowOffset: { width: 0, height: dark ? 4 : 5 },
+            shadowOpacity: dark ? 0.35 : 0.22,
+            shadowRadius: 12,
+            elevation: 5,
           }}
         >
           {purchasing
             ? <ActivityIndicator color="#fff" />
-            : <Text style={{ fontFamily: FF.bodyBold, fontSize: 16, color: dark ? "#0F1611" : "#fff", letterSpacing: 0.3 }}>
+            : <Text style={{ fontFamily: FF.bodyBold, fontSize: 16, color: dark ? "#16261C" : "#fff", letterSpacing: 0.3 }}>
                 Start Free Trial
               </Text>
           }

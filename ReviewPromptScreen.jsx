@@ -126,7 +126,7 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
             <TouchableOpacity
               onPress={onDone}
               activeOpacity={0.85}
-              style={[s.continueBtn, { backgroundColor: earn.deep }]}
+              style={[s.continueBtn, { backgroundColor: earn.deep }, theme.fx.glow]}
             >
               <Text style={[s.continueText, { color: dark ? "#16261C" : "#FAF6EE" }]}>
                 Continue

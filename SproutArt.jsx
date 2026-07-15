@@ -19,11 +19,11 @@ export default function Sprout({ size = 140, mini = false, tone = "fresh" }) {
     soil:  "#D8E2D2",
     halo:  "rgba(127,181,138,0.18)",
   } : {
-    leafA: "#A8C99A",
-    leafB: "#8FB585",
-    stem:  "#6E9C7E",
-    soil:  "#2A3B30",
-    halo:  "rgba(168,201,154,0.10)",
+    leafA: "#A5E39B",
+    leafB: "#8BD489",
+    stem:  "#7FBF92",
+    soil:  "#24402C",
+    halo:  "rgba(165,227,155,0.16)",
   };
 
   return (

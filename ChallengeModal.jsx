@@ -30,19 +30,20 @@ const CHALLENGE_OPTIONS = [
 ];
 
 const palette = (dark) => dark ? {
-  overlay: "rgba(0,0,0,0.62)",
-  sheet: "#171F18",
-  card: "#1A2320",
-  ink: "#E8EEDF",
-  mid: "#9DAE9A",
-  faint: "#566357",
-  border: "rgba(255,255,255,0.08)",
-  hairline: "rgba(255,255,255,0.06)",
-  wash: "rgba(168,201,154,0.13)",
-  washStrong: "rgba(168,201,154,0.22)",
-  input: "#1A2320",
-  deep: "#D8E8C5",
-  clay: "#CCA07E",
+  overlay: "rgba(0,0,0,0.66)",
+  sheet: "#17291D",
+  card: "#1E3325",
+  ink: "#F0F7EA",
+  mid: "#A9C4AB",
+  faint: "#6E8A74",
+  border: "rgba(160,230,170,0.15)",
+  hairline: "rgba(160,230,170,0.09)",
+  wash: "rgba(165,227,155,0.17)",
+  washStrong: "rgba(165,227,155,0.27)",
+  input: "#1E3325",
+  deep: "#C6F2A0",
+  clay: "#F0B984",
+  glow: { shadowColor: "#C6F2A0", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6 },
 } : {
   overlay: "rgba(11,26,17,0.35)",
   sheet: "#FFFFFF",
@@ -57,6 +58,7 @@ const palette = (dark) => dark ? {
   input: "#FAF6EE",
   deep: "#1F3A2A",
   clay: "#B0764E",
+  glow: { shadowColor: "#1F3A2A", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.22, shadowRadius: 12, elevation: 5 },
 };
 
 function isSubActive(profile) {
@@ -292,7 +294,7 @@ export default function ChallengeSheet({
           <TouchableOpacity onPress={onClose} style={[s.cancelBtn, { borderColor: th.border }]}>
             <Text style={{ color: th.mid, fontFamily: FF.bodyMed, fontSize: 14 }}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={send} disabled={!canSend || sending} style={[s.sendBtn, { backgroundColor: th.deep }, (!canSend || sending) && { opacity: 0.45 }]}>
+          <TouchableOpacity onPress={send} disabled={!canSend || sending} style={[s.sendBtn, { backgroundColor: th.deep }, canSend && !sending && th.glow, (!canSend || sending) && { opacity: 0.45 }]}>
             {sending ? <ActivityIndicator color={dark ? "#1F3A2A" : "#FAF6EE"} size="small" /> : <Text style={[s.sendBtnText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Send</Text>}
           </TouchableOpacity>
         </View>

@@ -276,7 +276,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                 value={proofText}
                 onChangeText={setProofText}
                 placeholder={`Describe how you completed "${task.title}"...`}
-                placeholderTextColor={dark ? "#3D6650" : "#A8BFB5"}
+                placeholderTextColor={dark ? "#5C7263" : "#A8BFB5"}
                 multiline
                 maxLength={1000}
                 style={{
@@ -337,6 +337,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                   paddingVertical: 15, borderRadius: 14,
                   backgroundColor: loading ? "rgba(47,171,114,0.4)" : GRN,
                   alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8,
+                  ...(loading ? null : theme.fx.glow),
                 }}
               >
                 {loading
