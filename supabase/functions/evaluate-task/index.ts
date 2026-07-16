@@ -106,6 +106,8 @@ serve(async (req: Request) => {
       `- Light: ~0.5-0.75 cr/min\n` +
       `- Focused: ~0.75-1.0 cr/min\n` +
       `- Hard: ~1.0-1.5 cr/min\n\n` +
+      `HARD RULE: credits MUST NEVER exceed 60, no matter how long or demanding ` +
+      `the task is. A task of 3 hours or more earns at most 60.\n\n` +
       `Task: "${title.replace(/"/g, "'")}"\n` +
       `Duration: ${mins} min\nCategory: ${category}\n\n` +
       `XP ≈ credits × 0.6 + 8 (round to integer)\n\n` +
@@ -145,6 +147,14 @@ serve(async (req: Request) => {
         result.credits = cap;
         result.xp = Math.round(cap * 0.6 + 8);
       }
+    }
+
+    // Absolute ceiling: no single task is worth more than an hour of screen
+    // time, however long or well-graded it is. A 3h+ task lands exactly here.
+    const MAX_REWARD_MINUTES = 60;
+    if (result.credits > MAX_REWARD_MINUTES) {
+      result.credits = MAX_REWARD_MINUTES;
+      result.xp = Math.round(MAX_REWARD_MINUTES * 0.6 + 8);
     }
 
     supabase.from("ai_check_usage").insert({ user_id: user.id }).then(() => {}, () => {});

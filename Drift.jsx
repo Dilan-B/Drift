@@ -54,6 +54,7 @@ import {
 } from "./Icons";
 import {
   requestScreenTimeAuth, getScreenTimeAuthStatus, isNativeBlockingAvailable,
+  openNativeAppPicker,
 } from "./blockedApps";
 import {
   startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag, consumeUsedSeconds,
@@ -426,11 +427,12 @@ const cacheFullTasks = async (uid, nextVisibleTasks, knownTasks = []) => {
   return cache.saveTasks(uid, mergeTaskRecords(existing, nextVisibleTasks));
 };
 
-// Fields that only ever live on the client — the tasks table doesn't have
-// columns for them, so a server fetch (rowToTask) returns them undefined. When
-// we re-apply fetched rows we must NOT let that undefined clobber the values we
-// still hold in the local cache, or a materialized recurring instance would
-// lose its template link and get re-created on the next sync.
+// Fields a server fetch (rowToTask) may return undefined, which must not clobber
+// a value the local cache still holds. `scheduledTime` has no column at all.
+// `recurringTemplateId` gained one in schema_v5 and now comes back from the
+// server — but rows created before that migration have it NULL, so the cache
+// still backfills those. Once no pre-v5 rows remain in any live task window,
+// recurringTemplateId can drop off this list.
 const CLIENT_ONLY_TASK_FIELDS = ["recurringTemplateId", "scheduledTime"];
 const rehydrateClientFields = (remoteTasks, cachedTasks) => {
   const cachedById = new Map((cachedTasks || []).map(t => [t.id, t]));
@@ -451,16 +453,21 @@ const rehydrateClientFields = (remoteTasks, cachedTasks) => {
 // it), leaving the user with the same task repeated in one day's list. Keep the
 // earliest pending instance per signature; return the extra ids so callers can
 // tombstone them. Completed tasks are never collapsed — they're history.
+// Content identity for a task on a given day. Deliberately excludes the
+// template link: that field is client-only (the server has no column for it),
+// so it survives a round-trip only if the local cache still holds the row.
+// Anything that must be reliable across a cold boot keys off this instead.
+const taskSignature = (t, day) =>
+  `${t.title}|${t.cat}|${t.minutes}|${day ?? (t.task_date || "")}`;
+
 const collapseDuplicateTasks = (list) => {
   const seen = new Set();
   const kept = [];
   const removedIds = [];
   for (const t of (list || [])) {
     if (t.done) { kept.push(t); continue; }
-    // Signature is content + day only — NOT the template link, because existing
-    // duplicate rows have that link in mixed states (past syncs stripped it from
-    // some copies). Two identical pending tasks on the same day collapse to one.
-    const sig = `${t.title}|${t.cat}|${t.minutes}|${t.task_date || ""}`;
+    // Two identical pending tasks on the same day collapse to one.
+    const sig = taskSignature(t);
     if (seen.has(sig)) { removedIds.push(t.id); continue; }
     seen.add(sig);
     kept.push(t);
@@ -544,6 +551,10 @@ function CreditTicker({ value, seconds, textColor }) {
 const FREE_TIER_MULTIPLIER = 0.6;
 const MAX_REWARD_RATIO = 0.5;
 const MIN_REWARD_RATIO = 0.25;
+// Absolute ceiling on what any single task can pay out, in minutes of screen
+// time. The ratio-based cap already keeps short tasks in check; this bounds the
+// long tail (a 3h+ task tops out here rather than scaling forever).
+const MAX_REWARD_MINUTES = 60;
 // const FREE_TASK_LIMIT = 5; // removed — no free tier limits for now
 const DIFFICULTY_GRANT = { easy: 15, medium: 7, hard: 3, committed: 1 };
 
@@ -555,7 +566,9 @@ const MIN_TASK_TITLE_WORDS = 2;
 function capReward(credits, mins) {
   const floor = Math.max(1, Math.ceil(mins * MIN_REWARD_RATIO));
   const cap = Math.max(1, Math.floor(mins * MAX_REWARD_RATIO));
-  return Math.max(floor, Math.min(credits, cap));
+  // MAX_REWARD_MINUTES is applied last so it also clamps the floor — a 4h task
+  // must not earn 60min via the floor after the ratio cap was already applied.
+  return Math.min(MAX_REWARD_MINUTES, Math.max(floor, Math.min(credits, cap)));
 }
 
 function freeTierCredits(mins) {
@@ -2146,10 +2159,66 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
       })}
       </Animated.View>
 
-      {/* Completed tasks intentionally disappear from Today once finished &
-          confirmed (they live on in Growth / history). The done instances stay
-          in `tasks` state — invisible here — so recurring dedup and earnable
-          math stay correct. */}
+      {/* Done today — completed tasks stay visible but recede: dimmed, flat,
+          no swipe/tap affordances. They read as settled rather than actionable,
+          so the eye still lands on `pending` first. */}
+      {done.length > 0 && (
+        <Animated.View style={{ opacity: listOp, marginTop: 22 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: ink.faint, letterSpacing: 1.6 }}>
+              DONE TODAY
+            </Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: ink.hairline }} />
+            <Text style={{ fontFamily: FF.bodyMed, fontSize: 11, color: ink.faint }}>
+              {done.length}
+            </Text>
+          </View>
+
+          {done.map(t => {
+            const cat = CATS[t.cat] || CATS.life;
+            return (
+              <View
+                key={t.id}
+                style={{
+                  flexDirection: "row", alignItems: "center",
+                  backgroundColor: ink.ghost, borderRadius: 18,
+                  borderWidth: 1, borderColor: "transparent",
+                  borderLeftWidth: 4, borderLeftColor: cat.c + "55",
+                  paddingVertical: 12, paddingLeft: 14, paddingRight: 14,
+                  marginBottom: 8,
+                  opacity: 0.62,
+                }}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    style={{
+                      fontFamily: FF.bodyMed, fontSize: 14, color: ink.mid,
+                      textDecorationLine: "line-through",
+                    }}
+                    numberOfLines={1}
+                  >
+                    {t.title}
+                  </Text>
+                </View>
+
+                <Text style={{ fontFamily: FF.bodyBold, fontSize: 12, color: ink.faint, marginRight: 10 }}>
+                  +{fmtMins(t.credits)}
+                </Text>
+
+                {/* Filled counterpart to the pending row's empty check circle. */}
+                <View style={{
+                  width: 26, height: 26, borderRadius: 13,
+                  backgroundColor: earn.green,
+                  alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  <CheckIcon size={13} color={dark ? "#16261C" : "#fff"} />
+                </View>
+              </View>
+            );
+          })}
+        </Animated.View>
+      )}
     </ScrollView>
     </>
   );
@@ -3565,6 +3634,11 @@ export default function App() {
     const now = new Date();
     const nowMins = now.getHours() * 60 + now.getMinutes();
     const RECURRING_APPEAR_MINS = 5 * 60; // 5:00 AM
+    // NOTE: the checks below are optimistic-UI only — they avoid a row that
+    // would flash in and vanish. The actual "one instance per template per day"
+    // invariant is enforced by the tasks_one_instance_per_template_per_day
+    // unique index; anything that slips past here is rejected on insert and
+    // pruned. Do not add another local guard: that's what failed before.
     const due = recurringTasks
       .filter(t => t?.enabled !== false)
       .filter(t => t.createdDate !== today)
@@ -3601,7 +3675,22 @@ export default function App() {
     setTasks(nt);
     persist({ tasks: nt });
     cacheFullTasks(userId, nt);
-    created.forEach(t => insertTask(userId, t).catch(e => {
+    // The database is the arbiter of "one instance per template per day". If the
+    // unique index rejects our insert, this template was already materialized
+    // today (possibly by an earlier launch whose local guard we couldn't see) —
+    // so drop the optimistic copy rather than leave a row that exists nowhere
+    // but on this device.
+    created.forEach(t => insertTask(userId, t).then(res => {
+      if (!res?.duplicate) return;
+      setTasks(prev => {
+        const pruned = prev.filter(x => x.id !== t.id);
+        persist({ tasks: pruned });
+        return pruned;
+      });
+      cache.loadTasks(userId)
+        .then(all => cache.saveTasks(userId, (all || []).filter(x => x.id !== t.id)))
+        .catch(() => {});
+    }).catch(e => {
       console.warn("recurring task sync failed:", e?.message);
     }));
   }, [screen, userId, proAccess, recurringTasks, tasks, taskHistory, minuteTick, markRecurringHandled, recurringGuardReady]);
@@ -3652,12 +3741,24 @@ export default function App() {
         addDeletedId(uid, dupId).catch(() => {});
         softDeleteTask(uid, dupId).catch(() => {});
       });
-      const allDone = remote.filter(t => t.done);
+      // remoteHydrated, not remote: the raw rows have no recurringTemplateId
+      // (it's a client-only field), and history is one of the inputs to the
+      // recurring dedup check — raw rows there make completed recurring tasks
+      // invisible to it, so they get materialized a second time.
+      const allDone = remoteHydrated.filter(t => t.done);
       setTaskHistory(prev => mergeCompletedTasks(prev, allDone));
       // Retry-sync any local-only tasks now that we're online.
       for (const lt of localOnly) {
         try {
           const saved = await insertTask(uid, lt);
+          // Rejected by the per-template-per-day index: the server already has
+          // this occurrence under another id. Tombstone our copy so it stops
+          // being retried (and re-rendered) on every launch.
+          if (saved?.duplicate) {
+            setTasks(prev => prev.filter(t => t.id !== lt.id));
+            addDeletedId(uid, lt.id).catch(() => {});
+            continue;
+          }
           if (saved?.id && saved.id !== lt.id) {
             setTasks(prev => prev.map(t => t.id === lt.id ? { ...t, id: saved.id } : t));
           }
@@ -4210,13 +4311,24 @@ export default function App() {
             });
             remoteTasksApplied = true;
             // Build history from completed tasks across all dates
-            const allDone = remote.filter(t => t.done);
+            // remoteHydrated, not remote: the raw rows have no recurringTemplateId
+      // (it's a client-only field), and history is one of the inputs to the
+      // recurring dedup check — raw rows there make completed recurring tasks
+      // invisible to it, so they get materialized a second time.
+      const allDone = remoteHydrated.filter(t => t.done);
             setTaskHistory(prev => mergeCompletedTasks(prev, allDone));
 
             // Retry-sync any local-only tasks now that we're online
             for (const lt of localOnly) {
               try {
                 const saved = await insertTask(uid, lt);
+                // See the matching branch in hydrateTasksFromServer: the index
+                // rejected this as an already-materialized occurrence.
+                if (saved?.duplicate) {
+                  setTasks(prev => prev.filter(t => t.id !== lt.id));
+                  addDeletedId(uid, lt.id).catch(() => {});
+                  continue;
+                }
                 if (saved?.id && saved.id !== lt.id) {
                   setTasks(prev => prev.map(t => t.id === lt.id ? { ...t, id: saved.id } : t));
                   cache.saveTasks(uid, mergeTaskRecords(cachedTasks, remoteHydrated, localOnly.map(t => t.id === lt.id ? { ...t, id: saved.id } : t)));
@@ -4512,7 +4624,11 @@ export default function App() {
       });
       return;
     }
-    const { credits, xp, reasoning } = result;
+    // The server applies the same ceiling; clamp here too so a stale/lenient
+    // function deploy can't hand out more than an hour off one task.
+    const credits = Math.min(MAX_REWARD_MINUTES, result.credits);
+    const xp = credits === result.credits ? result.xp : Math.round(credits * 0.6 + 8);
+    const { reasoning } = result;
     setTasks(prev => {
       const nt = prev.map(x =>
         x.id === t.id ? { ...x, credits, xp, aiReasoning: reasoning || "", aiValued: true, aiPending: false } : x
@@ -4982,7 +5098,22 @@ export default function App() {
               AsyncStorage.setItem("drift_username", profile.username);
             }
           }}
-          onOpenBlockedApps={() => { setFirstTimeBlockedApps(false); setShowBlockedApps(true); }}
+          onOpenBlockedApps={async () => {
+            setFirstTimeBlockedApps(false);
+            // Pro goes straight to Apple's picker — no in-app middleman screen.
+            // Free tier has nothing to pick (blocking is by category), so it
+            // still gets the sheet, which explains that and offers the upgrade.
+            if (!proAccess) { setShowBlockedApps(true); return; }
+            const { opened, reason } = await openNativeAppPicker();
+            if (opened) return;
+            if (reason === "denied") {
+              Alert.alert("Screen Time access needed",
+                "Enable Drift in Settings > Screen Time so Drift can block apps.");
+            } else if (reason === "unavailable") {
+              Alert.alert("Not available",
+                "Apple Screen Time blocking requires a custom build of Drift.");
+            }
+          }}
           onOpenBlockedHours={() => setShowBlockedHours(true)}
           onOpenRecurringTasks={() => setShowRecurringTasks(true)}
           onRequestScreenTime={async () => {

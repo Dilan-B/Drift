@@ -351,13 +351,23 @@ export default function ProfileScreen({
             icon={(c) => <CheckIcon size={20} color={c} />}
             onPress={onOpenRecurringTasks}
           />
-          <Row
-            id="screenTime"
-            title="Screen Time access"
-            sub={screenTimeStatus === "approved" ? "Approved" : `Status: ${screenTimeStatus || "unknown"}`}
-            icon={(c) => <PhoneIcon size={20} color={c} />}
-            onPress={onRequestScreenTime}
-          />
+          {/* Only surfaced when access is actually missing — an "Approved" row is
+              a dead end the user can't act on. Hidden for "approved" and for
+              "unavailable" (Expo Go / non-native build, not fixable from here).
+              Every other value, including "unknown", still shows the row: the
+              native bridge returns "unknown" both on a thrown call and from its
+              @unknown default, and hiding it there would leave no way to grant
+              access at all. Better a redundant row than an unreachable one. */}
+          {screenTimeStatus !== "approved" && screenTimeStatus !== "unavailable" && (
+            <Row
+              id="screenTime"
+              title="Screen Time access"
+              sub={screenTimeStatus === "denied" ? "Denied - tap to enable" : "Not enabled - tap to grant"}
+              accent={earn.terra}
+              icon={(c) => <PhoneIcon size={20} color={c} />}
+              onPress={onRequestScreenTime}
+            />
+          )}
           {!subActive && (
             <Row
               id="upgrade"

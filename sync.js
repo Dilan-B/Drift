@@ -18,6 +18,9 @@ const TTL = {
   ledger: 20_000,
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// Matched by name so a duplicate-recurring-instance rejection is distinguishable
+// from any other 23505 (e.g. a primary-key retry), which means something else.
+const RECURRING_UNIQUE_INDEX = "tasks_one_instance_per_template_per_day";
 
 // ── TASKS ────────────────────────────────────────────────────
 // Boot/hydrate reads default to a BOUNDED window (last year, capped row count)
@@ -73,12 +76,28 @@ export async function insertTask(userId, task) {
     ai_valued:    !!task.aiValued,
     ai_reasoning: task.aiReasoning || null,
     task_date:    task.task_date || todayDateStr(),
+    // Persist the recurring template link server-side. It used to be client-only,
+    // which meant "one instance per template per day" was enforced only by local
+    // state that didn't survive a round-trip — the app re-materialized every
+    // recurring task on every launch. The unique index
+    // tasks_one_instance_per_template_per_day now enforces it in the database.
+    recurring_template_id: task.recurringTemplateId || null,
   };
   if (UUID_RE.test(String(task.id || ""))) row.id = task.id;
   const { data, error } = await rateLimited(`insert_task_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
     supabase.from("tasks").insert(row).select().single()
   );
-  if (error) { console.warn("insertTask:", error.message); return null; }
+  if (error) {
+    // The unique index rejected this row: an instance of this template already
+    // exists for this day (including a soft-deleted one, which is how
+    // delete-for-the-day stays deleted). Not a failure — the invariant held.
+    // Report it so the caller can drop its optimistic local copy.
+    if (error.code === "23505" && String(error.message || "").includes(RECURRING_UNIQUE_INDEX)) {
+      return { duplicate: true };
+    }
+    console.warn("insertTask:", error.message);
+    return null;
+  }
   invalidateCache(`tasks_${userId}`);
   return rowToTask(data);
 }
@@ -140,6 +159,10 @@ function rowToTask(r) {
     completedDate: r.completed_at ? r.completed_at.slice(0, 10) : null,
     createdAt:   r.created_at,
     task_date:   r.task_date || (r.created_at ? r.created_at.slice(0, 10) : null),
+    // Server-persisted as of schema_v5. NULL on rows created before that
+    // migration; rehydrateClientFields still backfills those from the local
+    // cache, so the two sources cover each other during the transition.
+    recurringTemplateId: r.recurring_template_id || undefined,
   };
 }
 

@@ -96,6 +96,23 @@ export const requestScreenTimeAuth     = nativeRequestAuth;
 export const getScreenTimeAuthStatus   = nativeAuthStatus;
 export const pickBlockedAppsNative     = nativePresentPicker;
 
+/**
+ * Ensure Screen Time access, then present Apple's picker directly.
+ * Lets callers (the profile row) open the real picker without routing through
+ * an in-app explainer screen first. Returns why it bailed so the caller can
+ * decide whether to explain, upgrade, or stay silent.
+ */
+export async function openNativeAppPicker() {
+  if (!nativeIsAvailable()) return { opened: false, reason: "unavailable" };
+  let status = await nativeAuthStatus();
+  if (status !== "approved") {
+    status = await nativeRequestAuth();
+    if (status !== "approved") return { opened: false, reason: "denied", status };
+  }
+  const ok = await nativePresentPicker();
+  return ok ? { opened: true, status } : { opened: false, reason: "picker_failed", status };
+}
+
 export async function applyBlocking(_appsList, { freeTier = false } = {}) {
   if (!nativeIsAvailable()) {
     return { applied: false, reason: "Screen Time API unavailable (Expo Go or non-iOS)" };
