@@ -420,6 +420,18 @@ class ScreenTimeModule: NSObject {
     resolve(nil)
   }
 
+  // Mirrors the in-app theme toggle into the App Group so the DriftShield
+  // extension can render the block screen in the same light/dark theme the
+  // user chose inside Drift.
+  @objc(setAppearance:resolver:rejecter:)
+  func setAppearance(_ isDark: Bool,
+                     resolver resolve: RCTPromiseResolveBlock,
+                     rejecter reject: RCTPromiseRejectBlock) {
+    let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
+    defaults?.set(isDark, forKey: "drift_dark_mode")
+    resolve(nil)
+  }
+
   @objc(consumePendingHealthEarn:rejecter:)
   func consumePendingHealthEarn(_ resolve: RCTPromiseResolveBlock,
                                 rejecter reject: RCTPromiseRejectBlock) {

@@ -121,7 +121,7 @@ export default function Swipeable({
         style={{
           position: "absolute", top: 0, right: 0, bottom: 0,
           width: REVEAL,
-          backgroundColor: "#E05050",
+          backgroundColor: "#B5564B",
           borderRadius: 18,
           alignItems: "center", justifyContent: "center",
           opacity: tx.interpolate({

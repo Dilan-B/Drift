@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { supabase } from "./supabase";
-import { getTheme } from "./theme";
+import { FF, getTheme } from "./theme";
 import { cached, invalidateCache, rateLimited } from "./apiGuards";
 import FeedbackModal from "./FeedbackModal";
 import RedeemCodeModal from "./RedeemCodeModal";
@@ -22,10 +22,12 @@ let ImageManipulator = null;
 try { ImagePicker = require("expo-image-picker"); } catch {}
 try { ImageManipulator = require("expo-image-manipulator"); } catch {}
 
-const FO = "Orbitron_700Bold";
-const FOM = "Orbitron_400Regular";
-const FK = "Oswald_700Bold";
-const FB = undefined;
+// Organic-editorial type system (see theme.js): Playfair for display moments,
+// DM Sans for UI text, Orbitron strictly for small-caps kickers.
+const FO = FF.display;    // display serif — avatar initials, username
+const FOM = FF.kicker;    // kicker — tiny letterspaced labels, row CTAs
+const FK = FF.bodyMed;    // medium sans — row titles, buttons
+const FB = FF.body;       // body sans
 
 const normalizeUsername = (raw) =>
   (raw || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
@@ -225,8 +227,14 @@ export default function ProfileScreen({
     const key = id || title;
     const busy = !!busyActions[key];
     return (
-    <TouchableOpacity disabled={busy} onPress={() => runAction(key, onPress)} style={[s.row, { backgroundColor: paper.warm, borderColor: ink.border, opacity: busy ? 0.65 : 1 }]}>
-      <View style={s.rowIcon}>{icon?.(accent)}</View>
+    <TouchableOpacity
+      disabled={busy}
+      onPress={() => runAction(key, onPress)}
+      activeOpacity={0.8}
+      style={[s.row, { backgroundColor: paper.card, borderColor: ink.border, opacity: busy ? 0.65 : 1 }]}
+    >
+      {/* Icon sits in a quiet tinted chip so rows read at a glance */}
+      <View style={[s.rowIconChip, { backgroundColor: ink.ghost }]}>{icon?.(accent)}</View>
       <View style={{ flex: 1 }}>
         <Text style={[s.rowTitle, { color: ink.deep }]}>{title}</Text>
         <Text style={[s.rowSub, { color: ink.mid }]}>{sub}</Text>
@@ -275,14 +283,26 @@ export default function ProfileScreen({
 
   return (
     <KeyboardAvoidingView
-      style={[s.screen, { backgroundColor: paper.card }]}
+      style={[s.screen, { backgroundColor: paper.warm }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={[s.top, { borderColor: ink.border }, inAppPage && { paddingTop: 14 }]}>
-        <TouchableOpacity onPress={onClose} style={[s.close, { backgroundColor: paper.warm }]}>
+      {/* Aurora pools — the same quiet light the rest of the app breathes */}
+      <View pointerEvents="none" style={{
+        position: "absolute", top: -120, right: -90,
+        width: 300, height: 300, borderRadius: 150,
+        backgroundColor: theme.fx.auroraMint,
+      }} />
+      <View pointerEvents="none" style={{
+        position: "absolute", bottom: -130, left: -100,
+        width: 280, height: 280, borderRadius: 140,
+        backgroundColor: theme.fx.auroraClay,
+      }} />
+
+      <View style={[s.top, { borderColor: ink.hairline }, inAppPage && { paddingTop: 14 }]}>
+        <TouchableOpacity onPress={onClose} style={[s.close, { backgroundColor: ink.ghost }]}>
           <CloseIcon size={16} color={ink.deep} />
         </TouchableOpacity>
-        <Text style={[s.topTitle, { color: ink.deep }]}>Profile</Text>
+        <Text style={[s.topTitle, { color: ink.faint }]}>PROFILE</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -294,7 +314,7 @@ export default function ProfileScreen({
             ) : (
               <Text style={[s.avatarText, { color: earn.green }]}>{initials(currentUsername)}</Text>
             )}
-            <View style={[s.editBadge, { backgroundColor: earn.green }]}>
+            <View style={[s.editBadge, { backgroundColor: earn.green, borderColor: paper.warm }]}>
               <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
                 <Path d="M4 20h4L18.5 9.5a2.8 2.8 0 0 0-4-4L4 16v4z" stroke="#fff" strokeWidth={2.2} strokeLinejoin="round" />
                 <Path d="M13.5 6.5l4 4" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" />
@@ -302,13 +322,15 @@ export default function ProfileScreen({
             </View>
             {savingPhoto && <ActivityIndicator color={earn.green} style={StyleSheet.absoluteFill} />}
           </TouchableOpacity>
-          <Text style={[s.username, { color: ink.deep }]}>@{currentUsername}</Text>
+          <Text style={[s.username, { color: ink.deep }]}>
+            <Text style={{ color: ink.faint }}>@</Text>{currentUsername}
+          </Text>
           <Text style={[s.email, { color: ink.mid }]}>{userEmail || "Not signed in"}</Text>
           {/* Plan status pill removed while payments are off — no plan tiers are
               surfaced to the user, so the profile reads like a normal free app. */}
         </View>
 
-        <View style={[s.section, { borderColor: ink.border }]}>
+        <View style={[s.section, { backgroundColor: paper.card, borderColor: ink.border }]}>
           <Text style={[s.sectionLabel, { color: ink.faint }]}>ACCOUNT</Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <TextInput
@@ -319,7 +341,7 @@ export default function ProfileScreen({
               autoCapitalize="none"
               autoCorrect={false}
               maxLength={20}
-              style={[s.nameInput, { backgroundColor: paper.warm, borderColor: ink.border, color: ink.deep }]}
+              style={[s.nameInput, { backgroundColor: paper.sand, borderColor: "transparent", color: ink.deep }]}
             />
             <TouchableOpacity onPress={saveUsername} disabled={savingName} style={[s.saveBtn, { backgroundColor: earn.green }, theme.fx.glow]}>
               {savingName ? <ActivityIndicator color="#fff" /> : <CheckIcon size={18} color="#fff" />}
@@ -327,6 +349,7 @@ export default function ProfileScreen({
           </View>
         </View>
 
+        <Text style={[s.groupKicker, { color: ink.faint }]}>SETTINGS</Text>
         <View style={{ gap: 10 }}>
           <Row
             id="blockedApps"
@@ -391,21 +414,21 @@ export default function ProfileScreen({
         </View>
 
         {/* Feedback + legal */}
-        <View style={s.legalGroup}>
-          <TouchableOpacity onPress={() => setFeedbackOpen(true)} style={s.legalRow}>
+        <View style={[s.legalGroup, { backgroundColor: ink.ghost }]}>
+          <TouchableOpacity onPress={() => setFeedbackOpen(true)} style={[s.legalRow, { borderColor: ink.hairline }]}>
             <Text style={[s.legalText, { color: ink.deep }]}>Send feedback</Text>
             <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => Linking.openURL("https://driftproductivity.com/privacy/")}
-            style={s.legalRow}
+            style={[s.legalRow, { borderColor: ink.hairline }]}
           >
             <Text style={[s.legalText, { color: ink.deep }]}>Privacy policy</Text>
             <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => Linking.openURL("https://driftproductivity.com/terms/")}
-            style={s.legalRow}
+            style={[s.legalRow, { borderColor: "transparent" }]}
           >
             <Text style={[s.legalText, { color: ink.deep }]}>Terms of use</Text>
             <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
@@ -417,19 +440,19 @@ export default function ProfileScreen({
             { text: "Cancel", style: "cancel" },
             { text: "Sign out", style: "destructive", onPress: onSignOut },
           ])}
-          style={s.signOut}
+          style={[s.signOut, { backgroundColor: theme.danger.bg }]}
         >
-          <Text style={s.signOutText}>Sign out</Text>
+          <Text style={[s.signOutText, { color: theme.danger.fg }]}>Sign out</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={confirmDeleteAccount}
           disabled={deletingAccount}
-          style={[s.deleteAccount, deletingAccount && { opacity: 0.65 }]}
+          style={[s.deleteAccount, { borderColor: theme.danger.border }, deletingAccount && { opacity: 0.65 }]}
         >
           {deletingAccount
-            ? <ActivityIndicator color="#E05050" />
-            : <Text style={s.deleteAccountText}>Delete account</Text>}
+            ? <ActivityIndicator color={theme.danger.fg} />
+            : <Text style={[s.deleteAccountText, { color: theme.danger.fg }]}>Delete account</Text>}
         </TouchableOpacity>
       </ScrollView>
 
@@ -455,39 +478,40 @@ const s = StyleSheet.create({
   top: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 18, paddingTop: Platform.OS === "ios" ? 58 : 32, paddingBottom: 14,
-    borderBottomWidth: 0.5,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   close: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  topTitle: { fontFamily: FK, fontSize: 18 },
+  topTitle: { fontFamily: FOM, fontSize: 10, letterSpacing: 2.4 },
   content: { padding: 20, paddingBottom: 48 },
-  hero: { alignItems: "center", marginTop: 8, marginBottom: 24 },
-  avatar: { width: 104, height: 104, borderRadius: 52, borderWidth: 1, alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 12 },
+  hero: { alignItems: "center", marginTop: 12, marginBottom: 26 },
+  avatar: { width: 104, height: 104, borderRadius: 52, borderWidth: 1, alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 14 },
   avatarImg: { width: "100%", height: "100%" },
-  avatarText: { fontFamily: FO, fontSize: 28, letterSpacing: 1 },
+  avatarText: { fontFamily: FO, fontSize: 30, letterSpacing: 0 },
   editBadge: {
     position: "absolute", right: 4, bottom: 4,
     width: 28, height: 28, borderRadius: 14,
     alignItems: "center", justifyContent: "center",
-    borderWidth: 2, borderColor: "#fff",
+    borderWidth: 2,
   },
-  username: { fontFamily: FK, fontSize: 28 },
-  email: { fontFamily: FB, fontSize: 13, marginTop: 2 },
+  username: { fontFamily: FO, fontSize: 30, letterSpacing: -0.4 },
+  email: { fontFamily: FB, fontSize: 13, marginTop: 4 },
   statusPill: { marginTop: 12, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16 },
-  section: { borderWidth: 1, borderRadius: 18, padding: 14, marginBottom: 14 },
-  sectionLabel: { fontFamily: FK, fontSize: 10, letterSpacing: 1.4, marginBottom: 9 },
-  nameInput: { flex: 1, borderWidth: 1, borderRadius: 13, paddingHorizontal: 13, paddingVertical: 12, fontSize: 15 },
-  saveBtn: { width: 48, borderRadius: 13, alignItems: "center", justifyContent: "center" },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, borderWidth: 1, padding: 14 },
-  rowIcon: { width: 24, alignItems: "center" },
+  section: { borderWidth: 1, borderRadius: 22, padding: 16, marginBottom: 22 },
+  sectionLabel: { fontFamily: FOM, fontSize: 9, letterSpacing: 2.4, marginBottom: 10 },
+  groupKicker: { fontFamily: FOM, fontSize: 9, letterSpacing: 2.4, marginBottom: 10, marginLeft: 4 },
+  nameInput: { flex: 1, borderWidth: 1.2, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontFamily: FK, fontSize: 15 },
+  saveBtn: { width: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 18, borderWidth: 1, padding: 13 },
+  rowIconChip: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
   rowTitle: { fontFamily: FK, fontSize: 15 },
-  rowSub: { fontSize: 12, marginTop: 2 },
+  rowSub: { fontFamily: FB, fontSize: 12, marginTop: 2 },
   rowCta: { fontFamily: FOM, fontSize: 9, letterSpacing: 1 },
-  legalGroup: { marginTop: 24, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.03)", overflow: "hidden" },
-  legalRow:   { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: "rgba(0,0,0,0.07)" },
-  legalText:  { fontSize: 14, fontWeight: "500" },
+  legalGroup: { marginTop: 26, borderRadius: 18, overflow: "hidden" },
+  legalRow:   { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth },
+  legalText:  { fontFamily: FK, fontSize: 14 },
   legalChevron: { fontSize: 18 },
-  signOut: { marginTop: 22, padding: 15, borderRadius: 15, backgroundColor: "rgba(224,80,80,0.11)", alignItems: "center" },
-  signOutText: { fontFamily: FK, fontSize: 15, color: "#E05050" },
-  deleteAccount: { marginTop: 10, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: "rgba(224,80,80,0.22)", alignItems: "center" },
-  deleteAccountText: { fontFamily: FK, fontSize: 15, color: "#E05050" },
+  signOut: { marginTop: 22, padding: 15, borderRadius: 16, alignItems: "center" },
+  signOutText: { fontFamily: FK, fontSize: 15 },
+  deleteAccount: { marginTop: 10, padding: 15, borderRadius: 16, borderWidth: 1, alignItems: "center" },
+  deleteAccountText: { fontFamily: FK, fontSize: 15 },
 });

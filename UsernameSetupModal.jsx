@@ -12,11 +12,12 @@ import {
   KeyboardAvoidingView, Platform,
 } from "react-native";
 import { supabase } from "./supabase";
-import { getTheme } from "./theme";
+import { FF, getTheme } from "./theme";
 
-const FO  = "Orbitron_700Bold";
-const FOM = "Orbitron_400Regular";
-const FK  = "Oswald_700Bold";
+// Remapped onto the organic-editorial system — see theme.js FF.
+const FO  = FF.bodyBold;
+const FOM = FF.kicker;
+const FK  = FF.bodyMed;
 
 function normalize(raw) {
   return (raw || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
@@ -114,7 +115,7 @@ export default function UsernameSetupModal({ visible, userId, onDone, dark = fal
               }}
             />
             {!!error && (
-              <Text style={{ color: "#E05050", fontSize: 13, marginTop: 10 }}>{error}</Text>
+              <Text style={{ color: "#B5564B", fontSize: 13, marginTop: 10 }}>{error}</Text>
             )}
           </View>
 

@@ -28,8 +28,9 @@ const terra = "#2D7A52";
 // Upright, lighter Playfair Display - same family, no slant, slimmer strokes
 const FD = "PlayfairDisplay_500Medium";
 const FB = "DMSans_400Regular";
-const FO = "Orbitron_700Bold";
-const FK = "Oswald_700Bold";
+// Remapped onto the organic-editorial system — see theme.js FF.
+const FO = FF.bodyBold;
+const FK = FF.bodyMed;
 
 const palette = (dark) => dark ? {
   bg: "#0E1A13",

@@ -90,13 +90,13 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
                 onSubmitEditing={submit}
                 style={{
                   backgroundColor: paper.card,
-                  borderWidth: 1.5, borderColor: error ? "#E05050" : ink.border,
+                  borderWidth: 1.5, borderColor: error ? "#B5564B" : ink.border,
                   borderRadius: 12, paddingVertical: 16, paddingHorizontal: 16,
                   fontSize: 18, letterSpacing: 2, color: ink.deep, textAlign: "center",
                 }}
               />
               {!!error && (
-                <Text style={{ color: "#E05050", fontSize: 13, marginTop: 10, textAlign: "center" }}>{error}</Text>
+                <Text style={{ color: "#B5564B", fontSize: 13, marginTop: 10, textAlign: "center" }}>{error}</Text>
               )}
 
               <TouchableOpacity

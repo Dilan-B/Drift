@@ -69,7 +69,7 @@ export default function FamilyProfileModal({
             <Text style={[st.rowText, { color: t.ink.deep }]}>Sign out</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[st.row, { borderColor: t.ink.border, backgroundColor: t.paper.card }]} onPress={confirmDelete}>
-            <Text style={[st.rowText, { color: "#E05050" }]}>Delete account</Text>
+            <Text style={[st.rowText, { color: "#B5564B" }]}>Delete account</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>

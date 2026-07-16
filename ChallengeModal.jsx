@@ -369,7 +369,7 @@ const s = StyleSheet.create({
   input: { borderWidth: 1, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 13, fontFamily: FF.body, fontSize: 14 },
   infoBox: { flexDirection: "row", gap: 9, padding: 13, borderRadius: 16, borderWidth: 1, marginBottom: 16 },
   infoText: { flex: 1, fontFamily: FF.body, fontSize: 12, lineHeight: 18 },
-  errorText: { color: "#E05050", fontFamily: FF.body, fontSize: 12, marginBottom: 12, textAlign: "center" },
+  errorText: { color: "#B5564B", fontFamily: FF.body, fontSize: 12, marginBottom: 12, textAlign: "center" },
   cancelBtn: { flex: 1, padding: 14, borderRadius: 14, borderWidth: 1, alignItems: "center" },
   sendBtn: { flex: 2, padding: 14, borderRadius: 14, alignItems: "center" },
   sendBtnText: { fontFamily: FF.bodyMed, fontSize: 15 },

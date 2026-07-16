@@ -1563,7 +1563,7 @@ const styles = StyleSheet.create({
     backgroundColor: CARD_BG,
   },
   errorText: {
-    color: "#E05050",
+    color: "#B5564B",
     fontFamily: FF.bodyMed,
     fontSize: 14,
     marginTop: 8,

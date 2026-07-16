@@ -47,6 +47,13 @@ export const LIGHT = {
     barkLo:  "rgba(138,111,88,0.10)",
     barkInk: "#6E5849",   // brown ink for occasional warm labels
   },
+  // Destructive actions (sign out, delete, abandon). A muted terracotta-rose
+  // in the clay family — unmistakably "careful", never alarm-red.
+  danger: {
+    fg:     "#B5564B",
+    bg:     "rgba(181,86,75,0.10)",
+    border: "rgba(181,86,75,0.22)",
+  },
 };
 
 // Dark mode: "the greenhouse at night". Deliberately NOT light-mode-dimmed —
@@ -93,6 +100,12 @@ export const DARK = {
     bark:    "#C2A184",
     barkLo:  "rgba(194,161,132,0.15)",
     barkInk: "#E5CDB0",
+  },
+  // Destructive actions — soft salmon glow, kin to the apricot accents.
+  danger: {
+    fg:     "#EFA293",
+    bg:     "rgba(239,162,147,0.13)",
+    border: "rgba(239,162,147,0.26)",
   },
 };
 

@@ -2,108 +2,112 @@ import ManagedSettings
 import ManagedSettingsUI
 import UIKit
 
+/// The screen iOS draws over a blocked app.
+///
+/// Design: "quiet paper" — the shield renders in Drift's own theme (cream
+/// parchment in light mode, greenhouse-night forest in dark), so hitting the
+/// wall feels like a page of the app interrupting rather than a punishment
+/// card. The voice is calm and spare: state the deal, no snark, no guilt.
+///
+/// The app writes its in-app theme toggle to the shared App Group
+/// (`drift_dark_mode`, via ScreenTimeModule.setAppearance); we read it here.
+/// If the key has never been written (fresh install, pre-update build) we
+/// default to light, matching the app's own default.
+///
+/// Apple constrains this surface to: background color/blur, one icon, title,
+/// subtitle, and button labels/colors — system font only, fixed layout.
 class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 
   private let appGroup = "group.com.sanghani.drift.shared"
 
-  private let paperWarm = UIColor(red: 0.957, green: 0.976, blue: 0.965, alpha: 1)
-  private let inkVoid   = UIColor(red: 0.043, green: 0.102, blue: 0.067, alpha: 1)
-  private let inkMid    = UIColor(red: 0.420, green: 0.541, blue: 0.471, alpha: 1)
-  private let earnTerra = UIColor(red: 0.184, green: 0.671, blue: 0.447, alpha: 1)
+  // ── Palette (mirrors theme.js LIGHT / DARK) ─────────────────
+  private struct Palette {
+    let ground:      UIColor
+    let title:       UIColor
+    let subtitle:    UIColor
+    let icon:        UIColor
+    let buttonBg:    UIColor
+    let buttonLabel: UIColor
+  }
 
-  private let titles: [String] = [
-    "Nope.",
-    "Not yet.",
-    "Nice try.",
-    "Caught you.",
-    "Nah.",
-    "Hold up.",
-    "Blocked.",
-    "Not happening.",
-    "Patience.",
-    "Easy there.",
+  /// LIGHT — paper.warm ground, forest ink, deep-forest button.
+  private let light = Palette(
+    ground:      UIColor(red: 0.969, green: 0.969, blue: 0.957, alpha: 1), // #F7F7F4
+    title:       UIColor(red: 0.102, green: 0.157, blue: 0.125, alpha: 1), // #1A2820
+    subtitle:    UIColor(red: 0.420, green: 0.478, blue: 0.431, alpha: 1), // #6B7A6E
+    icon:        UIColor(red: 0.243, green: 0.420, blue: 0.306, alpha: 1), // #3E6B4E sage
+    buttonBg:    UIColor(red: 0.122, green: 0.227, blue: 0.165, alpha: 1), // #1F3A2A
+    buttonLabel: UIColor(red: 0.980, green: 0.965, blue: 0.933, alpha: 1)  // #FAF6EE
+  )
+
+  /// DARK — greenhouse-at-night forest ground, paper-white ink, mint button.
+  private let dark = Palette(
+    ground:      UIColor(red: 0.055, green: 0.102, blue: 0.075, alpha: 1), // #0E1A13
+    title:       UIColor(red: 0.941, green: 0.969, blue: 0.918, alpha: 1), // #F0F7EA
+    subtitle:    UIColor(red: 0.663, green: 0.769, blue: 0.671, alpha: 1), // #A9C4AB
+    icon:        UIColor(red: 0.498, green: 0.890, blue: 0.647, alpha: 1), // #7FE3A5 mint
+    buttonBg:    UIColor(red: 0.776, green: 0.949, blue: 0.627, alpha: 1), // #C6F2A0
+    buttonLabel: UIColor(red: 0.086, green: 0.149, blue: 0.110, alpha: 1)  // #16261C
+  )
+
+  // ── Voice: calm & spare ─────────────────────────────────────
+  // One fixed title; the firmness comes from brevity, not attitude.
+  private let title = "Not yet."
+
+  /// Shown when the balance is empty — the normal "earn it" case.
+  private let earnLines: [String] = [
+    "This time isn't earned yet. A task in Drift unlocks it.",
+    "Nothing here is going anywhere. Your goals might.",
+    "One task. Then this opens on your terms.",
+    "You set this boundary. It's holding.",
   ]
 
-  private let nudges: [String] = [
-    "You didn't earn this yet. Go do something real.",
-    "This app will still be here after you finish a task.",
-    "Put the phone down. Your future self is watching.",
-    "You're better than mindless scrolling. Prove it.",
-    "Touch grass, not glass.",
-    "Every minute here is a minute you didn't earn.",
-    "The dopamine can wait. Your goals can't.",
-    "Remember why you downloaded Drift?",
-    "One task. That's all it takes.",
-    "Your screen time balance says no. Drift says earn it.",
-    "This is the part where you grow.",
-    "Bored? Good. Go be productive.",
-    "You set this boundary. Respect it.",
-    "Would the best version of you open this right now?",
-    "Plot twist: you don't actually need to check this.",
-    "Scrolling won't fix anything. A task might.",
-    "30 minutes of work = 15 minutes of this. Fair trade.",
-    "Your thumbs deserve better than doomscrolling.",
-    "Breaking: nothing happened since you last checked.",
-    "The urge will pass. The regret won't.",
-  ]
+  /// Shown when a balance exists but apps are still shielded
+  /// (mid Drift-In focus session, or blocked hours).
+  private let focusLine = "You're mid-focus. This can wait until you surface."
 
   override func configuration(shielding application: Application) -> ShieldConfiguration {
-    buildConfig(name: application.localizedDisplayName)
+    buildConfig()
   }
 
   override func configuration(shielding application: Application, in category: ActivityCategory) -> ShieldConfiguration {
-    buildConfig(name: application.localizedDisplayName ?? category.localizedDisplayName)
+    buildConfig()
   }
 
   override func configuration(shielding webDomain: WebDomain) -> ShieldConfiguration {
-    buildConfig(name: webDomain.domain)
+    buildConfig()
   }
 
   override func configuration(shielding webDomain: WebDomain, in category: ActivityCategory) -> ShieldConfiguration {
-    buildConfig(name: webDomain.domain ?? category.localizedDisplayName)
+    buildConfig()
   }
 
-  private func makeIcon() -> UIImage? {
-    let symbols = ["leaf.fill", "flame.fill", "bolt.fill", "star.fill", "trophy.fill"]
-    let pick = symbols[Int.random(in: 0..<symbols.count)]
-    let config = UIImage.SymbolConfiguration(pointSize: 52, weight: .medium)
-    let image = UIImage(systemName: pick, withConfiguration: config)
-    return image?.withTintColor(earnTerra, renderingMode: .alwaysOriginal)
+  private func makeIcon(_ p: Palette) -> UIImage? {
+    let config = UIImage.SymbolConfiguration(pointSize: 46, weight: .regular)
+    let image = UIImage(systemName: "leaf.fill", withConfiguration: config)
+    return image?.withTintColor(p.icon, renderingMode: .alwaysOriginal)
   }
 
-  private func buildConfig(name: String?) -> ShieldConfiguration {
+  private func buildConfig() -> ShieldConfiguration {
     let defaults = UserDefaults(suiteName: appGroup)
+    // Follow the app's own theme toggle. `object(forKey:)` (not `bool`) so a
+    // never-written key falls back to light instead of reading as false-dark.
+    let isDark = (defaults?.object(forKey: "drift_dark_mode") as? Bool) ?? false
+    let p = isDark ? dark : light
+
     let balanceSec = defaults?.integer(forKey: "drift_widget_balance_seconds") ?? 0
-    let appName = name ?? "This app"
-
-    let title = ShieldConfiguration.Label(
-      text: titles[Int.random(in: 0..<titles.count)],
-      color: .white
-    )
-
-    let nudge = nudges[Int.random(in: 0..<nudges.count)]
-    let cta = balanceSec <= 0
-      ? "Open Drift \u{2192} complete a task \u{2192} earn your time."
-      : "\(appName) is locked. Earn more time in Drift."
-
-    let subtitle = ShieldConfiguration.Label(
-      text: "\(nudge)\n\n\(cta)",
-      color: UIColor(red: 0.75, green: 0.82, blue: 0.78, alpha: 1)
-    )
-
-    let primaryButton = ShieldConfiguration.Label(
-      text: "I'll go be productive",
-      color: .white
-    )
+    let line = balanceSec > 0
+      ? focusLine
+      : earnLines[Int.random(in: 0..<earnLines.count)]
 
     return ShieldConfiguration(
       backgroundBlurStyle: nil,
-      backgroundColor: UIColor(red: 0.067, green: 0.133, blue: 0.086, alpha: 1),
-      icon: makeIcon(),
-      title: title,
-      subtitle: subtitle,
-      primaryButtonLabel: primaryButton,
-      primaryButtonBackgroundColor: earnTerra,
+      backgroundColor: p.ground,
+      icon: makeIcon(p),
+      title: ShieldConfiguration.Label(text: title, color: p.title),
+      subtitle: ShieldConfiguration.Label(text: line, color: p.subtitle),
+      primaryButtonLabel: ShieldConfiguration.Label(text: "I'll come back later", color: p.buttonLabel),
+      primaryButtonBackgroundColor: p.buttonBg,
       secondaryButtonLabel: nil
     )
   }

@@ -8,10 +8,11 @@ import {
   Alert, KeyboardAvoidingView, Linking, Modal,
   Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
-import { getTheme } from "./theme";
+import { FF, getTheme } from "./theme";
 
-const FK = "Oswald_700Bold";
-const FO = "Orbitron_700Bold";
+// Remapped onto the organic-editorial system — see theme.js FF.
+const FK = FF.bodyMed;
+const FO = FF.bodyBold;
 const FEEDBACK_EMAIL = "driftappcontact@gmail.com";
 
 export default function FeedbackModal({ visible, onClose, userId, username, dark = false }) {

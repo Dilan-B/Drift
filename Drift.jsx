@@ -59,7 +59,7 @@ import {
 import {
   startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag, consumeUsedSeconds,
   getDiagnostics, updateSharedBalance, startDriftInLiveActivity, updateDriftInLiveActivity,
-  endDriftInLiveActivity, consumePendingHealthEarn, setProStatus,
+  endDriftInLiveActivity, consumePendingHealthEarn, setProStatus, setAppearance,
 } from "./screenTime";
 import { supabase, syncScreenTime, safeGetSession, saveOnboardingResponses, getAppConfig, isVersionOutdated, fetchAppStoreLatest } from "./supabase";
 import ForceUpdateModal from "./ForceUpdateModal";
@@ -95,11 +95,14 @@ const earn = {
   green: "#1A8050", greenLo: "#DDF2EA", greenD: "#0E5434",
   blue: "#5AB4D4", blueLo: "#E6F4FB",
 };
-const FO  = "Orbitron_700Bold";    // display headings
-const FOM = "Orbitron_400Regular"; // medium display
-const FK  = "Oswald_700Bold";      // Oswald bold — subheadings + task names
-const FKR = "Oswald_400Regular";   // Oswald regular
-const FB  = undefined;             // system sans-serif body
+// Legacy aliases, remapped onto the organic-editorial system (theme.js FF).
+// Older corners of this file still reference these names; pointing them at the
+// current typefaces migrates every remaining usage without touching each line.
+const FO  = FF.bodyBold;  // was Orbitron bold — stat values, popup numbers
+const FOM = FF.kicker;    // small letterspaced labels (Orbitron stays the kicker voice)
+const FK  = FF.bodyMed;   // was Oswald bold — subheadings, row titles
+const FKR = FF.body;      // was Oswald regular
+const FB  = FF.body;      // body text joins the brand sans instead of system default
 
 // ── Data constants ───────────────────────────────────────────
 const CATS = {
@@ -2587,7 +2590,7 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
                   onPress={() => setDraft(list => list.filter(r => r.id !== rule.id))}
                   style={{ paddingVertical: 8, paddingHorizontal: 8 }}
                 >
-                  <Text style={{ fontFamily: FK, fontSize: 18, color: "#E05050" }}>x</Text>
+                  <Text style={{ fontFamily: FK, fontSize: 18, color: "#B5564B" }}>x</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -2720,7 +2723,7 @@ function RecurringTasksModal({ visible, templates, dark, onClose, onSave }) {
                   onPress={() => setDraft(list => list.filter(t => t.id !== item.id))}
                   style={{ paddingVertical: 8, paddingHorizontal: 8 }}
                 >
-                  <Text style={{ fontFamily: FK, fontSize: 18, color: "#E05050" }}>x</Text>
+                  <Text style={{ fontFamily: FK, fontSize: 18, color: "#B5564B" }}>x</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -3510,7 +3513,12 @@ export default function App() {
   }, [screen, drainBy, persistLastAlive]);
 
   useEffect(() => {
-    AsyncStorage.getItem("drift_dark_mode").then(v => { if (v === "1") setDarkMode(true); });
+    AsyncStorage.getItem("drift_dark_mode").then(v => {
+      if (v === "1") setDarkMode(true);
+      // Push the restored theme to the App Group at every boot so the shield
+      // stays in sync even for users who never touch the toggle again.
+      setAppearance(v === "1").catch(() => {});
+    });
     AsyncStorage.getItem("drift_difficulty").then(v => { if (v) setDifficulty(v); });
   }, []);
 
@@ -4143,6 +4151,8 @@ export default function App() {
     setDarkMode(d => {
       const next = !d;
       AsyncStorage.setItem("drift_dark_mode", next ? "1" : "0");
+      // Mirror into the App Group so the shield matches the in-app theme.
+      setAppearance(next).catch(() => {});
       return next;
     });
   };

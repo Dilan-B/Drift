@@ -10,15 +10,16 @@ import {
   ScrollView, Modal, ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform,
 } from "react-native";
 import { supabase } from "./supabase";
-import { getTheme } from "./theme";
+import { FF, getTheme } from "./theme";
 import { Spinner } from "./Skeleton";
 import { CloseIcon, CameraIcon, ImageIcon, SparkleIcon, CheckIcon } from "./Icons";
 import { rateLimited } from "./apiGuards";
 
-const FO  = "Orbitron_700Bold";
-const FOM = "Orbitron_400Regular";
-const FK  = "Oswald_700Bold";
-const FB  = undefined;
+// Remapped onto the organic-editorial system — see theme.js FF.
+const FO  = FF.bodyBold;
+const FOM = FF.kicker;
+const FK  = FF.bodyMed;
+const FB  = FF.body;
 
 // ── Attempt to import expo-image-picker + image manipulator ───
 let ImagePicker = null;
@@ -56,7 +57,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
   const MID  = theme.ink.mid;
   const BRD  = theme.ink.border;
   const GRN  = theme.earn.green;
-  const RED  = "#E05050";
+  const RED  = "#B5564B";
 
   const [proofText, setProofText] = useState("");
   const [photo,     setPhoto]     = useState(null); // { uri, base64 } | null

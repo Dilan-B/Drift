@@ -116,7 +116,7 @@ export default function ChildAppsModal({ visible, onClose, dark, familyId, child
                 <View key={r.id} style={[s.reqRow, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
                   <Text style={[s.reqLabel, { color: t.ink.deep }]}>{r.app_label}</Text>
                   <Text style={[s.reqStatus, {
-                    color: r.status === "approved" ? t.earn.sage : r.status === "denied" ? "#E05050" : t.ink.mid,
+                    color: r.status === "approved" ? t.earn.sage : r.status === "denied" ? "#B5564B" : t.ink.mid,
                   }]}>
                     {r.status === "approved" ? "Allowed" : r.status === "denied" ? "Not allowed" : "Waiting"}
                   </Text>
@@ -174,7 +174,7 @@ const s = StyleSheet.create({
   input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontFamily: FF.body, fontSize: 16 },
   sendBtn: { borderRadius: 12, paddingHorizontal: 18, alignItems: "center", justifyContent: "center", minWidth: 64 },
   sendText: { fontFamily: FF.bodyMed, fontSize: 15 },
-  err: { color: "#E05050", fontFamily: FF.bodyMed, fontSize: 13, marginTop: 8 },
+  err: { color: "#B5564B", fontFamily: FF.bodyMed, fontSize: 13, marginTop: 8 },
   msg: { fontFamily: FF.bodyMed, fontSize: 13, marginTop: 8 },
   reqRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderRadius: 12, paddingVertical: 13, paddingHorizontal: 15, marginBottom: 8 },
   reqLabel: { fontFamily: FF.bodyMed, fontSize: 15 },

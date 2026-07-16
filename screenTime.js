@@ -159,6 +159,15 @@ export async function setProStatus(isPro) {
   try { await Native.setProStatus(!!isPro); } catch {}
 }
 
+/**
+ * Mirror the in-app theme toggle into the shared App Group so the shield
+ * (block screen) renders in the same light/dark theme as the app.
+ */
+export async function setAppearance(isDark) {
+  if (!isAvailable() || typeof Native.setAppearance !== "function") return;
+  try { await Native.setAppearance(!!isDark); } catch {}
+}
+
 /** Return a diagnostics dump for debugging the DeviceActivity pipeline. */
 export async function getDiagnostics() {
   if (!isAvailable()) return { available: false };

@@ -470,7 +470,7 @@ const s = StyleSheet.create({
   modalSub: { fontFamily: FF.body, fontSize: 14, lineHeight: 20, marginBottom: 14 },
   inputLabel: { fontFamily: FF.kicker, fontSize: 11, letterSpacing: 1.5, marginTop: 12, marginBottom: 6 },
   input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontFamily: FF.body, fontSize: 16 },
-  err: { color: "#E05050", fontFamily: FF.bodyMed, fontSize: 13, marginTop: 8 },
+  err: { color: "#B5564B", fontFamily: FF.bodyMed, fontSize: 13, marginTop: 8 },
   modalBtn: { borderRadius: 14, paddingVertical: 14, alignItems: "center" },
   modalBtnText: { fontFamily: FF.bodyMed, fontSize: 15 },
   allowRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1 },

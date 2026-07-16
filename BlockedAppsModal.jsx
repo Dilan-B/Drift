@@ -16,12 +16,13 @@ import {
   isNativeBlockingAvailable, requestScreenTimeAuth,
   getScreenTimeAuthStatus, pickBlockedAppsNative,
 } from "./blockedApps";
-import { getTheme } from "./theme";
+import { FF, getTheme } from "./theme";
 
-const FO  = "Orbitron_700Bold";
-const FOM = "Orbitron_400Regular";
-const FK  = "Oswald_700Bold";
-const FB  = undefined;
+// Remapped onto the organic-editorial system — see theme.js FF.
+const FO  = FF.bodyBold;
+const FOM = FF.kicker;
+const FK  = FF.bodyMed;
+const FB  = FF.body;
 
 export default function BlockedAppsModal({ visible, onClose, dark = false, firstTime = false, isPro = false, onUpgrade }) {
   const theme = getTheme(dark);
