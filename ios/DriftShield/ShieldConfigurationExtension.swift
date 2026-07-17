@@ -50,21 +50,45 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     buttonLabel: UIColor(red: 0.086, green: 0.149, blue: 0.110, alpha: 1)  // #16261C
   )
 
-  // ── Voice: calm & spare ─────────────────────────────────────
-  // One fixed title; the firmness comes from brevity, not attitude.
-  private let title = "Not yet."
+  // ── Voice: rotating themes ──────────────────────────────────
+  private struct ShieldVoice {
+    let title: String
+    let subtitle: String
+  }
 
-  /// Shown when the balance is empty — the normal "earn it" case.
-  private let earnLines: [String] = [
-    "This time isn't earned yet. A task in Drift unlocks it.",
-    "Nothing here is going anywhere. Your goals might.",
-    "One task. Then this opens on your terms.",
-    "You set this boundary. It's holding.",
+  private let earnVoices: [ShieldVoice] = [
+    // Zen garden — minimal, meditative
+    ShieldVoice(title: "breathe.", subtitle: "this moment is yours, not your phone's."),
+    ShieldVoice(title: "breathe.", subtitle: "there is nothing here that can't wait."),
+    ShieldVoice(title: "breathe.", subtitle: "stillness is productive too."),
+
+    // Greenhouse — organic, growth-forward
+    ShieldVoice(title: "growing.", subtitle: "your sprout is growing — don't pull it up to check."),
+    ShieldVoice(title: "growing.", subtitle: "every minute away from here is a minute it grows."),
+    ShieldVoice(title: "growing.", subtitle: "the greenhouse doesn't need you scrolling."),
+
+    // Scoreboard — clear, data-driven
+    ShieldVoice(title: "0 minutes.", subtitle: "complete a task in Drift to earn screen time."),
+    ShieldVoice(title: "0 minutes.", subtitle: "no balance. one task changes that."),
+    ShieldVoice(title: "0 minutes.", subtitle: "the counter starts when you do."),
+
+    // Gentle wall — warm, literary
+    ShieldVoice(title: "not yet.", subtitle: "the best things come to those who wait."),
+    ShieldVoice(title: "not yet.", subtitle: "patience is a form of action."),
+    ShieldVoice(title: "not yet.", subtitle: "what you resist today rewards you tomorrow."),
+
+    // Mirror — self-aware, honest
+    ShieldVoice(title: "again?", subtitle: "you know why you set this boundary."),
+    ShieldVoice(title: "again?", subtitle: "this is the part where you prove it to yourself."),
+    ShieldVoice(title: "again?", subtitle: "future you will be glad you stayed away."),
   ]
 
-  /// Shown when a balance exists but apps are still shielded
-  /// (mid Drift-In focus session, or blocked hours).
-  private let focusLine = "You're mid-focus. This can wait until you surface."
+  private let focusVoices: [ShieldVoice] = [
+    ShieldVoice(title: "not now.", subtitle: "you're mid-focus. this can wait until you surface."),
+    ShieldVoice(title: "growing.", subtitle: "your focus session is still running. stay with it."),
+    ShieldVoice(title: "breathe.", subtitle: "you chose depth over distraction. keep going."),
+    ShieldVoice(title: "almost.", subtitle: "finish your session first. this will still be here."),
+  ]
 
   override func configuration(shielding application: Application) -> ShieldConfiguration {
     buildConfig()
@@ -96,16 +120,16 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     let p = isDark ? dark : light
 
     let balanceSec = defaults?.integer(forKey: "drift_widget_balance_seconds") ?? 0
-    let line = balanceSec > 0
-      ? focusLine
-      : earnLines[Int.random(in: 0..<earnLines.count)]
+    let voice = balanceSec > 0
+      ? focusVoices[Int.random(in: 0..<focusVoices.count)]
+      : earnVoices[Int.random(in: 0..<earnVoices.count)]
 
     return ShieldConfiguration(
       backgroundBlurStyle: nil,
       backgroundColor: p.ground,
       icon: makeIcon(p),
-      title: ShieldConfiguration.Label(text: title, color: p.title),
-      subtitle: ShieldConfiguration.Label(text: line, color: p.subtitle),
+      title: ShieldConfiguration.Label(text: voice.title, color: p.title),
+      subtitle: ShieldConfiguration.Label(text: voice.subtitle, color: p.subtitle),
       primaryButtonLabel: ShieldConfiguration.Label(text: "I'll come back later", color: p.buttonLabel),
       primaryButtonBackgroundColor: p.buttonBg,
       secondaryButtonLabel: nil
