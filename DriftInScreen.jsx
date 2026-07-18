@@ -12,7 +12,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, StyleSheet,
   BackHandler, Alert, Animated, Platform, StatusBar,
-  ScrollView, AppState,
+  ScrollView, AppState, KeyboardAvoidingView,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
@@ -153,11 +153,13 @@ function PlantSlider({
 }
 
 // ── Main component ────────────────────────────────────────────
-export default function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSessionEnd, dark = false }) {
+// Memoized: stays mounted in the tab filmstrip; see SocialScreen note.
+function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSessionEnd, dark = false }) {
   const theme = getTheme(dark);
   // Setup-phase colors follow the app theme; active/done always use dark forest
   const [phase,   setPhase]   = useState("setup"); // setup | active | done
   const [task,    setTask]    = useState("");
+  const [showInfo, setShowInfo] = useState(false);
   const [dur,     setDur]     = useState(25);
   const [secLeft, setSecLeft] = useState(0);
   const [secTotal,setSecTotal]= useState(0);
@@ -346,7 +348,7 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
 
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 24, paddingBottom: 56 }}
+          contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 24, paddingBottom: 20 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -361,9 +363,48 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
             <Text style={{ fontFamily: FF.display, fontSize: 40, color: ink.deep, letterSpacing: -0.4 }}>
               Drift in
             </Text>
-            <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, marginTop: 8, lineHeight: 20 }}>
-              One task, full attention. The rest can wait.
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8, gap: 8 }}>
+              <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, lineHeight: 20, flexShrink: 1 }}>
+                One task, full attention. The rest can wait.
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowInfo(v => !v)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+                style={{
+                  width: 20, height: 20, borderRadius: 10,
+                  borderWidth: 1.2, borderColor: showInfo ? earn.sage : ink.faint,
+                  alignItems: "center", justifyContent: "center",
+                  backgroundColor: showInfo ? earn.sageLo : "transparent",
+                }}
+              >
+                <Text style={{
+                  fontFamily: FF.serifReg, fontSize: 12, lineHeight: 15,
+                  color: showInfo ? earn.sage : ink.faint,
+                }}>
+                  i
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {showInfo && (
+              <View style={{
+                marginTop: 12,
+                backgroundColor: paper.card,
+                borderRadius: 18,
+                borderWidth: 1,
+                borderColor: ink.border,
+                padding: 16,
+              }}>
+                <Text style={s.fieldKicker(ink)}>HOW IT WORKS</Text>
+                <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, lineHeight: 20 }}>
+                  Name the one thing you want to focus on and choose a length.
+                  While you're drifted in, your blocked apps stay locked and the
+                  timer keeps running even if you close Drift. Finish the session
+                  and half of your focused time comes back as screen time, plus
+                  experience toward your tier. Abandoning early earns nothing.
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Session card — one composed object, not a stack of form fields */}
@@ -374,7 +415,6 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
             borderColor: ink.border,
             padding: 22,
             overflow: "hidden",
-            marginBottom: 20,
           }}>
             {/* Sprout watermark tucked behind the corner */}
             <View pointerEvents="none" style={{
@@ -383,32 +423,6 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
             }}>
               <Sprout size={110} tone={dark ? "night" : "fresh"} />
             </View>
-
-            {/* Task */}
-            <Text style={s.fieldKicker(ink)}>TASK</Text>
-            <TextInput
-              value={task}
-              onChangeText={setTask}
-              placeholder="What needs your attention?"
-              placeholderTextColor={ink.faint}
-              maxLength={80}
-              style={{
-                backgroundColor: paper.sand,
-                borderWidth: 1.2,
-                borderColor: ready ? earn.sage : "transparent",
-                borderRadius: 16,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                fontFamily: FF.bodyMed,
-                fontSize: 15,
-                color: ink.deep,
-              }}
-              multiline={false}
-              returnKeyType="done"
-              autoFocus={false}
-            />
-
-            <View style={s.divider(ink)} />
 
             {/* Length */}
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
@@ -455,42 +469,72 @@ export default function DriftInScreen({ onSessionComplete, onSessionStart, onSes
               </View>
             </View>
           </View>
-
-          {/* CTA */}
-          <TouchableOpacity
-            onPress={startSession}
-            disabled={!ready}
-            activeOpacity={0.85}
-            style={[
-              {
-                height: 54,
-                borderRadius: 18,
-                alignItems: "center",
-                justifyContent: "center",
-                flexDirection: "row",
-                gap: 9,
-                backgroundColor: ready ? earn.deep : ink.ghost,
-              },
-              ready && fx.glow,
-            ]}
-          >
-            {ready && <LeafGlyph size={15} color={dark ? "#16261C" : "#FAF6EE"} />}
-            <Text style={{
-              fontFamily: FF.bodyMed, fontSize: 15, letterSpacing: 0.2,
-              color: ready ? (dark ? "#16261C" : "#FAF6EE") : ink.faint,
-            }}>
-              {ready ? "Drift in" : "Name your task first"}
-            </Text>
-          </TouchableOpacity>
-
-          {/* The deal, stated plainly */}
-          <Text style={{
-            fontFamily: FF.body, fontSize: 12, color: ink.faint,
-            textAlign: "center", marginTop: 16, lineHeight: 17,
-          }}>
-            Focus for a while — half of it comes back as screen time.
-          </Text>
         </ScrollView>
+
+        {/* Bottom dock — the task input lives down here, in thumb reach */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+        >
+          <View style={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 14 }}>
+            <View style={{
+              backgroundColor: paper.card,
+              borderRadius: 22,
+              borderWidth: 1,
+              borderColor: ink.border,
+              padding: 14,
+            }}>
+              <TextInput
+                value={task}
+                onChangeText={setTask}
+                placeholder="What needs your attention?"
+                placeholderTextColor={ink.faint}
+                maxLength={80}
+                style={{
+                  backgroundColor: paper.sand,
+                  borderWidth: 1.2,
+                  borderColor: ready ? earn.sage : "transparent",
+                  borderRadius: 16,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  fontFamily: FF.bodyMed,
+                  fontSize: 15,
+                  color: ink.deep,
+                }}
+                multiline={false}
+                returnKeyType="go"
+                onSubmitEditing={() => { if (ready) startSession(); }}
+                autoFocus={false}
+              />
+              <TouchableOpacity
+                onPress={startSession}
+                disabled={!ready}
+                activeOpacity={0.85}
+                style={[
+                  {
+                    height: 54,
+                    borderRadius: 18,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexDirection: "row",
+                    gap: 9,
+                    marginTop: 10,
+                    backgroundColor: ready ? earn.deep : ink.ghost,
+                  },
+                  ready && fx.glow,
+                ]}
+              >
+                {ready && <LeafGlyph size={15} color={dark ? "#16261C" : "#FAF6EE"} />}
+                <Text style={{
+                  fontFamily: FF.bodyMed, fontSize: 15, letterSpacing: 0.2,
+                  color: ready ? (dark ? "#16261C" : "#FAF6EE") : ink.faint,
+                }}>
+                  {ready ? "Drift in" : "Name your task first"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     );
   }
@@ -727,3 +771,5 @@ const s = {
   },
   collectBtnText: { fontFamily: FF.bodyMed, fontSize: 15 },
 };
+
+export default React.memo(DriftInScreen);

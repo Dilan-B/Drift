@@ -16,6 +16,8 @@ import { getLevelIdx, getLevel } from "./levels";
 import { notifyFriendRequest } from "./notifications";
 import { findContactsOnDrift, inviteContacts, contactsAvailable } from "./contacts";
 import ChallengeSheet from "./ChallengeModal";
+import RepChallengeModal from "./RepChallengeModal";
+import { POSE_EXERCISE_IDS, poseCameraAvailable } from "./PoseCamera";
 import Swipeable from "./Swipeable";
 import { cached, invalidateCache, rateLimited } from "./apiGuards";
 import { FF } from "./theme";
@@ -50,6 +52,8 @@ const palette = (dark) => dark ? {
   clay:    "#F0B984",
   clayLo:  "rgba(240,185,132,0.16)",
   glow: { shadowColor: "#C6F2A0", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6 },
+  auroraMint: "rgba(127,227,165,0.10)",
+  auroraClay: "rgba(240,185,132,0.055)",
 } : {
   bg: "#F7F7F4",
   card: "#FFFFFF",
@@ -68,6 +72,8 @@ const palette = (dark) => dark ? {
   clay:    "#B0764E",
   clayLo:  "#EEE0CF",
   glow: { shadowColor: "#1F3A2A", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.22, shadowRadius: 12, elevation: 5 },
+  auroraMint: "rgba(62,107,78,0.06)",
+  auroraClay: "rgba(176,118,78,0.05)",
 };
 
 /**
@@ -175,7 +181,7 @@ function Avatar({ username = "?", uri, size = 42 }) {
  * FriendRow. Each plant's growth state visually reflects the friend's
  * focus today. Tap to open stats; the challenge action lives there.
  */
-function FriendPlant({ friend, onPress, dark }) {
+const FriendPlant = React.memo(function FriendPlant({ friend, onPress, dark }) {
   const th = palette(dark);
   // The grove plant reflects the friend's LEVEL (Seedling → Old Growth from
   // their XP) — the same tier emblem shown on the Growth page and Today card.
@@ -230,7 +236,7 @@ function FriendPlant({ friend, onPress, dark }) {
       }} />
     </TouchableOpacity>
   );
-}
+});
 
 function LoadingState({ elapsedMs, dark }) {
   const th = palette(dark);
@@ -702,7 +708,11 @@ function PastChallengeRow({ item, myId, dark }) {
   );
 }
 
-export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onChallengeResolved, dark = false }) {
+// Memoized: this screen stays mounted in the tab filmstrip, so without memo
+// every App-level re-render (timer ticks, popups…) re-rendered this whole
+// tree and made Grove taps laggy/unresponsive. All props from Drift.jsx keep
+// stable identities.
+function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onChallengeResolved, dark = false }) {
   const th = palette(dark);
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -717,6 +727,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
   const [friendRequests, setFriendRequests] = useState([]);
   const [challenges, setChallenges] = useState([]);
   const [verifyingChallenge, setVerifyingChallenge] = useState(null);
+  const [repChallenge, setRepChallenge] = useState(null); // live pose-count verification
   const [toast, setToast] = useState("");
   const [showPast, setShowPast] = useState(false);
   const [selectedChallenge, setSelectedChallenge] = useState(null);
@@ -733,9 +744,9 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
   const seenReqIdsRef = useRef(null); // null until first load; then a Set of seen request ids
 
   useEffect(() => {
-    onSwipeLockChange?.(!!challengeTarget || showAdd || !!selectedChallenge || !!statsFriend || showPast || showContacts);
+    onSwipeLockChange?.(!!challengeTarget || showAdd || !!selectedChallenge || !!statsFriend || showPast || showContacts || !!repChallenge);
     return () => onSwipeLockChange?.(false);
-  }, [challengeTarget, showAdd, selectedChallenge, statsFriend, showPast, showContacts, onSwipeLockChange]);
+  }, [challengeTarget, showAdd, selectedChallenge, statsFriend, showPast, showContacts, repChallenge, onSwipeLockChange]);
 
   useEffect(() => {
     showedCachedFriendsRef.current = false;
@@ -861,7 +872,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
     // payload size matters. Add columns here as the UI starts using them.
     const COLS = [
       "id", "type", "status", "title", "exercise", "description",
-      "secs", "duration_mins",
+      "reps", "secs", "duration_mins",
       "challenger_id", "challenged_id", "winner_id",
       "challenger_done", "challenged_done",
       "created_at",
@@ -1063,6 +1074,19 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
     }
   };
 
+  // Route a "verify" tap to the right proof flow: exercise challenges with a
+  // pose config get LIVE rep counting (camera counts the reps, no photo);
+  // custom challenges — and any build where pose detection isn't available —
+  // keep the AI photo check.
+  const startVerify = (ch) => {
+    const isExercise = !!ch?.exercise && ch.exercise !== "custom";
+    if (isExercise && POSE_EXERCISE_IDS.has(ch.exercise) && poseCameraAvailable()) {
+      setRepChallenge(ch);
+    } else {
+      setVerifyingChallenge(ch);
+    }
+  };
+
   const markChallengeDone = async (challenge) => {
     const mine = challenge.challenger_id === userId ? "challenger_done" : "challenged_done";
     const winnerId = challenge.winner_id || userId;
@@ -1203,6 +1227,17 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
 
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
+      {/* Aurora pools — the same quiet light as the Drift In door */}
+      <View pointerEvents="none" style={{
+        position: "absolute", top: -120, right: -90,
+        width: 300, height: 300, borderRadius: 150,
+        backgroundColor: th.auroraMint,
+      }} />
+      <View pointerEvents="none" style={{
+        position: "absolute", bottom: -130, left: -100,
+        width: 280, height: 280, borderRadius: 140,
+        backgroundColor: th.auroraClay,
+      }} />
       {!!toast && (
         <View style={{
           position: "absolute", top: 14, left: 18, right: 18, zIndex: 50,
@@ -1453,7 +1488,7 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
                         myId={userId}
                         dark={dark}
                         onPress={setSelectedChallenge}
-                        onVerify={setVerifyingChallenge}
+                        onVerify={startVerify}
                       />
                     );
                     if (!canCancel) {
@@ -1624,6 +1659,23 @@ export default function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipe
           onSent={() => { setChallengeTarget(null); loadChallenges(); }}
           onClose={() => setChallengeTarget(null)}
           dark={dark}
+        />
+      )}
+
+      {repChallenge && (
+        <RepChallengeModal
+          challenge={repChallenge}
+          onVerified={() => {
+            const ch = repChallenge;
+            setRepChallenge(null);
+            markChallengeDone(ch);
+          }}
+          onUsePhoto={() => {
+            const ch = repChallenge;
+            setRepChallenge(null);
+            setVerifyingChallenge(ch);
+          }}
+          onClose={() => setRepChallenge(null)}
         />
       )}
 
@@ -1938,3 +1990,5 @@ const s = StyleSheet.create({
 });
 
 
+
+export default React.memo(SocialScreen);
