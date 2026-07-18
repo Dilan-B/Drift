@@ -4261,8 +4261,12 @@ export default function App() {
         //    it doesn't nag us while developing).
         const isExpoGo = Constants.appOwnership === "expo";
         if (Platform.OS === "ios" && !__DEV__ && !isExpoGo) {
+          // The App Store lookup MUST use the real native bundle id. This is a
+          // bare/prebuilt project, so the signed app is `com.sanghani.drift`
+          // (see ios/*.xcodeproj) — not app.json's historical `com.drift.app`.
+          // A wrong id makes iTunes return nothing → force-update never fires.
           const bundleId = Constants.expoConfig?.ios?.bundleIdentifier
-            || Constants.manifest?.ios?.bundleIdentifier || "com.drift.app";
+            || Constants.manifest?.ios?.bundleIdentifier || "com.sanghani.drift";
           const store = await fetchAppStoreLatest(bundleId);
           if (store?.version && isVersionOutdated(current, store.version)) {
             setUpdateStoreUrl(store.url || null);

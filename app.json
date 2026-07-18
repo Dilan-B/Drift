@@ -11,7 +11,7 @@
       "backgroundColor": "#0B1A11"
     },
     "ios": {
-      "bundleIdentifier": "com.drift.app",
+      "bundleIdentifier": "com.sanghani.drift",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Drift needs your camera to count reps automatically using pose detection.",
