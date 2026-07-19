@@ -15,7 +15,7 @@ import { useGoogleSignIn } from "./oauthSignIn";
 // import { AppleSignInButton } from "./appleSignIn";
 import { joinFamily, normalizeFamilyCode } from "./family";
 import { cached, rateLimited } from "./apiGuards";
-import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon, ClipboardIcon, SparkleIcon, UsersIcon } from "./Icons";
+import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon, ClipboardIcon, SparkleIcon, UsersIcon, BellIcon } from "./Icons";
 import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
 import Sprout, { Sprig, SeedDots } from "./SproutArt";
 import { FF } from "./theme";
@@ -62,6 +62,7 @@ const STEPS = [
   { id: "how1" },
   { id: "how2" },
   { id: "how3" },
+  { id: "how4" },
   // Account type is chosen here — PERMANENTLY — before auth. It decides the
   // whole downstream flow: personal → normal signup + questionnaire; parent →
   // signup only (management account); child → passwordless join by family code.
@@ -172,6 +173,13 @@ const HOW_SLIDES = [
     body: "Choose which apps to block.\nDrift enforces it even when closed.",
     detail: "No willpower needed. The system does the hard part.",
   },
+  {
+    id: "how4",
+    Icon: BellIcon,
+    headline: "Tasks can add\nthemselves",
+    body: "Save places like your gym, and Drift offers\nthe task when you arrive. It can pull in\ntoday's calendar events too.",
+    detail: "Both are optional, off until you turn them on, and stay on your device. Find them in Profile → Automatic tasks.",
+  },
 ];
 
 function HowItWorksSlide({ slideData, stepNum, onNext }) {
@@ -202,7 +210,7 @@ function HowItWorksSlide({ slideData, stepNum, onNext }) {
             </View>
           </View>
 
-          <Text style={styles.howKicker}>STEP {stepNum + 1} OF 3</Text>
+          <Text style={styles.howKicker}>STEP {stepNum + 1} OF {HOW_SLIDES.length}</Text>
 
           <Text style={{
             fontFamily: FF.display,
@@ -247,8 +255,8 @@ function HowItWorksSlide({ slideData, stepNum, onNext }) {
           gap: 7,
           marginBottom: 8,
         }}>
-          {[0, 1, 2].map(i => (
-            <View key={i} style={{
+          {HOW_SLIDES.map((s, i) => (
+            <View key={s.id} style={{
               width: i === stepNum ? 22 : 7,
               height: 7, borderRadius: 4,
               backgroundColor: i === stepNum ? ACCENT : "#DCE5DC",
@@ -259,7 +267,7 @@ function HowItWorksSlide({ slideData, stepNum, onNext }) {
 
       <TouchableOpacity style={styles.ctaBtn} onPress={onNext}>
         <Text style={styles.ctaBtnText}>
-          {stepNum === 2 ? "Let's set you up" : "Next"}
+          {stepNum === HOW_SLIDES.length - 1 ? "Let's set you up" : "Next"}
         </Text>
       </TouchableOpacity>
     </View>

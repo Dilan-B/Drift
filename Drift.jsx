@@ -19,8 +19,14 @@ import {
   clearPendingBalance, cache,
 } from "./sync";
 import { registerBackgroundRefresh } from "./backgroundRefresh";
-import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, scheduleDailyReminder, cancelAllNotifications } from "./notifications";
+import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTimeNotices, scheduleDailyReminder, cancelAllNotifications } from "./notifications";
 import { applyBlocking, clearBlocking } from "./blockedApps";
+// Importing places.js at module scope registers the geofence background task,
+// which iOS may wake the app directly into on a cold start.
+import { syncGeofences } from "./places";
+import { fetchTodayEvents, markImported, isCalendarSyncEnabled } from "./calendarSync";
+import SuggestedTaskModal from "./SuggestedTaskModal";
+import AutoTasksModal from "./AutoTasksModal";
 import { Spinner } from "./Skeleton";
 import Slider from "@react-native-community/slider";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
@@ -3174,6 +3180,11 @@ export default function App() {
   const [showBlockedApps,    setShowBlockedApps]    = useState(false);
   const [showBlockedHours,   setShowBlockedHours]   = useState(false);
   const [showRecurringTasks, setShowRecurringTasks] = useState(false);
+  const [showAutoTasks,      setShowAutoTasks]      = useState(false);
+  // Prefilled tasks awaiting confirmation (place arrivals / calendar imports).
+  // The queue IS the source of truth — the head is whatever's on screen — so a
+  // suggestion arriving while another is open can never be dropped.
+  const [suggestionQueue,    setSuggestionQueue]    = useState([]);
   const [firstTimeBlockedApps, setFirstTimeBlockedApps] = useState(false);
   const [showTutorial,       setShowTutorial]       = useState(false);
   const [tutorialTargets,    setTutorialTargets]    = useState(null); // measured rects for the coachmark spotlight
@@ -3442,8 +3453,13 @@ export default function App() {
     }
     // Local notifications: alert when time just ran out, or warn when crossing
     // below ~2 min. (Fires on the next drain/reconcile while the app is alive.)
+    // notifyOutOfTime/notifyLowTime are latched internally, so calling them on
+    // every drain tick still yields ONE notification per depletion episode.
     if (rem <= 0) {
       notifyOutOfTime();
+    } else if (prevSec <= 0) {
+      // Back in credit — re-arm so the next depletion notifies again.
+      resetTimeNotices();
     } else if (prevSec > 120 && rem <= 120) {
       notifyLowTime(Math.ceil(rem / 60));
     }
@@ -4653,6 +4669,9 @@ export default function App() {
 
     await clearBlocking().catch(() => {});
     shieldStateRef.current = "off";
+    // Balance is positive again — re-arm the "time's up" notice so the NEXT
+    // depletion notifies once (and clear any stale banner from the last one).
+    resetTimeNotices();
     const armedSeconds = Math.max(60, currentSeconds);
     let res = await startBalanceMonitoring(armedSeconds);
     if (res?.started === false && !/unavailable/i.test(res.reason || "")) {
@@ -4708,6 +4727,92 @@ export default function App() {
   const tryOpenAddTask = useCallback(() => {
     setOverlay("add");
   }, []);
+
+  // ── Suggested tasks (place arrival / calendar import) ────────
+  // Suggestions are shown one at a time; confirming or dismissing pulls the
+  // next off the queue. Nothing is ever added without the user confirming.
+  const queueSuggestions = useCallback((list) => {
+    const items = (list || []).filter(Boolean);
+    if (items.length === 0) return;
+    setSuggestionQueue(prev => [...prev, ...items]);
+  }, []);
+
+  const advanceSuggestion = useCallback(() => {
+    setSuggestionQueue(prev => prev.slice(1));
+  }, []);
+
+  // Tapping a place-arrival notification opens the prefilled confirm sheet.
+  // Covers both a warm tap (listener) and a cold start where the tap launched
+  // the app (getLastNotificationResponseAsync).
+  useEffect(() => {
+    if (appMode !== "personal") return;
+    let Notifications;
+    try { Notifications = require("expo-notifications"); } catch { return; }
+
+    const handle = (response) => {
+      const data = response?.notification?.request?.content?.data;
+      if (data?.type !== "place_suggestion") return;
+      queueSuggestions([{
+        title: data.title,
+        cat: data.cat,
+        minutes: data.minutes,
+        label: data.label,
+        source: "place",
+      }]);
+    };
+
+    let sub;
+    try {
+      sub = Notifications.addNotificationResponseReceivedListener(handle);
+      Notifications.getLastNotificationResponseAsync?.().then(r => { if (r) handle(r); }).catch(() => {});
+    } catch {}
+    return () => { try { sub?.remove(); } catch {} };
+  }, [appMode, queueSuggestions]);
+
+  // Re-register geofences at boot: the saved region set lives in the OS, and
+  // permissions can be revoked in Settings between launches.
+  useEffect(() => {
+    if (appMode !== "personal") return;
+    syncGeofences().catch(() => {});
+  }, [appMode]);
+
+  // Pull today's calendar events in as suggestions (user-triggered).
+  const importCalendarEvents = useCallback(async () => {
+    if (!(await isCalendarSyncEnabled())) return;
+    const events = await fetchTodayEvents();
+    if (events.length === 0) {
+      Alert.alert("Nothing to import", "No new events on today's calendar.");
+      return;
+    }
+    // Mark imported up-front so re-running never double-offers the same event;
+    // declining a suggestion just means no task, not "offer it again forever".
+    await markImported(events.map(e => e.eventId));
+    queueSuggestions(events.map(e => ({
+      title: e.title, cat: e.cat, minutes: e.minutes, source: "calendar",
+    })));
+  }, [queueSuggestions]);
+
+  // Auto-import on first foreground of the day when sync is on.
+  useEffect(() => {
+    if (appMode !== "personal" || !userId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!(await isCalendarSyncEnabled())) return;
+        const key = `drift_cal_autoimport_${userId}`;
+        const last = await AsyncStorage.getItem(key);
+        if (last === todayKey()) return;
+        const events = await fetchTodayEvents();
+        if (cancelled || events.length === 0) return;
+        await AsyncStorage.setItem(key, todayKey());
+        await markImported(events.map(e => e.eventId));
+        queueSuggestions(events.map(e => ({
+          title: e.title, cat: e.cat, minutes: e.minutes, source: "calendar",
+        })));
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [appMode, userId, queueSuggestions]);
 
   // Background AI valuation for a just-created task. Patches the provisional
   // credits/xp with the real evaluated values once the server responds. Never
@@ -5243,6 +5348,7 @@ export default function App() {
           }}
           onOpenBlockedHours={() => setShowBlockedHours(true)}
           onOpenRecurringTasks={() => setShowRecurringTasks(true)}
+          onOpenAutoTasks={() => setShowAutoTasks(true)}
           onRequestScreenTime={async () => {
             const next = await requestScreenTimeAuth();
             setScreenTimeStatus(next);
@@ -5360,6 +5466,36 @@ export default function App() {
       )}
       </>
       )}
+
+      {/* Suggested task (place arrival / calendar import) — confirm or edit */}
+      <SuggestedTaskModal
+        suggestion={suggestionQueue[0] || null}
+        dark={darkMode}
+        onConfirm={({ title, cat, minutes }) => {
+          const { credits, xp, reasoning } = freeTierCredits(minutes);
+          addTask({
+            id: makeUuid(),
+            title, cat, minutes,
+            done: false,
+            credits, xp,
+            aiCheck: false,
+            aiValued: false,
+            aiPending: false,
+            aiReasoning: reasoning || "",
+            task_date: todayKey(),
+          }, null);
+          advanceSuggestion();
+        }}
+        onDismiss={advanceSuggestion}
+      />
+
+      {/* Automatic-task settings (places + calendar) */}
+      <AutoTasksModal
+        visible={showAutoTasks}
+        dark={darkMode}
+        onClose={() => setShowAutoTasks(false)}
+        onImportCalendar={importCalendarEvents}
+      />
 
       {/* Add task overlay */}
       {overlay && (

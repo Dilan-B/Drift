@@ -10,6 +10,7 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { supabase } from "./supabase";
 import { FF, getTheme } from "./theme";
+import { LeafGlyph } from "./SproutArt";
 import { cached, invalidateCache, rateLimited } from "./apiGuards";
 import FeedbackModal from "./FeedbackModal";
 import RedeemCodeModal from "./RedeemCodeModal";
@@ -80,7 +81,7 @@ async function uploadAvatar(userId, sourceUri) {
 
 export default function ProfileScreen({
   userId, userEmail, username, subActive, trialDays, screenTimeStatus,
-  dark = false, onClose, onProfileChange, onOpenBlockedApps, onOpenBlockedHours, onOpenRecurringTasks,
+  dark = false, onClose, onProfileChange, onOpenBlockedApps, onOpenBlockedHours, onOpenRecurringTasks, onOpenAutoTasks,
   onRequestScreenTime, onUpgrade, onSignOut, onDeleteAccount, onProRedeemed,
   inAppPage = false,
 }) {
@@ -373,6 +374,13 @@ export default function ProfileScreen({
             cta={subActive ? "OPEN" : "PRO"}
             icon={(c) => <CheckIcon size={20} color={c} />}
             onPress={onOpenRecurringTasks}
+          />
+          <Row
+            id="autoTasks"
+            title="Automatic tasks"
+            sub="Suggest by place & calendar"
+            icon={(c) => <LeafGlyph size={19} color={c} />}
+            onPress={onOpenAutoTasks}
           />
           {/* Only surfaced when access is actually missing — an "Approved" row is
               a dead end the user can't act on. Hidden for "approved" and for

@@ -16,6 +16,10 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Drift needs your camera to count reps automatically using pose detection.",
         "NSMotionUsageDescription": "Drift uses motion data to detect exercise movement.",
+        "NSLocationWhenInUseUsageDescription": "Drift uses your location to save the places you choose, so it can suggest a task when you arrive. Your location stays on your device.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Drift checks when you arrive at places you've saved so it can suggest a task. This needs Always access to work in the background. Your location stays on your device and is never uploaded.",
+        "NSCalendarsUsageDescription": "Drift can read your calendar to offer today's events as tasks. It never changes your calendar and nothing is uploaded.",
+        "NSCalendarsFullAccessUsageDescription": "Drift can read your calendar to offer today's events as tasks. It never changes your calendar and nothing is uploaded.",
         "NSContactsUsageDescription": "Drift can match your contacts to find friends already on Drift. Contact emails are hashed on your device and never uploaded in plain text.",
         "CFBundleURLTypes": [
           {
@@ -41,6 +45,19 @@
         "react-native-vision-camera",
         {
           "cameraPermissionText": "Drift needs your camera to count reps automatically using pose detection."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Drift checks when you arrive at places you've saved so it can suggest a task. Your location stays on your device.",
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Drift can read your calendar to offer today's events as tasks. It never changes your calendar."
         }
       ],
       "react-native-fast-tflite",
