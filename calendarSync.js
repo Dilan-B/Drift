@@ -61,6 +61,25 @@ export async function requestCalendarPermission() {
   } catch { return false; }
 }
 
+/**
+ * Is this calendar backed by a Google account?
+ *
+ * We read the device calendar store, which already includes Google calendars
+ * whenever the user has added their Google account to the phone (iOS Settings
+ * → Calendar → Accounts). So "Google Calendar" needs no OAuth — it just needs
+ * to be identified, which is what this does: Google shows up as a CalDAV
+ * source whose name/owner is the gmail address or literally "Google".
+ */
+function looksGoogle(c) {
+  const hay = [
+    c?.source?.name,
+    c?.source?.type,
+    c?.ownerAccount,
+    c?.title,
+  ].filter(Boolean).join(" ").toLowerCase();
+  return /google|gmail|googlemail/.test(hay);
+}
+
 export async function listCalendars() {
   if (!Calendar) return [];
   try {
@@ -77,8 +96,36 @@ export async function listCalendars() {
         title: c.title || "Calendar",
         color: c.color || null,
         source: c.source?.name || "",
-      }));
+        isGoogle: looksGoogle(c),
+        // Birthday/holiday feeds are noise as tasks — flagged so the UI can
+        // avoid auto-selecting them.
+        isSubscribed: c?.allowsModifications === false,
+      }))
+      // Google first, then everything else, alphabetical within each group.
+      .sort((a, b) => (b.isGoogle - a.isGoogle) || a.title.localeCompare(b.title));
   } catch { return []; }
+}
+
+/**
+ * Default calendar selection, applied the first time sync is switched on:
+ * prefer Google calendars, fall back to the writable device calendars.
+ * Returns the ids it chose (already persisted).
+ */
+export async function applyDefaultCalendarSelection() {
+  const existing = await getSelectedCalendarIds();
+  if (existing.length > 0) return existing;
+
+  const cals = await listCalendars();
+  if (cals.length === 0) return [];
+
+  const google = cals.filter(c => c.isGoogle && !c.isSubscribed);
+  const chosen = google.length > 0
+    ? google
+    : cals.filter(c => !c.isSubscribed);
+
+  const ids = chosen.map(c => c.id);
+  await setSelectedCalendarIds(ids);
+  return ids;
 }
 
 // ── Category guessing ────────────────────────────────────────

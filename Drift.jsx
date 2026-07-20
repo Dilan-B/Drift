@@ -23,7 +23,7 @@ import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTim
 import { applyBlocking, clearBlocking } from "./blockedApps";
 // Importing places.js at module scope registers the geofence background task,
 // which iOS may wake the app directly into on a cold start.
-import { syncGeofences } from "./places";
+import { syncGeofences, isSuggestionsEnabled } from "./places";
 import { fetchTodayEvents, markImported, isCalendarSyncEnabled } from "./calendarSync";
 import SuggestedTaskModal from "./SuggestedTaskModal";
 import AutoTasksModal from "./AutoTasksModal";
@@ -676,12 +676,15 @@ function PlantSlider({
   );
 }
 
-function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPaywall }) {
+function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPaywall, onOpenAutoTasks }) {
   const { dark, theme } = useTheme();
   const { ink, paper, earn } = theme;
 
   const [title,    setTitle]    = useState("");
-  const [cat,      setCat]      = useState("work");
+  // Provisional only — the AI evaluator classifies the real category
+  // server-side and patches it in (see finalizeTaskCredits).
+  const [cat]                   = useState("life");
+  const [showAiInfo, setShowAiInfo] = useState(false);
   const [mins,     setMins]     = useState(30);
   const [aiCheck,  setAiCheck]  = useState(true); // AI Check is mandatory for Pro users
   const [evaluating, setEvaluating] = useState(false);
@@ -739,6 +742,10 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
     })
   ).current;
 
+  // Duration auto-guess from the title. The CATEGORY guess that used to live
+  // here is gone: the AI evaluator classifies it server-side (same round trip
+  // that values the task), so there's nothing for the user to pick and no
+  // frontend heuristic to disagree with the server.
   useEffect(() => {
     if (title.length < 4) return;
     const lo = title.toLowerCase();
@@ -752,11 +759,6 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
     else if (/read|study|practice|homework|review/i.test(lo)) setMins(20);
     else if (/gym|run|workout|swim|yoga|hike|work|meeting|code/i.test(lo)) setMins(30);
     else if (/no.*phone|deep.*clean|meal.*plan/i.test(lo)) setMins(60);
-    if      (/gym|run|push|squat|lift|workout|swim|yoga/i.test(lo)) setCat("physical");
-    else if (/walk|outside|park|hike|garden/i.test(lo))             setCat("outdoor");
-    else if (/work|meeting|email|report|code|call|zoom/i.test(lo))  setCat("work");
-    else if (/read|study|learn|book|practice/i.test(lo))            setCat("learning");
-    else if (/friend|dinner|date|mom|dad|drinks/i.test(lo))         setCat("social");
   }, [title]);
 
   const save = async () => {
@@ -910,33 +912,6 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                 <Sprout size={110} tone={dark ? "night" : "fresh"} />
               </View>
 
-              {/* Category */}
-              <Text style={fieldKicker}>CATEGORY</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {Object.entries(CATS).map(([k, v]) => {
-                  const active = cat === k;
-                  return (
-                    <TouchableOpacity
-                      key={k}
-                      onPress={() => setCat(k)}
-                      activeOpacity={0.8}
-                      style={{
-                        paddingVertical: 9, paddingHorizontal: 14, borderRadius: 999,
-                        borderWidth: 1.2,
-                        borderColor: active ? v.c : ink.border,
-                        backgroundColor: active ? `${v.c}18` : "transparent",
-                      }}
-                    >
-                      <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: active ? v.c : ink.mid }}>
-                        {v.l}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <View style={cardDivider} />
-
               {/* Length */}
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
                 <Text style={[fieldKicker, { marginBottom: 0 }]}>LENGTH</Text>
@@ -1087,31 +1062,60 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
             )}
             </View>
 
-            {/* AI check — a quiet note, not a control */}
-            <TouchableOpacity
-              onPress={() => { if (!isSubActive) onOpenPaywall?.(); }}
-              activeOpacity={isSubActive ? 1 : 0.7}
-              style={{
-                marginTop: 14,
-                flexDirection: "row", alignItems: "center", gap: 10,
-                padding: 14, borderRadius: 18,
-                backgroundColor: paper.card,
-                borderWidth: 1,
-                borderColor: ink.border,
-              }}
-            >
-              {isSubActive
-                ? <SparkleIcon size={16} color={earn.blue} />
-                : <LockIcon size={16} color={ink.mid} />}
-              <Text style={{ flex: 1, fontFamily: FF.body, fontSize: 12, color: ink.mid, lineHeight: 17 }}>
+            {/* AI check — just the mark by default. The explanation is one tap
+                away for anyone who wants it, instead of a permanent block of
+                text taking up the page. */}
+            <View style={{ alignItems: "center", marginTop: 16 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (!isSubActive) { onOpenPaywall?.(); return; }
+                  setShowAiInfo(v => !v);
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                activeOpacity={0.7}
+                style={{
+                  width: 38, height: 38, borderRadius: 19,
+                  alignItems: "center", justifyContent: "center",
+                  backgroundColor: showAiInfo ? earn.blueLo : ink.ghost,
+                  borderWidth: 1,
+                  borderColor: showAiInfo ? earn.blue : "transparent",
+                }}
+              >
                 {isSubActive
-                  ? "AI values this task and checks your proof before credits are earned."
-                  : "AI Check is a Pro feature."}
-              </Text>
-              {!isSubActive && (
-                <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: earn.sage, letterSpacing: 1 }}>UPGRADE</Text>
+                  ? <SparkleIcon size={17} color={earn.blue} />
+                  : <LockIcon size={16} color={ink.mid} />}
+              </TouchableOpacity>
+
+              {showAiInfo && isSubActive && (
+                <View style={{
+                  marginTop: 10,
+                  padding: 14, borderRadius: 18,
+                  backgroundColor: paper.card,
+                  borderWidth: 1, borderColor: ink.border,
+                }}>
+                  <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, lineHeight: 18, textAlign: "center" }}>
+                    AI reads your task to set its value and sort it into a
+                    category for you, then checks your proof before credits
+                    are earned.
+                  </Text>
+                </View>
               )}
-            </TouchableOpacity>
+
+              {/* Quiet pointer to the automatic sources — one line of text, and
+                  only while neither source is set up. */}
+              {onOpenAutoTasks && (
+                <TouchableOpacity
+                  onPress={onOpenAutoTasks}
+                  activeOpacity={0.7}
+                  style={{ marginTop: 18, paddingVertical: 6 }}
+                >
+                  <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, textAlign: "center" }}>
+                    or let Drift add them from your{" "}
+                    <Text style={{ fontFamily: FF.bodyMed, color: earn.sage }}>calendar or places</Text>
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </ScrollView>
 
           {/* Bottom dock — the task name lives down here, in thumb reach */}
@@ -1672,7 +1676,7 @@ function LevelUpModal({ level, dark, onClose }) {
   );
 }
 
-function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, onReduceScreenTime, onQuickGrant, quickGrantCount, grantMins, onSwipeLockChange, dark, secLeft }) {
+function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, onReduceScreenTime, onQuickGrant, quickGrantCount, grantMins, onSwipeLockChange, dark, secLeft, showAutoTasksHint, onOpenAutoTasks, onDismissAutoTasksHint }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Text color that sits on a `deep` (primary) button. In dark mode the deep
@@ -2024,6 +2028,36 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
           <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: onDeep }}>Add task</Text>
         </TouchableOpacity>
       </Animated.View>
+
+      {/* One-line nudge toward automatic tasks. Deliberately plain — a single
+          row of text, no icon block or illustration — and it removes itself
+          for good once set up or dismissed. */}
+      {showAutoTasksHint && (
+        <View style={{
+          flexDirection: "row", alignItems: "center", gap: 10,
+          paddingVertical: 12, paddingHorizontal: 14,
+          borderRadius: 16, marginBottom: 14,
+          backgroundColor: subtleActionBg,
+          borderWidth: 1, borderColor: subtleActionBorder,
+        }}>
+          <TouchableOpacity
+            onPress={onOpenAutoTasks}
+            activeOpacity={0.7}
+            style={{ flex: 1 }}
+          >
+            <Text style={{ fontFamily: FF.body, fontSize: 12.5, color: ink.mid, lineHeight: 18 }}>
+              Let tasks add themselves — from your calendar, or when you arrive
+              somewhere. <Text style={{ fontFamily: FF.bodyMed, color: earn.sage }}>Set up</Text>
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onDismissAutoTasksHint}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={{ fontSize: 16, color: ink.faint, lineHeight: 19 }}>×</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {tasks.length === 0 && (
         <Animated.View style={{
@@ -3181,6 +3215,9 @@ export default function App() {
   const [showBlockedHours,   setShowBlockedHours]   = useState(false);
   const [showRecurringTasks, setShowRecurringTasks] = useState(false);
   const [showAutoTasks,      setShowAutoTasks]      = useState(false);
+  // The Today nudge only exists until the user acts on it: it hides as soon as
+  // either feature is on, or once dismissed (dismissal is permanent).
+  const [autoTasksHint,      setAutoTasksHint]      = useState(false);
   // Prefilled tasks awaiting confirmation (place arrivals / calendar imports).
   // The queue IS the source of truth — the head is whatever's on screen — so a
   // suggestion arriving while another is open can never be dropped.
@@ -4776,6 +4813,30 @@ export default function App() {
     syncGeofences().catch(() => {});
   }, [appMode]);
 
+  // Decide whether the Today nudge should appear. Re-checked when the settings
+  // sheet closes so turning a feature on hides it immediately.
+  useEffect(() => {
+    if (appMode !== "personal") { setAutoTasksHint(false); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const dismissed = await AsyncStorage.getItem("drift_auto_tasks_hint_dismissed");
+        if (dismissed === "1") { if (!cancelled) setAutoTasksHint(false); return; }
+        const [places, cal] = await Promise.all([
+          isSuggestionsEnabled().catch(() => false),
+          isCalendarSyncEnabled().catch(() => false),
+        ]);
+        if (!cancelled) setAutoTasksHint(!places && !cal);
+      } catch { if (!cancelled) setAutoTasksHint(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [appMode, showAutoTasks]);
+
+  const dismissAutoTasksHint = useCallback(() => {
+    setAutoTasksHint(false);
+    AsyncStorage.setItem("drift_auto_tasks_hint_dismissed", "1").catch(() => {});
+  }, []);
+
   // Pull today's calendar events in as suggestions (user-triggered).
   const importCalendarEvents = useCallback(async () => {
     if (!(await isCalendarSyncEnabled())) return;
@@ -4837,15 +4898,19 @@ export default function App() {
     const credits = Math.min(MAX_REWARD_MINUTES, result.credits);
     const xp = credits === result.credits ? result.xp : Math.round(credits * 0.6 + 8);
     const { reasoning } = result;
+    // The model also classifies the category (the user no longer picks one).
+    // Fall back to whatever provisional value the task already carries if an
+    // older edge-function deploy doesn't return one.
+    const cat = result.category || t.cat || "life";
     setTasks(prev => {
       const nt = prev.map(x =>
-        x.id === t.id ? { ...x, credits, xp, aiReasoning: reasoning || "", aiValued: true, aiPending: false } : x
+        x.id === t.id ? { ...x, cat, credits, xp, aiReasoning: reasoning || "", aiValued: true, aiPending: false } : x
       );
       persist({ tasks: nt });
       if (userId) cacheFullTasks(userId, nt);
       return nt;
     });
-    if (userId) updateTaskCredits(userId, t.id, { credits, xp, reasoning, aiValued: true }).catch(() => {});
+    if (userId) updateTaskCredits(userId, t.id, { credits, xp, reasoning, aiValued: true, category: cat }).catch(() => {});
   };
 
   const addTask  = (t, recurrence) => {
@@ -5390,6 +5455,9 @@ export default function App() {
               onSwipeLockChange={setChildSwipeLockedNow}
               dark={darkMode}
               secLeft={displaySecLeft}
+              showAutoTasksHint={autoTasksHint}
+              onOpenAutoTasks={() => setShowAutoTasks(true)}
+              onDismissAutoTasksHint={dismissAutoTasksHint}
             />
           </View>
           <View style={{ width: TAB_W, height: "100%", backgroundColor: driftInActive ? th_ink.void : th_paper.warm }}>
@@ -5506,7 +5574,8 @@ export default function App() {
               onClose={() => setOverlay(null)}
               userId={userId}
               isSubActive={proAccess}
-              onOpenPaywall={() => {}}
+              onOpenPaywall={NOOP}
+              onOpenAutoTasks={autoTasksHint ? () => { setOverlay(null); setShowAutoTasks(true); } : null}
             />
           )}
         </View>

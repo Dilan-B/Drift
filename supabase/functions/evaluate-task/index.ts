@@ -87,7 +87,9 @@ serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const title    = String(body.title || "").slice(0, 200);
     const mins     = Math.max(1, Math.min(720, Number(body.mins) || 30));
-    const category = String(body.category || "life").slice(0, 30);
+    // `category` is now CLASSIFIED BY THE MODEL, not chosen by the user. Any
+    // value the client sends is only a provisional hint we ignore in the
+    // prompt — the server's answer is authoritative.
     if (!title) return json({ error: "Title required" }, 400);
 
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
@@ -108,11 +110,18 @@ serve(async (req: Request) => {
       `- Hard: ~1.0-1.5 cr/min\n\n` +
       `HARD RULE: credits MUST NEVER exceed 60, no matter how long or demanding ` +
       `the task is. A task of 3 hours or more earns at most 60.\n\n` +
+      `ALSO classify the task into exactly one category, chosen from this list ` +
+      `(use the id, lowercase): work (job, meetings, admin), physical (exercise, ` +
+      `sport, gym), outdoor (walking, hiking, gardening, being outside), ` +
+      `learning (study, reading, practising a skill), social (friends, family, ` +
+      `meals with others), life (chores, errands, cooking, self-care, anything ` +
+      `else). If two fit, pick the more specific one; use "life" only as a ` +
+      `fallback.\n\n` +
       `Task: "${title.replace(/"/g, "'")}"\n` +
-      `Duration: ${mins} min\nCategory: ${category}\n\n` +
+      `Duration: ${mins} min\n\n` +
       `XP ≈ credits × 0.6 + 8 (round to integer)\n\n` +
       `Reply ONLY this JSON (no markdown):\n` +
-      `{"productive":<bool>,"credits":<int>,"xp":<int>,"reasoning":"one short sentence"}`;
+      `{"productive":<bool>,"credits":<int>,"xp":<int>,"category":"<one of: work|physical|outdoor|learning|social|life>","reasoning":"one short sentence"}`;
 
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -135,9 +144,15 @@ serve(async (req: Request) => {
     const raw  = data.choices?.[0]?.message?.content || "{}";
     const content = raw.replace(/^```[\w]*\n?/m, "").replace(/```$/m, "").trim();
 
-    let result: { productive?: boolean; credits: number; xp: number; reasoning: string };
+    let result: { productive?: boolean; credits: number; xp: number; category?: string; reasoning: string };
     try { result = JSON.parse(content); }
     catch { return json({ error: "AI returned malformed response" }, 502); }
+
+    // Constrain the model's category to the app's fixed set — a hallucinated
+    // value would render as an unknown chip on the client.
+    const ALLOWED_CATEGORIES = ["work", "physical", "outdoor", "learning", "social", "life"];
+    const claimed = String(result.category || "").trim().toLowerCase();
+    result.category = ALLOWED_CATEGORIES.includes(claimed) ? claimed : "life";
 
     // Server-authoritative hard cap: non-productive tasks can never earn more than
     // 1/5 of their duration, regardless of what the model returned.

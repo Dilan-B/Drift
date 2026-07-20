@@ -105,6 +105,9 @@ const STEPS = [
       { id: "committed", label: "Committed", sub: "1 min per tap — earn everything" },
     ],
   },
+  // Last stop: offer the hands-off sources. One decision, skippable, and it's
+  // the only place in onboarding that asks for a system permission.
+  { id: "auto_tasks" },
 ];
 
 // ─── Welcome Screen ──────────────────────────────────────────────────────────
@@ -268,6 +271,85 @@ function HowItWorksSlide({ slideData, stepNum, onNext }) {
       <TouchableOpacity style={styles.ctaBtn} onPress={onNext}>
         <Text style={styles.ctaBtnText}>
           {stepNum === HOW_SLIDES.length - 1 ? "Let's set you up" : "Next"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── Automatic tasks opt-in ──────────────────────────────────────────────────
+// Deliberately a single yes/no. Turning it on requests the two permissions in
+// sequence; declining either one just leaves that half off, and the app is
+// fully functional either way.
+function AutoTasksSlide({ onNext }) {
+  const [busy, setBusy] = useState(false);
+
+  const enable = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      // Calendar first: it's the less intrusive prompt, so a user who bails
+      // after the first dialog still gets the more likely-useful half.
+      try {
+        const { setCalendarSyncEnabled, requestCalendarPermission, applyDefaultCalendarSelection } = require("./calendarSync");
+        const ok = await requestCalendarPermission();
+        if (ok) {
+          await setCalendarSyncEnabled(true);
+          await applyDefaultCalendarSelection();
+        }
+      } catch {}
+      try {
+        const { setSuggestionsEnabled } = require("./places");
+        await setSuggestionsEnabled(true);
+      } catch {}
+    } finally {
+      setBusy(false);
+      onNext();
+    }
+  };
+
+  return (
+    <View style={styles.slide}>
+      <View style={styles.howContent}>
+        <View style={styles.howIconWrap}>
+          <View style={styles.howIconDisc}>
+            <BellIcon size={30} color={ACCENT} strokeWidth={1.8} />
+          </View>
+        </View>
+
+        <Text style={styles.howKicker}>OPTIONAL</Text>
+
+        <Text style={{
+          fontFamily: FF.display, fontSize: 30, color: TEXT,
+          textAlign: "center", lineHeight: 37, letterSpacing: -0.3, marginBottom: 14,
+        }}>
+          {"Let tasks add\nthemselves?"}
+        </Text>
+
+        <Text style={{
+          fontFamily: FF.body, fontSize: 16, color: MUTED,
+          textAlign: "center", lineHeight: 24, marginBottom: 22, paddingHorizontal: 12,
+        }}>
+          {"Pull in today's calendar events, and offer\na task when you arrive at places you save."}
+        </Text>
+
+        <View style={styles.howDetail}>
+          <Text style={{
+            fontFamily: FF.bodyMed, fontSize: 14, color: "#2D5A3E",
+            textAlign: "center", lineHeight: 20,
+          }}>
+            You confirm every suggestion before it becomes a task. Your calendar
+            and location stay on your device.
+          </Text>
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.ctaBtn} onPress={enable} disabled={busy}>
+        <Text style={styles.ctaBtnText}>{busy ? "Setting up…" : "Yes, set it up"}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onNext} disabled={busy} style={{ paddingVertical: 14, alignItems: "center" }}>
+        <Text style={{ fontFamily: FF.body, fontSize: 14, color: MUTED }}>
+          Not now
         </Text>
       </TouchableOpacity>
     </View>
@@ -1232,7 +1314,7 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
       </View>
 
       {/* Progress bar (hidden on welcome/account-type/auth/how slides) */}
-      {step.id !== "welcome" && step.id !== "auth" && step.id !== "account_type" && !step.id?.startsWith("how") && (
+      {step.id !== "welcome" && step.id !== "auth" && step.id !== "account_type" && step.id !== "auto_tasks" && !step.id?.startsWith("how") && (
         <View style={styles.progressWrap}>
           {Array.from({ length: totalQuestions }).map((_, i) => (
             <View
@@ -1263,6 +1345,7 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
             onNext={goNext}
           />
         )}
+        {step.id === "auto_tasks" && <AutoTasksSlide onNext={goNext} />}
         {step.id === "auth" && accountType === "child" && isNewSignup && (
           <ChildJoinSlide onDone={handleAuthDone} />
         )}

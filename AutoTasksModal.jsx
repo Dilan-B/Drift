@@ -23,7 +23,7 @@ import {
 import {
   calendarAvailable, isCalendarSyncEnabled, setCalendarSyncEnabled,
   listCalendars, getSelectedCalendarIds, setSelectedCalendarIds,
-  requestCalendarPermission,
+  requestCalendarPermission, applyDefaultCalendarSelection,
 } from "./calendarSync";
 
 export default function AutoTasksModal({ visible, dark = false, onClose, onImportCalendar }) {
@@ -120,6 +120,9 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
         return;
       }
       setCalendars(await listCalendars());
+      // Preselect Google calendars (falling back to the device's own) so the
+      // common case needs zero taps.
+      setCalIds(await applyDefaultCalendarSelection());
     } finally {
       setCalLoading(false);
     }
@@ -330,7 +333,9 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                     <ActivityIndicator color={earn.sage} style={{ marginVertical: 12 }} />
                   ) : calendars.length === 0 ? (
                     <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, lineHeight: 18 }}>
-                      No calendars found.
+                      No calendars found. If you use Google Calendar, add your
+                      Google account in Settings → Calendar → Accounts, then
+                      come back.
                     </Text>
                   ) : (
                     <View style={{ gap: 8 }}>
@@ -352,9 +357,21 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                               backgroundColor: c.color || earn.sage,
                             }} />
                             <View style={{ flex: 1, minWidth: 0 }}>
-                              <Text numberOfLines={1} style={{ fontFamily: FF.bodyMed, fontSize: 14, color: ink.deep }}>
-                                {c.title}
-                              </Text>
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                <Text numberOfLines={1} style={{ fontFamily: FF.bodyMed, fontSize: 14, color: ink.deep, flexShrink: 1 }}>
+                                  {c.title}
+                                </Text>
+                                {c.isGoogle && (
+                                  <View style={{
+                                    paddingVertical: 2, paddingHorizontal: 7, borderRadius: 999,
+                                    backgroundColor: earn.sageLo,
+                                  }}>
+                                    <Text style={{ fontFamily: FF.kicker, fontSize: 7, color: earn.sage, letterSpacing: 1 }}>
+                                      GOOGLE
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
                               {!!c.source && (
                                 <Text numberOfLines={1} style={{ fontFamily: FF.body, fontSize: 11, color: ink.mid, marginTop: 2 }}>
                                   {c.source}
