@@ -592,6 +592,15 @@ function freeTierCredits(mins) {
 }
 
 // ── Add Task Overlay ─────────────────────────────────────────
+const REPEAT_OPTIONS = [
+  ["none", "Just once"],
+  ["daily", "Every day"],
+  ["weekdays", "Weekdays"],
+  ["weekends", "Weekends"],
+  ["custom", "Custom days"],
+];
+const REPEAT_LABELS = Object.fromEntries(REPEAT_OPTIONS);
+
 function PlantSlider({
   value,
   onValueChange,
@@ -685,6 +694,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
   // server-side and patches it in (see finalizeTaskCredits).
   const [cat]                   = useState("life");
   const [showAiInfo, setShowAiInfo] = useState(false);
+  const [repeatOpen, setRepeatOpen] = useState(false);
   const [mins,     setMins]     = useState(30);
   const [aiCheck,  setAiCheck]  = useState(true); // AI Check is mandatory for Pro users
   const [evaluating, setEvaluating] = useState(false);
@@ -818,6 +828,9 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
   const enterScale = entrance.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] });
   const ready = !!title.trim();
   const durLabel = mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60 ? `${mins%60}m` : ""}`.trim() : `${mins}m`;
+  // Same duration-based formula the task is created with, so the preview
+  // matches what actually lands before AI re-values it.
+  const earnPreview = freeTierCredits(mins);
   const fieldKicker = { fontFamily: FF.kicker, fontSize: 9, color: ink.faint, letterSpacing: 2.4, marginBottom: 10 };
   const cardDivider = { height: 1, backgroundColor: ink.hairline, marginVertical: 20 };
 
@@ -935,16 +948,31 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
 
               <View style={cardDivider} />
 
-              {/* Repeat */}
-              <Text style={fieldKicker}>REPEAT</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {[
-                ["none", "Once"],
-                ["daily", "Daily"],
-                ["weekdays", "Weekdays"],
-                ["weekends", "Weekends"],
-                ["custom", "Custom"],
-              ].map(([value, label]) => {
+              {/* Repeat — collapsed to a single row showing the current choice.
+                  Five pills for something most tasks never change was a lot of
+                  visual noise for a one-off decision. */}
+              <TouchableOpacity
+                onPress={() => setRepeatOpen(v => !v)}
+                activeOpacity={0.7}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+              >
+                <Text style={[fieldKicker, { marginBottom: 0 }]}>REPEAT</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: recur === "none" ? ink.mid : earn.sage }}>
+                    {REPEAT_LABELS[recur] || "Once"}
+                  </Text>
+                  <Text style={{
+                    fontFamily: FF.body, fontSize: 11, color: ink.faint,
+                    transform: [{ rotate: repeatOpen ? "180deg" : "0deg" }],
+                  }}>
+                    ▾
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {repeatOpen && (
+              <View style={{ marginTop: 14, gap: 2 }}>
+              {REPEAT_OPTIONS.map(([value, label]) => {
                 const active = recur === value;
                 return (
                   <TouchableOpacity
@@ -955,25 +983,27 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                         return;
                       }
                       setRecur(value);
+                      // Collapse on pick unless there's more to configure.
+                      if (value === "none" || !isSubActive) setRepeatOpen(false);
                     }}
-                    activeOpacity={0.8}
+                    activeOpacity={0.7}
                     style={{
-                      paddingVertical: 9,
-                      paddingHorizontal: 14,
-                      borderRadius: 999,
-                      borderWidth: 1.2,
-                      borderColor: active ? earn.sage : ink.border,
+                      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                      paddingVertical: 12, paddingHorizontal: 14,
+                      borderRadius: 14,
                       backgroundColor: active ? earn.sageLo : "transparent",
                     }}
                   >
-                    <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: active ? earn.sage : ink.mid }}>
+                    <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: active ? earn.sage : ink.mid }}>
                       {label}
                     </Text>
+                    {active && <CheckIcon size={15} color={earn.sage} />}
                   </TouchableOpacity>
                 );
               })}
-            </View>
-            {!isSubActive && (
+              </View>
+              )}
+              {repeatOpen && !isSubActive && (
               <TouchableOpacity
                 onPress={onOpenPaywall}
                 style={{
@@ -993,7 +1023,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                 <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: earn.sage, letterSpacing: 1 }}>UPGRADE</Text>
               </TouchableOpacity>
             )}
-            {recur !== "none" && isSubActive && (
+            {repeatOpen && recur !== "none" && isSubActive && (
               <View style={{
                 marginTop: 12,
                 gap: 10,
@@ -1060,6 +1090,37 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                 )}
               </View>
             )}
+
+              <View style={cardDivider} />
+
+              {/* Earn preview — fills the space the category picker left with
+                  the one thing worth knowing before you commit: what this is
+                  worth. Estimated, because the AI sets the final value. */}
+              <Text style={fieldKicker}>YOU'LL EARN</Text>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: FF.display, fontSize: 26, color: earn.sage, letterSpacing: -0.4 }}>
+                    {earnPreview.credits}m
+                  </Text>
+                  <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.mid, marginTop: 2 }}>
+                    screen time
+                  </Text>
+                </View>
+                <View style={{ width: 1, height: 36, backgroundColor: ink.hairline, marginHorizontal: 16 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: FF.display, fontSize: 26, color: earn.clay, letterSpacing: -0.4 }}>
+                    +{earnPreview.xp}
+                  </Text>
+                  <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.mid, marginTop: 2 }}>
+                    experience
+                  </Text>
+                </View>
+              </View>
+              {isSubActive && (
+                <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.faint, marginTop: 10, lineHeight: 16 }}>
+                  Estimated — AI sets the final value from what the task asks of you.
+                </Text>
+              )}
             </View>
 
             {/* AI check — just the mark by default. The explanation is one tap
