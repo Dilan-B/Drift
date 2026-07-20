@@ -27,6 +27,42 @@ let ImageManipulator = null;
 try { ImagePicker = require("expo-image-picker"); } catch {}
 try { ImageManipulator = require("expo-image-manipulator"); } catch {}
 
+// Public Wi-Fi (gyms, cafés, campuses) is the single most common cause of this
+// failing while the phone insists it's online: the captive portal accepts the
+// association, shows full bars, and then silently drops or hijacks HTTPS to
+// hosts it hasn't whitelisted. iOS keeps routing over Wi-Fi because it looks
+// connected, so cellular never takes over. Naming that beats "check your
+// connection", which is the one thing the user has already verified.
+const NO_REACH_MSG =
+  "Couldn't reach the AI service. If you're on public Wi-Fi (a gym, café or campus network), it may be blocking Drift — turn Wi-Fi off to use cellular and try again.";
+
+// How long we'll wait for the edge function before giving up. The server aims
+// to answer within ~45s; past 50s the request is not going to land, and
+// without this the platform default leaves the spinner up indefinitely on a
+// half-open connection — which is what a captive portal produces.
+const INVOKE_TIMEOUT_MS = 50_000;
+
+/**
+ * Reject if `promise` hasn't settled in `ms`.
+ *
+ * supabase-js has no per-invoke timeout, and React Native's underlying fetch
+ * will happily sit on a connection that was accepted but never answered — the
+ * exact failure a captive portal produces. Without this the user watches a
+ * spinner until they force-quit, which is what "restarting didn't help" looks
+ * like from the inside.
+ */
+function withTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((_resolve, reject) => {
+    timer = setTimeout(() => {
+      const e = new Error("Request timed out");
+      e.name = "AbortError";
+      reject(e);
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 // Force-shrink to at most ~600px on the long edge with JPEG 0.5 — keeps
 // the image under ~150 KB so OpenAI doesn't choke and we don't hit the
 // Edge Function WallClockTime limit.
@@ -133,14 +169,17 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
       let invokeErr = null;
       try {
         const res = await rateLimited("ai_verify", { limit: 8, windowMs: 60 * 60_000 }, () =>
-          supabase.functions.invoke("verify-task", {
-          body: {
-            taskTitle:    task.title,
-            durationMins: task.minutes,
-            proofText:    proofText.trim() || undefined,
-            imageBase64:  photo?.base64 || undefined,
-          },
-          })
+          withTimeout(
+            supabase.functions.invoke("verify-task", {
+              body: {
+                taskTitle:    task.title,
+                durationMins: task.minutes,
+                proofText:    proofText.trim() || undefined,
+                imageBase64:  photo?.base64 || undefined,
+              },
+            }),
+            INVOKE_TIMEOUT_MS
+          )
         );
         body = res.data;
         invokeErr = res.error;
@@ -165,9 +204,12 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
         return;
       }
 
-      // Rate limit
-      if (body?.error === "rate_limit") {
-        setRateLimitMsg(body.message || "Rate limit exceeded. Try again later.");
+      // Rate limit. Also keyed on the raw 429 — when supabase-js has already
+      // consumed the error body we get a status and no body, and reporting
+      // that as a connection failure is what made a plain rate-limit look
+      // like being offline.
+      if (body?.error === "rate_limit" || status === 429) {
+        setRateLimitMsg(body?.message || "You've hit the AI Check limit for now. Try again a bit later.");
         return;
       }
 
@@ -191,9 +233,17 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
       if (invokeErr) {
         // Dev-only: log the bare minimum (no body, no PII)
         if (__DEV__) console.warn("[AI Check] edge failure status", status);
+        // A status means the request REACHED the server and it answered — so
+        // never blame the user's connection here. Saying "check your
+        // connection" for a 500 sends people to reboot their router over a
+        // server-side fault, which is exactly the wrong place to look.
         Alert.alert(
           "Verification failed",
-          "We couldn't reach the AI service. Please try again in a moment."
+          status >= 500
+            ? "The AI service is having trouble right now. Try again in a moment."
+            : status > 0
+              ? `The AI service rejected the request (error ${status}). Try again, or use text-only proof.`
+              : NO_REACH_MSG
         );
         return;
       }
@@ -208,11 +258,11 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
         setRateLimitMsg(e?.message || "You've done a lot of AI Checks. Try again in a little while.");
         return;
       }
-      let msg = "Could not reach the AI. Check your connection and try again.";
-      if (raw.includes("aborted") || raw.includes("timeout")) {
-        msg = "AI took too long. Try a smaller photo.";
-      } else if (raw.includes("network") || raw.includes("fetch")) {
-        msg = "Network error. Check your connection.";
+      let msg = NO_REACH_MSG;
+      if (e?.name === "AbortError" || raw.includes("aborted") || raw.includes("timeout")) {
+        msg = "The AI check timed out. This often means the Wi-Fi you're on is blocking Drift — try turning Wi-Fi off to use cellular, then retry.";
+      } else if (raw.includes("network") || raw.includes("fetch") || raw.includes("failed to send")) {
+        msg = NO_REACH_MSG;
       }
       Alert.alert("Verification failed", msg);
     } finally {

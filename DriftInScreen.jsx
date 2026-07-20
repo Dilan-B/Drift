@@ -19,6 +19,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import Svg, { Circle as SvgCircle } from "react-native-svg";
 import { FF, getTheme } from "./theme";
 import Slider from "@react-native-community/slider";
+import { selectionTick } from "./haptics";
 import { CheckIcon } from "./Icons";
 import Sprout, { LeafGlyph } from "./SproutArt";
 
@@ -84,6 +85,24 @@ function PlantSlider({
   const pct = Math.max(0, Math.min(1, (value - minimumValue) / (maximumValue - minimumValue)));
   const leaves = [0.2, 0.4, 0.6, 0.8];
 
+  // Feedback on each step crossing: a haptic tick plus a quick swell of the
+  // filled track. Fired only when the value actually changes step, so dragging
+  // within one step stays silent instead of machine-gunning.
+  const lastValRef = useRef(value);
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  const handleChange = (v) => {
+    if (v !== lastValRef.current) {
+      lastValRef.current = v;
+      selectionTick();
+      pulse.setValue(1);
+      Animated.timing(pulse, {
+        toValue: 0, duration: 180, useNativeDriver: false,
+      }).start();
+    }
+    onValueChange(v);
+  };
+
   return (
     <View style={{ marginTop: 2 }}>
       <View style={{ height: 34, justifyContent: "center", marginHorizontal: 2 }}>
@@ -101,11 +120,14 @@ function PlantSlider({
             overflow: "hidden",
           }}
         >
-          <View style={{
+          <Animated.View style={{
             width: `${pct * 100}%`,
             height: "100%",
             backgroundColor: accent,
             borderRadius: 8,
+            // Brief brightening on each step — visible feedback for anyone
+            // with system haptics turned off.
+            opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.62] }),
           }} />
         </View>
         {leaves.map((stop, i) => {
@@ -137,7 +159,7 @@ function PlantSlider({
           maximumValue={maximumValue}
           step={step}
           value={value}
-          onValueChange={onValueChange}
+          onValueChange={handleChange}
           minimumTrackTintColor="transparent"
           maximumTrackTintColor="transparent"
           thumbTintColor={accent}
@@ -151,6 +173,11 @@ function PlantSlider({
     </View>
   );
 }
+
+// Most screen time a single Drift In session can pay out, however long it ran.
+// Sessions themselves are still unrestricted — a 5-hour deep-work block is a
+// fine thing to do, it just doesn't buy more than an hour of phone.
+const MAX_EARN_MINS = 60;
 
 // ── Main component ────────────────────────────────────────────
 // Memoized: stays mounted in the tab filmstrip; see SocialScreen note.
@@ -310,7 +337,10 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
 
   const elapsed       = secTotal - secLeft;
   const focusMins     = Math.max(0, Math.floor(elapsed / 60)); // full minutes focused
-  const creditsEarned = Math.floor(focusMins / 2);             // screen time = HALF the time drifted in
+  // Screen time = HALF the time drifted in, capped at MAX_EARN_MINS. A 5h
+  // session earns the same hour a 2h session does — long sessions are still
+  // worth doing for the XP, which is uncapped.
+  const creditsEarned = Math.min(MAX_EARN_MINS, Math.floor(focusMins / 2));
   const xpEarned      = focusMins > 0 ? Math.round(focusMins * 1.5 * 0.45 + 8) : 0;
   const progress      = secTotal > 0 ? elapsed / secTotal : 0;
 
@@ -400,8 +430,9 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
                   Name the one thing you want to focus on and choose a length.
                   While you're drifted in, your blocked apps stay locked and the
                   timer keeps running even if you close Drift. Finish the session
-                  and half of your focused time comes back as screen time, plus
-                  experience toward your tier. Abandoning early earns nothing.
+                  and half of your focused time comes back as screen time — up to
+                  a maximum of 60 minutes — plus experience toward your tier,
+                  which isn't capped. Abandoning early earns nothing.
                 </Text>
               </View>
             )}
@@ -452,10 +483,10 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: FF.display, fontSize: 26, color: earn.sage, letterSpacing: -0.4 }}>
-                  {Math.floor(dur / 2)}m
+                  {Math.min(MAX_EARN_MINS, Math.floor(dur / 2))}m
                 </Text>
                 <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                  screen time
+                  {Math.floor(dur / 2) > MAX_EARN_MINS ? "screen time (max)" : "screen time"}
                 </Text>
               </View>
               <View style={{ width: 1, height: 36, backgroundColor: ink.hairline, marginHorizontal: 16 }} />

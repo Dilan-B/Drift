@@ -18,6 +18,14 @@ try { Calendar = require("expo-calendar"); } catch {}
 const ENABLED_KEY   = "drift_calendar_sync_enabled";
 const CALENDARS_KEY = "drift_calendar_ids";
 const IMPORTED_KEY  = "drift_calendar_imported";  // { [eventId]: dateKey }
+const SOURCE_KEY    = "drift_calendar_source";    // "google" | "device"
+const AUTO_IMPORT_KEY = "drift_calendar_auto_import"; // "1" | "0", absent = on
+
+// Google is the default source: most people live in Google Calendar, and the
+// iOS calendar store surfaces it as soon as the account is added to the phone.
+// "device" is the escape hatch for people who actually use Apple Calendar.
+export const CAL_SOURCE_GOOGLE = "google";
+export const CAL_SOURCE_DEVICE = "device";
 
 // Events we should never turn into tasks: all-day blocks, declined invites,
 // and anything absurdly long (a multi-day "vacation" is not a task).
@@ -50,6 +58,33 @@ export async function getSelectedCalendarIds() {
 
 export async function setSelectedCalendarIds(ids) {
   try { await AsyncStorage.setItem(CALENDARS_KEY, JSON.stringify(ids || [])); } catch {}
+}
+
+/**
+ * Auto-import: pull today's events in on the first foreground of the day
+ * without being asked. On by default — that was the behaviour before this was
+ * a setting, so existing users see no change. Off means the "Import today's
+ * events" button is the only way events come in.
+ */
+export async function isCalendarAutoImportEnabled() {
+  try { return (await AsyncStorage.getItem(AUTO_IMPORT_KEY)) !== "0"; } catch { return true; }
+}
+
+export async function setCalendarAutoImportEnabled(on) {
+  try { await AsyncStorage.setItem(AUTO_IMPORT_KEY, on ? "1" : "0"); } catch {}
+}
+
+export async function getCalendarSource() {
+  try {
+    const v = await AsyncStorage.getItem(SOURCE_KEY);
+    return v === CAL_SOURCE_DEVICE ? CAL_SOURCE_DEVICE : CAL_SOURCE_GOOGLE;
+  } catch { return CAL_SOURCE_GOOGLE; }
+}
+
+export async function setCalendarSource(source) {
+  const v = source === CAL_SOURCE_DEVICE ? CAL_SOURCE_DEVICE : CAL_SOURCE_GOOGLE;
+  try { await AsyncStorage.setItem(SOURCE_KEY, v); } catch {}
+  return v;
 }
 
 // ── Permission + calendar list ───────────────────────────────
@@ -106,26 +141,53 @@ export async function listCalendars() {
   } catch { return []; }
 }
 
+/** Does the phone have a Google account wired into the calendar store? */
+export async function hasGoogleCalendar() {
+  const cals = await listCalendars();
+  return cals.some(c => c.isGoogle && !c.isSubscribed);
+}
+
+/** Calendars belonging to the given source, ignoring subscribed noise feeds. */
+function calendarsForSource(cals, source) {
+  const usable = cals.filter(c => !c.isSubscribed);
+  return source === CAL_SOURCE_GOOGLE
+    ? usable.filter(c => c.isGoogle)
+    : usable.filter(c => !c.isGoogle);
+}
+
 /**
- * Default calendar selection, applied the first time sync is switched on:
- * prefer Google calendars, fall back to the writable device calendars.
- * Returns the ids it chose (already persisted).
+ * Select every calendar belonging to `source`, replacing whatever was selected
+ * before. Used when the user switches source — the old source's calendars
+ * should not linger in the selection.
+ *
+ * Returns { ids, empty } so the caller can prompt when a source has nothing in
+ * it (the "Google is default but no Google account" case).
+ */
+export async function selectCalendarsForSource(source) {
+  const cals = await listCalendars();
+  const ids = calendarsForSource(cals, source).map(c => c.id);
+  await setSelectedCalendarIds(ids);
+  return { ids, empty: ids.length === 0 };
+}
+
+/**
+ * Default calendar selection, applied the first time sync is switched on.
+ * Honours the stored source (Google by default). If Google has no calendars —
+ * no Google account on the phone — fall back to the device's own and persist
+ * that switch, so the settings UI shows the source we actually used instead of
+ * claiming Google while importing from Apple Calendar.
  */
 export async function applyDefaultCalendarSelection() {
   const existing = await getSelectedCalendarIds();
   if (existing.length > 0) return existing;
 
-  const cals = await listCalendars();
-  if (cals.length === 0) return [];
+  const source = await getCalendarSource();
+  const { ids, empty } = await selectCalendarsForSource(source);
+  if (!empty || source === CAL_SOURCE_DEVICE) return ids;
 
-  const google = cals.filter(c => c.isGoogle && !c.isSubscribed);
-  const chosen = google.length > 0
-    ? google
-    : cals.filter(c => !c.isSubscribed);
-
-  const ids = chosen.map(c => c.id);
-  await setSelectedCalendarIds(ids);
-  return ids;
+  await setCalendarSource(CAL_SOURCE_DEVICE);
+  const fallback = await selectCalendarsForSource(CAL_SOURCE_DEVICE);
+  return fallback.ids;
 }
 
 // ── Category guessing ────────────────────────────────────────

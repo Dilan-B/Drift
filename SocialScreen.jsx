@@ -68,7 +68,7 @@ const palette = (dark) => dark ? {
   input: "#FAF6EE",
   sage:    "#3E6B4E",
   sageInk: "#3E6B4E",
-  deep:    "#1F3A2A",
+  deep:    "#3A6B4F",   // lifted from #1F3A2A — see theme.js earn.deep
   clay:    "#B0764E",
   clayLo:  "#EEE0CF",
   glow: { shadowColor: "#1F3A2A", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.22, shadowRadius: 12, elevation: 5 },

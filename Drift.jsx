@@ -24,11 +24,12 @@ import { applyBlocking, clearBlocking } from "./blockedApps";
 // Importing places.js at module scope registers the geofence background task,
 // which iOS may wake the app directly into on a cold start.
 import { syncGeofences, isSuggestionsEnabled } from "./places";
-import { fetchTodayEvents, markImported, isCalendarSyncEnabled } from "./calendarSync";
+import { fetchTodayEvents, markImported, isCalendarSyncEnabled, isCalendarAutoImportEnabled } from "./calendarSync";
 import SuggestedTaskModal from "./SuggestedTaskModal";
 import AutoTasksModal from "./AutoTasksModal";
 import { Spinner } from "./Skeleton";
 import Slider from "@react-native-community/slider";
+import { selectionTick } from "./haptics";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { useFonts } from "expo-font";
 import {
@@ -71,6 +72,7 @@ import { supabase, syncScreenTime, safeGetSession, saveOnboardingResponses, getA
 import ForceUpdateModal from "./ForceUpdateModal";
 import { handleSupabaseAuthCallback } from "./authLinks";
 import SocialScreen from "./SocialScreen";
+import LabScreen from "./LabScreen";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
@@ -565,7 +567,11 @@ const MIN_REWARD_RATIO = 0.25;
 // long tail (a 3h+ task tops out here rather than scaling forever).
 const MAX_REWARD_MINUTES = 60;
 // const FREE_TASK_LIMIT = 5; // removed — no free tier limits for now
-const DIFFICULTY_GRANT = { easy: 15, medium: 7, hard: 3, committed: 1 };
+// iOS Screen Time re-applies a shield on a ~15-minute granularity, so any grant
+// smaller than that doesn't actually block on time — the old per-difficulty
+// values (1/3/7 min) all behaved like 15 in practice. One honest constant
+// instead of a choice the OS ignores.
+const GRANT_MINS = 15;
 
 const BLOCKED_TASK_RE = /\b(goon|gooning|fap|fapping|jerk\s*off|jack\s*off|wank|masturbat|porn|hentai|onlyfans|xvideo|xhamster|nhentai|rule\s*34|edg(e|ing)\b(?!.*code)|69|blow\s*job|hand\s*job|sex(?!t)|nud[ei]|xxx|orgasm|boner|erection|cum\b|suck\s*(my|a|it)|eat\s*ass|anal\b|dildo|vibrator|fleshlight)\b/i;
 const VAGUE_TASK_RE = /^(stuff|things?|work|task|do it|idk|whatever|something|nothing|asdf|aaa+|test|hi|hey|lol|bruh|hmm+|ok|yes|no|nah|yep|pls|help|bro|dude|chill|vibe|vibes|blah|meh|ugh|haha|lmao|yolo|swag|based|slay|cap|bet|fr|ngl|tbh|ong|fam|sus|ratio|w|l|x+|z+|\.+|!+|\?+|a{2,}|ha+)$/i;
@@ -620,6 +626,21 @@ function PlantSlider({
   const pct = Math.max(0, Math.min(1, (value - minimumValue) / (maximumValue - minimumValue)));
   const leaves = [0.2, 0.4, 0.6, 0.8];
 
+  // Step-crossing feedback — mirrors the Drift In slider. See that copy for
+  // why the tick is gated on an actual value change.
+  const lastValRef = useRef(value);
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  const handleChange = (v) => {
+    if (v !== lastValRef.current) {
+      lastValRef.current = v;
+      selectionTick();
+      pulse.setValue(1);
+      Animated.timing(pulse, { toValue: 0, duration: 180, useNativeDriver: false }).start();
+    }
+    onValueChange(v);
+  };
+
   return (
     <View style={{ marginTop: 2 }}>
       <View style={{ height: 34, justifyContent: "center", marginHorizontal: 2 }}>
@@ -637,11 +658,12 @@ function PlantSlider({
             overflow: "hidden",
           }}
         >
-          <View style={{
+          <Animated.View style={{
             width: `${pct * 100}%`,
             height: "100%",
             backgroundColor: accent,
             borderRadius: 8,
+            opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.62] }),
           }} />
         </View>
         {leaves.map((stop, i) => {
@@ -673,7 +695,7 @@ function PlantSlider({
           maximumValue={maximumValue}
           step={step}
           value={value}
-          onValueChange={onValueChange}
+          onValueChange={handleChange}
           minimumTrackTintColor="transparent"
           maximumTrackTintColor="transparent"
           thumbTintColor={accent}
@@ -1763,7 +1785,7 @@ function LevelUpModal({ level, dark, onClose }) {
   );
 }
 
-function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, onReduceScreenTime, onQuickGrant, quickGrantCount, grantMins, onSwipeLockChange, dark, secLeft, showAutoTasksHint, onOpenAutoTasks, onDismissAutoTasksHint }) {
+function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, scrollRef, onReduceScreenTime, onQuickGrant, quickGrantCount, grantMins, onSwipeLockChange, dark, secLeft, showAutoTasksHint, onOpenAutoTasks, onDismissAutoTasksHint }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Text color that sits on a `deep` (primary) button. In dark mode the deep
@@ -1835,6 +1857,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
       dark={dark}
     />
     <ScrollView
+      ref={scrollRef}
       style={{ flex: 1, backgroundColor: paper.warm }}
       contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 130 }}
       showsVerticalScrollIndicator={false}
@@ -2095,25 +2118,42 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
         }}>
           TODAY
         </Text>
-        <TouchableOpacity
+        {/* The tour spotlights this button, and getting its rect has been
+            fiddly: a ref on the TouchableOpacity — or on a style-less wrapper —
+            resolves to the parent row under view flattening, and that row is
+            `space-between`, so the hole landed on the "TODAY" kicker instead of
+            the button. See the onLayout note below for what actually fixes it. */}
+        <View
           ref={addRef}
-          onPress={onAdd}
-          activeOpacity={0.85}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            paddingVertical: 11,
-            paddingHorizontal: 16,
-            borderRadius: 14,
-            backgroundColor: earn.deep,
-            // The primary CTA is a light source — let it glow in both modes.
-            ...theme.fx.glow,
-          }}
+          collapsable={false}
+          // NOT dead code: a View carrying an onLayout handler is never
+          // flattened away, which is what guarantees `addRef` points at a real
+          // host node instead of resolving to the parent row. We deliberately
+          // do NOT cache the rect here — onLayout doesn't re-fire on scroll, so
+          // a cached position would go stale the moment the user scrolls. The
+          // tour measures this node live instead.
+          onLayout={NOOP}
+          style={{ alignSelf: "center" }}
         >
-          <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
-          <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: onDeep }}>Add task</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onAdd}
+            activeOpacity={0.85}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              paddingVertical: 11,
+              paddingHorizontal: 16,
+              borderRadius: 14,
+              backgroundColor: earn.deep,
+              // The primary CTA is a light source — let it glow in both modes.
+              ...theme.fx.glow,
+            }}
+          >
+            <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
+            <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: onDeep }}>Add task</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
       {/* One-line nudge toward automatic tasks. Deliberately plain — a single
@@ -3159,16 +3199,104 @@ function IconGrove({ color, size = 22 }) {
     </Svg>
   );
 }
+// The Lab → a propagation flask with a cutting rooting inside. Same botanical
+// vocabulary as the other three (round canopy, soft fill, ground line) so the
+// dock still reads as one set.
+function IconLab({ color, size = 22 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* flask body */}
+      <Path
+        d="M10 3.5v5.2L5.4 17.2a2.2 2.2 0 0 0 1.9 3.3h9.4a2.2 2.2 0 0 0 1.9-3.3L14 8.7V3.5"
+        stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+      />
+      {/* neck lip */}
+      <Path d="M9 3.5h6" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
+      {/* liquid line */}
+      <Path d="M7.2 15h9.6" stroke={color} strokeWidth={1.7} strokeLinecap="round" opacity={0.4} />
+      {/* the cutting: stem + one leaf */}
+      <Path d="M12 18.5v-4.2" stroke={color} strokeWidth={1.7} strokeLinecap="round" />
+      <SvgCircle cx="13.9" cy="12.6" r="1.9" fill={color} opacity={0.18} />
+      <SvgCircle cx="13.9" cy="12.6" r="1.9" stroke={color} strokeWidth={1.6} />
+    </Svg>
+  );
+}
 
 // Stable no-op for callback props on memoized screens (an inline `() => {}`
 // would defeat React.memo by changing identity every render).
 const NOOP = () => {};
 
+/**
+ * The Grove — now two halves behind one segmented control:
+ *   You     → the old Stats tab (level, streak, weekly bars, categories)
+ *   Friends → the social grove (friends, challenges, plants)
+ *
+ * They were separate dock tabs; both answer "how am I doing", so they read
+ * better as one place with a toggle than as two neighbours. Each half keeps its
+ * own scrolling and empty states — this only owns the switch.
+ */
+function GroveTab({ half, onHalfChange, dark, statsProps, socialProps }) {
+  const theme = getTheme(dark);
+  const { ink, paper, earn } = theme;
+  const onDeep = dark ? "#16261C" : "#FAF6EE";
+
+  return (
+    <View style={{ flex: 1, backgroundColor: paper.warm }}>
+      <View style={{
+        flexDirection: "row", gap: 6, padding: 4,
+        marginHorizontal: 22,
+        marginTop: Platform.OS === "ios" ? 40 : 18,
+        borderRadius: 16, backgroundColor: paper.sand,
+        borderWidth: 1, borderColor: ink.hairline,
+      }}>
+        {[{ key: "you", label: "You" }, { key: "friends", label: "Friends" }].map(opt => {
+          const on = half === opt.key;
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              onPress={() => onHalfChange(opt.key)}
+              activeOpacity={0.85}
+              style={{
+                flex: 1, height: 36, borderRadius: 12,
+                alignItems: "center", justifyContent: "center",
+                backgroundColor: on ? earn.deep : "transparent",
+              }}
+            >
+              <Text style={{
+                fontFamily: FF.bodyMed, fontSize: 13,
+                color: on ? onDeep : ink.mid,
+              }}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Both halves stay mounted: SocialScreen holds live challenge state and
+          remounting it on every toggle would re-fetch and drop it. */}
+      <View style={{ flex: 1 }}>
+        <View style={{ ...StyleSheet.absoluteFillObject, opacity: half === "you" ? 1 : 0 }}
+              pointerEvents={half === "you" ? "auto" : "none"}>
+          <ProgressView {...statsProps} dark={dark} />
+        </View>
+        <View style={{ ...StyleSheet.absoluteFillObject, opacity: half === "friends" ? 1 : 0 }}
+              pointerEvents={half === "friends" ? "auto" : "none"}>
+          <SocialScreen {...socialProps} dark={dark} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// Four tabs, deliberately. Stats used to have its own slot; it now lives inside
+// The Grove as the "You" half, which freed this one for The Lab without
+// crowding the island to five.
 const TABS = [
   { id: "today",    label: "Today",     Icon: IconToday },
   { id: "driftin",  label: "Drift In",  Icon: IconDrift },
-  { id: "progress", label: "Stats",     Icon: IconRings },
   { id: "friends",  label: "The Grove", Icon: IconGrove },
+  { id: "lab",      label: "The Lab",   Icon: IconLab   },
 ];
 
 // ── Root App ─────────────────────────────────────────────────
@@ -3301,6 +3429,8 @@ export default function App() {
   const [showBlockedApps,    setShowBlockedApps]    = useState(false);
   const [showBlockedHours,   setShowBlockedHours]   = useState(false);
   const [showRecurringTasks, setShowRecurringTasks] = useState(false);
+  // Which half of The Grove is showing — "you" (the old Stats tab) or "friends".
+  const [groveHalf, setGroveHalf] = useState("you");
   const [showAutoTasks,      setShowAutoTasks]      = useState(false);
   // The Today nudge only exists until the user acts on it: it hides as soon as
   // either feature is on, or once dismissed (dismissal is permanent).
@@ -3312,15 +3442,16 @@ export default function App() {
   const [firstTimeBlockedApps, setFirstTimeBlockedApps] = useState(false);
   const [showTutorial,       setShowTutorial]       = useState(false);
   const [tutorialTargets,    setTutorialTargets]    = useState(null); // measured rects for the coachmark spotlight
+  const tourReplayRef = useRef(false); // true when the tour was opened from The Lab, not signup
   const tutHeroRef = useRef(null);
   const tutAddRef  = useRef(null);
+  const todayScrollRef = useRef(null); // so the tour can reset Today to the top
   const tutTabBarRef = useRef(null);
   const [showReviewPrompt,   setShowReviewPrompt]   = useState(false);
   const [showUsernameSetup,  setShowUsernameSetup]  = useState(false);
   const [showReduceTime,     setShowReduceTime]     = useState(false);
   const [showQuickGrant,     setShowQuickGrant]     = useState(false);
   const [quickGrantCount,    setQuickGrantCount]    = useState(0);
-  const [difficulty,         setDifficulty]         = useState("medium");
   const [userEmail,          setUserEmail]          = useState("");
   const [myUsername,         setUserName]           = useState("");
   const [screenTimeStatus,   setScreenTimeStatus]   = useState("unknown");
@@ -3748,7 +3879,6 @@ export default function App() {
       // stays in sync even for users who never touch the toggle again.
       setAppearance(v === "1").catch(() => {});
     });
-    AsyncStorage.getItem("drift_difficulty").then(v => { if (v) setDifficulty(v); });
   }, []);
 
   const refreshQuickGrantCount = useCallback(async () => {
@@ -4021,9 +4151,6 @@ export default function App() {
       return;
     }
 
-    const diff = answers?.difficulty?.[0] || "medium";
-    setDifficulty(diff);
-    await AsyncStorage.setItem("drift_difficulty", diff);
     setUserId(authUser.id);
     setUserEmail(authUser.email ?? "");
     // Persist the pre-signup onboarding answers for analytics (fire-and-forget).
@@ -4033,7 +4160,15 @@ export default function App() {
     // was closed and reopened.
     try {
       const stats = await fetchProfileStats(authUser.id);
-      if (stats?.totalXp > 0) setTotalXp(prev => Math.max(prev, stats.totalXp));
+      if (stats?.totalXp > 0) {
+        // Re-baseline the level tracker BEFORE the XP lands. Sign-in sets
+        // screen="app" while totalXp is still 0, so the jump from 0 to the
+        // user's real XP looked like a level gain and popped the level-up
+        // modal at every login. Seeding the ref here makes hydration a
+        // no-op; only XP earned after this point can celebrate.
+        levelIdxRef.current = getLevelIdx(stats.totalXp);
+        setTotalXp(prev => Math.max(prev, stats.totalXp));
+      }
       if (stats?.balanceSeconds > 0) {
         setCredits({
           balance: Math.ceil(stats.balanceSeconds / 60),
@@ -4344,6 +4479,11 @@ export default function App() {
   // each element exactly. Falls back to region anchoring if a measure fails.
   useEffect(() => {
     if (!showTutorial) { setTutorialTargets(null); return; }
+    // Reset Today to the top first. The spotlight rects are absolute screen
+    // coordinates, so replaying the tour on a scrolled-down Today put the
+    // holes over whatever happened to be at those positions. Scrolling here
+    // (before the measure delay below) means we measure the settled layout.
+    try { todayScrollRef.current?.scrollTo?.({ y: 0, animated: true }); } catch {}
     const measure = (ref) => new Promise((resolve) => {
       const node = ref?.current;
       if (!node?.measureInWindow) return resolve(null);
@@ -4356,9 +4496,19 @@ export default function App() {
     });
     // Delay so the tour's targets (and the tab-bar slide) have settled.
     const t = setTimeout(async () => {
-      const [balance, add, pill] = await Promise.all([
+      const [balance, measuredAdd, pill] = await Promise.all([
         measure(tutHeroRef), measure(tutAddRef), measure(tutTabBarRef),
       ]);
+
+      // Reject a measurement that spans most of the screen. The Add button is
+      // a small pill on the right of a space-between row, so a near-full-width
+      // rect means we measured the row — which is what put the spotlight over
+      // the "TODAY" kicker. Better to skip the highlight (the step still shows,
+      // fully dimmed) than to point confidently at the wrong thing.
+      const SCREEN_W = Dimensions.get("window").width;
+      const add = (measuredAdd && measuredAdd.w > 0 && measuredAdd.w < SCREEN_W * 0.6)
+        ? measuredAdd
+        : null;
       let tabs = null;
       if (pill) {
         // The pill has 8px inner padding and 4 equal tab columns.
@@ -4372,7 +4522,10 @@ export default function App() {
         }));
       }
       setTutorialTargets({ balance, add, tabs });
-    }, 380);
+      // 380ms was enough for just the tab slide, but the scroll-to-top above
+      // animates for ~300ms of its own — measuring at 380 would capture the
+      // layout mid-scroll and misplace every hole.
+    }, 560);
     return () => clearTimeout(t);
   }, [showTutorial]);
 
@@ -4919,6 +5072,24 @@ export default function App() {
     return () => { cancelled = true; };
   }, [appMode, showAutoTasks]);
 
+  // Opening the app picker from The Lab. Pro goes straight to Apple's picker —
+  // no in-app middleman screen. Free tier has nothing to pick (blocking is by
+  // category), so it still gets the sheet, which explains that and offers the
+  // upgrade. Lifted out of ProfileScreen when these rows moved to The Lab.
+  const openBlockedAppsPicker = useCallback(async () => {
+    setFirstTimeBlockedApps(false);
+    if (!proAccess) { setShowBlockedApps(true); return; }
+    const { opened, reason } = await openNativeAppPicker();
+    if (opened) return;
+    if (reason === "denied") {
+      Alert.alert("Screen Time access needed",
+        "Enable Drift in Settings > Screen Time so Drift can block apps.");
+    } else if (reason === "unavailable") {
+      Alert.alert("Not available",
+        "Apple Screen Time blocking requires a custom build of Drift.");
+    }
+  }, [proAccess]);
+
   const dismissAutoTasksHint = useCallback(() => {
     setAutoTasksHint(false);
     AsyncStorage.setItem("drift_auto_tasks_hint_dismissed", "1").catch(() => {});
@@ -4947,6 +5118,7 @@ export default function App() {
     (async () => {
       try {
         if (!(await isCalendarSyncEnabled())) return;
+        if (!(await isCalendarAutoImportEnabled())) return;
         const key = `drift_cal_autoimport_${userId}`;
         const last = await AsyncStorage.getItem(key);
         if (last === todayKey()) return;
@@ -5232,7 +5404,7 @@ export default function App() {
     // (0.5x multiplier) grants 5 minutes of screen time. We route it through
     // the same applyBalanceSeconds path a real task uses so credits/ledger/
     // sync all behave identically.
-    const addedMins = DIFFICULTY_GRANT[difficulty] || 7;
+    const addedMins = GRANT_MINS;
     const newSec = secRef.current + addedMins * 60;
     const nextCredits = {
       ...credits,
@@ -5291,7 +5463,7 @@ export default function App() {
       const { error } = await supabase.functions.invoke("delete-account", {});
       if (error) throw error;
       await signOut();
-      Alert.alert("Account deleted", "Your Drift account has been anonymized and signed out.");
+      Alert.alert("Account deleted", "Your account has been successfully deleted.");
     } catch (e) {
       Alert.alert("Could not delete account", e?.message || "Please try again later.");
       throw e;
@@ -5482,25 +5654,6 @@ export default function App() {
               AsyncStorage.setItem("drift_username", profile.username);
             }
           }}
-          onOpenBlockedApps={async () => {
-            setFirstTimeBlockedApps(false);
-            // Pro goes straight to Apple's picker — no in-app middleman screen.
-            // Free tier has nothing to pick (blocking is by category), so it
-            // still gets the sheet, which explains that and offers the upgrade.
-            if (!proAccess) { setShowBlockedApps(true); return; }
-            const { opened, reason } = await openNativeAppPicker();
-            if (opened) return;
-            if (reason === "denied") {
-              Alert.alert("Screen Time access needed",
-                "Enable Drift in Settings > Screen Time so Drift can block apps.");
-            } else if (reason === "unavailable") {
-              Alert.alert("Not available",
-                "Apple Screen Time blocking requires a custom build of Drift.");
-            }
-          }}
-          onOpenBlockedHours={() => setShowBlockedHours(true)}
-          onOpenRecurringTasks={() => setShowRecurringTasks(true)}
-          onOpenAutoTasks={() => setShowAutoTasks(true)}
           onRequestScreenTime={async () => {
             const next = await requestScreenTimeAuth();
             setScreenTimeStatus(next);
@@ -5535,10 +5688,11 @@ export default function App() {
               onAdd={tryOpenAddTask}
               heroRef={tutHeroRef}
               addRef={tutAddRef}
+              scrollRef={todayScrollRef}
               onReduceScreenTime={() => setShowReduceTime(true)}
               onQuickGrant={() => setShowQuickGrant(true)}
               quickGrantCount={quickGrantCount}
-              grantMins={DIFFICULTY_GRANT[difficulty] || 7}
+              grantMins={GRANT_MINS}
               onSwipeLockChange={setChildSwipeLockedNow}
               dark={darkMode}
               secLeft={displaySecLeft}
@@ -5558,16 +5712,38 @@ export default function App() {
             />
           </View>
           <View style={{ width: TAB_W, height: "100%" }}>
-            <ProgressView tasks={statsTasks} totalXp={totalXp} skips={0} onAddTask={tryOpenAddTask} dark={darkMode} />
+            <GroveTab
+              half={groveHalf}
+              onHalfChange={setGroveHalf}
+              dark={darkMode}
+              statsProps={{ tasks: statsTasks, totalXp, skips: 0, onAddTask: tryOpenAddTask }}
+              socialProps={{
+                userId,
+                isPremium: proAccess,
+                onOpenPaywall: NOOP,
+                onSwipeLockChange: setChildSwipeLockedNow,
+                onChallengeResolved: stableChallengeResolved,
+              }}
+            />
           </View>
           <View style={{ width: TAB_W, height: "100%" }}>
-            <SocialScreen
-              userId={userId}
-              isPremium={proAccess}
-              onOpenPaywall={NOOP}
-              onSwipeLockChange={setChildSwipeLockedNow}
-              onChallengeResolved={stableChallengeResolved}
+            <LabScreen
               dark={darkMode}
+              // Panes stay mounted in the filmstrip, so the Lab needs to know
+              // when it's actually on screen to re-read its toggles.
+              visible={tab === "lab"}
+              onOpenAutoTasks={() => setShowAutoTasks(true)}
+              onOpenBlockedApps={openBlockedAppsPicker}
+              onOpenBlockedHours={() => setShowBlockedHours(true)}
+              onOpenRecurringTasks={() => setShowRecurringTasks(true)}
+              // The tour spotlights elements on Today, so jump there before
+              // opening it — measuring the hero while it's scrolled off to the
+              // side would put the highlight off-screen. The delay lets the tab
+              // slide settle so measureInWindow reads final positions.
+              onReplayTour={() => {
+                setTab("today");
+                setTimeout(() => { tourReplayRef.current = true; setShowTutorial(true); }, 420);
+              }}
             />
           </View>
         </Animated.View>
@@ -5685,12 +5861,19 @@ export default function App() {
         }}
       />
 
-      {/* Post-signup coachmark tour → hands off to the review prompt. */}
+      {/* Post-signup coachmark tour → hands off to the review prompt. A manual
+          replay from The Lab skips that hand-off; asking for a review every
+          time someone rewatches the tour would be obnoxious. */}
       {showTutorial && (
         <TutorialOverlay
           dark={darkMode}
           targets={tutorialTargets}
-          onDone={() => { setShowTutorial(false); setShowReviewPrompt(true); }}
+          onDone={() => {
+            const wasReplay = tourReplayRef.current;
+            tourReplayRef.current = false;
+            setShowTutorial(false);
+            if (!wasReplay) setShowReviewPrompt(true);
+          }}
         />
       )}
 
@@ -5742,7 +5925,7 @@ export default function App() {
         dark={darkMode}
         onClose={() => setShowQuickGrant(false)}
         onGrant={handleQuickGrant}
-        grantMins={DIFFICULTY_GRANT[difficulty] || 7}
+        grantMins={GRANT_MINS}
       />
     </TouchTracker>
     </ThemeContext.Provider>

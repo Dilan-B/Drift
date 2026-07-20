@@ -75,7 +75,7 @@ const palette = (dark) => dark ? {
   wash: "#E4ECE0",
   washStrong: "rgba(62,107,78,0.14)",
   sage: "#3E6B4E",
-  deep: "#1F3A2A",
+  deep: "#3A6B4F",   // lifted from #1F3A2A — see theme.js earn.deep
   onDeep: "#FAF6EE",
   clay: "#B0764E",
   danger: "#B5564B",

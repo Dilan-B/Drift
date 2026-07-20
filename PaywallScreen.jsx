@@ -59,7 +59,7 @@ export default function PaywallScreen({ onClose, onPurchase, onRestore, offering
     : { deep: "#1A2820", mid: "#6B7A6E", faint: "#A8B0A8" };
   const earn = dark
     ? { green: "#7FE3A5", greenD: "#B4F0C4", sageLo: "rgba(165,227,155,0.17)", deep: "#C6F2A0" }
-    : { green: "#2D6B47", greenD: "#1F3A2A", sageLo: "#E4ECE0", deep: "#1F3A2A" };
+    : { green: "#2D6B47", greenD: "#3A6B4F", sageLo: "#E4ECE0", deep: "#3A6B4F" };
 
   const handlePurchase = async () => {
     setPurchasing(true);

@@ -22,7 +22,8 @@ const STEPS = [
   { target: "balance", anchor: "top",    kicker: "TODAY",   title: "Your earned time", body: "This is the time you've banked. When it reaches zero, your chosen apps lock until you earn more." },
   { target: "add",     anchor: "top",    kicker: "TASKS",   title: "Add a task", body: "Tap the + to add something worth doing. Finish and confirm it to earn screen time." },
   { target: { tab: 1 }, anchor: "bottom", kicker: "FOCUS",  title: "Drift In", body: "Start a focus session from the tab bar. Your apps stay blocked while you focus — and you earn time for it." },
-  { target: { tab: 3 }, anchor: "bottom", kicker: "GROVE",  title: "The Grove", body: "Add friends, watch your plant grow as you level up, and challenge each other to stay on track." },
+  { target: { tab: 2 }, anchor: "bottom", kicker: "GROVE",  title: "The Grove", body: "Your progress under You, and your friends under Friends — streaks, levels and challenges in one place." },
+  { target: { tab: 3 }, anchor: "bottom", kicker: "THE LAB", title: "The Lab", body: "Where you tune Drift: which apps get blocked, what repeats, and what gets suggested automatically." },
   { target: null,      anchor: "center", kicker: "READY",   title: "You're all set", body: "Complete your first task to bank some minutes. Welcome to focused." },
 ];
 

@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import {
   isNativeBlockingAvailable, requestScreenTimeAuth,
-  getScreenTimeAuthStatus, pickBlockedAppsNative,
+  getScreenTimeAuthStatus, pickBlockedAppsNative, getBlockedSelectionCount,
 } from "./blockedApps";
 import { FF, getTheme } from "./theme";
 
@@ -24,9 +24,31 @@ const FOM = FF.kicker;
 const FK  = FF.bodyMed;
 const FB  = FF.body;
 
+// `isPro` / `onUpgrade` are still accepted so existing call sites keep working,
+// but app selection is no longer gated on a subscription.
 export default function BlockedAppsModal({ visible, onClose, dark = false, firstTime = false, isPro = false, onUpgrade }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
+
+  // How many apps/categories/domains are currently picked. Apple won't tell us
+  // what they are, only how many — which is all the Done gate needs.
+  const [selectionCount, setSelectionCount] = React.useState(0);
+
+  // Can this build actually block anything? On Android, in Expo Go, or in any
+  // build without FamilyControls, the picker can't open and the selection
+  // count is permanently 0 — so REQUIRING a selection would trap the user in
+  // onboarding with no way forward. Gate only where the gate is satisfiable.
+  const canBlock = isNativeBlockingAvailable();
+  const gateOnSelection = firstTime && canBlock;
+  const canFinish = !gateOnSelection || selectionCount > 0;
+
+  const refreshSelection = React.useCallback(async () => {
+    setSelectionCount(await getBlockedSelectionCount());
+  }, []);
+
+  // Re-read on open, and again whenever we come back from Apple's picker —
+  // the picker is a separate system sheet, so nothing re-renders on its own.
+  React.useEffect(() => { if (visible) refreshSelection(); }, [visible, refreshSelection]);
 
   const ensureAccess = async () => {
     if (!isNativeBlockingAvailable()) {
@@ -51,17 +73,18 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
   const openPicker = async () => {
     if (!(await ensureAccess())) return;
     await pickBlockedAppsNative();
-  };
-
-  // Free tier blocks social & entertainment by CATEGORY automatically — there's
-  // no per-app selection, so we just make sure Screen Time access is granted.
-  const enableFreeBlocking = async () => {
-    if (!(await ensureAccess())) return;
-    Alert.alert("You're set", "Drift will block social & entertainment apps when your earned time hits zero.");
+    await refreshSelection();
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      // During first-time onboarding a swipe-down must not escape the gate.
+      // Swallowing the request leaves `visible` true, so iOS re-presents.
+      onRequestClose={canFinish ? onClose : undefined}
+    >
       <View style={{ flex: 1, backgroundColor: paper.warm }}>
         {/* Header */}
         <View style={{
@@ -96,96 +119,79 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
             </Text>
           </View>
 
-          {isPro ? (
-            <>
-              {/* Native picker (iOS Screen Time) — Pro only */}
-              <TouchableOpacity
-                onPress={openPicker}
-                style={{
-                  paddingVertical: 18, paddingHorizontal: 16, borderRadius: 14, marginBottom: 12,
-                  borderWidth: 1.5, borderColor: earn.green, backgroundColor: earn.greenLo,
-                  alignItems: "center",
-                }}
-              >
-                <Text style={{ fontFamily: FK, fontSize: 16, color: earn.green }}>
-                  Pick apps with Apple Screen Time
-                </Text>
-                <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4, textAlign: "center" }}>
-                  Apps, categories, or web domains.
-                </Text>
-              </TouchableOpacity>
+          {/* Apple's picker, for everyone. Choosing what to block is the core
+              promise of the app, not an upsell — the old free tier got a
+              blunt block-every-category switch and a "Upgrade to Pro to choose
+              specific apps" nag instead. */}
+          <TouchableOpacity
+            onPress={openPicker}
+            style={{
+              paddingVertical: 18, paddingHorizontal: 16, borderRadius: 14, marginBottom: 12,
+              borderWidth: 1.5, borderColor: earn.green, backgroundColor: earn.greenLo,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ fontFamily: FK, fontSize: 16, color: earn.green }}>
+              {selectionCount > 0 ? "Change blocked apps" : "Pick apps with Apple Screen Time"}
+            </Text>
+            <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4, textAlign: "center" }}>
+              Apps, categories, or web domains.
+            </Text>
+          </TouchableOpacity>
 
-              <Text style={{ fontFamily: FB, fontSize: 11, color: ink.faint, textAlign: "center", marginBottom: 24, lineHeight: 16 }}>
-                Tap again anytime to change what's blocked. Stored on your device only.
+          {selectionCount > 0 && (
+            <View style={{
+              flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7,
+              marginBottom: 12,
+            }}>
+              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: earn.green }} />
+              <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid }}>
+                {selectionCount} {selectionCount === 1 ? "selection" : "selections"} saved
               </Text>
-            </>
-          ) : (
-            <>
-              {/* Free plan — no app picker (it would do nothing): blocking is by
-                  category automatically. Just grant access + offer upgrade. */}
-              <View style={{
-                backgroundColor: paper.card, padding: 16, borderRadius: 14, marginBottom: 14,
-                borderWidth: 1, borderColor: ink.border,
-              }}>
-                <Text style={{ fontFamily: FOM, fontSize: 9, color: ink.faint, letterSpacing: 1.5, marginBottom: 6 }}>
-                  FREE PLAN
-                </Text>
-                <Text style={{ fontFamily: FB, fontSize: 13, color: ink.deep, lineHeight: 19 }}>
-                  Social & entertainment apps are blocked automatically when your time runs out. Pick specific apps with Pro.
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                onPress={enableFreeBlocking}
-                style={{
-                  paddingVertical: 18, paddingHorizontal: 16, borderRadius: 14, marginBottom: 12,
-                  borderWidth: 1.5, borderColor: earn.green, backgroundColor: earn.greenLo,
-                  alignItems: "center",
-                }}
-              >
-                <Text style={{ fontFamily: FK, fontSize: 16, color: earn.green }}>
-                  Enable Screen Time access
-                </Text>
-                <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4, textAlign: "center" }}>
-                  Needed to block apps.
-                </Text>
-              </TouchableOpacity>
-
-              {!!onUpgrade && (
-                <TouchableOpacity
-                  onPress={() => { onClose?.(); onUpgrade?.(); }}
-                  style={{ paddingVertical: 14, alignItems: "center", marginBottom: 12 }}
-                >
-                  <Text style={{ fontFamily: FB, fontSize: 13, color: earn.green }}>
-                    Upgrade to Pro to choose specific apps
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </>
+            </View>
           )}
 
-          {/* Done / Skip — first-time onboarding only */}
+          <Text style={{ fontFamily: FB, fontSize: 11, color: ink.faint, textAlign: "center", marginBottom: 24, lineHeight: 16 }}>
+            Tap again anytime to change what's blocked. Stored on your device only.
+          </Text>
+
+          {/* Done — first-time onboarding only. Gated on an actual selection:
+              finishing onboarding with nothing blocked leaves the shield inert
+              and the app pointless, so there's no skip here. */}
           {firstTime && (
             <>
               <TouchableOpacity
-                onPress={onClose}
-                activeOpacity={0.8}
+                onPress={canFinish ? onClose : null}
+                activeOpacity={canFinish ? 0.8 : 1}
                 style={{
-                  paddingVertical: 14, borderRadius: 14,
-                  backgroundColor: earn.green, alignItems: "center",
-                  ...theme.fx.glow,
+                  paddingVertical: 14, borderRadius: 14, alignItems: "center",
+                  backgroundColor: canFinish ? earn.green : ink.ghost,
+                  ...(canFinish ? theme.fx.glow : null),
                 }}
               >
-                <Text style={{ fontFamily: FO, fontSize: 12, color: dark ? "#16261C" : "#fff", letterSpacing: 2 }}>
-                  DONE
+                <Text style={{
+                  fontFamily: FO, fontSize: 12, letterSpacing: 2,
+                  color: canFinish ? (dark ? "#16261C" : "#fff") : ink.faint,
+                }}>
+                  {canBlock ? "DONE" : "CONTINUE"}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={onClose}
-                style={{ paddingVertical: 14, alignItems: "center", marginTop: 6 }}
-              >
-                <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid }}>Skip for now</Text>
-              </TouchableOpacity>
+              {!canFinish && (
+                <Text style={{
+                  fontFamily: FB, fontSize: 12, color: ink.mid,
+                  textAlign: "center", marginTop: 10, lineHeight: 18,
+                }}>
+                  Pick at least one app or category to continue.
+                </Text>
+              )}
+              {!canBlock && (
+                <Text style={{
+                  fontFamily: FB, fontSize: 12, color: ink.faint,
+                  textAlign: "center", marginTop: 10, lineHeight: 18,
+                }}>
+                  App blocking needs a full build of Drift — you can set this up later.
+                </Text>
+              )}
             </>
           )}
         </ScrollView>

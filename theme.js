@@ -24,9 +24,12 @@ export const LIGHT = {
     dash:   "rgba(26,40,32,0.16)", // dashed empty-state outlines
   },
   earn: {
-    // Deep forest = primary CTAs (the "+ Add task" button in the image)
-    deep:    "#1F3A2A",
-    deepHi:  "#2A4D38",
+    // Primary CTAs (the "+ Add task" button). Was #1F3A2A — near-black forest
+    // at 11.5:1 on cream, which read as harsh rather than calm next to the rest
+    // of the palette. #3A6B4F is the same hue, lifted: still 5.7:1 with the
+    // cream label (comfortably past AA) but far softer on the page.
+    deep:    "#3A6B4F",
+    deepHi:  "#48815E",
     // Sage = soft pill backgrounds (the "Seedling" badge, active tab pill)
     sage:    "#3E6B4E",
     sageLo:  "#E4ECE0",
@@ -64,7 +67,7 @@ export const LIGHT = {
 // inset well → canvas → card → top layer.
 export const DARK = {
   ink: {
-    void:   "#081209",
+    void:   "#000000",    // deepest well (shield / Drift In) — true black
     deep:   "#F0F7EA",    // warm paper-white — crisp primary text
     mid:    "#A9C4AB",    // secondary — soft green-white, clearly readable
     faint:  "#6E8A74",    // tertiary — muted but never invisible
@@ -73,10 +76,14 @@ export const DARK = {
     hairline: "rgba(160,230,170,0.09)",
   },
   paper: {
-    warm:   "#0E1A13",    // canvas — deep forest green, unmistakably green
-    card:   "#17291D",    // raised surfaces — botanical, not gray
-    cream:  "#1E3325",    // top layer (inputs on cards, hovers)
-    sand:   "#122117",    // inset wells — sit BELOW the canvas
+    // Near-black with only a whisper of green. The canvas used to read as
+    // "deep forest" (#0E1A13); at night that green cast was the loudest thing
+    // on screen. The surfaces still step apart from each other — canvas → card
+    // → top layer — just around black instead of around green.
+    warm:   "#050706",    // canvas — very near true black
+    card:   "#0D110F",    // raised surfaces
+    cream:  "#141916",    // top layer (inputs on cards, hovers)
+    sand:   "#080A09",    // inset wells — sit BELOW the canvas
     dash:   "rgba(160,230,170,0.26)",
   },
   earn: {

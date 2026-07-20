@@ -10,12 +10,11 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { supabase } from "./supabase";
 import { FF, getTheme } from "./theme";
-import { LeafGlyph } from "./SproutArt";
 import { cached, invalidateCache, rateLimited } from "./apiGuards";
 import FeedbackModal from "./FeedbackModal";
 import RedeemCodeModal from "./RedeemCodeModal";
 import {
-  CloseIcon, ShieldKeyIcon, PhoneIcon, SparkleIcon, CheckIcon,
+  CloseIcon, PhoneIcon, SparkleIcon, CheckIcon,
 } from "./Icons";
 
 let ImagePicker = null;
@@ -81,7 +80,9 @@ async function uploadAvatar(userId, sourceUri) {
 
 export default function ProfileScreen({
   userId, userEmail, username, subActive, trialDays, screenTimeStatus,
-  dark = false, onClose, onProfileChange, onOpenBlockedApps, onOpenBlockedHours, onOpenRecurringTasks, onOpenAutoTasks,
+  // Blocked apps/hours, recurring and automatic tasks now live in The Lab, so
+  // this screen no longer takes handlers for them.
+  dark = false, onClose, onProfileChange,
   onRequestScreenTime, onUpgrade, onSignOut, onDeleteAccount, onProRedeemed,
   inAppPage = false,
 }) {
@@ -250,7 +251,7 @@ export default function ProfileScreen({
   const confirmDeleteAccount = () => {
     Alert.alert(
       "Delete account?",
-      "This anonymizes your Drift profile and signs you out. This cannot be undone.",
+      "This deletes your Drift account and signs you out. This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -352,36 +353,9 @@ export default function ProfileScreen({
 
         <Text style={[s.groupKicker, { color: ink.faint }]}>SETTINGS</Text>
         <View style={{ gap: 10 }}>
-          <Row
-            id="blockedApps"
-            title="Blocked apps"
-            sub="Apps blocked during focus"
-            icon={(c) => <ShieldKeyIcon size={20} color={c} />}
-            onPress={onOpenBlockedApps}
-          />
-          <Row
-            id="blockedHours"
-            title="Blocked hours"
-            sub="Force balance to 0"
-            cta={subActive ? "OPEN" : "PRO"}
-            icon={(c) => <PhoneIcon size={20} color={c} />}
-            onPress={onOpenBlockedHours}
-          />
-          <Row
-            id="recurringTasks"
-            title="Recurring tasks"
-            sub="Auto-create daily tasks"
-            cta={subActive ? "OPEN" : "PRO"}
-            icon={(c) => <CheckIcon size={20} color={c} />}
-            onPress={onOpenRecurringTasks}
-          />
-          <Row
-            id="autoTasks"
-            title="Automatic tasks"
-            sub="Suggest by place & calendar"
-            icon={(c) => <LeafGlyph size={19} color={c} />}
-            onPress={onOpenAutoTasks}
-          />
+          {/* Blocked apps / hours, recurring tasks and automatic tasks moved to
+              The Lab tab — they configure behaviour, not the account, and
+              nobody found them buried next to billing. */}
           {/* Only surfaced when access is actually missing — an "Approved" row is
               a dead end the user can't act on. Hidden for "approved" and for
               "unavailable" (Expo Go / non-native build, not fixable from here).

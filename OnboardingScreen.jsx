@@ -8,14 +8,14 @@ import { Oswald_700Bold } from "@expo-google-fonts/oswald";
 import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions,
   ScrollView, Animated, StatusBar, TextInput, KeyboardAvoidingView,
-  Platform, ActivityIndicator, Alert, Linking, Keyboard,
+  Platform, ActivityIndicator, Alert, Linking, Keyboard, PanResponder,
 } from "react-native";
 import { supabase } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
 // import { AppleSignInButton } from "./appleSignIn";
 import { joinFamily, normalizeFamilyCode } from "./family";
 import { cached, rateLimited } from "./apiGuards";
-import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon, ClipboardIcon, SparkleIcon, UsersIcon, BellIcon } from "./Icons";
+import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon, ClipboardIcon, SparkleIcon, UsersIcon, BellIcon, LeafIcon } from "./Icons";
 import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
 import Sprout, { Sprig, SeedDots } from "./SproutArt";
 import { FF } from "./theme";
@@ -55,6 +55,30 @@ const COVER_INK = "#F0F7EA";
 const COVER_MID = "#AFC7AF";
 const COVER_MINT = "#C6F2A0";
 
+// ─── Dev tools ──────────────────────────────────────────────────────────────
+// TEMPORARY. Jump straight into either onboarding flow without wiping the app
+// or making a new account. Gated on __DEV__ so it can never reach the App
+// Store — flip this to `true` if you need it in a TestFlight/preview build,
+// but flip it back before submitting.
+export const SHOW_DEV_TOOLS = __DEV__;
+
+function DevButton({ label, onPress }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={{
+        borderWidth: 1, borderStyle: "dashed", borderColor: CLAY,
+        borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12,
+      }}
+    >
+      <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: CLAY, letterSpacing: 1.4 }}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 // ─── Step data ──────────────────────────────────────────────────────────────
 
 const STEPS = [
@@ -93,18 +117,12 @@ const STEPS = [
       { id: "practice", label: "Practice a skill", sub: "20 min · Music, art, code, etc." },
     ],
   },
-  {
-    id: "difficulty",
-    question: "How strict should\nDrift be?",
-    subtitle: "Controls how much free screen time the Take button gives you.",
-    type: "single",
-    options: [
-      { id: "easy", label: "Easy", sub: "15 min per tap — gentle start" },
-      { id: "medium", label: "Medium", sub: "7 min per tap — balanced" },
-      { id: "hard", label: "Hard", sub: "3 min per tap — stay disciplined" },
-      { id: "committed", label: "Committed", sub: "1 min per tap — earn everything" },
-    ],
-  },
+  // NOTE: the old "How strict should Drift be?" step (1/3/7/15 min per tap) was
+  // removed. iOS Screen Time only re-applies a shield on a ~15-minute
+  // granularity, so every setting behaved like 15 regardless of what was
+  // picked — the choice was cosmetic. The Take button now grants a flat
+  // GRANT_MINS (15) that matches what the OS actually enforces.
+  //
   // Last stop: offer the hands-off sources. One decision, skippable, and it's
   // the only place in onboarding that asks for a system permission.
   { id: "auto_tasks" },
@@ -112,7 +130,7 @@ const STEPS = [
 
 // ─── Welcome Screen ──────────────────────────────────────────────────────────
 
-function WelcomeSlide({ onNext }) {
+function WelcomeSlide({ onNext, onDevPre, onDevPost }) {
   const [fontsLoaded] = useFonts({ Orbitron_700Bold, Orbitron_400Regular, Oswald_700Bold });
   const heroAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -148,6 +166,13 @@ function WelcomeSlide({ onNext }) {
         <Text style={[styles.ctaBtnText, { color: "#16261C" }]}>Get Started</Text>
       </TouchableOpacity>
       <Text style={[styles.legal, { color: COVER_MID }]}>Takes 60 seconds</Text>
+
+      {SHOW_DEV_TOOLS && (
+        <View style={styles.devRow}>
+          <DevButton label="DEV · PRE-SIGNUP" onPress={onDevPre} />
+          <DevButton label="DEV · POST-SIGNUP" onPress={onDevPost} />
+        </View>
+      )}
     </View>
   );
 }
@@ -281,12 +306,65 @@ function HowItWorksSlide({ slideData, stepNum, onNext }) {
 // Deliberately a single yes/no. Turning it on requests the two permissions in
 // sequence; declining either one just leaves that half off, and the app is
 // fully functional either way.
+/**
+ * The little "two sources → one task" diagram that sits between the copy and
+ * the buttons. Purely decorative, but it shows the shape of the feature faster
+ * than another paragraph would.
+ */
+function AutoTasksDiagram() {
+  const chip = {
+    flexDirection: "row", alignItems: "center", gap: 7,
+    backgroundColor: CARD_BG, borderRadius: 12,
+    borderWidth: 1, borderColor: BORDER,
+    paddingVertical: 9, paddingHorizontal: 12,
+  };
+  const chipText = { fontFamily: FF.bodyMed, fontSize: 12, color: TEXT };
+
+  return (
+    <View style={{ alignItems: "center", width: "100%" }}>
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={chip}>
+          <ClipboardIcon size={13} color={ACCENT} strokeWidth={1.8} />
+          <Text style={chipText}>9:00 Standup</Text>
+        </View>
+        <View style={chip}>
+          <LeafIcon size={13} color={CLAY} strokeWidth={1.8} />
+          <Text style={chipText}>At the gym</Text>
+        </View>
+      </View>
+
+      {/* Converging arms down into the single task card. */}
+      <View style={{ flexDirection: "row", alignItems: "flex-start", height: 22 }}>
+        <View style={{ width: 70, height: 11, borderRightWidth: 1.5, borderBottomWidth: 1.5, borderColor: "#CFDCD0", borderBottomRightRadius: 10 }} />
+        <View style={{ width: 70, height: 11, borderLeftWidth: 1.5, borderBottomWidth: 1.5, borderColor: "#CFDCD0", borderBottomLeftRadius: 10 }} />
+      </View>
+      <View style={{ width: 1.5, height: 10, backgroundColor: "#CFDCD0", marginTop: -11 }} />
+
+      <View style={{
+        flexDirection: "row", alignItems: "center", gap: 9, marginTop: 10,
+        backgroundColor: SAGE_LO, borderRadius: 14,
+        borderWidth: 1, borderColor: "rgba(62,107,78,0.18)",
+        paddingVertical: 11, paddingHorizontal: 16,
+      }}>
+        <CheckIcon size={14} color={ACCENT} strokeWidth={2} />
+        <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: "#2D5A3E" }}>
+          Added to today — if you confirm
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 function AutoTasksSlide({ onNext }) {
-  const [busy, setBusy] = useState(false);
+  // "idle" → "working" → "done". The done beat is held briefly on purpose:
+  // permission dialogs resolve instantly once granted, and dropping straight
+  // to Today made it feel like the tap did nothing.
+  const [phase, setPhase] = useState("idle");
+  const doneOp = useRef(new Animated.Value(0)).current;
 
   const enable = async () => {
-    if (busy) return;
-    setBusy(true);
+    if (phase !== "idle") return;
+    setPhase("working");
     try {
       // Calendar first: it's the less intrusive prompt, so a user who bails
       // after the first dialog still gets the more likely-useful half.
@@ -303,51 +381,75 @@ function AutoTasksSlide({ onNext }) {
         await setSuggestionsEnabled(true);
       } catch {}
     } finally {
-      setBusy(false);
-      onNext();
+      setPhase("done");
     }
   };
 
+  // Hold the confirmation ~1.6s, then hand off.
+  useEffect(() => {
+    if (phase !== "done") return;
+    Animated.timing(doneOp, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+    const t = setTimeout(onNext, 1600);
+    return () => clearTimeout(t);
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (phase === "done") {
+    return (
+      <View style={[styles.slide, { alignItems: "center", justifyContent: "center" }]}>
+        <Animated.View style={{ opacity: doneOp, alignItems: "center" }}>
+          <View style={styles.howIconRing}>
+            <View style={styles.howIconDisc}>
+              <CheckIcon size={30} color={ACCENT} strokeWidth={2} />
+            </View>
+          </View>
+          <Text style={{
+            fontFamily: FF.display, fontSize: 27, color: TEXT,
+            textAlign: "center", lineHeight: 34, letterSpacing: -0.3,
+          }}>
+            {"Getting it all\nset up for you"}
+          </Text>
+          <ActivityIndicator color={ACCENT} style={{ marginTop: 20 }} />
+        </Animated.View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.slide}>
-      <View style={styles.howContent}>
-        <View style={styles.howIconWrap}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingBottom: 16 }}>
+        {/* Kicker sits above the icon on its own line — it used to collide
+            with the bell disc. */}
+        <Text style={[styles.howKicker, { marginBottom: 16 }]}>OPTIONAL</Text>
+
+        <View style={styles.howIconRing}>
           <View style={styles.howIconDisc}>
             <BellIcon size={30} color={ACCENT} strokeWidth={1.8} />
           </View>
         </View>
 
-        <Text style={styles.howKicker}>OPTIONAL</Text>
-
         <Text style={{
           fontFamily: FF.display, fontSize: 30, color: TEXT,
-          textAlign: "center", lineHeight: 37, letterSpacing: -0.3, marginBottom: 14,
+          textAlign: "center", lineHeight: 37, letterSpacing: -0.3, marginBottom: 12,
         }}>
           {"Let tasks add\nthemselves?"}
         </Text>
 
         <Text style={{
           fontFamily: FF.body, fontSize: 16, color: MUTED,
-          textAlign: "center", lineHeight: 24, marginBottom: 22, paddingHorizontal: 12,
+          textAlign: "center", lineHeight: 23, marginBottom: 26, paddingHorizontal: 18,
         }}>
-          {"Pull in today's calendar events, and offer\na task when you arrive at places you save."}
+          Your calendar and your places, turned into tasks.
         </Text>
 
-        <View style={styles.howDetail}>
-          <Text style={{
-            fontFamily: FF.bodyMed, fontSize: 14, color: "#2D5A3E",
-            textAlign: "center", lineHeight: 20,
-          }}>
-            You confirm every suggestion before it becomes a task. Your calendar
-            and location stay on your device.
-          </Text>
-        </View>
+        <AutoTasksDiagram />
       </View>
 
-      <TouchableOpacity style={styles.ctaBtn} onPress={enable} disabled={busy}>
-        <Text style={styles.ctaBtnText}>{busy ? "Setting up…" : "Yes, set it up"}</Text>
+      <TouchableOpacity style={styles.ctaBtn} onPress={enable} disabled={phase !== "idle"}>
+        <Text style={styles.ctaBtnText}>
+          {phase === "working" ? "Setting up…" : "Yes, set it up"}
+        </Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={onNext} disabled={busy} style={{ paddingVertical: 14, alignItems: "center" }}>
+      <TouchableOpacity onPress={onNext} disabled={phase !== "idle"} style={{ paddingVertical: 14, alignItems: "center" }}>
         <Text style={{ fontFamily: FF.body, fontSize: 14, color: MUTED }}>
           Not now
         </Text>
@@ -358,7 +460,7 @@ function AutoTasksSlide({ onNext }) {
 
 // ─── Question Slide ──────────────────────────────────────────────────────────
 
-function QuestionSlide({ step, answers, onToggle, onNext, canContinue }) {
+function QuestionSlide({ step, answers, onToggle, onNext, canContinue, onSkip }) {
   return (
     <View style={styles.slide}>
       <View style={{ flex: 1 }}>
@@ -410,6 +512,12 @@ function QuestionSlide({ step, answers, onToggle, onNext, canContinue }) {
       >
         <Text style={styles.ctaBtnText}>Continue</Text>
       </TouchableOpacity>
+
+      {onSkip && (
+        <TouchableOpacity onPress={onSkip} style={styles.skipBtn} activeOpacity={0.6}>
+          <Text style={styles.skipText}>Skip for now</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -1216,13 +1324,18 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
   // Back navigation. Auth (during signup) returns to the account-type picker so
   // a wrong pick is easy to undo; the picker itself returns to sign-in if the
   // user came from there, otherwise to the previous slide.
+  //
+  // "tasks" is deliberately excluded: it's the first post-signup step, and the
+  // slide before it is auth — the account already exists by then, so going back
+  // there would offer to sign up again.
   const canGoBack =
     step.id?.startsWith("how") ||
     step.id === "account_type" ||
     (step.id === "auth" && isNewSignup) ||
-    step.id === "difficulty";
+    step.id === "auto_tasks";
 
   function goBack() {
+    if (!canGoBack) return;
     Keyboard.dismiss();
     if (step.id === "auth") {
       setStepIndex(STEPS.findIndex((s) => s.id === "account_type"));
@@ -1235,6 +1348,36 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
     }
     setStepIndex((i) => Math.max(0, i - 1));
   }
+
+  // Swipe right anywhere on the slide to go back — the same affordance as the
+  // button, for people who never look at the top-left corner. Only claims the
+  // gesture on a decisive mostly-horizontal drag so it can't steal scrolling
+  // from the option lists or the keyboard-avoiding auth form.
+  const backSwipe = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) =>
+        g.dx > 18 && Math.abs(g.dx) > Math.abs(g.dy) * 2.2,
+      onPanResponderRelease: (_e, g) => {
+        if (g.dx > 60) goBackRef.current?.();
+      },
+    })
+  ).current;
+  // The responder is created once, so point it at the latest goBack.
+  const goBackRef = useRef(goBack);
+  goBackRef.current = goBack;
+  // TEMPORARY dev jumps. Pre-signup restarts at the welcome cover; post-signup
+  // lands on the first questionnaire step, the same place a real signup arrives
+  // at. Post-signup normally requires an authed user — when there isn't one,
+  // finishing just completes with whatever answers were given, which is enough
+  // to eyeball the slides.
+  function devGoPreSignup() {
+    setAnswers({});
+    setStepIndex(0);
+  }
+  function devGoPostSignup() {
+    setStepIndex(STEPS.findIndex((s) => s.id === "tasks"));
+  }
+
   // Progress reflects only the real questions (tasks + difficulty), not the
   // welcome / how-it-works / auth slides.
   const totalQuestions = STEPS.filter((s) => s.options).length;
@@ -1329,8 +1472,14 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
         </View>
       )}
 
-      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        {step.id === "welcome" && <WelcomeSlide onNext={goNext} />}
+      <Animated.View style={{ flex: 1, opacity: fadeAnim }} {...(canGoBack ? backSwipe.panHandlers : {})}>
+        {step.id === "welcome" && (
+          <WelcomeSlide
+            onNext={goNext}
+            onDevPre={devGoPreSignup}
+            onDevPost={devGoPostSignup}
+          />
+        )}
         {step.id?.startsWith("how") && (
           <HowItWorksSlide
             slideData={HOW_SLIDES.find(s => s.id === step.id)}
@@ -1364,6 +1513,12 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
             onToggle={toggleAnswer}
             onNext={goNext}
             canContinue={canContinue()}
+            // Task seeding is genuinely optional — you can add tasks any time.
+            // Skipping clears the step so no tasks get seeded from a stale pick.
+            onSkip={step.id === "tasks" ? () => {
+              setAnswers(prev => ({ ...prev, tasks: [] }));
+              goNext();
+            } : null}
           />
         )}
       </Animated.View>
@@ -1693,7 +1848,7 @@ const styles = StyleSheet.create({
 
   // Buttons
   ctaBtn: {
-    backgroundColor: "#1F3A2A",
+    backgroundColor: "#3A6B4F",   // lifted from #1F3A2A — see theme.js earn.deep
     borderRadius: 16,
     paddingVertical: 17,
     alignItems: "center",
@@ -1709,6 +1864,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     elevation: 0,
   },
+  // Deliberately quiet: an escape hatch, not a second call to action.
+  skipBtn: { paddingVertical: 12, alignItems: "center" },
+  skipText: { fontFamily: FF.body, fontSize: 13, color: FAINT },
+  // TEMPORARY dev-tool row — see SHOW_DEV_TOOLS.
+  devRow: { flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 12 },
   // Cover variant — a light source against the forest
   ctaBtnCover: {
     backgroundColor: COVER_MINT,

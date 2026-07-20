@@ -41,15 +41,37 @@ function isEmailVerified(user: { email_confirmed_at?: string | null; confirmed_a
   return !!(user?.email_confirmed_at || user?.confirmed_at);
 }
 
+/**
+ * Reject with a logged reason.
+ *
+ * Every rejection used to `return json(...)` silently, so a run that was
+ * refused at the door produced logs containing nothing but boot/listening/
+ * shutdown — indistinguishable from a run that never happened. That made a
+ * real user-reported failure impossible to diagnose after the fact.
+ *
+ * Logs the reason code and status only. Never the task title, proof text,
+ * image, token, or user id — a rejection reason is not worth leaking content.
+ */
+function reject(reason: string, status: number, body?: Record<string, unknown>) {
+  console.error(`reject: ${reason} (${status})`);
+  return json({ error: reason, ...body }, status);
+}
+
 // ── Main handler ──────────────────────────────────────────────
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
+  // Wall-clock budget for everything this invocation does. Supabase kills the
+  // function at 60s; we aim to have replied well before that, because a kill
+  // gives the client no HTTP status at all.
+  const REQUEST_STARTED_AT = Date.now();
+  const REQUEST_DEADLINE_MS = 45_000;
+
   try {
     // ── 1. Authenticate ──────────────────────────────────────
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "Unauthorized" }, 401);
+    if (!authHeader) return reject("Unauthorized", 401);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -58,12 +80,12 @@ serve(async (req: Request) => {
     );
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser();
-    if (authErr || !user) return json({ error: "Unauthorized" }, 401);
-    if (!isEmailVerified(user)) return json({ error: "email_not_verified" }, 403);
+    if (authErr || !user) return reject("Unauthorized", 401);
+    if (!isEmailVerified(user)) return reject("email_not_verified", 403);
 
     // Reject oversized requests early — protect from amplification attacks
     const lenHeader = parseInt(req.headers.get("content-length") || "0", 10);
-    if (lenHeader && lenHeader > MAX_BODY_BYTES) return json({ error: "Body too large" }, 413);
+    if (lenHeader && lenHeader > MAX_BODY_BYTES) return reject("body_too_large", 413);
 
     // ── 1b. Subscription check (cached + dev-bypass) ─────────
     let subActive: boolean | null = cachedSub(user.id);
@@ -108,43 +130,113 @@ serve(async (req: Request) => {
         .gte("created_at", midnight.toISOString()),
     ]);
 
+    // These two are the most likely cause of a "couldn't connect" report: the
+    // old client showed any unparseable error body as a connection failure, so
+    // a plain 429 looked exactly like being offline. Log them so the next
+    // occurrence is unambiguous in the dashboard.
     if ((hourCount ?? 0) >= MAX_PER_HOUR)
-      return json({
-        error: "rate_limit",
+      return reject("rate_limit", 429, {
         message: `You can verify up to ${MAX_PER_HOUR} tasks per hour. Try again soon.`,
-      }, 429);
+      });
 
     if ((dayCount ?? 0) >= MAX_PER_DAY)
-      return json({
-        error: "rate_limit",
+      return reject("rate_limit", 429, {
         message: `Daily limit of ${MAX_PER_DAY} AI verifications reached. Resets at midnight.`,
-      }, 429);
+      });
 
     // ── 3. Parse & validate input ────────────────────────────
     let body: { taskTitle?: string; durationMins?: number; proofText?: string; imageBase64?: string };
     try { body = await req.json(); }
-    catch { return json({ error: "Invalid JSON body" }, 400); }
+    catch { return reject("invalid_json", 400); }
 
     const { taskTitle, durationMins, proofText, imageBase64 } = body;
 
     if (!taskTitle || typeof taskTitle !== "string" || taskTitle.length > 200)
-      return json({ error: "Invalid task title" }, 400);
+      return reject("invalid_task_title", 400);
 
     if (!proofText && !imageBase64)
-      return json({ error: "Proof text or image required" }, 400);
+      return reject("proof_required", 400);
 
     const sanitizedProof = proofText
       ? proofText.slice(0, MAX_PROOF_CHARS).replace(/[<>]/g, "")
       : undefined;
 
     if (imageBase64 && imageBase64.length > MAX_IMAGE_BYTES)
-      return json({ error: "Image too large (max ~375 KB)" }, 400);
+      return reject("image_too_large", 400);
 
     // ── 4. Build OpenAI request ───────────────────────────────
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
     if (!openaiKey) {
       console.error("OPENAI_API_KEY secret not set");
-      return json({ error: "Service misconfigured" }, 500);
+      return reject("service_misconfigured", 500);
+    }
+
+    // fetch + hard timeout. Supabase kills the whole invocation at 60s
+    // WallClockTime, so every outbound call needs its own budget — a hung
+    // request would otherwise burn the function's entire lifetime and return
+    // nothing the client can interpret.
+    async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { ...init, signal: controller.signal });
+      } finally { clearTimeout(timer); }
+    }
+
+    // ── 4a. Verifiability pre-flight ──────────────────────────
+    // Some tasks have no plausible proof. "Speak with my teacher", "call mum",
+    // "think through the pitch" leave nothing to photograph and nothing a
+    // photo could contradict, so running them through image verification just
+    // produces a coin-flip rejection the user can't do anything about.
+    //
+    // For those, we skip verification entirely and accept. This is deliberately
+    // server-side and invisible: exposing it as a client flag would let anyone
+    // mark their own tasks unverifiable and auto-pass everything.
+    //
+    // Fails OPEN toward normal verification — if this classification errors or
+    // returns junk we fall through to the real check rather than auto-accepting.
+    async function isHardToVerify(): Promise<boolean> {
+      try {
+        const r = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            max_tokens: 10,
+            temperature: 0,
+            messages: [{
+              role: "user",
+              content:
+                `A user must prove they completed a task using one photo and/or a short written note.\n` +
+                `Decide whether that task can plausibly be evidenced this way.\n` +
+                `Answer "verifiable" if there is a physical trace, location, object, screen, or bodily state ` +
+                `a photo could plausibly show (gym workout, dishes, reading, a run, cooking, cleaning).\n` +
+                `Answer "unverifiable" if completion is private, conversational, or purely mental, leaving ` +
+                `nothing a photo could show or contradict (speaking with someone, phoning a relative, ` +
+                `thinking, planning in your head, praying, meditating without a setup).\n` +
+                `Task: "${taskTitle.replace(/"/g, "'")}"\n` +
+                `Reply with exactly one word: verifiable or unverifiable.`,
+            }],
+          }),
+        }, 8_000);
+        if (!r.ok) return false;
+        const d = await r.json();
+        const word = String(d.choices?.[0]?.message?.content || "").trim().toLowerCase();
+        return word.startsWith("unverifiable");
+      } catch {
+        return false;
+      }
+    }
+
+    if (await isHardToVerify()) {
+      // Log the bypass so the rate-limit ledger still reflects the attempt.
+      supabase.from("ai_check_usage").insert({ user_id: user.id }).then(() => {}, () => {});
+      return json({
+        verified: true,
+        confidence: "medium",
+        bypassed: true,
+        message: "This one's hard to capture in a photo, so we'll take your word for it. Nice work.",
+      });
     }
 
     const messageContent: Array<{ type: string; [k: string]: unknown }> = [];
@@ -189,36 +281,39 @@ serve(async (req: Request) => {
     });
 
     // ── 5. Call OpenAI ────────────────────────────────────────
-    // Supabase Edge Functions kill us at 60s WallClockTime. Budget conservatively.
+    // Supabase Edge Functions kill us at 60s WallClockTime. Budget against a
+    // deadline measured from when the REQUEST started, not from here — the
+    // verifiability pre-flight above has already spent some of it, and the old
+    // fixed 28s+20s pair could overrun once anything ran before it.
     const startedAt = Date.now();
     async function callOpenAI(timeoutMs: number) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
-      try {
-        return await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${openaiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages: [{ role: "user", content: messageContent }],
-            max_tokens: 200,
-            temperature: 0.3,
-          }),
-          signal: controller.signal,
-        });
-      } finally { clearTimeout(timeout); }
+      return await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openaiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: messageContent }],
+          max_tokens: 200,
+          temperature: 0.3,
+        }),
+      }, timeoutMs);
     }
 
     let openaiResp: Response;
     try {
-      openaiResp = await callOpenAI(28_000);
-      // Retry on 5xx ONLY if we have time budget left (don't risk WallClockTime kill)
-      if (openaiResp.status >= 500 && openaiResp.status < 600 && Date.now() - startedAt < 25_000) {
+      // Leave ~6s of headroom under the 60s kill for reading the body and
+      // replying, so a slow OpenAI turns into a clean 503 rather than the
+      // platform killing us mid-flight (which reaches the client as an opaque
+      // "failed to send a request" — indistinguishable from being offline).
+      const budgetLeft = () => REQUEST_DEADLINE_MS - (Date.now() - REQUEST_STARTED_AT);
+      openaiResp = await callOpenAI(Math.max(5_000, Math.min(28_000, budgetLeft())));
+      // Retry on 5xx ONLY if enough budget remains for a second full attempt.
+      if (openaiResp.status >= 500 && openaiResp.status < 600 && budgetLeft() > 12_000) {
         await new Promise(r => setTimeout(r, 500));
-        openaiResp = await callOpenAI(20_000);
+        openaiResp = await callOpenAI(Math.max(5_000, Math.min(20_000, budgetLeft())));
       }
     } catch (e: any) {
       const tag = e?.name === "AbortError" ? "timeout" : (e?.message || "unknown");

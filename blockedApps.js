@@ -89,6 +89,7 @@ import {
   requestAuthorization as nativeRequestAuth,
   getAuthorizationStatus as nativeAuthStatus,
   presentAppPicker as nativePresentPicker,
+  getDiagnostics as nativeGetDiagnostics,
 } from "./screenTime";
 
 export const isNativeBlockingAvailable = nativeIsAvailable;
@@ -113,6 +114,23 @@ export async function openNativeAppPicker() {
   return ok ? { opened: true, status } : { opened: false, reason: "picker_failed", status };
 }
 
+/**
+ * How many things the user has actually picked in Apple's picker.
+ *
+ * Apple hides the selection itself, but the native diagnostics dump reports
+ * token counts, which is enough to answer "has anything been chosen yet?".
+ * Returns 0 whenever we can't tell (no native module, pre-iOS 16, throw) —
+ * callers treat that as "nothing selected", so a build without the bridge
+ * never claims a selection exists.
+ */
+export async function getBlockedSelectionCount() {
+  if (!nativeIsAvailable()) return 0;
+  try {
+    const d = await nativeGetDiagnostics();
+    return (d?.pickedAppCount || 0) + (d?.pickedCategoryCount || 0) + (d?.pickedWebCount || 0);
+  } catch { return 0; }
+}
+
 export async function applyBlocking(_appsList, { freeTier = false } = {}) {
   if (!nativeIsAvailable()) {
     return { applied: false, reason: "Screen Time API unavailable (Expo Go or non-iOS)" };
@@ -122,9 +140,15 @@ export async function applyBlocking(_appsList, { freeTier = false } = {}) {
     const next = await nativeRequestAuth();
     if (next !== "approved") return { applied: false, reason: "Authorization not granted" };
   }
-  const ok = freeTier
-    ? await nativeApplyShieldCategories()
-    : await nativeApplyShield();
+  // App selection is no longer a Pro feature, so the user's own picks win for
+  // everyone. `freeTier` now only decides the FALLBACK: if a free user somehow
+  // has nothing selected, shield the broad categories rather than nothing at
+  // all. Pro users with an empty selection get the same treatment as before —
+  // applyShield on an empty selection, which is a no-op by design.
+  const picked = await getBlockedSelectionCount();
+  const ok = picked > 0
+    ? await nativeApplyShield()
+    : (freeTier ? await nativeApplyShieldCategories() : await nativeApplyShield());
   return ok ? { applied: true } : { applied: false, reason: "Failed to apply shield" };
 }
 
