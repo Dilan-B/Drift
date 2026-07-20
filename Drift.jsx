@@ -600,6 +600,9 @@ const REPEAT_OPTIONS = [
   ["custom", "Custom days"],
 ];
 const REPEAT_LABELS = Object.fromEntries(REPEAT_OPTIONS);
+// Must be multiples of the slider's 15m step so tapping one lands exactly on
+// a slider position rather than a value the thumb can't represent.
+const QUICK_LENGTHS = [15, 30, 60, 120];
 
 function PlantSlider({
   value,
@@ -946,6 +949,34 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                 rightLabel="5h"
               />
 
+              {/* Quick lengths — dragging a slider to an exact common value is
+                  fiddly; these snap straight to it. */}
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
+                {QUICK_LENGTHS.map(m => {
+                  const active = mins === m;
+                  return (
+                    <TouchableOpacity
+                      key={m}
+                      onPress={() => setMins(m)}
+                      activeOpacity={0.8}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 9,
+                        borderRadius: 12,
+                        alignItems: "center",
+                        borderWidth: 1.2,
+                        borderColor: active ? earn.sage : ink.border,
+                        backgroundColor: active ? earn.sageLo : "transparent",
+                      }}
+                    >
+                      <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: active ? earn.sage : ink.mid }}>
+                        {m >= 60 ? `${m / 60}h` : `${m}m`}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
               <View style={cardDivider} />
 
               {/* Repeat — collapsed to a single row showing the current choice.
@@ -1093,10 +1124,10 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
 
               <View style={cardDivider} />
 
-              {/* Earn preview — fills the space the category picker left with
-                  the one thing worth knowing before you commit: what this is
-                  worth. Estimated, because the AI sets the final value. */}
-              <Text style={fieldKicker}>YOU'LL EARN</Text>
+              {/* Earn preview — the one thing worth knowing before you commit.
+                  The kicker says "estimated" so the numbers need no caption
+                  explaining that AI sets the final value. */}
+              <Text style={fieldKicker}>ESTIMATED EARNINGS</Text>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontFamily: FF.display, fontSize: 26, color: earn.sage, letterSpacing: -0.4 }}>
@@ -1116,11 +1147,6 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                   </Text>
                 </View>
               </View>
-              {isSubActive && (
-                <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.faint, marginTop: 10, lineHeight: 16 }}>
-                  Estimated — AI sets the final value from what the task asks of you.
-                </Text>
-              )}
             </View>
 
             {/* AI check — just the mark by default. The explanation is one tap
