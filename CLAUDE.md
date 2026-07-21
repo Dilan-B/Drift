@@ -2,12 +2,6 @@
 
 Expo / React Native productivity app. You earn screen-time by completing tasks; a Screen Time shield blocks chosen apps until you've earned time.
 
-> **⚠️ UNVERIFIED CHANGES ON `main` — READ [`TESTING-1677732.md`](TESTING-1677732.md) BEFORE TESTING OR BUILDING.**
-> Commit `1677732` is a large batch (dock restructure, onboarding, theme, edge
-> function) that compiles but has **never been run on a device**. That file lists
-> what to test in risk order, the ship-blocker to check first, and two known-
-> unresolved bugs. Delete it and this note once the list is worked through.
-
 ## Stack
 - Expo SDK + React Native (JS/JSX, not TS). Entry: `App.js` → `Drift.jsx` (main shell, ~4k lines).
 - Supabase: auth, Postgres (RLS), Edge Functions (Deno/TS) in `supabase/functions/*`, admin SQL in `supabase/admin/*`.

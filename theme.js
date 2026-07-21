@@ -72,8 +72,8 @@ export const DARK = {
     mid:    "#A9C4AB",    // secondary — soft green-white, clearly readable
     faint:  "#6E8A74",    // tertiary — muted but never invisible
     ghost:  "rgba(160,230,170,0.07)",
-    border: "rgba(160,230,170,0.15)",   // mint glass line — visible on cards
-    hairline: "rgba(160,230,170,0.09)",
+    border: "rgba(160,230,170,0.28)",   // mint glass line — visible on near-black canvas
+    hairline: "rgba(160,230,170,0.18)",
   },
   paper: {
     // Near-black with only a whisper of green. The canvas used to read as
