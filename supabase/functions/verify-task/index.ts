@@ -7,6 +7,20 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // ── Limits ────────────────────────────────────────────────────
 const MAX_PER_HOUR     = 5;
 const MAX_PER_DAY      = 20;
+
+// ── Model selection ──────────────────────────────────────────
+// Both are env-overridable (`supabase secrets set OPENAI_MODEL=...`) so the
+// model can change without a code deploy.
+//
+// MODEL_VISION handles the real proof check, which may include a photo — it
+// MUST be a vision-capable model or photo verification breaks outright.
+// MODEL_TEXT handles the one-word verifiability pre-flight, which never sends
+// an image, so it can be a cheaper text-only model if one is available.
+//
+// Default for both: gpt-4.1-nano — $0.10/$0.40 per 1M in/out (vs gpt-4o-mini's
+// $0.15/$0.60) and it accepts image input.
+const MODEL_VISION = Deno.env.get("OPENAI_MODEL") || "gpt-4.1-nano";
+const MODEL_TEXT   = Deno.env.get("OPENAI_MODEL_TEXT") || MODEL_VISION;
 const MAX_PROOF_CHARS  = 1000;
 const MAX_IMAGE_BYTES  = 450_000; // ~330 KB original after shrink → safer for OpenAI
 const MAX_BODY_BYTES   = 800_000; // hard ceiling on request body
@@ -201,7 +215,7 @@ serve(async (req: Request) => {
           method: "POST",
           headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "gpt-4o-mini",
+            model: MODEL_TEXT,
             max_tokens: 10,
             temperature: 0,
             messages: [{
@@ -294,7 +308,7 @@ serve(async (req: Request) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: MODEL_VISION,
           messages: [{ role: "user", content: messageContent }],
           max_tokens: 200,
           temperature: 0.3,
