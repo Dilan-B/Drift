@@ -213,6 +213,8 @@ PODS:
     - ExpoModulesCore
   - ExpoBackgroundTask (1.0.10):
     - ExpoModulesCore
+  - ExpoCalendar (15.0.8):
+    - ExpoModulesCore
   - ExpoClipboard (8.0.8):
     - ExpoModulesCore
   - ExpoContacts (15.0.11):
@@ -223,6 +225,8 @@ PODS:
     - ExpoModulesCore
   - ExpoFont (14.0.12):
     - ExpoModulesCore
+  - ExpoHaptics (15.0.8):
+    - ExpoModulesCore
   - ExpoImageManipulator (14.0.8):
     - EXImageLoader
     - ExpoModulesCore
@@ -232,6 +236,8 @@ PODS:
   - ExpoKeepAwake (15.0.8):
     - ExpoModulesCore
   - ExpoLinking (8.0.12):
+    - ExpoModulesCore
+  - ExpoLocation (19.0.8):
     - ExpoModulesCore
   - ExpoModulesCore (3.0.30):
     - hermes-engine
@@ -2294,6 +2300,29 @@ PODS:
     - TensorFlowLiteC/Core (= 2.17.0)
   - TensorFlowLiteC/Core (2.17.0)
   - UMAppLoader (6.0.8)
+  - vision-camera-resize-plugin (3.2.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - VisionCamera
+    - Yoga
   - VisionCamera (4.7.3):
     - VisionCamera/Core (= 4.7.3)
     - VisionCamera/FrameProcessors (= 4.7.3)
@@ -2323,15 +2352,18 @@ DEPENDENCIES:
   - ExpoAppleAuthentication (from `../node_modules/expo-apple-authentication/ios`)
   - ExpoAsset (from `../node_modules/expo-asset/ios`)
   - ExpoBackgroundTask (from `../node_modules/expo-background-task/ios`)
+  - ExpoCalendar (from `../node_modules/expo-calendar/ios`)
   - ExpoClipboard (from `../node_modules/expo-clipboard/ios`)
   - ExpoContacts (from `../node_modules/expo-contacts/ios`)
   - ExpoCrypto (from `../node_modules/expo-crypto/ios`)
   - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo-font/ios`)
+  - ExpoHaptics (from `../node_modules/expo-haptics/ios`)
   - ExpoImageManipulator (from `../node_modules/expo-image-manipulator/ios`)
   - ExpoImagePicker (from `../node_modules/expo-image-picker/ios`)
   - ExpoKeepAwake (from `../node_modules/expo-keep-awake/ios`)
   - ExpoLinking (from `../node_modules/expo-linking/ios`)
+  - ExpoLocation (from `../node_modules/expo-location/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
   - ExpoStoreReview (from `../node_modules/expo-store-review/ios`)
@@ -2417,6 +2449,7 @@ DEPENDENCIES:
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
   - UMAppLoader (from `../node_modules/unimodules-app-loader/ios`)
+  - vision-camera-resize-plugin (from `../node_modules/vision-camera-resize-plugin`)
   - VisionCamera (from `../node_modules/react-native-vision-camera`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
@@ -2458,6 +2491,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-asset/ios"
   ExpoBackgroundTask:
     :path: "../node_modules/expo-background-task/ios"
+  ExpoCalendar:
+    :path: "../node_modules/expo-calendar/ios"
   ExpoClipboard:
     :path: "../node_modules/expo-clipboard/ios"
   ExpoContacts:
@@ -2468,6 +2503,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-file-system/ios"
   ExpoFont:
     :path: "../node_modules/expo-font/ios"
+  ExpoHaptics:
+    :path: "../node_modules/expo-haptics/ios"
   ExpoImageManipulator:
     :path: "../node_modules/expo-image-manipulator/ios"
   ExpoImagePicker:
@@ -2476,6 +2513,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-keep-awake/ios"
   ExpoLinking:
     :path: "../node_modules/expo-linking/ios"
+  ExpoLocation:
+    :path: "../node_modules/expo-location/ios"
   ExpoModulesCore:
     :path: "../node_modules/expo-modules-core"
   ExpoSecureStore:
@@ -2645,6 +2684,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-worklets"
   UMAppLoader:
     :path: "../node_modules/unimodules-app-loader/ios"
+  vision-camera-resize-plugin:
+    :path: "../node_modules/vision-camera-resize-plugin"
   VisionCamera:
     :path: "../node_modules/react-native-vision-camera"
   Yoga:
@@ -2665,15 +2706,18 @@ SPEC CHECKSUMS:
   ExpoAppleAuthentication: 9413ae9a5e631a424cc04c1b13b0694dbab7d594
   ExpoAsset: 9e5a7c9c0a9fb83ad5b2bb365141f2bd7f289b66
   ExpoBackgroundTask: 835449414ab9f0e551de1f6d382fadbfad191dc7
+  ExpoCalendar: b35805a0a9e3f46a4cef0cbfdf36673b4c973c63
   ExpoClipboard: b36b287d8356887844bb08ed5c84b5979bb4dd1e
   ExpoContacts: 1c976e6c0b9be9b256ea038eba5c86f5707a73ce
   ExpoCrypto: e2a2c4c748aac8485e5675f027b7901f511d43ff
   ExpoFileSystem: a8e7fb1e958471764fb48d281cf9fa81a9e4d77c
   ExpoFont: dfb7c572372b610da45b41e3b436321fd6a97215
+  ExpoHaptics: d3a6375d8dcc3a1083d003bc2298ff654fafb536
   ExpoImageManipulator: 607a5c8c88085381639458a46cc55fb9d3869148
   ExpoImagePicker: ade85e148f735fc7e6f27dfe3eef28eb3887e90a
   ExpoKeepAwake: 55f75eca6499bb9e4231ebad6f3e9cb8f99c0296
   ExpoLinking: 2ef632ad5013e3f1568fae9408d56ab9af5efc55
+  ExpoLocation: d5b61cb4970fa982e39ca94246a206a0c3b812ca
   ExpoModulesCore: 9e6a5514828e7dd5ded9e99d33557be2d284e660
   ExpoSecureStore: d32f751874a2ceb5aaeebeb3578e165c1ba2b24a
   ExpoStoreReview: 32bb43b6fae9c8db3e33cad69996dff3785eef5f
@@ -2764,9 +2808,10 @@ SPEC CHECKSUMS:
   SDWebImageWebPCoder: 0e06e365080397465cc73a7a9b472d8a3bd0f377
   TensorFlowLiteC: eac6d689a8d391d1b202dc59e3d9165ba64aaf73
   UMAppLoader: 145337733539f9af9b3dd97eeaa7f3bd97cacb23
+  vision-camera-resize-plugin: 63f2604f36e4201a5cbf5211284c343c8f7ba8c7
   VisionCamera: 0044a94f7489f19e19d5938e97dfc36f4784af3c
   Yoga: 5934998fbeaef7845dbf698f698518695ab4cd1a
 
-PODFILE CHECKSUM: 2c7cb802ec05e724e3bb6eeabb5d219e032bda30
+PODFILE CHECKSUM: 48ba68f0cb0d414abe54581ec526f5920316a333
 
 COCOAPODS: 1.16.2
