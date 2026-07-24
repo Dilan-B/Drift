@@ -1,0 +1,54 @@
+{
+  "title": "parent-mode",
+  "scenes": [
+    {
+      "visual": "hook",
+      "kicker": "For parents",
+      "headline": "End the screen time fight.",
+      "voiceover": "Every night, the same argument about the phone. Drift ends it.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "tasks",
+      "kicker": "You assign",
+      "headline": "Their chores, on their phone.",
+      "voiceover": "You put real tasks on your kid's phone. Homework, chores, practice.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "approve",
+      "kicker": "You approve",
+      "headline": "They prove it. You tap.",
+      "voiceover": "When it's done, they send proof. You approve it from your phone.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "shield",
+      "kicker": "You decide",
+      "headline": "You pick what gets blocked.",
+      "voiceover": "You choose exactly which apps stay locked until the work is done.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "earn",
+      "kicker": "They earn",
+      "headline": "Screen time, earned. Not begged for.",
+      "voiceover": "Screen time becomes something they earn. Not something you argue about.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "cta",
+      "kicker": "Free on the App Store",
+      "headline": "Bring peace to the phone.",
+      "voiceover": "Drift. Screen time they earn. Peace you keep.",
+      "audio": null,
+      "frames": 105
+    }
+  ],
+  "audioBase": "audio/parent-mode"
+}

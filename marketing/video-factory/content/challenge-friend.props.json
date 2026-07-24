@@ -1,0 +1,46 @@
+{
+  "title": "challenge-friend",
+  "scenes": [
+    {
+      "visual": "hook",
+      "kicker": "New in Drift",
+      "headline": "Bet your friend can't beat you.",
+      "voiceover": "Think you're faster than your friends? Prove it.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "challenge",
+      "kicker": "Send a dare",
+      "headline": "20 push-ups. First done wins.",
+      "voiceover": "Fire a challenge at a friend. Push-ups, a plank, a run. First one done wins.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "earn",
+      "kicker": "Winner takes it",
+      "headline": "Win the dare, earn the scroll.",
+      "voiceover": "The winner walks away with screen time minutes, earned the fun way.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "shield",
+      "kicker": "Losers wait",
+      "headline": "Lose? Your feeds stay locked.",
+      "voiceover": "Lose, and your apps stay locked until you earn your way back in.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "cta",
+      "kicker": "Free on the App Store",
+      "headline": "Earn your scroll. Together.",
+      "voiceover": "Drift. Challenge your friends. Earn your scroll.",
+      "audio": null,
+      "frames": 105
+    }
+  ],
+  "audioBase": "audio/challenge-friend"
+}

@@ -1,0 +1,35 @@
+{
+  "title": "photo-proof",
+  "scenes": [
+    {
+      "visual": "hook",
+      "kicker": "No honor system",
+      "headline": "Other apps trust you. Drift checks.",
+      "voiceover": "Every screen time app runs on the honor system. You know how that goes."
+    },
+    {
+      "visual": "proof",
+      "kicker": "AI check",
+      "headline": "Snap a photo. AI verifies it.",
+      "voiceover": "In Drift, you snap a photo of the finished task. The AI actually checks it."
+    },
+    {
+      "visual": "earn",
+      "kicker": "The payoff",
+      "headline": "Real proof. Real minutes.",
+      "voiceover": "Proof accepted, minutes unlocked. No cheating, even on yourself."
+    },
+    {
+      "visual": "shield",
+      "kicker": "No proof?",
+      "headline": "No photo, no feed.",
+      "voiceover": "And until then, the feeds stay behind the shield."
+    },
+    {
+      "visual": "cta",
+      "kicker": "Free on the App Store",
+      "headline": "Earn your scroll. For real.",
+      "voiceover": "Drift. Earn your scroll. For real this time."
+    }
+  ]
+}

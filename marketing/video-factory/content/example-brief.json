@@ -1,0 +1,46 @@
+{
+  "title": "drift-default-promo",
+  "scenes": [
+    {
+      "visual": "hook",
+      "kicker": "Screen time",
+      "headline": "Your apps cost you nothing. That's the problem.",
+      "voiceover": "Your apps cost you nothing to open. That's exactly why you can't stop.",
+      "frames": 136,
+      "audio": "scene-1.wav"
+    },
+    {
+      "visual": "shield",
+      "kicker": "The shield",
+      "headline": "Drift locks your distracting apps.",
+      "voiceover": "Drift puts a shield over the apps that eat your day. They stay locked.",
+      "frames": 122,
+      "audio": "scene-2.wav"
+    },
+    {
+      "visual": "tasks",
+      "kicker": "Do real things",
+      "headline": "Finish tasks. Earn minutes.",
+      "voiceover": "Finish real tasks, and you earn screen time back. Minute by minute.",
+      "frames": 138,
+      "audio": "scene-3.wav"
+    },
+    {
+      "visual": "earn",
+      "kicker": "Earned, not given",
+      "headline": "Scroll guilt-free.",
+      "voiceover": "So when you scroll, it's time you actually earned. No guilt.",
+      "frames": 123,
+      "audio": "scene-4.wav"
+    },
+    {
+      "visual": "cta",
+      "kicker": "Free on the App Store",
+      "headline": "Earn your scroll.",
+      "voiceover": "Drift. Earn your scroll.",
+      "frames": 75,
+      "audio": "scene-5.wav"
+    }
+  ],
+  "audioBase": "audio/test-run"
+}

@@ -1,0 +1,46 @@
+{
+  "title": "ignore-button",
+  "scenes": [
+    {
+      "visual": "hook",
+      "kicker": "Be honest",
+      "headline": "You've never once hit \"OK, time to stop.\"",
+      "voiceover": "Your screen time alert has an ignore button. You use it every day.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "shield",
+      "kicker": "No ignore button",
+      "headline": "Drift doesn't ask. It locks.",
+      "voiceover": "Drift shields your worst apps. There's nothing to dismiss.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "tasks",
+      "kicker": "The only way in",
+      "headline": "Do something real first.",
+      "voiceover": "Finish actual tasks to earn your minutes back.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "earn",
+      "kicker": "Fair trade",
+      "headline": "Your scroll, paid in full.",
+      "voiceover": "Every minute on your feed is a minute you earned.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "cta",
+      "kicker": "Free on the App Store",
+      "headline": "Earn your scroll.",
+      "voiceover": "Drift. Earn your scroll.",
+      "audio": null,
+      "frames": 105
+    }
+  ],
+  "audioBase": "audio/ignore-button"
+}

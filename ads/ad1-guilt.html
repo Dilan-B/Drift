@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drift Ad 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#050508;color:#fff;width:100vw;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.container{width:390px;height:844px;background:#050508;position:relative;overflow:hidden}
+
+.line{opacity:0;transform:translateY(40px);font-weight:800;text-align:center;padding:0 30px;position:absolute;width:100%;left:0}
+.line.active{animation:slideIn .5s ease forwards}
+.line.exit{animation:slideOut .3s ease forwards}
+
+@keyframes slideIn{to{opacity:1;transform:translateY(0)}}
+@keyframes slideOut{to{opacity:0;transform:translateY(-30px) scale(.95)}}
+
+.hook{font-size:42px;top:50%;transform:translateY(-50%) translateY(40px);line-height:1.1;letter-spacing:-.03em}
+.hook span{color:#ff4444}
+
+.stat{font-size:28px;top:50%;transform:translateY(-50%) translateY(40px);line-height:1.3}
+.stat .big{font-size:80px;font-weight:900;display:block;background:linear-gradient(135deg,#6c5ce7,#a29bfe,#00cec9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.04em;margin-bottom:10px}
+
+.problem{font-size:26px;top:50%;transform:translateY(-50%) translateY(40px);line-height:1.4;font-weight:700}
+.problem span{color:#ff6b6b}
+
+.solution{font-size:24px;top:50%;transform:translateY(-50%) translateY(40px);line-height:1.4;font-weight:700}
+.solution span{background:linear-gradient(135deg,#6c5ce7,#00cec9);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+.phone-mock{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) translateY(40px) scale(.9);width:220px;height:440px;border:3px solid rgba(255,255,255,.15);border-radius:36px;background:#0c0c12;padding:50px 16px 16px;opacity:0}
+.phone-mock.active{animation:phoneIn .6s ease forwards}
+@keyframes phoneIn{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.phone-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:90px;height:24px;background:#050508;border-radius:0 0 14px 14px}
+.shield{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.shield-icon{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#6c5ce7,#00cec9);display:flex;align-items:center;justify-content:center;font-size:28px}
+.shield-text{font-size:13px;color:rgba(255,255,255,.6);text-align:center;line-height:1.5}
+.shield-text strong{color:#fff;display:block;font-size:15px;margin-bottom:4px}
+.task-item{width:100%;padding:10px 12px;background:rgba(255,255,255,.05);border-radius:12px;display:flex;align-items:center;gap:10px;margin-top:8px}
+.task-check{width:20px;height:20px;border-radius:50%;border:2px solid #6c5ce7;flex-shrink:0}
+.task-label{font-size:11px;font-weight:600}
+.task-reward{font-size:10px;color:#00cec9;margin-left:auto;white-space:nowrap}
+
+.result{font-size:26px;top:50%;transform:translateY(-50%) translateY(40px);line-height:1.4;font-weight:700}
+.result .before{color:#ff4444;font-size:48px;font-weight:900;display:block;text-decoration:line-through;opacity:.5}
+.result .after{font-size:48px;font-weight:900;display:block;background:linear-gradient(135deg,#6c5ce7,#00cec9);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+.cta{font-size:22px;top:50%;transform:translateY(-50%) translateY(40px);line-height:1.5;font-weight:700}
+.cta .app-name{font-size:56px;font-weight:900;display:block;background:linear-gradient(135deg,#6c5ce7,#a29bfe,#00cec9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px}
+.cta .free{font-size:18px;color:rgba(255,255,255,.5);font-weight:600}
+
+.bg-glow{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;opacity:0;transition:opacity 1s}
+.bg-glow.active{opacity:1}
+.glow1{width:300px;height:300px;background:rgba(108,92,231,.3);top:20%;left:-20%}
+.glow2{width:250px;height:250px;background:rgba(0,206,201,.2);bottom:20%;right:-20%}
+.glow-red{width:300px;height:300px;background:rgba(255,68,68,.2);top:30%;left:10%}
+</style>
+</head>
+<body>
+<div class="container" id="ad">
+<div class="bg-glow glow1" id="glow1"></div>
+<div class="bg-glow glow2" id="glow2"></div>
+<div class="bg-glow glow-red" id="glowRed"></div>
+
+<div class="line hook" id="s1">I lost <span>6 hours</span> yesterday.</div>
+
+<div class="line stat" id="s2"><span class="big">6h 42m</span>on TikTok alone.</div>
+
+<div class="line problem" id="s3">Not working.<br>Not studying.<br>Just... <span>scrolling.</span></div>
+
+<div class="line solution" id="s4">So I downloaded<br><span>Drift.</span></div>
+
+<div class="phone-mock" id="s5">
+<div class="phone-notch"></div>
+<div class="shield">
+<div class="shield-icon">🛡</div>
+<div class="shield-text"><strong>Apps blocked</strong>Complete tasks to earn screen time</div>
+<div class="task-item"><div class="task-check"></div><span class="task-label">Finish homework</span><span class="task-reward">+30m</span></div>
+<div class="task-item"><div class="task-check"></div><span class="task-label">Go for a walk</span><span class="task-reward">+15m</span></div>
+</div>
+</div>
+
+<div class="line result" id="s6">Screen time:<br><span class="before">6 hours</span><span class="after">2 hours</span></div>
+
+<div class="line cta" id="s7"><span class="app-name">Drift</span>Earn your screen time.<br><span class="free">Free on the App Store</span></div>
+</div>
+
+<script>
+const steps=[
+{show:'s1',glows:['glowRed'],dur:2500},
+{show:'s2',glows:['glowRed'],dur:2500},
+{show:'s3',glows:['glowRed'],dur:3000},
+{show:'s4',glows:['glow1','glow2'],dur:2000},
+{show:'s5',glows:['glow1','glow2'],dur:3000,isPhone:true},
+{show:'s6',glows:['glow1','glow2'],dur:3000},
+{show:'s7',glows:['glow1','glow2'],dur:4000},
+];
+let prev=null;
+function run(i){
+if(i>=steps.length)return;
+const s=steps[i];
+document.querySelectorAll('.bg-glow').forEach(g=>g.classList.remove('active'));
+s.glows.forEach(id=>document.getElementById(id).classList.add('active'));
+if(prev){
+const p=document.getElementById(prev);
+p.classList.remove('active');
+p.classList.add('exit');
+}
+setTimeout(()=>{
+const el=document.getElementById(s.show);
+if(s.isPhone)el.classList.add('active');
+else el.classList.add('active');
+prev=s.show;
+setTimeout(()=>run(i+1),s.dur);
+},prev?300:0);
+}
+setTimeout(()=>run(0),500);
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+{
+  "title": "guilt-free",
+  "scenes": [
+    {
+      "visual": "hook",
+      "kicker": "That feeling",
+      "headline": "You scroll. Then you hate that you scrolled.",
+      "voiceover": "The scroll feels good for ten minutes. The guilt lasts all day.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "tasks",
+      "kicker": "Flip it",
+      "headline": "Do the thing you're avoiding.",
+      "voiceover": "With Drift, you knock out the tasks you keep putting off.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "earn",
+      "kicker": "Get paid",
+      "headline": "Every task buys you screen time.",
+      "voiceover": "And every one pays you in minutes of screen time.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "shield",
+      "kicker": "Until then",
+      "headline": "The feeds can wait. They're locked.",
+      "voiceover": "Until you've earned it, your feeds stay locked.",
+      "audio": null,
+      "frames": 105
+    },
+    {
+      "visual": "cta",
+      "kicker": "Free on the App Store",
+      "headline": "Scroll happy.",
+      "voiceover": "Drift. Earn your scroll. Enjoy it, too.",
+      "audio": null,
+      "frames": 105
+    }
+  ],
+  "audioBase": "audio/guilt-free"
+}
