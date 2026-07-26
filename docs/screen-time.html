@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How much of your life is your phone? · Drift</title>
+<meta name="description" content="A quick calculator: enter how many hours a day you spend on your phone and see how many years of your life that adds up to.">
+<meta property="og:title" content="How much of your life is your phone?">
+<meta property="og:description" content="Enter your daily screen time and see the years — a screen-time reality check from Drift.">
+<style>
+  :root{
+    --ink:#16261C; --deep:#1F3A2A; --deepHi:#2A4D38;
+    --paper:#F4F5F1; --card:#FFFFFF; --line:#E4E7E2;
+    --sage:#3E6B4E; --sageLo:#E4ECE0; --terra:#2D7A52; --terraBr:#3DA870;
+    --clay:#B0764E; --clayLo:#EEE0CF; --mid:#5F6E62; --faint:#9AA69C; --sun:#E9E4B0;
+    --serif:Georgia,"Iowan Old Style","Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --bg:var(--paper); --fg:var(--ink); --panel:var(--card); --sub:var(--mid); --hair:var(--line);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#111c16; --fg:#EEF3EC; --panel:#182821; --sub:#A7B5A9; --hair:#26362D; }
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:var(--sans); background:var(--bg); color:var(--fg);
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+    min-height:100dvh; padding:max(20px,env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .wrap{width:100%; max-width:520px; margin:0 auto}
+
+  /* portal mark */
+  .mark{width:52px;height:52px;border-radius:50%;position:relative;margin:8px auto 18px;
+    background:var(--deep);display:grid;place-items:center}
+  .mark::before{content:"";width:20px;height:20px;border-radius:50%;background:var(--sun)}
+
+  .eyebrow{font-family:var(--sans);font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+    font-size:12px;color:var(--terra);text-align:center}
+  h1{font-family:var(--serif);font-weight:700;font-size:clamp(28px,7vw,38px);line-height:1.08;
+    text-align:center;margin-top:10px;text-wrap:balance;letter-spacing:-.01em}
+  .intro{text-align:center;color:var(--sub);font-size:16px;margin-top:12px;text-wrap:pretty}
+
+  .panel{background:var(--panel);border:1px solid var(--hair);border-radius:18px;
+    padding:22px 20px;margin-top:24px;box-shadow:0 10px 30px rgba(15,30,20,.06)}
+
+  label{display:block;font-weight:700;font-size:15px;margin-bottom:2px}
+  .hint{font-size:13px;color:var(--sub);margin-bottom:12px}
+
+  .hours{display:flex;align-items:baseline;gap:10px;justify-content:center;margin:6px 0 2px}
+  .hours input{width:3.4ch;font-family:var(--serif);font-weight:700;font-size:56px;
+    text-align:right;border:none;background:transparent;color:var(--terra);
+    font-variant-numeric:tabular-nums;padding:0}
+  .hours input:focus{outline:none}
+  .hours .unit{font-family:var(--serif);font-style:italic;font-size:22px;color:var(--sub)}
+
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:999px;
+    background:linear-gradient(90deg,var(--terra) var(--fill,38%),var(--sageLo) var(--fill,38%));
+    margin-top:14px;cursor:pointer}
+  @media (prefers-color-scheme:dark){input[type=range]{background:linear-gradient(90deg,var(--terraBr) var(--fill,38%),#24362c var(--fill,38%))}}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;
+    background:#fff;border:3px solid var(--terra);box-shadow:0 2px 6px rgba(0,0,0,.25);margin-top:0}
+  input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;
+    border:3px solid var(--terra);box-shadow:0 2px 6px rgba(0,0,0,.25)}
+  .scale{display:flex;justify-content:space-between;font-size:12px;color:var(--faint);margin-top:6px}
+
+  .agerow{display:flex;align-items:center;gap:12px;margin-top:22px;
+    border-top:1px solid var(--hair);padding-top:18px}
+  .agerow label{margin:0;flex:1}
+  .agerow .sub{font-weight:400;color:var(--sub);font-size:13px;display:block}
+  .agerow input{width:70px;font-family:var(--serif);font-weight:700;font-size:26px;text-align:center;
+    color:var(--fg);background:var(--bg);border:1px solid var(--hair);border-radius:12px;padding:8px 4px;
+    font-variant-numeric:tabular-nums}
+  .agerow input:focus{outline:2px solid var(--terra);outline-offset:1px}
+
+  /* headline result */
+  .result{margin-top:26px;text-align:center}
+  .result .big{font-family:var(--serif);font-weight:700;color:var(--terra);
+    font-size:clamp(60px,17vw,92px);line-height:.95;font-variant-numeric:tabular-nums;
+    display:block;transition:color .2s}
+  .result .big.alarm{color:var(--clay)}
+  .result .years{font-family:var(--serif);font-style:italic;font-size:22px;color:var(--fg);margin-top:2px}
+  .result .ctx{color:var(--sub);font-size:15px;margin-top:12px;max-width:40ch;margin-left:auto;margin-right:auto;text-wrap:pretty}
+  .result .ctx b{color:var(--fg)}
+
+  .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:24px}
+  .stat{background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:14px 8px;text-align:center}
+  .stat .n{font-family:var(--serif);font-weight:700;font-size:clamp(20px,6vw,26px);color:var(--fg);
+    font-variant-numeric:tabular-nums;line-height:1}
+  .stat .l{font-size:11.5px;color:var(--sub);margin-top:6px;line-height:1.25}
+
+  footer{margin-top:26px;text-align:center;font-size:12.5px;color:var(--faint);max-width:44ch}
+  footer a{color:var(--sub)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mark" aria-hidden="true"></div>
+  <div class="eyebrow">A Screen-Time Reality Check</div>
+  <h1>How much of your life is your phone?</h1>
+  <p class="intro">Drag the slider to how many hours a day you're on your phone. We'll do the math you'd rather not.</p>
+
+  <div class="panel">
+    <label for="hours">Hours on your phone, per day</label>
+    <div class="hint">Not sure? Your phone's Settings → Screen Time has the real number.</div>
+    <div class="hours">
+      <input id="hoursNum" type="number" min="0" max="16" step="0.5" value="4.5" inputmode="decimal" aria-label="Hours per day">
+      <span class="unit">hrs / day</span>
+    </div>
+    <input id="hours" type="range" min="0" max="12" step="0.5" value="4.5" aria-label="Hours per day slider">
+    <div class="scale"><span>0</span><span>3</span><span>6</span><span>9</span><span>12+</span></div>
+
+    <div class="agerow">
+      <label for="age">Your age
+        <span class="sub">so we can project across the rest of your life</span>
+      </label>
+      <input id="age" type="number" min="10" max="95" step="1" value="30" inputmode="numeric" aria-label="Your age">
+    </div>
+  </div>
+
+  <div class="result">
+    <span class="big" id="bigYears">9.4</span>
+    <div class="years" id="yearsLabel">years of your life</div>
+    <p class="ctx" id="ctx"></p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n" id="sWeek">32h</div><div class="l">every week</div></div>
+    <div class="stat"><div class="n" id="sYear">68</div><div class="l">days per year</div></div>
+    <div class="stat"><div class="n" id="sWake">28%</div><div class="l">of your waking hours</div></div>
+  </div>
+
+  <footer>
+    Estimates only, for reflection — not precise. Lifetime figure projects your current daily use from your age to 85, counting a 16-hour waking day. <br>Made by <a href="https://dilan-b.github.io/Drift/">Drift</a>.
+  </footer>
+</div>
+
+<script>
+  var LIFE = 85;        // life expectancy horizon
+  var WAKING = 16;      // waking hours per day
+  var range = document.getElementById('hours');
+  var num   = document.getElementById('hoursNum');
+  var age   = document.getElementById('age');
+  var bigYears = document.getElementById('bigYears');
+  var yearsLabel = document.getElementById('yearsLabel');
+  var ctx = document.getElementById('ctx');
+  var sWeek = document.getElementById('sWeek');
+  var sYear = document.getElementById('sYear');
+  var sWake = document.getElementById('sWake');
+
+  function fmt(n, d){ return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+  function compute(){
+    var h = Math.max(0, Math.min(16, parseFloat(num.value)||0));
+    var a = Math.max(10, Math.min(95, parseInt(age.value,10)||30));
+    var yearsLeft = Math.max(0, LIFE - a);
+
+    // years of remaining LIFE spent on the phone (24h clock)
+    var lifeYears = h * yearsLeft / 24;
+    // % of WAKING hours
+    var wakePct = Math.round(Math.min(100, h / WAKING * 100));
+    // days per year (24h clock)
+    var daysYr = Math.round(h * 365.25 / 24);
+    // hours per week
+    var perWeek = h * 7;
+
+    bigYears.textContent = fmt(lifeYears, lifeYears < 10 ? 1 : 0);
+    bigYears.classList.toggle('alarm', lifeYears >= 8);
+    yearsLabel.textContent = lifeYears === 1 ? 'year of your life' : 'years of your life';
+
+    var wakingYears = lifeYears / (WAKING/24); // same time expressed against waking hours only
+    ctx.innerHTML = 'At <b>' + fmt(h,1).replace(/\.0$/,'') + ' hrs/day</b>, from age <b>' + a +
+      '</b> to <b>' + LIFE + '</b> you\'ll spend about <b>' + fmt(lifeYears, lifeYears<10?1:0) +
+      ' years</b> looking at your phone — roughly <b>' + fmt(wakingYears, wakingYears<10?1:0) +
+      ' years</b> of your <i>waking</i> life.';
+
+    sWeek.textContent = (perWeek % 1 === 0 ? perWeek : fmt(perWeek,1)) + 'h';
+    sYear.textContent = daysYr;
+    sWake.textContent = wakePct + '%';
+
+    var fill = (Math.min(12, h) / 12 * 100);
+    range.style.setProperty('--fill', fill + '%');
+  }
+
+  function fromRange(){ num.value = range.value; compute(); }
+  function fromNum(){
+    var v = Math.max(0, Math.min(16, parseFloat(num.value)||0));
+    if (v <= 12) range.value = v;
+    compute();
+  }
+  range.addEventListener('input', fromRange);
+  num.addEventListener('input', fromNum);
+  age.addEventListener('input', compute);
+  compute();
+</script>
+</body>
+</html>
