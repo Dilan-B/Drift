@@ -44,7 +44,7 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>
@@ -56,6 +56,16 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSCalendarsUsageDescription</key>
+    <string>Drift can read your calendar to offer today's events as tasks. It never changes your calendar and nothing is uploaded.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Drift can read your calendar to offer today's events as tasks. It never changes your calendar and nothing is uploaded.</string>
+    <key>NSRemindersFullAccessUsageDescription</key>
+    <string>Drift can read your reminders to offer them as tasks. It never changes your reminders and nothing is uploaded.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Drift uses your location to save the places you choose, so it can suggest a task when you arrive. Your location stays on your device.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Drift checks when you arrive at places you've saved so it can suggest a task. This needs Always access to work in the background. Your location stays on your device and is never uploaded.</string>
     <key>NSCameraUsageDescription</key>
     <string>Drift needs your camera to take proof photos for AI-verified tasks and to set your profile avatar.</string>
     <key>NSContactsUsageDescription</key>
