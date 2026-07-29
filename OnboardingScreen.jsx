@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { supabase } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
-// import { AppleSignInButton } from "./appleSignIn";
+import { AppleSignInButton } from "./appleSignIn";
 import { joinFamily, normalizeFamilyCode } from "./family";
 import { cached, rateLimited } from "./apiGuards";
 import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon, ClipboardIcon, SparkleIcon, UsersIcon, BellIcon, LeafIcon } from "./Icons";
@@ -590,8 +590,8 @@ function Field({ label, inputRef, style, ...props }) {
   );
 }
 
-// ─── Social auth provider button (Google only) ───────────────────────────────
-function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
+// ─── Social auth provider buttons (Apple + Google) ───────────────────────────
+function OAuthButtons({ mode, loading, setLoading, setError, onDone, dark = false }) {
   // Google sign-in hook — handles PKCE under the hood
   const google = useGoogleSignIn(async (res) => {
     if (!res || res.cancelled) return;
@@ -631,6 +631,16 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
     }
   };
 
+  const handleApple = async (user) => {
+    setError("");
+    setLoading(false);
+    onDone?.(user);
+  };
+  const handleAppleError = (err) => {
+    setLoading(false);
+    setError(prettyAuthError(err?.message) || "Apple sign-in failed.");
+  };
+
   // No providers available — render nothing
   if (!google.isConfigured) return null;
 
@@ -641,6 +651,15 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone }) {
         <Text style={{ color: FAINT, fontFamily: FF.body, fontSize: 12 }}>or</Text>
         <View style={{ flex: 1, height: 1, backgroundColor: BORDER }} />
       </View>
+
+      {/* Apple — required equivalent login alongside Google (Guideline 4.8) */}
+      <AppleSignInButton
+        mode={mode}
+        dark={dark}
+        onDone={handleApple}
+        onError={handleAppleError}
+        style={{ marginBottom: 10 }}
+      />
 
       {/* Google — Material-style button */}
       <TouchableOpacity
