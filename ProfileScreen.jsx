@@ -13,6 +13,8 @@ import { FF, getTheme } from "./theme";
 import { cached, invalidateCache, rateLimited } from "./apiGuards";
 import FeedbackModal from "./FeedbackModal";
 import RedeemCodeModal from "./RedeemCodeModal";
+import ShareCard from "./ShareCard";
+import { getReferralInfo } from "./referrals";
 import {
   CloseIcon, PhoneIcon, SparkleIcon, CheckIcon,
 } from "./Icons";
@@ -96,6 +98,9 @@ export default function ProfileScreen({
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [busyActions, setBusyActions] = useState({});
+  const [shareOpen, setShareOpen] = useState(false);
+  const [stats, setStats] = useState({ streak: 0, tasksCompleted: 0, minutesEarned: 0 });
+  const [referralCode, setReferralCode] = useState("");
 
   useEffect(() => {
     if (!userId) return;
@@ -119,6 +124,24 @@ export default function ProfileScreen({
         setDraftUsername(data.username || username || "");
         onProfileChange?.(data);
       }
+    })();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      const [{ count: tc }, { data: p }, { data: tasks }] = await Promise.all([
+        supabase.from("tasks").select("*", { count: "exact", head: true }).eq("user_id", userId).eq("completed", true),
+        supabase.from("profiles").select("current_streak, referral_code").eq("id", userId).maybeSingle(),
+        supabase.from("tasks").select("credits").eq("user_id", userId).eq("completed", true),
+      ]);
+      if (p?.referral_code) setReferralCode(p.referral_code);
+      const mins = (tasks || []).reduce((sum, t) => sum + (t.credits || 0), 0);
+      setStats({
+        streak: p?.current_streak || 0,
+        tasksCompleted: tc || 0,
+        minutesEarned: mins,
+      });
     })();
   }, [userId]);
 
@@ -393,6 +416,19 @@ export default function ProfileScreen({
               onPress={() => setRedeemOpen(true)}
             />
           )}
+          <Row
+            id="shareInvite"
+            title="Share & Invite"
+            sub="Share your stats, earn bonus time"
+            cta="SHARE"
+            accent={earn.green}
+            icon={(c) => (
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <Path d="M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+            )}
+            onPress={() => setShareOpen(true)}
+          />
         </View>
 
         {/* Feedback + legal */}
@@ -451,6 +487,19 @@ export default function ProfileScreen({
         onRedeemed={onProRedeemed}
         dark={dark}
       />
+      {shareOpen && (
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.85)", zIndex: 999 }}>
+          <ShareCard
+            username={currentUsername}
+            streak={stats.streak}
+            tasksCompleted={stats.tasksCompleted}
+            minutesEarned={stats.minutesEarned}
+            referralCode={referralCode}
+            theme={{ bg: paper.card, text: ink.deep, sage: earn.green }}
+            onClose={() => setShareOpen(false)}
+          />
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }

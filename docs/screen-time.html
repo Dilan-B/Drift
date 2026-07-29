@@ -83,6 +83,17 @@
   .result .ctx{color:var(--sub);font-size:15px;margin-top:12px;max-width:40ch;margin-left:auto;margin-right:auto;text-wrap:pretty}
   .result .ctx b{color:var(--fg)}
 
+  /* life-in-weeks card */
+  .lifecard{margin-top:22px;background:var(--panel);border:1px solid var(--hair);border-radius:16px;padding:16px 16px 14px}
+  #lifeCanvas{width:100%;height:250px;display:block}
+  .lifecap{text-align:center;font-size:12.5px;color:var(--sub);margin-top:10px;text-wrap:pretty}
+  .lifelegend{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:center;margin-top:10px;font-size:12px;color:var(--sub)}
+  .lifelegend i{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px}
+  .share{all:unset;box-sizing:border-box;cursor:pointer;display:block;width:100%;text-align:center;margin-top:18px;
+    background:var(--terra);color:#fff;font-weight:700;font-size:15px;padding:14px;border-radius:999px}
+  .share:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+  .share.copied{background:var(--sage)}
+
   .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:24px}
   .stat{background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:14px 8px;text-align:center}
   .stat .n{font-family:var(--serif);font-weight:700;font-size:clamp(20px,6vw,26px);color:var(--fg);
@@ -125,6 +136,17 @@
     <p class="ctx" id="ctx"></p>
   </div>
 
+  <div class="lifecard">
+    <canvas id="lifeCanvas" aria-label="A whole life in weeks, with phone time shaded"></canvas>
+    <div class="lifecap">A long life is about <b>4,420 weeks</b>. The shaded weeks are your phone.</div>
+    <div class="lifelegend">
+      <span><i style="background:var(--sub)"></i>a week of a life</span>
+      <span><i style="background:var(--clay)"></i>a week on your phone</span>
+    </div>
+  </div>
+
+  <button class="share" id="shareBtn" type="button">Screenshot this — or tap to share</button>
+
   <div class="stats">
     <div class="stat"><div class="n" id="sWeek">32h</div><div class="l">every week</div></div>
     <div class="stat"><div class="n" id="sYear">68</div><div class="l">days per year</div></div>
@@ -148,8 +170,35 @@
   var sWeek = document.getElementById('sWeek');
   var sYear = document.getElementById('sYear');
   var sWake = document.getElementById('sWake');
+  var lifeCanvas = document.getElementById('lifeCanvas');
+  var shareBtn = document.getElementById('shareBtn');
+  var curHours = 4.5, curYears = '10';
 
   function fmt(n, d){ return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+  function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'; }
+
+  function drawLife(shadeFrac){
+    var cols = 52, rows = 85, total = cols*rows;
+    var dpr = Math.max(1, window.devicePixelRatio||1);
+    var rect = lifeCanvas.getBoundingClientRect();
+    if (rect.width < 2) return;
+    var W = Math.round(rect.width*dpr), H = Math.round(rect.height*dpr);
+    lifeCanvas.width = W; lifeCanvas.height = H;
+    var ctx = lifeCanvas.getContext('2d');
+    var cw = W/cols, ch = H/rows, r = Math.min(cw,ch)*0.36;
+    var base = cssVar('--hair'), lived = cssVar('--sub'), phone = cssVar('--clay');
+    // lived weeks (faint) as the field; phone block in clay at the bottom
+    var shadedN = Math.round(total * Math.min(1, shadeFrac));
+    ctx.clearRect(0,0,W,H);
+    for (var idx=0; idx<total; idx++){
+      var row = Math.floor(idx/cols), col = idx%cols;
+      ctx.fillStyle = (idx >= total - shadedN) ? phone : lived;
+      ctx.globalAlpha = (idx >= total - shadedN) ? 1 : 0.5;
+      ctx.beginPath(); ctx.arc(col*cw+cw/2, row*ch+ch/2, r, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
 
   function compute(){
     var h = Math.max(0, Math.min(16, parseFloat(num.value)||0));
@@ -181,7 +230,29 @@
 
     var fill = (Math.min(12, h) / 12 * 100);
     range.style.setProperty('--fill', fill + '%');
+
+    // life-in-weeks: phone as a share of a whole life (24h clock)
+    curHours = fmt(h,1).replace(/\.0$/,'');
+    curYears = fmt(lifeYears, lifeYears<10?1:0);
+    drawLife(h/24);
   }
+
+  shareBtn.addEventListener('click', async function(){
+    var txt = 'At ' + curHours + ' hrs a day, I’ll spend about ' + curYears +
+      ' years of the rest of my life looking at my phone. What’s yours?';
+    var url = 'https://dilan-b.github.io/Drift/screen-time.html';
+    try {
+      if (navigator.share) { await navigator.share({ title: 'How much of your life is your phone?', text: txt, url: url }); }
+      else {
+        await navigator.clipboard.writeText(txt + ' ' + url);
+        shareBtn.textContent = 'Copied — paste it to someone';
+        shareBtn.classList.add('copied');
+        setTimeout(function(){ shareBtn.textContent = 'Screenshot this — or tap to share'; shareBtn.classList.remove('copied'); }, 2400);
+      }
+    } catch(e) {}
+  });
+
+  var rz; window.addEventListener('resize', function(){ clearTimeout(rz); rz = setTimeout(compute, 150); });
 
   function fromRange(){ num.value = range.value; compute(); }
   function fromNum(){

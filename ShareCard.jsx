@@ -17,6 +17,7 @@ export default function ShareCard({
   streak = 0,
   tasksCompleted = 0,
   minutesEarned = 0,
+  referralCode = "",
   theme,
   onClose,
 }) {
@@ -32,7 +33,7 @@ export default function ShareCard({
       `${streak}-day streak · ${tasksCompleted} tasks completed · ${minutesEarned} min earned`,
       ``,
       `I earn my screen time instead of doom-scrolling.`,
-      `Try it free: driftproductivity.com`,
+      referralCode ? `Try it free: driftproductivity.com?ref=${referralCode}` : `Try it free: driftproductivity.com`,
     ].join("\n");
     try {
       await Share.share({ message: msg });
