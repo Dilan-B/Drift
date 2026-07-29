@@ -41,18 +41,29 @@ Your data stays on your device. Task photos are analyzed by AI and never stored.
 
 Free to use. No ads. No hidden fees.
 
+Terms of Use (EULA): https://driftproductivity.com/terms/
+Privacy Policy: https://driftproductivity.com/privacy/
+
+> ⚠️ The two links above are REQUIRED in the App Store description. Submission
+> d2729363 was auto-rejected twice under Guideline 3.1.2(c) for their absence —
+> the app still ships dormant auto-renewable-subscription code, so Apple's
+> automated check applies subscription rules regardless of the paywall being
+> disabled. In-app links do not satisfy it; the scanner reads the store listing.
+> Verify both URLs resolve in a private window before saving.
+
 ## Category
 Primary: Productivity
 Secondary: Health & Fitness
 
 ## What's New (for 1.1.4)
+• Sign in with Apple — faster sign-up, keep your email private
 • AI task suggestions from your calendar and saved places
 • The Lab — experimental features to test
 • Rotating shield themes (zen, greenhouse, scoreboard, and more)
 • Smarter task categories powered by AI
 • Live rep-tracking for workout challenges
 • Dark mode improvements
-• Fixed crash on launch for iOS 17+ devices
+• Fixed an issue that could show "Update Required" on the latest version
 • Performance and stability improvements
 
 ## Search Ads Keywords (high intent)
