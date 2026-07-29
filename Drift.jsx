@@ -3427,6 +3427,10 @@ export default function App() {
   const [showAccount,        setShowAccount]        = useState(false);
   const [forceUpdate,        setForceUpdate]        = useState(false);
   const [updateStoreUrl,     setUpdateStoreUrl]     = useState(null);
+  // Dev escape hatch out of the update gate. Persisted, because the gate
+  // re-checks on every foreground and returns before every other screen — a
+  // session-only flag would re-lock on the next cold start.
+  const updateOverrideRef = useRef(false);
   const [showBlockedApps,    setShowBlockedApps]    = useState(false);
   const [showBlockedHours,   setShowBlockedHours]   = useState(false);
   const [showRecurringTasks, setShowRecurringTasks] = useState(false);
@@ -3449,6 +3453,7 @@ export default function App() {
   const todayScrollRef = useRef(null); // so the tour can reset Today to the top
   const tutTabBarRef = useRef(null);
   const [showReviewPrompt,   setShowReviewPrompt]   = useState(false);
+  const reviewPromptShownRef = useRef(false); // in-memory guard against double-triggering within a session
   const [showUsernameSetup,  setShowUsernameSetup]  = useState(false);
   const [showReduceTime,     setShowReduceTime]     = useState(false);
   const [showQuickGrant,     setShowQuickGrant]     = useState(false);
@@ -4546,6 +4551,7 @@ export default function App() {
   // caught. Fails open (never blocks) if the config can't be read.
   useEffect(() => {
     const check = async () => {
+      if (updateOverrideRef.current) return;
       try {
         const current = Constants.expoConfig?.version || Constants.manifest?.version;
 
@@ -4578,7 +4584,19 @@ export default function App() {
         }
       } catch {}
     };
-    check();
+    (async () => {
+      // The override is stored as the version it was granted on, so it dies the
+      // moment the app is actually updated. Otherwise one tap would silently
+      // disable the update gate on that install forever — including for a
+      // security fix we genuinely need to force.
+      try {
+        const current = Constants.expoConfig?.version || Constants.manifest?.version;
+        const skipFor = await AsyncStorage.getItem("drift_dev_skip_update");
+        if (skipFor && skipFor === current) updateOverrideRef.current = true;
+        else if (skipFor) await AsyncStorage.removeItem("drift_dev_skip_update");
+      } catch {}
+      check();
+    })();
     const sub = AppState.addEventListener("change", s => { if (s === "active") check(); });
     return () => sub.remove();
   }, []);
@@ -4987,6 +5005,19 @@ export default function App() {
     persist({ tasks: nt, taskHistory: nh, credits: nc, totalXp: nx });
 
     track("task_completed", { credits: task.credits, xp: task.xp });
+
+    // Ask for a review only after real engagement (Apple 5.6.3 rejected
+    // prompting during onboarding). Fires once ever, after the 3rd completed
+    // task, gated on a persisted flag so it survives app restarts.
+    if (!reviewPromptShownRef.current && nh.length >= 3) {
+      reviewPromptShownRef.current = true;
+      AsyncStorage.getItem("drift_review_prompt_shown").then(flag => {
+        if (flag !== "1") {
+          AsyncStorage.setItem("drift_review_prompt_shown", "1").catch(() => {});
+          setShowReviewPrompt(true);
+        }
+      }).catch(() => {});
+    }
 
     // ── Server-of-truth writes ──
     if (userId) {
@@ -5511,7 +5542,17 @@ export default function App() {
   // child) with no way past it but updating. Placed before every other screen.
   if (forceUpdate) return (
     <View style={{ flex: 1, backgroundColor: getTheme(darkMode).paper.warm }}>
-      <ForceUpdateModal visible={true} storeUrl={updateStoreUrl} dark={darkMode} />
+      <ForceUpdateModal
+        visible={true}
+        storeUrl={updateStoreUrl}
+        dark={darkMode}
+        onOverride={() => {
+          updateOverrideRef.current = true;
+          const current = Constants.expoConfig?.version || Constants.manifest?.version;
+          if (current) AsyncStorage.setItem("drift_dev_skip_update", current).catch(() => {});
+          setForceUpdate(false);
+        }}
+      />
     </View>
   );
 
@@ -5871,23 +5912,23 @@ export default function App() {
         }}
       />
 
-      {/* Post-signup coachmark tour → hands off to the review prompt. A manual
-          replay from The Lab skips that hand-off; asking for a review every
-          time someone rewatches the tour would be obnoxious. */}
+      {/* Post-signup coachmark tour. The review prompt is NOT tied to this —
+          Apple (5.6.3) rejected asking for a rating during onboarding, before
+          the user has had a chance to see the app's value. It's triggered
+          instead after real engagement — see completeTask(). */}
       {showTutorial && (
         <TutorialOverlay
           dark={darkMode}
           targets={tutorialTargets}
           onDone={() => {
-            const wasReplay = tourReplayRef.current;
             tourReplayRef.current = false;
             setShowTutorial(false);
-            if (!wasReplay) setShowReviewPrompt(true);
           }}
         />
       )}
 
-      {/* Post-signup review prompt (shown after the tutorial). */}
+      {/* Review prompt — shown once, after the user has completed enough
+          tasks to have actually experienced the app's value. */}
       <Modal visible={showReviewPrompt} animationType="slide" onRequestClose={() => setShowReviewPrompt(false)}>
         <ReviewPromptScreen dark={darkMode} onDone={() => setShowReviewPrompt(false)} />
       </Modal>
