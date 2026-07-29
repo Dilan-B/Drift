@@ -19,7 +19,7 @@ import {
   clearPendingBalance, cache,
 } from "./sync";
 import { registerBackgroundRefresh } from "./backgroundRefresh";
-import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTimeNotices, scheduleDailyReminder, cancelAllNotifications } from "./notifications";
+import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTimeNotices, scheduleDailyReminder, cancelAllNotifications, registerForPushNotifications } from "./notifications";
 import { applyBlocking, clearBlocking } from "./blockedApps";
 // Importing places.js at module scope registers the geofence background task,
 // which iOS may wake the app directly into on a cold start.
@@ -82,6 +82,7 @@ import TutorialOverlay from "./TutorialOverlay";
 // import PaywallScreen from "./PaywallScreen";
 // import { useSubscription } from "./useSubscription";
 import ParentShell from "./ParentShell";
+import { identify, track, startAnalytics, stopAnalytics } from "./analytics";
 import ChildShell from "./ChildShell";
 import { cached, rateLimited } from "./apiGuards";
 import {
@@ -4617,6 +4618,12 @@ export default function App() {
         }
         setUserId(uid);
         setUserEmail(session?.user?.email ?? "");
+        if (uid) {
+          identify(uid);
+          startAnalytics();
+          track("app_opened");
+          registerForPushNotifications().catch(() => {});
+        }
         let bootAcctType = "personal";
         if (uid) {
           try {
@@ -4979,6 +4986,8 @@ export default function App() {
     startTick(newSec);
     persist({ tasks: nt, taskHistory: nh, credits: nc, totalXp: nx });
 
+    track("task_completed", { credits: task.credits, xp: task.xp });
+
     // ── Server-of-truth writes ──
     if (userId) {
       completeTaskRow(userId, id).catch(e => console.warn("completeTaskRow:", e?.message));
@@ -5173,6 +5182,7 @@ export default function App() {
   };
 
   const addTask  = (t, recurrence) => {
+    track("task_created", { credits: t.credits });
     const nt = [...tasks, t];
     setTasks(nt); persist({ tasks: nt });
     if (userId) {
