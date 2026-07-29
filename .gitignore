@@ -16,5 +16,5 @@ yarn-debug.*
 yarn-error.*
 .env
 
-# Admin SQL — never commit
-supabase/admin/
+# Admin SQL
+# supabase/admin/

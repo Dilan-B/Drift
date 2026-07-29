@@ -1,0 +1,71 @@
+-- Growth dashboard queries
+-- Run these in the Supabase SQL editor to track progress toward 10k users.
+-- These are SELECT-only queries, not schema changes.
+
+-- 1. Total users over time (daily signups)
+-- SELECT
+--   DATE(created_at) AS day,
+--   COUNT(*) AS signups,
+--   SUM(COUNT(*)) OVER (ORDER BY DATE(created_at)) AS cumulative_users
+-- FROM auth.users
+-- GROUP BY DATE(created_at)
+-- ORDER BY day DESC
+-- LIMIT 30;
+
+-- 2. Referral funnel
+-- SELECT
+--   (SELECT COUNT(*) FROM profiles WHERE referral_code IS NOT NULL) AS users_with_codes,
+--   (SELECT COUNT(*) FROM referral_events) AS successful_referrals,
+--   (SELECT COUNT(DISTINCT referrer_id) FROM referral_events) AS active_referrers,
+--   (SELECT ROUND(AVG(cnt), 1) FROM (
+--     SELECT COUNT(*) cnt FROM referral_events GROUP BY referrer_id
+--   ) sub) AS avg_referrals_per_referrer;
+
+-- 3. Daily active users (last 30 days, from analytics_events)
+-- SELECT
+--   DATE(created_at) AS day,
+--   COUNT(DISTINCT user_id) AS dau
+-- FROM analytics_events
+-- WHERE event_name = 'app_opened'
+--   AND created_at > NOW() - INTERVAL '30 days'
+-- GROUP BY DATE(created_at)
+-- ORDER BY day DESC;
+
+-- 4. Onboarding completion rate
+-- SELECT
+--   (SELECT COUNT(DISTINCT user_id) FROM analytics_events WHERE event_name = 'onboarding_started') AS started,
+--   (SELECT COUNT(DISTINCT user_id) FROM analytics_events WHERE event_name = 'onboarding_completed') AS completed;
+
+-- 5. Retention: users active in week 1 vs week 2 after signup
+-- SELECT
+--   w1.cohort_week,
+--   w1.users AS week1_active,
+--   w2.users AS week2_active,
+--   ROUND(100.0 * w2.users / NULLIF(w1.users, 0), 1) AS retention_pct
+-- FROM (
+--   SELECT DATE_TRUNC('week', u.created_at) AS cohort_week, COUNT(DISTINCT e.user_id) AS users
+--   FROM auth.users u
+--   JOIN analytics_events e ON e.user_id = u.id
+--     AND e.created_at BETWEEN u.created_at AND u.created_at + INTERVAL '7 days'
+--   GROUP BY 1
+-- ) w1
+-- LEFT JOIN (
+--   SELECT DATE_TRUNC('week', u.created_at) AS cohort_week, COUNT(DISTINCT e.user_id) AS users
+--   FROM auth.users u
+--   JOIN analytics_events e ON e.user_id = u.id
+--     AND e.created_at BETWEEN u.created_at + INTERVAL '7 days' AND u.created_at + INTERVAL '14 days'
+--   GROUP BY 1
+-- ) w2 ON w1.cohort_week = w2.cohort_week
+-- ORDER BY w1.cohort_week DESC;
+
+-- 6. Top referrers
+-- SELECT
+--   p.username,
+--   p.referral_code,
+--   COUNT(r.id) AS referrals,
+--   COUNT(r.id) * 15 AS bonus_minutes_earned
+-- FROM referral_events r
+-- JOIN profiles p ON p.id = r.referrer_id
+-- GROUP BY p.username, p.referral_code
+-- ORDER BY referrals DESC
+-- LIMIT 20;
