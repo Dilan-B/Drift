@@ -17,9 +17,14 @@
  * denied permission is a safe no-op.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
+import { supabase } from "./supabase";
 
 let Notifications = null;
 try { Notifications = require("expo-notifications"); } catch {}
+
+let Constants = null;
+try { Constants = require("expo-constants")?.default; } catch {}
 
 const OUT_OF_TIME_ID = "drift-out-of-time";
 const LOW_TIME_ID    = "drift-low-time";
@@ -209,6 +214,53 @@ export async function notifyChildSubmittedTask(taskTitle) {
 export async function notifyTaskApproved(minutes) {
   const m = Math.max(1, Math.round(minutes || 0));
   await fireImmediate("drift-task-approved", "Task approved", `You earned ${m} more minutes of screen time.`);
+}
+
+// ── Remote push token registration ──────────────────────────
+/**
+ * Request push permission, obtain the Expo push token, and save it to the
+ * push_tokens table in Supabase. Call after login / on app launch once the
+ * user is authenticated. Safe to call repeatedly — the unique constraint on
+ * (user_id, expo_push_token) prevents duplicates.
+ *
+ * Returns the token string on success, or null on failure / denied permission.
+ */
+export async function registerForPushNotifications() {
+  if (!Notifications) return null;
+  try {
+    const granted = await requestNotificationPermission();
+    if (!granted) return null;
+
+    // Expo push tokens require a projectId in EAS builds.
+    const projectId = Constants?.expoConfig?.extra?.eas?.projectId
+      ?? Constants?.easConfig?.projectId;
+
+    const tokenData = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined,
+    );
+    const token = tokenData?.data;
+    if (!token) return null;
+
+    // Get the current user.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // Upsert into push_tokens (conflict on the unique constraint just updates).
+    await supabase.from("push_tokens").upsert(
+      {
+        user_id: user.id,
+        expo_push_token: token,
+        platform: Platform.OS || "ios",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,expo_push_token" },
+    );
+
+    return token;
+  } catch (err) {
+    console.warn("registerForPushNotifications failed:", err);
+    return null;
+  }
 }
 
 /** Cancel everything Drift scheduled (e.g. on sign-out). */

@@ -27,6 +27,7 @@ let Contacts = null;
 try { Contacts = require("expo-contacts"); } catch {}
 
 const INVITE_URL = "https://driftproductivity.com";
+import { getReferralInfo } from "./referrals";
 
 export function contactsAvailable() {
   return !!Contacts;
@@ -91,12 +92,16 @@ export async function findContactsOnDrift() {
   }
 }
 
-/** Share a Drift download link with contacts who aren't on Drift yet. */
+/** Share a Drift download link with the user's referral code. */
 export async function inviteContacts() {
   try {
-    await Share.share({
-      message: `I'm using Drift to earn my screen time instead of doom-scrolling — join me: ${INVITE_URL}`,
-    });
+    const info = await getReferralInfo().catch(() => null);
+    const code = info?.code;
+    const link = code ? `${INVITE_URL}?ref=${code}` : INVITE_URL;
+    const msg = code
+      ? `I use Drift to earn my screen time — join with my code ${code} for 15 bonus minutes: ${link}`
+      : `I'm using Drift to earn my screen time instead of doom-scrolling — join me: ${link}`;
+    await Share.share({ message: msg });
     return true;
   } catch {
     return false;

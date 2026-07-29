@@ -34,7 +34,7 @@ serve(async (req: Request) => {
     // Generate personalized email via OpenAI
     const prompt = `You are writing a cold outreach email on behalf of Riaan, the founder of Drift.
 
-Drift is an iOS app built by two teens (Riaan and his co-founder) to solve their own generation's screen time problem. It uses Apple's Screen Time API to block distracting apps (TikTok, Instagram, games, etc.) until the user completes real-world tasks — homework, chores, exercise, or custom goals set by parents or the user themselves. Once tasks are verified, they earn minutes of screen time that unlock their blocked apps. It's live on the App Store and growing organically.
+Drift is an iOS app built by two teens (Riaan and Dilan) to solve their own generation's screen time problem. It uses Apple's Screen Time API to block distracting apps (TikTok, Instagram, games, etc.) until the user completes real-world tasks — homework, chores, exercise, or custom goals set by parents or the user themselves. Once tasks are verified, they earn minutes of screen time that unlock their blocked apps. It's live on the App Store and growing organically.
 
 Recipient: ${recipientName}
 Context about them: ${recipientContext || "none provided"}
