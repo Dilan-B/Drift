@@ -4,14 +4,6 @@ Updated July 29, 2026
 
 ## Right now — activates growth infrastructure
 
-> ⚠️ **Blocked on Riaan.** `supabase/admin/` is gitignored (`.gitignore:20`) and no
-> file under it is tracked in git, so none of the four SQL files below were
-> pushed — they exist only on the machine that wrote them. Dilan's checkout has
-> just `diagnose_recurring_duplicates.sql` and `schema_v5_recurring_template_id.sql`.
-> Send the four files directly (they must not be committed), or paste them into
-> the Supabase SQL editor yourself. Item 5 depends on step 2 — `send-push` writes
-> to `push_tokens`, so deploying before that table exists fails at runtime.
-
 1. Run `supabase/admin/analytics_events.sql` in Supabase SQL editor. Creates the event tracking table.
 2. Run `supabase/admin/push_tokens.sql` in Supabase SQL editor. Stores Expo push tokens.
 3. Run `supabase/admin/referrals.sql` in Supabase SQL editor. Adds referral codes to profiles, creates referral_events table. Required for Share & Invite in Profile.
