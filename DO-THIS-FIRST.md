@@ -4,14 +4,36 @@ Updated July 29, 2026
 
 ## Right now — activates growth infrastructure
 
-1. Run `supabase/admin/analytics_events.sql` in Supabase SQL editor. Creates the event tracking table.
-2. Run `supabase/admin/push_tokens.sql` in Supabase SQL editor. Stores Expo push tokens.
-3. Run `supabase/admin/referrals.sql` in Supabase SQL editor. Adds referral codes to profiles, creates referral_events table. Required for Share & Invite in Profile.
-4. Run `supabase/admin/streaks.sql` in Supabase SQL editor. Adds streak columns with auto-update triggers. Required for Share Card stats.
-5. Deploy push functions:
-   npx supabase functions deploy send-push --project-ref kxsikaymdykepcniozlp
-   npx supabase functions deploy send-scheduled-pushes --project-ref kxsikaymdykepcniozlp
-   npx supabase secrets set PUSH_SECRET=$(openssl rand -hex 32) --project-ref kxsikaymdykepcniozlp
+**Items 1–4 are DONE** (run against the Drift project `kxsikaymdykepcniozlp` on
+2026-07-31). Item 5 is done except the secret.
+
+1. ~~`supabase/admin/analytics_events.sql`~~ ✅ done
+2. ~~`supabase/admin/push_tokens.sql`~~ ✅ done
+3. ~~`supabase/admin/referrals.sql`~~ ✅ done — also adds `bonus_minutes`, which
+   `apply_referral_code()` writes to and nothing previously created
+4. ~~`supabase/admin/streaks.sql`~~ ✅ done — triggers now key off `done IS TRUE`,
+   matching `completeTaskRow()` in `sync.js`; the original `status = 'completed'`
+   column is never written by the app
+5. Push functions — **both deployed.** One step left:
+   - ~~deploy `send-push`~~ ✅
+   - ~~deploy `send-scheduled-pushes`~~ ✅
+   - [ ] set `PUSH_SECRET`. **Save the value in a password manager** — Supabase
+     secrets cannot be read back, and the cron that calls `send-scheduled-pushes`
+     needs it as a `Authorization: Bearer` header. Generate and set in PowerShell:
+
+     ```powershell
+     $sb = "$env:APPDATA\npm\node_modules\supabase\node_modules\@supabase\cli-windows-x64\bin\supabase.exe"
+     $bytes = New-Object byte[] 32
+     [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+     $hex = -join ($bytes | ForEach-Object { $_.ToString('x2') })
+     $hex   # <- copy this into your password manager BEFORE running the next line
+     & $sb secrets set PUSH_SECRET=$hex --project-ref kxsikaymdykepcniozlp
+     ```
+
+> On this Windows machine, never invoke `supabase` bare or via `npx` from the repo
+> root — `PATHEXT` includes `.JS` and `cmd.exe` resolves it to `.\supabase.js`,
+> handing the app's own module to Windows Script Host. Use the `$sb` absolute path
+> above. Same trap applies to `sync`, `contacts`, `family`, and `places`.
 
 ## Today — App Store & distribution
 

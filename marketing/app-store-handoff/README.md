@@ -20,17 +20,28 @@ Job A is what's blocking release. Do it first.
 
 ## A0. Get the code
 
-The fixes are on the branch **`fix/app-store-review-1.1.4`**.
+**Everything is merged to `main` and pushed.** No branch to check out.
 
 ```bash
-git fetch origin
-git checkout fix/app-store-review-1.1.4
+git checkout main
+git pull origin main
 ```
 
-If Dilan has already merged it, `git pull origin main` is enough instead.
+Confirm with `git log --oneline -6`. You should see `7360ba8` (the review fixes),
+`fd8eb90` (the merge), and `cd71f3c` (SQL corrections) in the history. If you
+don't, stop and message Dilan.
 
-Confirm you have it — `git log --oneline -1` should show the App Store review fix
-commit. If it doesn't, **stop and message Dilan**, it hasn't been pushed yet.
+### Already done — do NOT redo these
+
+| | Status |
+|---|---|
+| The three code fixes | ✅ merged to `main` |
+| Supabase SQL (analytics, push tokens, referrals, streaks) | ✅ run against the Drift project |
+| `send-push` + `send-scheduled-pushes` edge functions | ✅ deployed |
+| App Store description copy (incl. Terms link) | ✅ written, in `marketing/aso-keywords.md` — still needs pasting into App Store Connect |
+
+**Still open:** the `PUSH_SECRET` secret (Dilan holds it), the App Store Connect
+metadata edits (A2), and the build + submit (A3).
 
 ## A1. What changed and why
 

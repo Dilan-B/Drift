@@ -402,6 +402,61 @@ Fail if:
 - Redirect gets stuck in Safari.
 - The app returns but no session is created.
 
+### 5A. Sign in with Apple — RELEASE BLOCKER
+
+App Review rejected 1.1.4 twice under Guideline 4.8 for this. `appleSignIn.js` was
+fully written but its import in `OnboardingScreen.jsx` was commented out, so the
+button never rendered and only Google was offered. We replied to Apple asserting we
+had it, which is why it bounced a second time. **Do not submit without checking this.**
+
+Steps:
+
+1. Open the sign-up screen. Look at the social buttons.
+2. Tap the black "Sign up with Apple" button.
+3. Complete the Apple sheet (Face ID / password).
+4. Choose "Hide My Email" on the first authorization.
+5. If a username setup modal appears, complete it.
+6. Force-quit and relaunch.
+7. Sign out, then sign in again with Apple.
+
+Expected:
+
+- An Apple button is visible **above** the Google button on both sign-up and sign-in.
+- The native Apple sheet appears (not a web view).
+- A Supabase session is created and persists across a relaunch.
+- Second sign-in works even though Apple returns no name/email that time.
+
+Fail if:
+
+- Only a Google button is present. ← this is the rejection; stop and report it
+- The Apple button renders but nothing happens on tap.
+- Signing in a second time fails or creates a duplicate account.
+
+### 5B. Force-update gate does not fire on the current build — RELEASE BLOCKER
+
+`app.json` declared `1.0.0` while the native build was `1.1.4`. The gate reads
+`Constants.expoConfig.version` (from `app.json`, not the native settings), so every
+install judged itself outdated and blocked behind `ForceUpdateModal`, which has no
+dismiss. This locked the whole team out of TestFlight.
+
+Steps:
+
+1. Install the build and cold-launch it.
+2. Background the app for 30 seconds, then foreground it (the check re-runs on foreground).
+
+Expected:
+
+- The app opens normally. No "Time to update Drift" screen at any point.
+
+Fail if:
+
+- The update screen appears. If it does, **the version numbers are out of sync again** —
+  check `app.json`, `package.json`, and `MARKETING_VERSION` all read the same value.
+
+To get past it while debugging: tap the sprout illustration **seven times** to reveal a
+"Continue without updating (dev)" link. The override is keyed to the version it was
+granted on, so it clears itself on the next update.
+
 ## Onboarding Tests
 
 ### 6. New User Onboarding
@@ -1326,6 +1381,13 @@ Expected:
 - Past challenges list updates.
 
 ## Paywall, Pro, and Gating Tests
+
+> ⚠️ **SKIP tests 42 and 43 — they are obsolete.** All payments were removed and
+> every feature is free (see the "payments removed" note in `Drift.jsx`; `PaywallScreen`
+> and `useSubscription` are no longer wired into the shell). There is no paywall to
+> open, so "paywall opens instead of broken feature" can no longer pass. Report these
+> as N/A rather than failures. The RevenueCat machinery is dormant but still present,
+> which is why App Review still applies subscription rules to the listing.
 
 ### 42. Free Account Gating
 
