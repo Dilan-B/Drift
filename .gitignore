@@ -16,5 +16,12 @@ yarn-debug.*
 yarn-error.*
 .env
 
-# Admin SQL
+# Admin SQL — schema and migrations ARE tracked (the folder-wide ignore was
+# lifted deliberately so migrations are reviewable and rebuildable from source).
 # supabase/admin/
+#
+# Exception: ad-hoc diagnostic queries that hardcode a real user's email or id.
+# This repo is public — anything under supabase/admin/ now ships to the world by
+# default, so one-off queries against production data must stay local. Add new
+# ones here, or parameterise the identifier before committing.
+supabase/admin/diagnose_recurring_duplicates.sql
