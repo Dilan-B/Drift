@@ -2,9 +2,16 @@
 -- Run after schema_v*.sql files in the Supabase SQL editor.
 
 -- 1. Add referral_code column to profiles (unique per user)
+--
+-- bonus_minutes is created here because apply_referral_code (step 5) writes to
+-- it. It was previously assumed to already exist on profiles; it does not —
+-- nothing else in the schema or the client creates it, so the function failed
+-- at runtime on the first redemption while the table and trigger installed
+-- cleanly, making it look like the migration had worked.
 ALTER TABLE profiles
   ADD COLUMN IF NOT EXISTS referral_code text UNIQUE,
-  ADD COLUMN IF NOT EXISTS referred_by uuid REFERENCES auth.users(id);
+  ADD COLUMN IF NOT EXISTS referred_by uuid REFERENCES auth.users(id),
+  ADD COLUMN IF NOT EXISTS bonus_minutes integer NOT NULL DEFAULT 0;
 
 -- 2. Generate a referral code for every existing user that doesn't have one
 UPDATE profiles

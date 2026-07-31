@@ -1,5 +1,13 @@
 -- Streak tracking on profiles for server-side push notifications.
 -- Run after the base schema in the Supabase SQL editor.
+--
+-- COLUMN NAMES: tasks completion is `done boolean` + `completed_at timestamptz`
+-- — see completeTaskRow() in sync.js, which writes {done: true, completed_at}.
+-- An earlier version of this file keyed off a `status = 'completed'` text
+-- column that the app never writes and that may not exist at all. That fails
+-- loudly (CREATE TRIGGER ... WHEN references a missing column) or, worse,
+-- silently: triggers install against an unused column and every streak stays
+-- at 0 forever. Keep these predicates in sync with sync.js.
 
 -- Add streak columns to profiles
 ALTER TABLE profiles
@@ -16,7 +24,7 @@ DECLARE
   v_current integer;
   v_longest integer;
 BEGIN
-  IF NEW.status != 'completed' THEN RETURN NEW; END IF;
+  IF NEW.done IS NOT TRUE THEN RETURN NEW; END IF;
 
   SELECT last_task_date, current_streak, longest_streak
   INTO v_last, v_current, v_longest
@@ -49,7 +57,7 @@ DROP TRIGGER IF EXISTS trg_update_streak ON tasks;
 CREATE TRIGGER trg_update_streak
   AFTER UPDATE ON tasks
   FOR EACH ROW
-  WHEN (OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'completed')
+  WHEN (OLD.done IS DISTINCT FROM NEW.done AND NEW.done IS TRUE)
   EXECUTE FUNCTION update_streak_on_task_complete();
 
 -- Also fire on insert for tasks that are inserted already completed
@@ -57,15 +65,20 @@ DROP TRIGGER IF EXISTS trg_update_streak_insert ON tasks;
 CREATE TRIGGER trg_update_streak_insert
   AFTER INSERT ON tasks
   FOR EACH ROW
-  WHEN (NEW.status = 'completed')
+  WHEN (NEW.done IS TRUE)
   EXECUTE FUNCTION update_streak_on_task_complete();
 
--- Backfill current streaks from existing task history
--- (Run once, then triggers handle it going forward)
+-- Backfill current streaks from existing task history.
+-- Safe to re-run: it recomputes from the tasks table rather than incrementing,
+-- so it converges on the same values. Soft-deleted tasks are excluded to match
+-- fetchTasks() in sync.js, which filters on deleted_at IS NULL — counting them
+-- would inflate streaks with days the user has since removed.
 WITH daily_completions AS (
   SELECT user_id, DATE(completed_at) AS d
   FROM tasks
-  WHERE status = 'completed' AND completed_at IS NOT NULL
+  WHERE done IS TRUE
+    AND completed_at IS NOT NULL
+    AND deleted_at IS NULL
   GROUP BY user_id, DATE(completed_at)
 ),
 streaks AS (
