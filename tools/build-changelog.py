@@ -189,6 +189,25 @@ ROWS = [
      "Listed what to verify in risk order; nothing in that batch was device-verified.", "Unreleased", "—"),
     ("2026-07-20", "98be1a6", "Bug Fix", "UI", "Dark-mode card edges invisible on the near-black canvas",
      "Raised ink.border 0.15→0.28 and ink.hairline 0.09→0.18.", "Unreleased", "—"),
+    # ── 2026-07-29 · App Store review fixes ───────────────────
+    ("2026-07-29", "7360ba8", "Bug Fix", "Release", "\"Update Required\" locked every install out, including the newest TestFlight build",
+     "app.json declared version 1.0.0 while the native build was 1.1.4 (MARKETING_VERSION / CFBundleShortVersionString). The force-update gate reads Constants.expoConfig.version, which comes from app.json rather than the native build settings, so every install compared 1.0.0 against the live App Store version and blocked behind ForceUpdateModal — which has no dismiss. Set app.json and package.json to 1.1.4. The two values are independent and nothing keeps them in sync.",
+     "Unreleased", "Native build"),
+    ("2026-07-29", "7360ba8", "Bug Fix", "Auth", "Sign in with Apple was never shown, causing two Guideline 4.8 rejections",
+     "appleSignIn.js was fully implemented but its import in OnboardingScreen.jsx was commented out and the button never rendered, so only Google was offered. We replied to Apple asserting we had it, which is why it bounced twice.",
+     "Unreleased", "Native build"),
+    ("2026-07-29", "7360ba8", "Bug Fix", "Onboarding", "Rating prompt fired during onboarding — Guideline 5.6.3 rejection",
+     "ReviewPromptScreen was triggered by the tutorial's onDone, before the user had done anything. Moved into completeTask(): fires once ever, after the 3rd completed task, gated on a persisted AsyncStorage flag.",
+     "Unreleased", "Native build"),
+    ("2026-07-29", "7360ba8", "Feature", "Release", "Hidden dev override on the mandatory-update gate",
+     "Recovery path for the lockout above — the gate returns before every other screen, so there is nothing else to tap. Seven taps on the sprout (or visible under __DEV__); deliberately not a plain button, which would defeat forcing a real security update. The grant is stored as the version it was issued for, so it self-clears on the next update instead of disabling the gate forever.",
+     "Unreleased", "Native build"),
+    ("2026-07-29", "387f630", "Docs", "Release", "Terms of Use link added to the App Store description copy",
+     "Guideline 3.1.2(c) auto-rejected the submission twice for its absence. The app still ships dormant auto-renewable-subscription code, so Apple's automated check applies subscription rules regardless of the paywall being disabled, and in-app links do not satisfy the scanner — it reads the store listing.",
+     "Unreleased", "—"),
+    ("2026-07-29", "166eea9", "Infra", "Backend", "revenuecat-webhook recovered into version control",
+     "The function was live and ACTIVE on Supabase with no source in the repo — the only copy was on Supabase's servers, so nobody could review or redeploy it. Downloaded via `supabase functions download`.",
+     "Unreleased", "—"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]

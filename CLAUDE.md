@@ -45,6 +45,23 @@ this binary file from churning on every push. Also update on request.
 Do NOT move it into `docs/` — that folder is served publicly via GitHub Pages
 (https://dilan-b.github.io/Drift/), and this log names bugs and unverified work.
 
+## Releases
+**Bump the version in THREE places or the app bricks itself.** `app.json`,
+`package.json`, and Xcode's `MARKETING_VERSION` are independent values and
+nothing keeps them in sync. The force-update gate in `Drift.jsx` reads
+`Constants.expoConfig.version` — which comes from `app.json`, *not* the native
+build — and compares it to the version live on the App Store. If `app.json`
+is behind, every install (TestFlight included) decides it is outdated and
+blocks behind `ForceUpdateModal`, which has no dismiss. This shipped once and
+locked the whole team out; see the 2026-07-29 rows in the changelog.
+
+Escape hatch if it happens again: seven taps on the sprout in the update
+screen reveals a dev override (visible outright under `__DEV__`). The grant is
+keyed to the version it was issued for, so it self-clears on the next update.
+
+Build number (`CURRENT_PROJECT_VERSION`) increments per submission; the
+marketing version only on a real release.
+
 ## Key files
 - `Drift.jsx` — app shell, screen-time timer, modals, tab nav
 - `useSubscription.js`, `useBetaMode.js` — entitlement state (server is source of truth)
