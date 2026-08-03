@@ -1,8 +1,6 @@
 PODS:
   - EXApplication (7.0.8):
     - ExpoModulesCore
-  - EXConstants (18.0.13):
-    - ExpoModulesCore
   - EXImageLoader (6.0.0):
     - ExpoModulesCore
     - React-Core
@@ -1568,29 +1566,6 @@ PODS:
     - React-RCTFBReactNativeSpec
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-  - react-native-fast-tflite (1.6.1):
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - TensorFlowLiteC (= 2.17.0)
-    - Yoga
   - react-native-get-random-values (2.0.0):
     - hermes-engine
     - RCTRequired
@@ -2290,9 +2265,6 @@ PODS:
   - SDWebImageWebPCoder (0.15.0):
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.17)
-  - TensorFlowLiteC (2.17.0):
-    - TensorFlowLiteC/Core (= 2.17.0)
-  - TensorFlowLiteC/Core (2.17.0)
   - UMAppLoader (6.0.8)
   - vision-camera-resize-plugin (3.2.0):
     - hermes-engine
@@ -2333,7 +2305,6 @@ PODS:
 
 DEPENDENCIES:
   - EXApplication (from `../node_modules/expo-application/ios`)
-  - EXConstants (from `../node_modules/expo-constants/ios`)
   - EXImageLoader (from `../node_modules/expo-image-loader/ios`)
   - EXJSONUtils (from `../node_modules/expo-json-utils/ios`)
   - EXManifests (from `../node_modules/expo-manifests/ios`)
@@ -2400,7 +2371,6 @@ DEPENDENCIES:
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
-  - react-native-fast-tflite (from `../node_modules/react-native-fast-tflite`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - "react-native-slider (from `../node_modules/@react-native-community/slider`)"
   - react-native-webview (from `../node_modules/react-native-webview`)
@@ -2451,13 +2421,10 @@ SPEC REPOS:
     - libwebp
     - SDWebImage
     - SDWebImageWebPCoder
-    - TensorFlowLiteC
 
 EXTERNAL SOURCES:
   EXApplication:
     :path: "../node_modules/expo-application/ios"
-  EXConstants:
-    :path: "../node_modules/expo-constants/ios"
   EXImageLoader:
     :path: "../node_modules/expo-image-loader/ios"
   EXJSONUtils:
@@ -2589,8 +2556,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   React-microtasksnativemodule:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
-  react-native-fast-tflite:
-    :path: "../node_modules/react-native-fast-tflite"
   react-native-get-random-values:
     :path: "../node_modules/react-native-get-random-values"
   react-native-slider:
@@ -2682,7 +2647,6 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   EXApplication: 1e98d4b1dccdf30627f92917f4b2c5a53c330e5f
-  EXConstants: fce59a631a06c4151602843667f7cfe35f81e271
   EXImageLoader: 189e3476581efe3ad4d1d3fb4735b7179eb26f05
   EXJSONUtils: 1d3e4590438c3ee593684186007028a14b3686cd
   EXManifests: 378c7742de02a8605093b1c82b5774d8f9875cec
@@ -2749,7 +2713,6 @@ SPEC CHECKSUMS:
   React-logger: 50fdb9a8236da90c0b1072da5c32ee03aeb5bf28
   React-Mapbuffer: 9050ee10c19f4f7fca8963d0211b2854d624973e
   React-microtasksnativemodule: f775db9e991c6f3b8ccbc02bfcde22770f96e23b
-  react-native-fast-tflite: 1f6c22eb458734ea8a83344be3801fca05309963
   react-native-get-random-values: a603782b2b222a34533c66371614790282dba3f1
   react-native-slider: 8c562583722c396a3682f451f0b6e68e351ec3b9
   react-native-webview: 0ed52ddb2eafc64a502871218440b8b4d37961c3
@@ -2792,7 +2755,6 @@ SPEC CHECKSUMS:
   RNWorklets: 76fce72926e28e304afb44f0da23b2d24f2c1fa0
   SDWebImage: 1bb6a1b84b6fe87b972a102bdc77dd589df33477
   SDWebImageWebPCoder: 0e06e365080397465cc73a7a9b472d8a3bd0f377
-  TensorFlowLiteC: eac6d689a8d391d1b202dc59e3d9165ba64aaf73
   UMAppLoader: 145337733539f9af9b3dd97eeaa7f3bd97cacb23
   vision-camera-resize-plugin: 63f2604f36e4201a5cbf5211284c343c8f7ba8c7
   VisionCamera: 0044a94f7489f19e19d5938e97dfc36f4784af3c
