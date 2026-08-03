@@ -78,9 +78,6 @@ import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
 import ReviewPromptScreen from "./ReviewPromptScreen";
 import TutorialOverlay from "./TutorialOverlay";
-// PaywallScreen + useSubscription removed — app is fully free for now
-// import PaywallScreen from "./PaywallScreen";
-// import { useSubscription } from "./useSubscription";
 import ParentShell from "./ParentShell";
 import { identify, track, startAnalytics, stopAnalytics } from "./analytics";
 import ChildShell from "./ChildShell";
