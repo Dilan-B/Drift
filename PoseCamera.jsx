@@ -23,16 +23,9 @@ export const POSE_EXERCISE_IDS = new Set([
   "pushups", "dips", "squats", "lunges", "situps", "burpees", "jacks",
 ]);
 
-let Live = null;
-try {
-  // Probe the native deps first — each throws in Expo Go.
-  require("react-native-vision-camera");
-  require("react-native-fast-tflite");
-  require("vision-camera-resize-plugin");
-  Live = require("./PoseCameraLive").default;
-} catch {
-  Live = null;
-}
+// PoseCameraLive requires react-native-fast-tflite which was removed;
+// live pose tracking is disabled until a replacement is wired up.
+const Live = null;
 
 export function poseCameraAvailable() {
   return !!Live;
