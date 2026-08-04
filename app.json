@@ -60,7 +60,6 @@
           "calendarPermission": "Drift can read your calendar to offer today's events as tasks. It never changes your calendar."
         }
       ],
-      "react-native-fast-tflite",
       "expo-web-browser",
       "@react-native-community/datetimepicker",
       "expo-secure-store",
