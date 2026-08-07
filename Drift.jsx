@@ -5601,7 +5601,7 @@ export default function App() {
     <ThemeContext.Provider value={{ dark: darkMode, theme: activeTheme }}>
     <TouchTracker style={{
       flex: 1,
-      paddingTop: Constants.statusBarHeight,
+      paddingTop: Math.max(Constants.statusBarHeight || 0, 59),
       backgroundColor: driftInActive ? th_ink.void : th_paper.warm,
     }}>
       <StatusBar barStyle={driftInActive || darkMode ? "light-content" : "dark-content"} />
@@ -5618,7 +5618,7 @@ export default function App() {
       {!driftInActive && !showAccount && (
         <View style={{
           flexDirection: "row", alignItems: "center",
-          paddingHorizontal: 22, paddingTop: 6, paddingBottom: 8,
+          paddingHorizontal: 22, paddingTop: 10, paddingBottom: 8,
           backgroundColor: th_paper.warm,
         }}>
           {/* Wordmark — heavy condensed sans, generous tracking */}
