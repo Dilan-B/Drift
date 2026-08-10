@@ -30,24 +30,24 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     let buttonLabel: UIColor
   }
 
-  /// LIGHT — paper.warm ground, forest ink, deep-forest button.
+  /// LIGHT — warm cream ground, deep forest ink, strong contrast.
   private let light = Palette(
     ground:      UIColor(red: 0.969, green: 0.969, blue: 0.957, alpha: 1), // #F7F7F4
-    title:       UIColor(red: 0.102, green: 0.157, blue: 0.125, alpha: 1), // #1A2820
-    subtitle:    UIColor(red: 0.420, green: 0.478, blue: 0.431, alpha: 1), // #6B7A6E
-    icon:        UIColor(red: 0.243, green: 0.420, blue: 0.306, alpha: 1), // #3E6B4E sage
-    buttonBg:    UIColor(red: 0.122, green: 0.227, blue: 0.165, alpha: 1), // #1F3A2A
-    buttonLabel: UIColor(red: 0.980, green: 0.965, blue: 0.933, alpha: 1)  // #FAF6EE
+    title:       UIColor(red: 0.043, green: 0.102, blue: 0.067, alpha: 1), // #0B1A11 near-black
+    subtitle:    UIColor(red: 0.350, green: 0.420, blue: 0.370, alpha: 1), // darker mid
+    icon:        UIColor(red: 0.227, green: 0.420, blue: 0.278, alpha: 1), // #3A6B47 sage
+    buttonBg:    UIColor(red: 0.227, green: 0.420, blue: 0.310, alpha: 1), // #3A6B4F
+    buttonLabel: UIColor.white
   )
 
-  /// DARK — greenhouse-at-night forest ground, paper-white ink, mint button.
+  /// DARK — near-black ground, bright white title for max contrast, mint accent.
   private let dark = Palette(
-    ground:      UIColor(red: 0.055, green: 0.102, blue: 0.075, alpha: 1), // #0E1A13
-    title:       UIColor(red: 0.941, green: 0.969, blue: 0.918, alpha: 1), // #F0F7EA
-    subtitle:    UIColor(red: 0.663, green: 0.769, blue: 0.671, alpha: 1), // #A9C4AB
+    ground:      UIColor(red: 0.020, green: 0.027, blue: 0.024, alpha: 1), // #050706 near-black
+    title:       UIColor.white,                                             // pure white
+    subtitle:    UIColor(red: 0.750, green: 0.820, blue: 0.760, alpha: 1), // brighter sage
     icon:        UIColor(red: 0.498, green: 0.890, blue: 0.647, alpha: 1), // #7FE3A5 mint
     buttonBg:    UIColor(red: 0.776, green: 0.949, blue: 0.627, alpha: 1), // #C6F2A0
-    buttonLabel: UIColor(red: 0.086, green: 0.149, blue: 0.110, alpha: 1)  // #16261C
+    buttonLabel: UIColor(red: 0.020, green: 0.027, blue: 0.024, alpha: 1)  // #050706
   )
 
   // ── Voice: rotating themes ──────────────────────────────────
@@ -57,37 +57,20 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
   }
 
   private let earnVoices: [ShieldVoice] = [
-    // Zen garden — minimal, meditative
-    ShieldVoice(title: "breathe.", subtitle: "this moment is yours, not your phone's."),
-    ShieldVoice(title: "breathe.", subtitle: "there is nothing here that can't wait."),
-    ShieldVoice(title: "breathe.", subtitle: "stillness is productive too."),
-
-    // Greenhouse — organic, growth-forward
-    ShieldVoice(title: "growing.", subtitle: "your sprout is growing — don't pull it up to check."),
-    ShieldVoice(title: "growing.", subtitle: "every minute away from here is a minute it grows."),
-    ShieldVoice(title: "growing.", subtitle: "the greenhouse doesn't need you scrolling."),
-
-    // Scoreboard — clear, data-driven
-    ShieldVoice(title: "0 minutes.", subtitle: "complete a task in Drift to earn screen time."),
-    ShieldVoice(title: "0 minutes.", subtitle: "no balance. one task changes that."),
-    ShieldVoice(title: "0 minutes.", subtitle: "the counter starts when you do."),
-
-    // Gentle wall — warm, literary
-    ShieldVoice(title: "not yet.", subtitle: "the best things come to those who wait."),
-    ShieldVoice(title: "not yet.", subtitle: "patience is a form of action."),
-    ShieldVoice(title: "not yet.", subtitle: "what you resist today rewards you tomorrow."),
-
-    // Mirror — self-aware, honest
-    ShieldVoice(title: "again?", subtitle: "you know why you set this boundary."),
-    ShieldVoice(title: "again?", subtitle: "this is the part where you prove it to yourself."),
-    ShieldVoice(title: "again?", subtitle: "future you will be glad you stayed away."),
+    ShieldVoice(title: "Not yet.", subtitle: "Earn screen time by completing a task in Drift."),
+    ShieldVoice(title: "Not yet.", subtitle: "One task is all it takes."),
+    ShieldVoice(title: "Not yet.", subtitle: "Nothing here that can't wait."),
+    ShieldVoice(title: "Breathe.", subtitle: "This moment is yours, not your phone's."),
+    ShieldVoice(title: "Breathe.", subtitle: "Stillness is productive too."),
+    ShieldVoice(title: "Blocked.", subtitle: "Complete a task in Drift to unlock."),
+    ShieldVoice(title: "Blocked.", subtitle: "No balance. One task changes that."),
+    ShieldVoice(title: "Not yet.", subtitle: "You set this boundary for a reason."),
   ]
 
   private let focusVoices: [ShieldVoice] = [
-    ShieldVoice(title: "not now.", subtitle: "you're mid-focus. this can wait until you surface."),
-    ShieldVoice(title: "growing.", subtitle: "your focus session is still running. stay with it."),
-    ShieldVoice(title: "breathe.", subtitle: "you chose depth over distraction. keep going."),
-    ShieldVoice(title: "almost.", subtitle: "finish your session first. this will still be here."),
+    ShieldVoice(title: "Focus.", subtitle: "Your session is still running. Stay with it."),
+    ShieldVoice(title: "Focus.", subtitle: "Finish first. This will still be here."),
+    ShieldVoice(title: "Not now.", subtitle: "You chose depth over distraction."),
   ]
 
   override func configuration(shielding application: Application) -> ShieldConfiguration {
