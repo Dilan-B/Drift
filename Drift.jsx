@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, TextInput, ScrollView,
   StyleSheet, KeyboardAvoidingView,
   StatusBar, Platform, Alert, AppState, Modal, PanResponder, Animated, Easing,
-  ActivityIndicator, Linking, Dimensions, Pressable,
+  ActivityIndicator, Linking, Dimensions, Pressable, Share,
 } from "react-native";
 import Constants from "expo-constants";
 import * as Crypto from "expo-crypto";
@@ -1685,6 +1685,91 @@ function FloatingFeedback({ popup }) {
             <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 1 }}>+{popup.xp} XP</Text>
           </View>
         )}
+      </Animated.View>
+    </View>
+  );
+}
+
+function ShareWinSheet({ task, dark, onClose }) {
+  const theme = getTheme(dark);
+  const { ink, paper, earn } = theme;
+  const slideY = useRef(new Animated.Value(300)).current;
+  const fadeOp = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!task) { slideY.setValue(300); fadeOp.setValue(0); return; }
+    Animated.parallel([
+      Animated.spring(slideY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 14 }),
+      Animated.timing(fadeOp, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+  }, [task]);
+
+  if (!task) return null;
+
+  const cat = CATS[task.cat] || CATS.life;
+  const earnedText = fmtMins(task.credits);
+  const timeText = `${task.minutes}m`;
+
+  const doShare = async () => {
+    const msg = `I just earned ${earnedText} of screen time by doing "${task.title}" for ${timeText} on Drift.\n\nhttps://apps.apple.com/app/id6746262733`;
+    try {
+      await Share.share({ message: msg });
+    } catch {}
+    onClose();
+  };
+
+  const dismiss = () => {
+    Animated.parallel([
+      Animated.timing(slideY, { toValue: 300, duration: 200, useNativeDriver: true }),
+      Animated.timing(fadeOp, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => onClose());
+  };
+
+  return (
+    <View style={[StyleSheet.absoluteFill, { zIndex: 250, justifyContent: "flex-end" }]}>
+      <Pressable style={StyleSheet.absoluteFill} onPress={dismiss}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.35)", opacity: fadeOp }]} />
+      </Pressable>
+      <Animated.View style={{
+        backgroundColor: paper.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+        paddingHorizontal: 28, paddingTop: 24, paddingBottom: Platform.OS === "ios" ? 48 : 28,
+        transform: [{ translateY: slideY }],
+      }}>
+        <View style={{ alignItems: "center", marginBottom: 20 }}>
+          <View style={{
+            width: 36, height: 4, borderRadius: 2,
+            backgroundColor: ink.ghost, marginBottom: 20,
+          }} />
+          <View style={{
+            width: 52, height: 52, borderRadius: 26,
+            backgroundColor: earn.greenLo, alignItems: "center", justifyContent: "center",
+            marginBottom: 14,
+          }}>
+            <CheckIcon size={24} color={earn.green} />
+          </View>
+          <Text style={{ fontFamily: FF.bodyBold, fontSize: 18, color: ink.deep, textAlign: "center", marginBottom: 4 }}>
+            {task.title}
+          </Text>
+          <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, textAlign: "center" }}>
+            {timeText} {cat.l.toLowerCase()} · +{earnedText} earned
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          onPress={doShare}
+          activeOpacity={0.85}
+          style={{
+            backgroundColor: earn.green, borderRadius: 16,
+            paddingVertical: 16, alignItems: "center", marginBottom: 10,
+          }}
+        >
+          <Text style={{ fontFamily: FF.bodyBold, fontSize: 15, color: "#fff", letterSpacing: 0.3 }}>
+            Share your win
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={dismiss} activeOpacity={0.7} style={{ alignItems: "center", paddingVertical: 10 }}>
+          <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: ink.mid }}>Not now</Text>
+        </TouchableOpacity>
       </Animated.View>
     </View>
   );
@@ -3413,6 +3498,7 @@ export default function App() {
   const [totalXp,     setTotalXp]     = useState(0);
   const [overlay,     setOverlay]     = useState(null);
   const [popup,       setPopup]       = useState(null);
+  const [shareTask,   setShareTask]   = useState(null);
   const [levelUp,     setLevelUp]     = useState(null);
   const [secLeft,     setSecLeft]     = useState(0);
 
@@ -4997,7 +5083,11 @@ export default function App() {
     const nc  = { balance: Math.ceil(newSec / 60), balanceSec: newSec, earned: credits.earned + task.credits, spent: credits.spent };
     setTasks(nt); setTaskHistory(nh); setCredits(nc); setTotalXp(nx);
     setPopup({ credits: task.credits, xp: task.xp });
-    setTimeout(() => setPopup(null), 2000);
+    const todayDone = nh.filter(t => t.completedDate === todayKey()).length;
+    setTimeout(() => {
+      setPopup(null);
+      if (todayDone % 3 === 0) setShareTask(completedTask);
+    }, 2000);
     startTick(newSec);
     persist({ tasks: nt, taskHistory: nh, credits: nc, totalXp: nx });
 
@@ -5608,6 +5698,7 @@ export default function App() {
 
       {/* XP / credit popup */}
       <FloatingFeedback popup={popup} />
+      <ShareWinSheet task={shareTask} dark={darkMode} onClose={() => setShareTask(null)} />
       <LevelUpModal
         level={levelUp}
         dark={darkMode}
