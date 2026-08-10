@@ -5857,7 +5857,7 @@ export default function App() {
             title, cat, minutes,
             done: false,
             credits, xp,
-            aiCheck: false,
+            aiCheck: proAccess,
             aiValued: false,
             aiPending: false,
             aiReasoning: reasoning || "",

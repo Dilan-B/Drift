@@ -134,13 +134,11 @@ export async function safeGetSession() {
   try {
     const { data, error } = await supabase.auth.getSession();
     if (error) {
-      const msg = error?.message || "";
-      if (/invalid.*refresh|refresh.*expired/i.test(msg)) {
-        await supabase.auth.signOut().catch(() => {});
-        return { data: { session: null }, error: null };
-      }
-      // Transient errors (network, 5xx) — return whatever data we got so the
-      // cached session (if any) isn't thrown away on a flaky cold start.
+      // Never sign out on refresh errors here. Supabase's autoRefreshToken will
+      // retry, and on a truly dead token Supabase emits SIGNED_OUT itself. Our
+      // earlier sign-out on "invalid_grant" / "refresh_expired" was the #1 cause
+      // of random logouts — a transient 5xx or cold-start network miss matched
+      // the regex and nuked the session before autoRefresh could retry.
       return { data: data || { session: null }, error: null };
     }
     return { data, error: null };
