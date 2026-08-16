@@ -45,6 +45,13 @@
     </array>
     <key>CFBundleVersion</key>
     <string>$(CURRENT_PROJECT_VERSION)</string>
+    <!-- Export compliance. Declaring exempt: Drift's only cryptography is
+         HTTPS/TLS to Supabase and standard AES (aes-js) used to encrypt the
+         auth session at rest on-device. No proprietary or non-standard
+         algorithms. Without this key App Store Connect flags every new build
+         "Missing Compliance" and blocks submission until answered by hand. -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>
