@@ -125,6 +125,14 @@ export const UnlockIcon = make(({ color, strokeWidth }) => (
   </>
 ));
 
+// Microphone — used for the Siri / voice-control surfaces.
+export const MicIcon = make(({ color, strokeWidth }) => (
+  <>
+    <Rect x="9" y="2" width="6" height="11" rx="3" stroke={color} strokeWidth={strokeWidth} fill="none" />
+    <Path d="M5 11a7 7 0 0 0 14 0 M12 18v3" stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinecap="round" />
+  </>
+));
+
 export const SparkleIcon = make(({ color, strokeWidth }) => (
   <Path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinejoin="round" />
 ));

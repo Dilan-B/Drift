@@ -16,6 +16,7 @@ import React, {
   useRef, useEffect, useState, useCallback, createContext, useContext,
 } from "react";
 import { Animated, View, Dimensions, Easing, Pressable, Modal } from "react-native";
+import { selectionTick, impactLight } from "./haptics";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
@@ -229,13 +230,23 @@ export function Pop({ children, onPress, style, scaleTo = 0.94, disabled, hitSlo
       overshootClamping: true,
     }).start();
   };
+  // Fire on press-IN, not on press, so the tap is felt at the moment of
+  // contact the way system controls do — waiting for onPress lands the tick
+  // late enough to read as lag. `haptic` was previously accepted and silently
+  // ignored; opt-in per call site so lists and scrubbers don't buzz.
+  const pressIn = () => {
+    press(scaleTo);
+    if (!haptic) return;
+    if (haptic === "select") selectionTick();
+    else impactLight();
+  };
   return (
     <Pressable
       disabled={disabled}
       hitSlop={hitSlop}
       unstable_pressDelay={0}
       android_disableSound={false}
-      onPressIn={() => press(scaleTo)}
+      onPressIn={pressIn}
       onPressOut={() => press(1)}
       onPress={onPress}
       style={[style, { alignItems: "center", justifyContent: "center" }]}

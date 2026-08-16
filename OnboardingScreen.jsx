@@ -15,7 +15,7 @@ import { useGoogleSignIn } from "./oauthSignIn";
 import { AppleSignInButton } from "./appleSignIn";
 import { joinFamily, normalizeFamilyCode } from "./family";
 import { cached, rateLimited } from "./apiGuards";
-import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon, ClipboardIcon, SparkleIcon, UsersIcon, BellIcon, LeafIcon } from "./Icons";
+import { PhoneIcon, HoleIcon, CakeIcon, TargetIcon, WaveIcon, CheckIcon, LockIcon, ClipboardIcon, SparkleIcon, UsersIcon, BellIcon, LeafIcon, MicIcon } from "./Icons";
 import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
 import Sprout, { Sprig, SeedDots } from "./SproutArt";
 import { FF } from "./theme";
@@ -87,6 +87,7 @@ const STEPS = [
   { id: "how2" },
   { id: "how3" },
   { id: "how4" },
+  { id: "how5" },
   // Account type is chosen here — PERMANENTLY — before auth. It decides the
   // whole downstream flow: personal → normal signup + questionnaire; parent →
   // signup only (management account); child → passwordless join by family code.
@@ -207,6 +208,13 @@ const HOW_SLIDES = [
     headline: "Tasks can add\nthemselves",
     body: "Save places like your gym, and Drift offers\nthe task when you arrive. It can pull in\ntoday's calendar events too.",
     detail: "Both are optional, off until you turn them on, and stay on your device. Find them in Profile → Automatic tasks.",
+  },
+  {
+    id: "how5",
+    Icon: MicIcon,
+    headline: "Just ask Siri",
+    body: "“Hey Siri, check my Drift balance”\n“Hey Siri, create a task in Drift”\n“Hey Siri, start a Drift In session”",
+    detail: "Nothing to set up — the commands work as soon as Drift is installed. They show up in Shortcuts too.",
   },
 ];
 

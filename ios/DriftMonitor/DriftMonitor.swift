@@ -43,6 +43,10 @@ class DriftMonitor: DeviceActivityMonitor {
       defaults?.set(Date().timeIntervalSince1970, forKey: "drift_last_fired_at")
       let count = (defaults?.integer(forKey: "drift_fire_count") ?? 0) + 1
       defaults?.set(count, forKey: "drift_fire_count")
+      // The user is mid-session on their blocked apps and still has balance.
+      // This is the only moment iOS actually tells us that, so it's where the
+      // "is this still the move?" nudge belongs.
+      nudgeStillTheMove(minutesIn: checkpointSec / 60)
       return
     }
 
@@ -136,6 +140,61 @@ class DriftMonitor: DeviceActivityMonitor {
     store.shield.applications = nil
     store.shield.applicationCategories = nil
     store.shield.webDomains = nil
+  }
+
+  /// Mid-session nudge: "you've been at this a while — still worth it?"
+  ///
+  /// IMPORTANT — what we can and cannot know here. FamilyActivitySelection hands
+  /// us opaque ApplicationTokens; Apple deliberately never exposes the bundle id
+  /// or display name, and there is no API that reports which app is foregrounded.
+  /// So this CANNOT say "Instagram" on its own. If the user has told Drift what
+  /// their own biggest time-sink is, we echo that string back; otherwise the copy
+  /// stays app-agnostic. Never guess an app name.
+  ///
+  /// Capped per day so this reads as a nudge and not as nagging — a user who
+  /// earned three hours would otherwise get twelve of these.
+  private func nudgeStillTheMove(minutesIn: Int) {
+    let defaults = UserDefaults(suiteName: APP_GROUP)
+
+    // Respect the user's opt-out.
+    guard defaults?.object(forKey: "drift_nudges_enabled") as? Bool ?? true else { return }
+
+    let today = localDayKey()
+    if defaults?.string(forKey: "drift_nudge_day") != today {
+      defaults?.set(today, forKey: "drift_nudge_day")
+      defaults?.set(0, forKey: "drift_nudge_count")
+    }
+    let sent = defaults?.integer(forKey: "drift_nudge_count") ?? 0
+    guard sent < 4 else { return }
+    defaults?.set(sent + 1, forKey: "drift_nudge_count")
+
+    // Optional user-supplied label, e.g. "Instagram". Set in-app; absent by default.
+    let label = (defaults?.string(forKey: "drift_distraction_label") ?? "")
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    let content = UNMutableNotificationContent()
+    if !label.isEmpty {
+      content.title = "Is \(label) really the move right now?"
+    } else {
+      content.title = "Is this really the move right now?"
+    }
+    let mins = max(1, minutesIn)
+    let bodies = [
+      "You're \(mins) minutes in. No judgment — just checking.",
+      "\(mins) minutes gone. Still worth it?",
+      "That's \(mins) minutes of your earned time. Your call.",
+      "\(mins) minutes in. There's a task waiting if you'd rather.",
+    ]
+    content.body = bodies[min(sent, bodies.count - 1)]
+    content.sound = nil  // silent — a buzz mid-scroll is the wrong texture
+
+    UNUserNotificationCenter.current().add(
+      UNNotificationRequest(
+        identifier: "drift.monitor.nudge.\(Int(Date().timeIntervalSince1970))",
+        content: content,
+        trigger: nil
+      )
+    )
   }
 
   private func notifyOutOfTime() {
