@@ -56,37 +56,85 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     let subtitle: String
   }
 
-  private let earnVoices: [ShieldVoice] = [
-    ShieldVoice(title: "Not yet.", subtitle: "Earn screen time by completing a task in Drift."),
-    ShieldVoice(title: "Not yet.", subtitle: "One task is all it takes."),
-    ShieldVoice(title: "Not yet.", subtitle: "Nothing here that can't wait."),
-    ShieldVoice(title: "Breathe.", subtitle: "This moment is yours, not your phone's."),
-    ShieldVoice(title: "Breathe.", subtitle: "Stillness is productive too."),
-    ShieldVoice(title: "Blocked.", subtitle: "Complete a task in Drift to unlock."),
-    ShieldVoice(title: "Blocked.", subtitle: "No balance. One task changes that."),
-    ShieldVoice(title: "Not yet.", subtitle: "You set this boundary for a reason."),
-  ]
+  // ── Naming the blocked thing ────────────────────────────────
+  // ShieldConfigurationDataSource is the ONE place iOS tells a third-party app
+  // which app the user just tried to open: "The system provides your extension
+  // with the display names, bundle identifiers, and domains for each
+  // application, website, or category it shields."
+  //
+  // PRIVACY BOUNDARY — do not cross it. The same documentation states this
+  // extension "runs in a sandbox [that] prevents your extension from making
+  // network requests or moving sensitive content outside the extension's
+  // address space." So the name is used to draw THIS screen and nothing else:
+  // never written to the App Group, never persisted, never sent anywhere. If a
+  // future change wants the host app to know which app was blocked, that is not
+  // a thing to route through here.
+  //
+  // The name is optional in practice: shielding a whole category, or a token
+  // whose app is uninstalled, can leave it empty. Every voice therefore has a
+  // generic counterpart, and an empty/whitespace name falls back to it.
 
-  private let focusVoices: [ShieldVoice] = [
-    ShieldVoice(title: "Focus.", subtitle: "Your session is still running. Stay with it."),
-    ShieldVoice(title: "Focus.", subtitle: "Finish first. This will still be here."),
-    ShieldVoice(title: "Not now.", subtitle: "You chose depth over distraction."),
-  ]
+  private func earnVoices(_ name: String?) -> [ShieldVoice] {
+    guard let n = named(name) else {
+      return [
+        ShieldVoice(title: "Not yet.", subtitle: "Earn screen time by completing a task in Drift."),
+        ShieldVoice(title: "Not yet.", subtitle: "One task is all it takes."),
+        ShieldVoice(title: "Not yet.", subtitle: "Nothing here that can't wait."),
+        ShieldVoice(title: "Breathe.", subtitle: "This moment is yours, not your phone's."),
+        ShieldVoice(title: "Breathe.", subtitle: "Stillness is productive too."),
+        ShieldVoice(title: "Blocked.", subtitle: "Complete a task in Drift to unlock."),
+        ShieldVoice(title: "Blocked.", subtitle: "No balance. One task changes that."),
+        ShieldVoice(title: "Not yet.", subtitle: "You set this boundary for a reason."),
+      ]
+    }
+    return [
+      ShieldVoice(title: "Not yet.", subtitle: "\(n) unlocks when you complete a task in Drift."),
+      ShieldVoice(title: "Is \(n) the move right now?", subtitle: "One task in Drift and it's yours."),
+      ShieldVoice(title: "\(n) can wait.", subtitle: "Complete a task to earn your time back."),
+      ShieldVoice(title: "Breathe.", subtitle: "\(n) will still be there in ten minutes."),
+      ShieldVoice(title: "\(n) is blocked.", subtitle: "No balance. One task changes that."),
+      ShieldVoice(title: "Not yet.", subtitle: "You blocked \(n) for a reason."),
+    ]
+  }
+
+  private func focusVoices(_ name: String?) -> [ShieldVoice] {
+    guard let n = named(name) else {
+      return [
+        ShieldVoice(title: "Focus.", subtitle: "Your session is still running. Stay with it."),
+        ShieldVoice(title: "Focus.", subtitle: "Finish first. This will still be here."),
+        ShieldVoice(title: "Not now.", subtitle: "You chose depth over distraction."),
+      ]
+    }
+    return [
+      ShieldVoice(title: "Focus.", subtitle: "Session's still running. \(n) can wait."),
+      ShieldVoice(title: "Not now.", subtitle: "Finish up. \(n) will still be there."),
+      ShieldVoice(title: "Not now.", subtitle: "You chose depth over \(n)."),
+    ]
+  }
+
+  /// Trimmed, length-capped display name, or nil when there's nothing usable.
+  /// Capped because the shield's title is a fixed-size system label and a long
+  /// name would truncate mid-word.
+  private func named(_ raw: String?) -> String? {
+    guard let t = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty else { return nil }
+    return t.count <= 24 ? t : nil
+  }
 
   override func configuration(shielding application: Application) -> ShieldConfiguration {
-    buildConfig()
+    buildConfig(name: application.localizedDisplayName)
   }
 
   override func configuration(shielding application: Application, in category: ActivityCategory) -> ShieldConfiguration {
-    buildConfig()
+    // Still name the specific app — the category is just how it got shielded.
+    buildConfig(name: application.localizedDisplayName)
   }
 
   override func configuration(shielding webDomain: WebDomain) -> ShieldConfiguration {
-    buildConfig()
+    buildConfig(name: webDomain.domain)
   }
 
   override func configuration(shielding webDomain: WebDomain, in category: ActivityCategory) -> ShieldConfiguration {
-    buildConfig()
+    buildConfig(name: webDomain.domain)
   }
 
   private func makeIcon(_ p: Palette) -> UIImage? {
@@ -95,7 +143,7 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     return image?.withTintColor(p.icon, renderingMode: .alwaysOriginal)
   }
 
-  private func buildConfig() -> ShieldConfiguration {
+  private func buildConfig(name: String? = nil) -> ShieldConfiguration {
     let defaults = UserDefaults(suiteName: appGroup)
     // Follow the app's own theme toggle. `object(forKey:)` (not `bool`) so a
     // never-written key falls back to light instead of reading as false-dark.
@@ -103,9 +151,8 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     let p = isDark ? dark : light
 
     let balanceSec = defaults?.integer(forKey: "drift_widget_balance_seconds") ?? 0
-    let voice = balanceSec > 0
-      ? focusVoices[Int.random(in: 0..<focusVoices.count)]
-      : earnVoices[Int.random(in: 0..<earnVoices.count)]
+    let voices = balanceSec > 0 ? focusVoices(name) : earnVoices(name)
+    let voice = voices[Int.random(in: 0..<voices.count)]
 
     return ShieldConfiguration(
       backgroundBlurStyle: nil,
