@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control Your Screen Time With Siri (2026) | Drift</title>
+<meta name="description" content="Apple's Screen Time can't be controlled by voice. Drift can. Check your balance, create tasks, and start focus sessions with Siri — built on App Intents, no setup required.">
+<meta name="keywords" content="siri screen time, control screen time with siri, siri shortcuts screen time, app intents apps, siri productivity app, hands free screen time, siri focus app, voice control screen time iPhone">
+<meta property="og:title" content="Control Your Screen Time With Siri">
+<meta property="og:description" content="Apple's Screen Time can't be driven by voice. Drift can — here's every command.">
+<meta property="og:type" content="article">
+<link rel="canonical" href="https://dilan-b.github.io/Drift/siri-screen-time.html">
+<style>
+  :root {
+    --ink: #16261C; --paper: #F4F5F1; --card: #FFFFFF; --sage: #3E6B4E;
+    --mid: #5F6E62; --faint: #9AA69C; --line: #E4E7E2; --terra: #2D7A52;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #EEF3EC; --paper: #111c16; --card: #182821; --mid: #A7B5A9; --faint: #7C8C80; --line: #26362D; }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans); background: var(--paper); color: var(--ink);
+    line-height: 1.7; -webkit-font-smoothing: antialiased;
+    max-width: 680px; margin: 0 auto; padding: 48px 24px 80px;
+  }
+  .backlink { display: inline-block; color: var(--sage); text-decoration: none; font-size: 0.9rem; margin-bottom: 24px; }
+  .backlink:hover { text-decoration: underline; }
+  h1 { font-family: var(--serif); font-size: 2.2rem; line-height: 1.2; margin-bottom: 12px; letter-spacing: -0.02em; }
+  .meta { color: var(--mid); font-size: 0.9rem; margin-bottom: 40px; }
+  h2 { font-size: 1.4rem; margin: 40px 0 12px; letter-spacing: -0.01em; }
+  h3 { font-size: 1.12rem; margin: 28px 0 8px; }
+  p { margin-bottom: 20px; }
+  .highlight {
+    background: var(--card); border-left: 3px solid var(--sage);
+    padding: 20px 24px; margin: 32px 0; border-radius: 0 8px 8px 0;
+  }
+  .highlight p { margin-bottom: 0; }
+
+  .commands { display: flex; flex-direction: column; gap: 10px; margin: 28px 0 32px; }
+  .cmd {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px 20px;
+  }
+  .cmd-say {
+    font-family: var(--serif); font-size: 1.08rem; color: var(--ink);
+    margin-bottom: 4px; line-height: 1.35;
+  }
+  .cmd-does { font-size: 0.92rem; color: var(--mid); }
+
+  .cta {
+    display: inline-block; background: var(--sage); color: #fff; padding: 14px 32px;
+    border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 1.05rem;
+    margin-top: 8px;
+  }
+  .cta:hover { background: var(--terra); }
+  .footer { margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--mid); font-size: 0.85rem; }
+  a { color: var(--sage); }
+  ul { margin: 0 0 20px 20px; }
+  li { margin-bottom: 8px; }
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Control Your Screen Time With Siri",
+  "description": "How App Intents makes hands-free screen time control possible, and every Siri command Drift supports.",
+  "author": { "@type": "Organization", "name": "Drift" },
+  "publisher": { "@type": "Organization", "name": "Drift" },
+  "datePublished": "2026-08-15",
+  "dateModified": "2026-08-15"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Can Siri turn off Screen Time?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Apple's built-in Screen Time has no Siri interface, so you cannot check limits, extend time, or change settings by voice. Third-party apps built on App Intents can expose their own actions to Siri — Drift does this, letting you check your earned balance and start focus sessions hands-free."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need to set up a Shortcut to use Siri with Drift?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Drift's actions register with Siri automatically when you install the app. There is no permission prompt and no shortcut to configure. The commands also appear in the Shortcuts app if you want to build your own automations on top of them."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is App Intents?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "App Intents is Apple's framework for letting apps expose specific actions to Siri, Shortcuts, and Spotlight. It replaces SiriKit, which Apple has deprecated. Because actions are registered individually, Siri can chain them together as part of a longer multi-step request."
+      }
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<a class="backlink" href="blog.html">← The Drift Blog</a>
+
+<h1>Control Your Screen Time With Siri</h1>
+<p class="meta">By the Drift team · August 2026 · 4 min read</p>
+
+<p>Here's something most people discover the hard way: <strong>you cannot ask Siri anything about Screen Time.</strong> Not how much time you have left, not to give yourself fifteen more minutes, not to turn a limit off. Apple built Screen Time as a Settings panel, and it stayed one.</p>
+
+<p>That's a strange gap in 2026, when Siri can chain actions across half the apps on your phone. So we closed it.</p>
+
+<h2>Every Drift command</h2>
+
+<p>Drift registers four actions with Siri. They work from the moment you install the app — no permission prompt, nothing to configure.</p>
+
+<div class="commands">
+  <div class="cmd">
+    <div class="cmd-say">"Hey Siri, check my Drift balance"</div>
+    <div class="cmd-does">Siri reads back how much screen time you've earned, without opening the app.</div>
+  </div>
+  <div class="cmd">
+    <div class="cmd-say">"Hey Siri, create a task in Drift"</div>
+    <div class="cmd-does">Dictate the task. Drift opens with it already filled in, ready to set a duration.</div>
+  </div>
+  <div class="cmd">
+    <div class="cmd-say">"Hey Siri, start a Drift In session"</div>
+    <div class="cmd-does">Begins a focus block by voice. Say a length and it uses that; otherwise 25 minutes.</div>
+  </div>
+  <div class="cmd">
+    <div class="cmd-say">"Hey Siri, how am I doing in Drift?"</div>
+    <div class="cmd-does">Reports today's progress — earned time and what's still available.</div>
+  </div>
+</div>
+
+<p>Phrasing is flexible. "What's my Drift balance", "add a task to Drift", and "focus session in Drift" all resolve to the same actions.</p>
+
+<h2>Why this wasn't possible before</h2>
+
+<p>Until recently, hooking an app into Siri meant <strong>SiriKit</strong>, which only supported a fixed list of categories Apple defined — messaging, payments, workouts, ride booking. If your app did something outside that list, you were out of luck. A screen time app was firmly outside that list.</p>
+
+<p><strong>App Intents</strong> changed the model. Instead of fitting into Apple's categories, an app declares its own actions, and Siri learns them. Apple has now deprecated SiriKit in favor of it, with a two-to-three year sunset.</p>
+
+<div class="highlight">
+<p><strong>The practical upshot:</strong> because each action is registered separately rather than bundled behind one "open the app" command, Siri can use them as building blocks inside a longer request — not just run them one at a time.</p>
+</div>
+
+<h2>Using Drift in Shortcuts</h2>
+
+<p>The same actions show up in the Shortcuts app, which is where this gets genuinely useful. A few automations worth building:</p>
+
+<ul>
+  <li><strong>Arrive at the library → start a focus session.</strong> A location trigger plus Drift's session action means your phone locks down as you sit down.</li>
+  <li><strong>Every morning at 8 → read me my balance.</strong> Pairs well with an existing morning routine shortcut.</li>
+  <li><strong>Plug in to charge after 10pm → start a session.</strong> Turns your charger into a commitment device.</li>
+  <li><strong>Ask for a balance check before opening a social app.</strong> A small friction step, entirely self-imposed.</li>
+</ul>
+
+<p>None of these require any setup inside Drift. The actions are just there, alongside every other app's, once Drift is installed.</p>
+
+<h2>What Siri can't do</h2>
+
+<p>Worth being straight about the limits. Siri <em>cannot</em> unlock your blocked apps or grant you screen time — those require completing a task, and tasks go through <a href="ai-screen-time.html">AI verification</a> inside the app. That's deliberate. A voice command that hands you thirty minutes would defeat the entire point of the app.</p>
+
+<p>Siri is for the parts that should be frictionless: checking where you stand, capturing a task before you forget it, starting a session without breaking your stride. The part that's supposed to take effort still takes effort.</p>
+
+<h2>Frequently asked questions</h2>
+
+<h3>Can Siri turn off Screen Time?</h3>
+<p>No. Apple's built-in Screen Time has no Siri interface, so you cannot check limits, extend time, or change settings by voice. Third-party apps built on App Intents can expose their own actions to Siri — Drift does this, letting you check your earned balance and start focus sessions hands-free.</p>
+
+<h3>Do I need to set up a Shortcut to use Siri with Drift?</h3>
+<p>No. Drift's actions register with Siri automatically when you install the app. There is no permission prompt and no shortcut to configure. The commands also appear in the Shortcuts app if you want to build your own automations on top of them.</p>
+
+<h3>What is App Intents?</h3>
+<p>App Intents is Apple's framework for letting apps expose specific actions to Siri, Shortcuts, and Spotlight. It replaces SiriKit, which Apple has deprecated. Because actions are registered individually, Siri can chain them together as part of a longer multi-step request.</p>
+
+<h2>Try it</h2>
+
+<p>Drift is free on the App Store. Install it, then ask Siri for your balance — it'll tell you that you don't have one yet, which is a fine place to start.</p>
+
+<p><a href="https://apps.apple.com/app/drift-screentime/id6778215875" class="cta">Download Drift — Free on the App Store</a></p>
+
+<div class="footer">
+  <p>Drift is a productivity app for iPhone that blocks distracting apps until you complete AI-verified tasks.</p>
+  <p style="margin-top: 8px;"><a href="blog.html">Blog</a> · <a href="./">Home</a> · <a href="ai-screen-time.html">AI Screen Time</a> · <a href="reduce-screen-time.html">Reduce Screen Time</a> · <a href="screen-time.html">Calculator</a> · <a href="support.html">Support</a> · <a href="privacy.html">Privacy</a></p>
+</div>
+
+</body>
+</html>
