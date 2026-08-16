@@ -120,9 +120,14 @@ struct DriftShortcutsProvider: AppShortcutsProvider {
     )
     AppShortcut(
       intent: StartDriftInIntent(),
+      // EVERY utterance must contain \(.applicationName) — Apple rejects the
+      // build otherwise ("Invalid Utterance"). The display name is "Drift", so
+      // the token renders inline and these read exactly as written in the
+      // onboarding slide and the blog post: "Start a Drift In session".
       phrases: [
+        "Start a \(.applicationName) In session",
+        "Start \(.applicationName) In",
         "Start a \(.applicationName) session",
-        "Start Drift In",
         "Focus session in \(.applicationName)",
       ],
       shortTitle: "Start Session",
