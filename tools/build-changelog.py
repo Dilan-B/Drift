@@ -208,6 +208,49 @@ ROWS = [
     ("2026-07-29", "166eea9", "Infra", "Backend", "revenuecat-webhook recovered into version control",
      "The function was live and ACTIVE on Supabase with no source in the repo — the only copy was on Supabase's servers, so nobody could review or redeploy it. Downloaded via `supabase functions download`.",
      "Unreleased", "—"),
+    # ── 2026-08-16 ────────────────────────────────────────────
+    ("2026-08-16", "788c3c0", "Bug Fix", "Tasks", "Calendar-imported tasks skipped AI verification entirely",
+     "Tasks created from the calendar suggestion sheet were hardcoded aiCheck: false, so tapping one claimed the credit instantly while every manually-created task went through the AI proof check. Now inherits proAccess like any other task.",
+     "1.1.6", "Native build"),
+    ("2026-08-16", "788c3c0", "Bug Fix", "Auth", "Users signed out at random, not just after updates",
+     "safeGetSession called supabase.auth.signOut() whenever an error message matched /invalid.*refresh|refresh.*expired/i. A transient 5xx, or a cold start before the network was ready, matched that regex and destroyed the session before autoRefreshToken could retry. Supabase already emits SIGNED_OUT on a genuinely dead token, so the manual sign-out was both redundant and destructive. NOTE: a second suspected cause (loss of the Keychain AES key, which makes the encrypted session decrypt to garbage) is untouched and still live.",
+     "1.1.6", "—"),
+    ("2026-08-16", "20020dc", "Feature", "Growth", "Share-a-win sheet after completing a task",
+     "Every third task completed in a day offers a share sheet with the task, duration and time earned, plus an App Store link. Built on React Native's built-in Share, so no new dependency.",
+     "1.1.6", "Native build"),
+    ("2026-08-16", "be399eb", "Feature", "Siri", "Four Siri voice commands via App Intents",
+     "Check balance, create task, start a Drift In session, and today's progress. Registered through AppShortcutsProvider so they also surface in Shortcuts. App Intents needs no entitlement and no App Store Connect configuration, unlike the deprecated SiriKit.",
+     "1.1.6", "Native build"),
+    ("2026-08-16", "4fba037", "Feature", "Onboarding", "Onboarding slide introducing the Siri commands",
+     "Fifth how-it-works slide listing the three main utterances, so the feature is discoverable rather than hidden.",
+     "1.1.6", "Native build"),
+    ("2026-08-16", "4fba037", "UI", "Interaction", "Buttons now give haptic feedback on press",
+     "Anim.Pop accepted a `haptic` prop and silently ignored it - expo-haptics was installed but never reached the button layer. Now fires on press-in rather than onPress, so the tick lands at contact instead of reading as lag. Opt-in per call site.",
+     "1.1.6", "Native build"),
+    ("2026-08-16", "4fba037", "Feature", "Screen Time", "Mid-session nudge while burning earned time",
+     "A silent notification (Is this really the move right now?) fires from the DeviceActivity checkpoint, capped at 4 per day. That checkpoint is the only moment iOS tells a third-party app the user is mid-session on a blocked app.",
+     "1.1.6", "Native build"),
+    ("2026-08-16", "9452c72", "Infra", "Screen Time", "Checkpoint cadence tightened to 5 minutes, with a hard event cap",
+     "More checkpoints means more chances to nudge. Apple documents a ~15-minute floor for threshold delivery, but whether it applies to event thresholds is unverified; every 15-minute mark is still a multiple of 5, so the worst case degrades to the previous behaviour. Also a safety fix: an 8-hour balance previously armed 31 events, and if startMonitoring throws, the catch stops ALL monitoring and leaves no enforcement at all. Now capped at 17.",
+     "1.1.6", "Native build"),
+    ("2026-08-16", "dbd0fe1", "Feature", "Screen Time", "Block screen names the app it is blocking",
+     "ShieldConfigurationDataSource is the one place iOS hands a third-party app the identity of the app being opened, and the parameter was being discarded. The shield can now say Is Instagram the move right now? The name is used only to draw that screen - the extension is sandboxed specifically to prevent moving content out, so it is never persisted or transmitted.",
+     "1.1.6", "Native build"),
+    ("2026-08-16", "a988d5e", "Bug Fix", "Release", "Xcode Cloud could not upload builds - versions hardcoded in Info.plist",
+     "ios/Drift/Info.plist pinned CFBundleShortVersionString and CFBundleVersion to literals. Info.plist OVERRIDES the build settings, so Xcode Cloud's auto-incremented build number never reached the binary. The three extensions never hit this because their Info.plists do not declare these keys. Now reads $(MARKETING_VERSION) / $(CURRENT_PROJECT_VERSION), which also removes Info.plist as a fourth place every version bump had to be applied.",
+     "1.1.6", "Native build"),
+    ("2026-08-16", "a4c6895", "Bug Fix", "Release", "Archive failed - every App Shortcut utterance needs the applicationName token",
+     "Apple rejects the build if any utterance omits it. One of thirteen phrases hardcoded Start Drift In. Since the display name is Drift the token renders inline, so the advertised phrasing was preserved.",
+     "1.1.6", "Native build"),
+    ("2026-08-16", "7b188c2", "Infra", "Release", "ci_post_clone no longer fails when Node is already installed",
+     "brew install node exits non-zero when the formula is already present, and set -e turned that into a dead build before anything compiled. Newer Xcode Cloud images ship Node, so this fired intermittently depending on which image the build landed on.",
+     "1.1.6", "—"),
+    ("2026-08-16", "2c2ced7", "Bug Fix", "Website", "Download links on the marketing site were dead",
+     "Two different App Store IDs were in circulation across docs/ (6738963592 and 6746262733) and both 404'd. The correct ID is 6778215875, verified against the real bundle id com.sanghani.drift via the iTunes lookup API. The same audit is still outstanding on driftproductivity.com, which is a separate codebase.",
+     "1.1.6", "—"),
+    ("2026-08-16", "2c2ced7", "Docs", "Website", "Blog section, AI and Siri articles, sitemap and structured data",
+     "Adds a blog index plus posts on AI verification and Siri control, a sitemap.xml and robots.txt (neither existed before), and JSON-LD MobileApplication/Article/FAQPage markup. Published to the GitHub Pages site, NOT to driftproductivity.com - see SITEBLOG.md for that handoff.",
+     "1.1.6", "—"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
@@ -276,7 +319,7 @@ for i, a in enumerate(areas, start=8):
 
 s["G6"] = "By release"
 s["G6"].font = Font(name=FONT, bold=True, size=12, color="1F3A2A")
-rels = ["1.1.2", "1.1.3", "1.1.4", "Unreleased"]
+rels = ["1.1.2", "1.1.3", "1.1.4", "1.1.6", "Unreleased"]
 s["G7"], s["H7"] = "Release", "Count"
 for c in ("G7", "H7"):
     s[c].font = HDR_FONT
@@ -363,5 +406,5 @@ assert sum(t.values()) == len(ROWS) and sum(r.values()) == len(ROWS)
 for k in t:
     assert k in ("Feature", "Bug Fix", "UI", "Infra", "Security", "Chore", "Docs"), f"unlisted type {k}"
 for k in r:
-    assert k in ("1.1.2", "1.1.3", "1.1.4", "Unreleased"), f"unlisted release {k}"
+    assert k in ("1.1.2", "1.1.3", "1.1.4", "1.1.6", "Unreleased"), f"unlisted release {k}"
 print("\nAll type/release values are covered by a summary row - no change is uncounted.")
