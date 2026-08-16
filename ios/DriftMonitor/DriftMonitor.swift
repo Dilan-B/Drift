@@ -70,6 +70,36 @@ class DriftMonitor: DeviceActivityMonitor {
     ])
   }
 
+  // Extra intervention points. DeviceActivityMonitor defines these alongside
+  // eventDidReachThreshold; we previously overrode none of them, so the only
+  // signal we ever acted on was "threshold crossed". Each one below is a
+  // separate chance to catch the user mid-session.
+  //
+  // NOTE: delivery of the *warning* callbacks depends on a warningTime being
+  // configured on the event/schedule, which we do not currently set — so these
+  // may never fire today. They are cheap to keep: an override that iOS never
+  // calls costs nothing, and wiring warningTime later needs no extension change.
+  override func eventWillReachThresholdWarning(
+    _ event: DeviceActivityEvent.Name,
+    activity: DeviceActivityName
+  ) {
+    super.eventWillReachThresholdWarning(event, activity: activity)
+    // Raw string, not the .balanceDepleted symbol — that DeviceActivityEvent.Name
+    // extension lives in the main app target and is not visible here.
+    guard event.rawValue == "drift.balanceDepleted" else { return }
+    let content = UNMutableNotificationContent()
+    content.title = "Almost out of time"
+    content.body = "Your earned time is nearly gone. Wrap up, or complete a task to keep going."
+    content.sound = nil
+    UNUserNotificationCenter.current().add(
+      UNNotificationRequest(
+        identifier: "drift.monitor.warn.\(Int(Date().timeIntervalSince1970))",
+        content: content,
+        trigger: nil
+      )
+    )
+  }
+
   // Called when the monitoring window starts (a new day, in our schedule).
   // We don't shield here by default — the shield state is whatever Drift left it.
   override func intervalDidStart(for activity: DeviceActivityName) {

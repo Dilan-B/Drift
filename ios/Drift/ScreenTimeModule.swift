@@ -277,18 +277,43 @@ class ScreenTimeModule: NSObject {
       let threshold = DateComponents(minute: thresholdSec / 60, second: thresholdSec % 60)
       let needsFailsafe = totalSec < APPLE_MIN_THRESHOLD_SEC
 
+      // ── Checkpoint cadence ────────────────────────────────────
+      // Checkpoints do double duty: they record consumed usage, and they are
+      // the ONLY moment iOS tells us the user is mid-session on a blocked app
+      // (DriftMonitor turns that signal into the "still the move?" nudge). More
+      // checkpoints therefore means more chances to intervene.
+      //
+      // Apple documents a ~15-minute floor for threshold delivery. That floor is
+      // believed to apply to schedule intervals rather than event thresholds,
+      // but that is UNVERIFIED — so treat the finer cadence as an experiment,
+      // not a guarantee. Every 15-minute mark is still a multiple of the 5-minute
+      // step, so if iOS silently drops the sub-15 events we land back on exactly
+      // the previous behaviour and lose nothing.
+      //
+      // HARD CAP on the event count. startMonitoring throws once an activity has
+      // too many events, and the catch below stops BOTH monitors — leaving the
+      // user with no background enforcement whatsoever. Spacing widens for large
+      // balances so the count can never grow unbounded: a 4-hour balance gets
+      // 15-minute spacing, not 48 events.
+      let MAX_CHECKPOINTS = 16
+      let NUDGE_STEP_SEC  = 300
+      var stepSec = NUDGE_STEP_SEC
+      if totalSec > NUDGE_STEP_SEC * MAX_CHECKPOINTS {
+        // Round up to a whole minute so thresholds stay clean.
+        stepSec = Int(ceil(Double(totalSec) / Double(MAX_CHECKPOINTS) / 60.0)) * 60
+      }
+      stepSec = max(60, stepSec)
+
       var events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [:]
-      if totalSec > APPLE_MIN_THRESHOLD_SEC {
-        var checkpointSec = APPLE_MIN_THRESHOLD_SEC
-        while checkpointSec < totalSec {
-          events[.balanceCheckpoint(checkpointSec)] = DeviceActivityEvent(
-            applications: selection.applicationTokens,
-            categories:   selection.categoryTokens,
-            webDomains:   selection.webDomainTokens,
-            threshold:    DateComponents(minute: checkpointSec / 60, second: checkpointSec % 60)
-          )
-          checkpointSec += APPLE_MIN_THRESHOLD_SEC
-        }
+      var checkpointSec = stepSec
+      while checkpointSec < totalSec && events.count < MAX_CHECKPOINTS {
+        events[.balanceCheckpoint(checkpointSec)] = DeviceActivityEvent(
+          applications: selection.applicationTokens,
+          categories:   selection.categoryTokens,
+          webDomains:   selection.webDomainTokens,
+          threshold:    DateComponents(minute: checkpointSec / 60, second: checkpointSec % 60)
+        )
+        checkpointSec += stepSec
       }
       events[.balanceDepleted] = DeviceActivityEvent(
         applications: selection.applicationTokens,
@@ -315,6 +340,10 @@ class ScreenTimeModule: NSObject {
         // Keep chunk for diagnostics only; the extension no longer re-arms
         // at sub-minute granularity (impossible on iOS).
         defaults?.set(thresholdSec, forKey: "drift_balance_chunk_size")
+        // Diagnostics: compare against fireCount to learn empirically whether
+        // iOS is actually delivering the sub-15-minute checkpoints.
+        defaults?.set(stepSec, forKey: "drift_checkpoint_step_seconds")
+        defaults?.set(events.count, forKey: "drift_checkpoint_count")
         try center.startMonitoring(
           .driftBalance,
           during: schedule,
