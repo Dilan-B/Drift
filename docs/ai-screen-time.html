@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI-Powered Screen Time Control for iPhone (2026) | Drift</title>
-<meta name="description" content="Drift uses on-device AI to verify your tasks before unlocking screen time. The first screen time app with AI-powered accountability — not just timers and limits.">
-<meta name="keywords" content="AI screen time app, Apple Intelligence apps, AI productivity app iPhone, smart screen time, AI app blocker, AI task verification, best AI apps iPhone 2026, Apple AI apps">
-<meta property="og:title" content="AI-Powered Screen Time Control for iPhone">
-<meta property="og:description" content="Not another timer. Drift uses AI to verify you actually did the work before unlocking your apps.">
+<title>AI Screen Time App With Siri Control for iPhone (2026) | Drift</title>
+<meta name="description" content="Drift uses AI to verify your tasks before unlocking screen time, and works with Siri through App Intents. The first screen time app with AI accountability — not just timers and limits.">
+<meta name="keywords" content="AI screen time app, Apple Intelligence apps, Siri screen time, App Intents apps, AI productivity app iPhone, smart screen time, AI app blocker, AI task verification, best AI apps iPhone 2026, Apple AI apps, Siri shortcuts productivity">
+<meta property="og:title" content="AI Screen Time Control With Siri — Drift">
+<meta property="og:description" content="Not another timer. Drift uses AI to verify you actually did the work — and Siri can run the whole thing hands-free.">
 <meta property="og:type" content="article">
 <link rel="canonical" href="https://dilan-b.github.io/Drift/ai-screen-time.html">
 <style>
@@ -65,15 +65,63 @@
   "dateModified": "2026-08-15"
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Can Siri control screen time apps?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Siri cannot control Apple's built-in Screen Time, but Drift registers its actions with Siri through App Intents. You can say \"Hey Siri, check my Drift balance\", \"create a task in Drift\", or \"start a Drift In session\" without opening the app. No setup or permissions are required."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the best AI screen time app for iPhone?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Drift is the only screen time app that uses AI to verify you actually completed a task before unlocking your apps. Other apps rely on timers and self-reporting, which are trivial to override. Drift asks follow-up questions or checks photo proof, then unlocks the time you earned."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is Drift different from Apple Screen Time?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Apple Screen Time sets limits you can dismiss with one tap. Drift blocks your chosen apps until you earn time by completing a verified task, with no override button. Both use the same system-level blocking, but Drift replaces restriction with an earning model."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does Drift work when the app is closed?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Drift uses Apple's DeviceActivity framework, so iOS keeps counting your usage and re-applies the block when your earned time runs out, even if Drift has been force-quit."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is Drift free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Drift is free on the App Store, including AI task verification. There are no ads and no tracking."
+      }
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
 <h1>AI-Powered Screen Time Control That Actually Works</h1>
-<p class="meta">By the Drift team · August 2026 · 6 min read</p>
+<p class="meta">By the Drift team · August 2026 · 7 min read</p>
 
 <p>Apple Intelligence is making AI a native part of every iPhone. But while Apple's AI writes your emails and summarizes your notifications, it doesn't touch the <strong>biggest problem on your phone: the 4+ hours you spend doom-scrolling every day.</strong></p>
 
-<p>Drift does. It's the first screen time app that uses AI not just to track your habits, but to <em>verify</em> that you actually did something productive before your apps unlock.</p>
+<p>Drift does. It's the first screen time app that uses AI not just to track your habits, but to <em>verify</em> that you actually did something productive before your apps unlock — and it hooks into Siri so you can run it without touching your phone at all.</p>
 
 <h2>The Problem With Every Other Screen Time App</h2>
 
@@ -133,6 +181,11 @@
     <td><span class="cross">No</span></td>
     <td><span class="check">Task valuation + verification</span></td>
   </tr>
+  <tr>
+    <td>Siri control</td>
+    <td><span class="cross">No</span></td>
+    <td><span class="check">App Intents — full voice control</span></td>
+  </tr>
 </table>
 
 <h2>Built on Apple's Own Frameworks</h2>
@@ -144,6 +197,23 @@
   <li><strong>Background enforcement</strong> — even if you force-quit Drift, iOS keeps counting your usage and re-applies the shield when your earned time runs out.</li>
   <li><strong>Privacy-first</strong> — Drift never sees which apps you picked. Apple's opaque token system means your app choices stay between you and iOS.</li>
 </ul>
+
+<h2>Control Drift With Siri</h2>
+
+<p>Drift is built on <strong>App Intents</strong> — the framework Apple introduced to replace SiriKit and the same one powering the new Siri's ability to chain actions across apps. That means you can run Drift hands-free:</p>
+
+<ul>
+  <li><strong>"Hey Siri, check my Drift balance"</strong> — Siri tells you how much screen time you have left, without opening the app.</li>
+  <li><strong>"Hey Siri, create a task in Drift"</strong> — dictate the task and Drift opens with it ready to go.</li>
+  <li><strong>"Hey Siri, start a Drift In session"</strong> — begin a focus block by voice.</li>
+  <li><strong>"Hey Siri, how am I doing in Drift?"</strong> — get today's progress read back to you.</li>
+</ul>
+
+<p>Because these are registered as App Intents rather than one-off shortcuts, the rebuilt Siri can also fold them into multi-step requests — "start a focus session and put my phone on Do Not Disturb" works as a single instruction. They show up automatically in the Shortcuts app too, so you can wire Drift into your own automations: start a session when you arrive at the library, check your balance every morning, whatever fits.</p>
+
+<div class="highlight">
+<p><strong>No setup required.</strong> The voice commands work the moment you install Drift — no permissions to grant, no shortcuts to configure.</p>
+</div>
 
 <h2>How AI Fits Into the Apple Intelligence Era</h2>
 
@@ -162,6 +232,23 @@
   <li><strong>Parents</strong> who want a fair system their kids will actually follow — <a href="parents.html">Drift for families</a></li>
   <li><strong>Anyone</strong> who's tried Screen Time limits, failed, and wants something that actually works</li>
 </ul>
+
+<h2>Frequently Asked Questions</h2>
+
+<h3>Can Siri control screen time apps?</h3>
+<p>Siri cannot control Apple's built-in Screen Time, but Drift registers its actions with Siri through App Intents. You can say "Hey Siri, check my Drift balance", "create a task in Drift", or "start a Drift In session" without opening the app. No setup or permissions are required.</p>
+
+<h3>What is the best AI screen time app for iPhone?</h3>
+<p>Drift is the only screen time app that uses AI to verify you actually completed a task before unlocking your apps. Other apps rely on timers and self-reporting, which are trivial to override. Drift asks follow-up questions or checks photo proof, then unlocks the time you earned.</p>
+
+<h3>How is Drift different from Apple Screen Time?</h3>
+<p>Apple Screen Time sets limits you can dismiss with one tap. Drift blocks your chosen apps until you earn time by completing a verified task, with no override button. Both use the same system-level blocking, but Drift replaces restriction with an earning model.</p>
+
+<h3>Does Drift work when the app is closed?</h3>
+<p>Yes. Drift uses Apple's DeviceActivity framework, so iOS keeps counting your usage and re-applies the block when your earned time runs out, even if Drift has been force-quit.</p>
+
+<h3>Is Drift free?</h3>
+<p>Yes. Drift is free on the App Store, including AI task verification. There are no ads and no tracking.</p>
 
 <h2>Try It Free</h2>
 
