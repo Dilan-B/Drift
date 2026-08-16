@@ -67,6 +67,7 @@ import {
   startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag, consumeUsedSeconds,
   getDiagnostics, updateSharedBalance, startDriftInLiveActivity, updateDriftInLiveActivity,
   endDriftInLiveActivity, consumePendingHealthEarn, setProStatus, setAppearance,
+  consumePendingSiriTask,
 } from "./screenTime";
 import { supabase, syncScreenTime, safeGetSession, saveOnboardingResponses, getAppConfig, isVersionOutdated, fetchAppStoreLatest } from "./supabase";
 import ForceUpdateModal from "./ForceUpdateModal";
@@ -4413,6 +4414,10 @@ export default function App() {
     // while offline so the server can't resurrect a stale balance.
     flushPendingStats(userId).catch(() => {});
     claimPendingHealthEarn().catch(() => {});
+    consumePendingSiriTask().then(siri => {
+      if (siri?.taskName) setOverlay("add");
+      // driftInMinutes is handled by the sync loop below — requires UI to be ready.
+    }).catch(() => {});
     reconcileMonitoring();
     const sync = async () => {
       await claimPendingHealthEarn().catch(() => {});

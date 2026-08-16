@@ -539,6 +539,23 @@ class ScreenTimeModule: NSObject {
     resolve(nil)
   }
 
+  // ── Siri / App Intents handoff ──────────────────────────────
+  @objc(consumePendingSiriTask:rejecter:)
+  func consumePendingSiriTask(_ resolve: RCTPromiseResolveBlock,
+                              rejecter reject: RCTPromiseRejectBlock) {
+    let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
+    var result: [String: Any] = [:]
+    if let taskName = defaults?.string(forKey: "drift_siri_pending_task"), !taskName.isEmpty {
+      result["taskName"] = taskName
+      defaults?.removeObject(forKey: "drift_siri_pending_task")
+    }
+    if let driftInMins = defaults?.object(forKey: "drift_siri_start_driftin") as? Int, driftInMins > 0 {
+      result["driftInMinutes"] = driftInMins
+      defaults?.removeObject(forKey: "drift_siri_start_driftin")
+    }
+    resolve(result)
+  }
+
   // Diagnostics — read every state we care about so we can debug why the
   // extension isn't firing on a given device.
   @objc(getDiagnostics:rejecter:)

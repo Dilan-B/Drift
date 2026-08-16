@@ -64,6 +64,9 @@ RCT_EXTERN_METHOD(updateDriftInLiveActivity:(nonnull NSNumber *)seconds
 RCT_EXTERN_METHOD(endDriftInLiveActivity:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(consumePendingSiriTask:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 RCT_EXTERN_METHOD(getDiagnostics:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 

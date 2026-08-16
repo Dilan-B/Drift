@@ -168,6 +168,16 @@ export async function setAppearance(isDark) {
   try { await Native.setAppearance(!!isDark); } catch {}
 }
 
+/**
+ * Consume any pending Siri / App Intents handoff.
+ * Returns { taskName?: string, driftInMinutes?: number } and clears the flags.
+ */
+export async function consumePendingSiriTask() {
+  if (!isAvailable() || typeof Native.consumePendingSiriTask !== "function") return {};
+  try { return (await Native.consumePendingSiriTask()) || {}; }
+  catch { return {}; }
+}
+
 /** Return a diagnostics dump for debugging the DeviceActivity pipeline. */
 export async function getDiagnostics() {
   if (!isAvailable()) return { available: false };
