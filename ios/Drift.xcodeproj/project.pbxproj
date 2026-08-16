@@ -21,8 +21,8 @@
 		C08B28A02FEB2F95008BCC46 /* DriftShield.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C08B28952FEB2F95008BCC46 /* DriftShield.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C9D2621DA58127DB323B2D8D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E67FB59A2F59FB64009250 /* ExpoModulesProvider.swift */; };
 		DR70010000000000000000A1 /* ScreenTimeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B1 /* ScreenTimeModule.swift */; };
-		DR70010000000000000000A5 /* DriftAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B5 /* DriftAppIntents.swift */; };
 		DR70010000000000000000A2 /* ScreenTimeModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B2 /* ScreenTimeModule.m */; };
+		DR70010000000000000000A5 /* DriftAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B5 /* DriftAppIntents.swift */; };
 		DR70010000000000000000C1 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000D1 /* FamilyControls.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		DR70010000000000000000C2 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000D2 /* ManagedSettings.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		DR70010000000000000000C3 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000D3 /* DeviceActivity.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
@@ -90,8 +90,8 @@
 		C08B28972FEB2F95008BCC46 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
 		D048D60A21832318D6C696F5 /* Pods-Drift.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Drift.debug.xcconfig"; path = "Target Support Files/Pods-Drift/Pods-Drift.debug.xcconfig"; sourceTree = "<group>"; };
 		DR70020000000000000000B1 /* ScreenTimeModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScreenTimeModule.swift; path = Drift/ScreenTimeModule.swift; sourceTree = "<group>"; };
-		DR70020000000000000000B5 /* DriftAppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DriftAppIntents.swift; path = Drift/DriftAppIntents.swift; sourceTree = "<group>"; };
 		DR70020000000000000000B2 /* ScreenTimeModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ScreenTimeModule.m; path = Drift/ScreenTimeModule.m; sourceTree = "<group>"; };
+		DR70020000000000000000B5 /* DriftAppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DriftAppIntents.swift; path = Drift/DriftAppIntents.swift; sourceTree = "<group>"; };
 		DR70020000000000000000D1 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 		DR70020000000000000000D2 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
 		DR70020000000000000000D3 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
@@ -672,7 +672,7 @@
 					"FB_SONARKIT_ENABLED=1",
 				);
 				INFOPLIST_FILE = Drift/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -704,7 +704,7 @@
 				CURRENT_PROJECT_VERSION = 100;
 				DEVELOPMENT_TEAM = 3YUK3GTP3T;
 				INFOPLIST_FILE = Drift/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -772,7 +772,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
 					"$(inherited)",
@@ -828,7 +828,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
 					"$(inherited)",
@@ -865,7 +865,7 @@
 				INFOPLIST_FILE = DriftMonitor/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DriftMonitor;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -913,7 +913,7 @@
 				INFOPLIST_FILE = DriftMonitor/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DriftMonitor;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -960,7 +960,7 @@
 				INFOPLIST_FILE = DriftWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DriftWidgets;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1010,7 +1010,7 @@
 				INFOPLIST_FILE = DriftWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DriftWidgets;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1055,7 +1055,7 @@
 				INFOPLIST_FILE = DriftShield/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DriftShield;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1103,7 +1103,7 @@
 				INFOPLIST_FILE = DriftShield/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DriftShield;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
