@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dilan-b.github.io/Drift/sitemap.xml
