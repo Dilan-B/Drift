@@ -62,6 +62,19 @@ keyed to the version it was issued for, so it self-clears on the next update.
 Build number (`CURRENT_PROJECT_VERSION`) increments per submission; the
 marketing version only on a real release.
 
+**Do not hardcode versions in `ios/Drift/Info.plist`.** It must keep
+`CFBundleShortVersionString = $(MARKETING_VERSION)` and
+`CFBundleVersion = $(CURRENT_PROJECT_VERSION)`. Info.plist *overrides* the build
+settings, so a literal value there silently wins over both the Xcode project and
+Xcode Cloud's auto-incremented build number.
+
+This caused a long run of "Preparing build for App Store Connect failed"
+(builds 56, 60, 63, 64, 67, 89). `CFBundleVersion` was pinned to `2`, so every
+upload was the same version+build pair and App Store Connect rejected it as a
+duplicate — meaning each marketing version could be uploaded exactly ONCE, and
+bumping the version only ever "fixed" it by minting a fresh pair. The three
+extensions never hit this because their Info.plists don't declare these keys.
+
 ## Key files
 - `Drift.jsx` — app shell, screen-time timer, modals, tab nav
 - `useSubscription.js`, `useBetaMode.js` — entitlement state (server is source of truth)
