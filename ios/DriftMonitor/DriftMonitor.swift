@@ -210,7 +210,7 @@ class DriftMonitor: DeviceActivityMonitor {
     }
     let mins = max(1, minutesIn)
     let bodies = [
-      "You're \(mins) minutes in. No judgment — just checking.",
+      "You're \(mins) minutes in. No judgment, just checking.",
       "\(mins) minutes gone. Still worth it?",
       "That's \(mins) minutes of your earned time. Your call.",
       "\(mins) minutes in. There's a task waiting if you'd rather.",
