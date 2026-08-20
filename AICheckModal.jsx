@@ -115,6 +115,12 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
   const [result,    setResult]    = useState(null); // { verified, confidence, message } | null
   const [rateLimitMsg, setRateLimitMsg] = useState("");
   const [nowMs,     setNowMs]     = useState(() => Date.now());
+  // The verifier asked for one clarification instead of rejecting. Holding a
+  // question here means an ambiguous-but-honest submission gets a way through
+  // rather than a flat no — which is the failure mode that actually costs a
+  // real user their credits.
+  const [question,  setQuestion]  = useState("");
+  const [answer,    setAnswer]    = useState("");
 
   // ── The unlock countdown ───────────────────────────────────
   // A task can't be proven the instant it's created. Anchored on createdAt,
@@ -124,7 +130,11 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
   // "locked" locally on missing data would strand old tasks permanently.
   const createdMs = task?.createdAt ? Date.parse(task.createdAt) : NaN;
   const gateMs    = requiredWaitMs(task?.minutes);
-  const unlocksAt = Number.isFinite(createdMs) ? createdMs + gateMs : null;
+  // Tasks logged after the fact have nothing to wait for — the work predates
+  // the row. The server agrees (it reads logged_retroactively off the task),
+  // so showing a countdown here would be a lie the server wouldn't enforce.
+  const retro     = !!task?.loggedRetroactively;
+  const unlocksAt = !retro && Number.isFinite(createdMs) ? createdMs + gateMs : null;
   const remaining = unlocksAt ? Math.max(0, unlocksAt - nowMs) : 0;
   const locked    = remaining > 0;
 
@@ -138,6 +148,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
     if (!visible) {
       setProofText(""); setPhoto(null); setVideo(null); setResult(null);
       setLoading(false); setPreparing(""); setRateLimitMsg("");
+      setQuestion(""); setAnswer("");
     } else {
       setNowMs(Date.now());
     }
@@ -252,9 +263,13 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
   // All AI calls happen server-side in the verify-task edge function.
   // There is no client-side OpenAI path in any build.
 
-  const submit = async () => {
+  const submit = async ({ answering = false } = {}) => {
     if (locked) return;
-    if (!proofText.trim() && !photo && !video) {
+    if (answering && !answer.trim()) {
+      Alert.alert("Add an answer", "Answer the question to finish verifying.");
+      return;
+    }
+    if (!answering && !proofText.trim() && !photo && !video) {
       Alert.alert("Add proof", "Write what you did, or capture a photo or video.");
       return;
     }
@@ -277,11 +292,16 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                 // more fields it has to distrust.
                 taskId:      task.id,
                 proofText:   proofText.trim() || undefined,
-                imageBase64: photo?.base64 || undefined,
-                frames:      video?.frames || undefined,
-                videoMeta:   video
+                // Answering a question resends NO media: the server rehydrates
+                // its own earlier reading of the image from proof_summary, so
+                // the round trip is one cheap text call instead of a second
+                // vision pass over a photo it already described.
+                imageBase64: answering ? undefined : (photo?.base64 || undefined),
+                frames:      answering ? undefined : (video?.frames || undefined),
+                videoMeta:   !answering && video
                   ? { durationSec: video.durationSec, frameCount: video.frames.length }
                   : undefined,
+                followUpAnswer: answering ? answer.trim() : undefined,
               },
             }),
             INVOKE_TIMEOUT_MS
@@ -330,6 +350,12 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
 
       // Client predates the taskId contract (shouldn't happen — the force
       // update gate should have caught it — but say something useful if it does).
+      if (body?.error === "question_expired") {
+        setQuestion(""); setAnswer("");
+        Alert.alert("That timed out", body?.message || "Submit your proof again.");
+        return;
+      }
+
       if (body?.error === "task_id_required") {
         Alert.alert("Update needed", body?.message || "Update Drift to use AI Check.");
         return;
@@ -350,8 +376,19 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
         return;
       }
 
+      // The verifier wants one more thing before deciding. Deliberately NOT
+      // rendered as a rejection: it doesn't burn an attempt server-side, and
+      // showing a red "NOT VERIFIED" for what is really a follow-up would
+      // teach people the check is hostile.
+      if (body && !body.error && body.question) {
+        setQuestion(body.question);
+        setAnswer("");
+        return;
+      }
+
       // Success
       if (body && !body.error && (body.verified !== undefined)) {
+        setQuestion("");
         setResult(body);
         return;
       }
@@ -489,8 +526,63 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
             </View>
           )}
 
+          {/* One clarifying question, in place of a rejection. */}
+          {!result && !locked && !!question && (
+            <>
+              <Text style={{ fontFamily: FOM, fontSize: 9, color: GRN, letterSpacing: 2, marginBottom: 10 }}>
+                ONE QUICK CHECK
+              </Text>
+              <View style={{
+                backgroundColor: SURF, borderRadius: 14, padding: 16, marginBottom: 14,
+                borderWidth: 1, borderColor: BRD,
+              }}>
+                <Text style={{ fontFamily: FK, fontSize: 15, color: TXT, lineHeight: 22 }}>
+                  {question}
+                </Text>
+              </View>
+
+              <TextInput
+                value={answer}
+                onChangeText={setAnswer}
+                placeholder="Your answer…"
+                placeholderTextColor={dark ? "#5C7263" : "#A8BFB5"}
+                multiline
+                maxLength={1000}
+                autoFocus
+                style={{
+                  backgroundColor: SURF, borderRadius: 12, padding: 14,
+                  borderWidth: 1, borderColor: BRD,
+                  color: TXT, fontFamily: FB, fontSize: 14,
+                  minHeight: 80, textAlignVertical: "top", marginBottom: 14,
+                }}
+              />
+
+              <TouchableOpacity
+                onPress={() => submit({ answering: true })}
+                disabled={busy}
+                style={{
+                  paddingVertical: 15, borderRadius: 14,
+                  backgroundColor: busy ? "rgba(47,171,114,0.4)" : GRN,
+                  alignItems: "center", justifyContent: "center",
+                  ...(busy ? null : theme.fx.glow),
+                }}
+              >
+                {loading
+                  ? <Spinner size={22} color={dark ? "#16261C" : "#fff"} />
+                  : <Text style={{ fontFamily: FO, fontSize: 12, color: dark ? "#16261C" : "#fff", letterSpacing: 2 }}>
+                      SEND ANSWER
+                    </Text>
+                }
+              </TouchableOpacity>
+
+              <Text style={{ fontFamily: FB, fontSize: 11, color: MID, textAlign: "center", marginTop: 10, lineHeight: 16 }}>
+                This doesn't count as an attempt — we just need one detail to be sure.
+              </Text>
+            </>
+          )}
+
           {/* Proof input */}
-          {!result && !locked && (
+          {!result && !locked && !question && (
             <>
               <Text style={{ fontFamily: FOM, fontSize: 9, color: MID, letterSpacing: 2, marginBottom: 10 }}>
                 YOUR PROOF
@@ -578,7 +670,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
 
               {/* Submit */}
               <TouchableOpacity
-                onPress={submit}
+                onPress={() => submit()}
                 disabled={busy}
                 style={{
                   paddingVertical: 15, borderRadius: 14,
@@ -629,6 +721,21 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                 }}>
                   {result.message}
                 </Text>
+                {/* The specific gap, not just the verdict. "Not verified" with
+                    no reason is what makes an honest rejection feel arbitrary. */}
+                {!result.verified && !!result.shortfall && (
+                  <View style={{
+                    marginTop: 14, paddingTop: 12,
+                    borderTopWidth: 1, borderTopColor: "rgba(181,86,75,0.18)",
+                  }}>
+                    <Text style={{ fontFamily: FOM, fontSize: 9, color: MID, letterSpacing: 1.5, marginBottom: 4 }}>
+                      WHAT WAS MISSING
+                    </Text>
+                    <Text style={{ fontFamily: FB, fontSize: 13, color: TXT, lineHeight: 19 }}>
+                      {result.shortfall}
+                    </Text>
+                  </View>
+                )}
                 <Text style={{
                   fontFamily: FOM, fontSize: 9, color: MID,
                   letterSpacing: 1.5, textAlign: "center", marginTop: 8,

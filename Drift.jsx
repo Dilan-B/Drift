@@ -728,6 +728,11 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
   const [evalError,  setEvalError]  = useState("");
   const [saved,      setSaved]      = useState(false);
   const [recur,    setRecur]    = useState("none");
+  // "I've already done this." Opens the proof gate immediately — the elapsed
+  // clock is meaningless for work that predates the task — at the cost of a
+  // stricter evidence rubric server-side. Fixed at creation and immutable
+  // afterwards, so it's a commitment rather than an escape hatch.
+  const [already,  setAlready]  = useState(false);
   const [recurDays, setRecurDays] = useState([new Date().getDay()]);
   const [recurTime, setRecurTime] = useState(() => {
     const d = new Date();
@@ -825,6 +830,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
       aiPending: !!aiPending, // credits are provisional until the bg evaluator finishes
       aiReasoning: reasoning || "",
       task_date: todayKey(),
+      loggedRetroactively: already,
       // Anchor for the AI Check unlock countdown. The server re-reads
       // tasks.created_at and is the authority; this is only so the countdown
       // is honest in the seconds before the insert round-trips.
@@ -1004,6 +1010,39 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                   );
                 })}
               </View>
+
+              <View style={cardDivider} />
+
+              {/* Already done.
+                  Without this the gate assumes create → do → prove, and anyone
+                  who washes the dishes and THEN opens Drift is told to wait to
+                  prove something already finished. That reads as broken rather
+                  than strict. */}
+              <TouchableOpacity
+                onPress={() => setAlready(v => !v)}
+                activeOpacity={0.7}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+              >
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Text style={[fieldKicker, { marginBottom: 0 }]}>ALREADY DONE</Text>
+                  {already && (
+                    <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.faint, marginTop: 4, lineHeight: 15 }}>
+                      Prove it right away — but you'll need solid evidence.
+                    </Text>
+                  )}
+                </View>
+                <View style={{
+                  width: 44, height: 26, borderRadius: 13, padding: 3,
+                  backgroundColor: already ? earn.sage : ink.ghost,
+                  justifyContent: "center",
+                  alignItems: already ? "flex-end" : "flex-start",
+                }}>
+                  <View style={{
+                    width: 20, height: 20, borderRadius: 10,
+                    backgroundColor: dark ? "#16261C" : "#FFFFFF",
+                  }} />
+                </View>
+              </TouchableOpacity>
 
               <View style={cardDivider} />
 

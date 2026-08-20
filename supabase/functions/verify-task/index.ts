@@ -46,6 +46,11 @@ const GATE_FRACTION = 0.5;
 const GATE_MIN_MS   = 60_000;            // 1 minute
 const GATE_MAX_MS   = 120 * 60_000;      // 2 hours
 
+// How long a clarifying question stays answerable. Past this the user has lost
+// the context that made it answerable, and a stale question on the row would
+// block a fresh submission forever.
+const QUESTION_TTL_MS = 30 * 60_000;
+
 function requiredWaitMs(minutes: number): number {
   const half = (Number(minutes) || 0) * 60_000 * GATE_FRACTION;
   return Math.min(GATE_MAX_MS, Math.max(GATE_MIN_MS, half));
@@ -262,11 +267,12 @@ serve(async (req: Request) => {
       imageBase64?: string;
       frames?: string[];
       videoMeta?: { durationSec?: number; frameCount?: number; sizeBytes?: number };
+      followUpAnswer?: string;
     };
     try { body = await req.json(); }
     catch { return reject("invalid_json", 400); }
 
-    const { taskId, proofText, imageBase64, frames, videoMeta } = body;
+    const { taskId, proofText, imageBase64, frames, videoMeta, followUpAnswer } = body;
 
     // taskId is mandatory. The old contract accepted a bare title, which meant
     // the server had no row to time-check against — a client could invent a
@@ -281,7 +287,8 @@ serve(async (req: Request) => {
 
     // ── 3b. Load the task. This read goes through the USER's client, so RLS
     // is what proves ownership — no manual user_id comparison to get wrong.
-    const FULL_COLS = "id, title, minutes, created_at, done, deleted_at, verified_at, verify_attempts";
+    const FULL_COLS = "id, title, minutes, created_at, done, deleted_at, verified_at, verify_attempts, " +
+                      "logged_retroactively, pending_question, pending_question_at, proof_summary, proof_kind";
     const BASE_COLS = "id, title, minutes, created_at, done, deleted_at";
 
     let { data: taskRow, error: taskErr } = await supabase
@@ -295,7 +302,7 @@ serve(async (req: Request) => {
     // The TIME GATE still holds on that path: it depends only on created_at.
     // What's lost is replay protection and the attempt cap, so say so loudly.
     let gateColumnsMissing = false;
-    if (taskErr && /verified_at|verify_attempts|schema cache|PGRST/i.test(taskErr.message || "")) {
+    if (taskErr && /verified_at|verify_attempts|logged_retroactively|pending_question|schema cache|PGRST/i.test(taskErr.message || "")) {
       console.error("schema_v6 not applied — running without replay protection");
       gateColumnsMissing = true;
       ({ data: taskRow, error: taskErr } = await supabase
@@ -349,7 +356,13 @@ serve(async (req: Request) => {
     const elapsedMs  = Math.max(0, Date.now() - createdMs);
     const requiredMs = requiredWaitMs(durationMins);
 
-    if (elapsedMs < requiredMs) {
+    // "I already did this", declared when the task was created. The gate is
+    // meaningless for work that predates the task row, and making that user
+    // wait to prove something already finished is the single most annoying
+    // thing this feature can do. The cost is the strict rubric below.
+    const retroactive = taskRow.logged_retroactively === true;
+
+    if (!retroactive && elapsedMs < requiredMs) {
       const remainingMs = requiredMs - elapsedMs;
       logUsage("gated", null);
       // 425 Too Early is the honest status. The client reads secondsRemaining
@@ -396,7 +409,30 @@ serve(async (req: Request) => {
       ? sanitizeText(proofText.trim(), MAX_PROOF_CHARS)
       : "";
 
-    if (!sanitizedProof && !images.length) return reject("proof_required", 400);
+    // ── Answering an outstanding question ────────────────────
+    // The user isn't resubmitting proof, they're answering something we asked
+    // about the proof we already read. The transcription pass is skipped
+    // entirely: proof_summary on the row IS that reading, so this costs one
+    // cheap text call instead of re-reviewing an image we already described.
+    const answering = typeof followUpAnswer === "string" && followUpAnswer.trim().length > 0;
+    const questionAge = taskRow.pending_question_at
+      ? Date.now() - Date.parse(taskRow.pending_question_at)
+      : Infinity;
+    const questionLive = !!taskRow.pending_question &&
+      Number.isFinite(questionAge) && questionAge < QUESTION_TTL_MS;
+
+    const sanitizedAnswer = answering
+      ? sanitizeText(followUpAnswer.trim(), MAX_PROOF_CHARS)
+      : "";
+
+    if (answering && !questionLive) {
+      return reject("question_expired", 409, {
+        message: "That question timed out. Submit your proof again.",
+      });
+    }
+
+    if (!sanitizedProof && !images.length && !answering)
+      return reject("proof_required", 400);
 
     const isVideo = rawFrames.length > 0;
     const videoSeconds = isVideo ? Math.round(Number(videoMeta?.durationSec) || 0) : 0;
@@ -491,7 +527,12 @@ serve(async (req: Request) => {
       return String(raw || "").trim().toLowerCase().startsWith("uncapturable");
     }
 
-    const uncapturable = await isUncapturable();
+    // Skipped when answering: this classifies the TASK, which hasn't changed
+    // since the request that asked the question, so re-running it is a model
+    // call for an answer we already acted on.
+    const uncapturable = answering
+      ? String(taskRow.proof_kind) === "assisted"
+      : await isUncapturable();
 
     // ── 6. PASS ONE — transcribe the media, task-blind ────────
     // This is the "turn the photo into text" step. The prompt deliberately
@@ -512,7 +553,17 @@ serve(async (req: Request) => {
     let transcript: Transcript | null = null;
     let transcriptFailed = false;
 
-    if (images.length) {
+    // Answering a question: the evidence was already described on a previous
+    // request and persisted. Re-reading the image would cost a vision call to
+    // produce the same text.
+    if (answering && taskRow.proof_summary) {
+      transcript = {
+        description: String(taskRow.proof_summary).slice(0, 2000),
+        visibleText: "",
+        people: "",
+        quality: "",
+      };
+    } else if (images.length) {
       const parts: Array<Record<string, unknown>> = [];
 
       parts.push({
@@ -588,7 +639,24 @@ serve(async (req: Request) => {
     // ── 7. PASS TWO — judge, from the description only ────────
     // Text-only by design: this model never sees the pixels, so it can only
     // reason about detail the task-blind pass actually reported.
-    const evidenceKind = isVideo ? "video" : images.length ? "photo" : "written";
+    // On an answering request no media is resent, so the live signals are all
+    // absent. Fall back to what the ORIGINAL submission was — otherwise this
+    // reads as "written", and the rubric below then tells the judge to reject
+    // for having no photo, failing every answered question on a photo task.
+    const evidenceKind = answering
+      ? (["photo", "video", "assisted"].includes(String(taskRow.proof_kind))
+          ? String(taskRow.proof_kind)
+          : (transcript ? "photo" : "written"))
+      : (isVideo ? "video" : images.length ? "photo" : "written");
+
+    const retroRule = retroactive
+      ? `\nTHIS TASK WAS LOGGED AFTER THE FACT. The user marked it as already complete when they ` +
+        `created it, so no elapsed time vouches for them and the evidence has to carry the claim on its ` +
+        `own. Hold it to a HIGHER standard than usual: require evidence that is specific and clearly tied ` +
+        `to this task, not merely compatible with it. Accept a video, a clear artefact of the finished ` +
+        `work, or a written account containing concrete detail only someone who did it would know. ` +
+        `Reject a generic photo that could have been taken at any time.\n`
+      : "";
 
     const rubric = uncapturable
       ? `This task leaves no physical trace a camera could record, so it is judged on the written account alone.\n` +
@@ -598,11 +666,14 @@ serve(async (req: Request) => {
         `that could be written without doing the task, and anything under about eight words.`
       : `This task leaves a physical trace, so a bare written claim is NOT sufficient — the user could have ` +
         `typed it from the sofa. Written proof only supports evidence; it cannot replace it.\n` +
-        `If NO photo or video was submitted, reject and say what to capture.`;
+        (answering || images.length
+          ? ""
+          : `
+If NO photo or video was submitted, reject and say what to capture.`);
 
     const countRule =
       `COUNTS AND QUANTITIES. If the task names a number (20 pages, 10 push-ups, 3 sets, 5km):\n` +
-      (isVideo
+      ((isVideo || (answering && evidenceKind === "video"))
         ? `  A video is allowed to establish a count, but only up to what the described frames actually show. ` +
           `If the description distinguishes fewer complete repetitions than the task requires, and the ` +
           `unseen gaps between frames could not plausibly contain the rest, reject and say how many were visible.`
@@ -635,6 +706,14 @@ serve(async (req: Request) => {
         `── THE USER'S WRITTEN ACCOUNT ──\n` +
         (sanitizedProof ? `"${sanitizedProof}"\n` : `(none given)\n`) +
         `\n` +
+        (answering
+          ? `── CLARIFYING QUESTION AND ANSWER ──\n` +
+            `You asked: "${String(taskRow.pending_question).slice(0, 300)}"\n` +
+            `They answered: "${sanitizedAnswer}"\n` +
+            `Weigh this heavily. A specific, plausible answer consistent with the described evidence is ` +
+            `strong corroboration and should usually tip an otherwise-borderline case to verified. ` +
+            `A vague, evasive, or contradictory answer is a clear reject.\n\n`
+          : "") +
 
         `── NEUTRAL DESCRIPTION OF THE EVIDENCE ──\n` +
         (transcript
@@ -647,7 +726,8 @@ serve(async (req: Request) => {
         `\n` +
 
         `── HOW TO DECIDE ──\n` +
-        `${rubric}\n\n` +
+        `${rubric}\n` +
+        `${retroRule}\n` +
         `${countRule}\n\n` +
         `CORRESPONDENCE. The described scene must connect to THIS task specifically. A tidy desk does not ` +
         `prove studying; a gym does not prove a workout happened; a book does not prove it was read. Ask ` +
@@ -668,9 +748,19 @@ serve(async (req: Request) => {
 
         `Write "message" to the user directly, in one or two plain sentences. On a rejection, name the exact ` +
         `thing that was missing and what would settle it next time. Never be sarcastic or scolding.\n\n` +
-        `Reply ONLY with valid JSON, no markdown:\n` +
+        (answering
+          ? ""
+          : `\nIF YOU ARE MINDED TO REJECT BUT THE EVIDENCE IS MERELY AMBIGUOUS RATHER THAN ABSENT OR ` +
+            `CONTRADICTORY — it plausibly shows the task but doesn't settle it — do NOT reject. Instead set ` +
+            `"question" to ONE short, specific question that only someone who actually did this task could ` +
+            `answer, drawn from the task itself ("what page did you stop on?", "what was the last thing you ` +
+            `put away?", "how many sets did you finish?"). Leave "question" empty when the evidence is ` +
+            `unrelated, clearly contradictory, or so vague that no answer would rescue it — a question is ` +
+            `for resolving doubt, not for giving an obviously false claim a second try.\n`) +
+        `\nReply ONLY with valid JSON, no markdown:\n` +
         `{"verified": true or false, "confidence": "high" or "medium" or "low", ` +
-        `"message": "1-2 sentences to the user", "shortfall": "what was missing, or empty string if verified"}`,
+        `"message": "1-2 sentences to the user", "shortfall": "what was missing, or empty string if verified", ` +
+        `"question": "one clarifying question, or empty string"}`,
     }];
 
     const judgeRaw = await chat(
@@ -687,7 +777,7 @@ serve(async (req: Request) => {
       }, 503);
     }
 
-    const parsed = parseJson<{ verified: boolean; confidence: string; message: string; shortfall?: string }>(judgeRaw);
+    const parsed = parseJson<{ verified: boolean; confidence: string; message: string; shortfall?: string; question?: string }>(judgeRaw);
 
     // Fail CLOSED on an unreadable verdict. The old build scanned the raw text
     // for `"verified":true` and passed if it found it — which meant a garbled
@@ -700,31 +790,46 @@ serve(async (req: Request) => {
           message: String(parsed.message || "").slice(0, 400) ||
             (parsed.verified ? "Verified." : "That proof wasn't enough."),
           shortfall: String(parsed.shortfall || "").slice(0, 200),
+          question: String(parsed.question || "").slice(0, 200),
         }
       : {
           verified: false,
           confidence: "low",
           message: "The check didn't come back cleanly. Try submitting again.",
           shortfall: "unreadable verdict",
+          question: "",
         };
 
     const proofKind = uncapturable && !images.length ? "assisted" : evidenceKind;
 
+    // A question is an open verdict, not a rejection. It must not burn one of
+    // the four attempts — otherwise asking the user to clarify actively costs
+    // them, and an honest person answering two questions would be halfway to
+    // locked out of their own task.
+    const asking = !result.verified && !answering && !!result.question;
+
     // ── 8. Record the outcome ─────────────────────────────────
-    logUsage(proofKind, result.verified);
+    logUsage(asking ? `${proofKind}_question` : proofKind, asking ? null : result.verified);
 
     // The attempt counter and (on a pass) verified_at go through the service
     // role — the trigger from schema_v6_proof_gate.sql rejects these columns
     // from the user's own JWT, which is the whole point.
     if (admin && !gateColumnsMissing) {
       const patch: Record<string, unknown> = {
-        verify_attempts: attempts + 1,
+        // Not incremented when we're asking a question — see `asking` above.
+        verify_attempts: asking ? attempts : attempts + 1,
         proof_kind: proofKind,
+        // Preserve the existing summary when answering (transcript is a
+        // re-hydration of it), otherwise write the fresh reading.
         proof_summary: transcript
           ? [transcript.description, transcript.visibleText && `Text: ${transcript.visibleText}`,
              transcript.motion && `Motion: ${transcript.motion}`]
               .filter(Boolean).join("\n").slice(0, 2000)
           : null,
+        // Set when asking, cleared on every settled verdict so a stale question
+        // can't block the next submission.
+        pending_question: asking ? result.question : null,
+        pending_question_at: asking ? new Date().toISOString() : null,
       };
       if (result.verified) patch.verified_at = new Date().toISOString();
 
@@ -743,8 +848,12 @@ serve(async (req: Request) => {
       confidence: result.confidence,
       message: result.message,
       shortfall: result.shortfall || undefined,
+      // Present only when the verifier wants one more thing before deciding.
+      // The client shows it as a question to answer, not as a rejection.
+      question: asking ? result.question : undefined,
       proofKind,
-      attemptsLeft: Math.max(0, MAX_ATTEMPTS_PER_TASK - (attempts + 1)),
+      retroactive,
+      attemptsLeft: Math.max(0, MAX_ATTEMPTS_PER_TASK - (asking ? attempts : attempts + 1)),
     });
   } catch (err) {
     console.error("Unhandled error:", err);
