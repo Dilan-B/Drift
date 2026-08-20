@@ -25,9 +25,21 @@ try { Location = require("expo-location"); } catch {}
 try { TaskManager = require("expo-task-manager"); } catch {}
 try { Notifications = require("expo-notifications"); } catch {}
 
+// Imported for its side effects as much as its exports: notifications.js
+// installs the foreground notification handler at module scope. Without it a
+// geofence that fires while the app is open schedules a notification the OS
+// then declines to display, which looks exactly like the geofence not firing.
+// Required lazily so a missing module can't take the geofence task down with
+// it — this file must stay importable on a cold background wake.
+let notif = null;
+try { notif = require("./notifications"); } catch {}
+
 export const GEOFENCE_TASK = "drift-place-geofence";
 const PLACES_KEY   = "drift_saved_places";
 const ENABLED_KEY  = "drift_place_suggestions_enabled";
+// Fingerprint of the region set currently handed to the OS, so a no-op sync
+// doesn't restart monitoring (see syncGeofences).
+const REGIONS_SIG_KEY = "drift_place_regions_sig";
 const COOLDOWN_MS  = 4 * 60 * 60 * 1000; // don't re-suggest the same place for 4h
 
 // iOS caps an app at 20 monitored regions; stay well under it.
@@ -253,7 +265,9 @@ export async function addPlace({ label, title, cat, minutes, latitude, longitude
     cat: cat || "life",
     minutes: Math.max(5, Math.min(300, Number(minutes) || 30)),
     latitude, longitude,
-    radius: Math.max(80, Math.min(1000, Number(radius) || DEFAULT_RADIUS_M)),
+    // iOS treats regions under ~100m as unreliable and can ignore them
+    // outright, so a place saved at 80m looked fine in the UI and never fired.
+    radius: Math.max(100, Math.min(1000, Number(radius) || DEFAULT_RADIUS_M)),
     enabled: true,
     lastSuggestedAt: 0,
   };
@@ -302,8 +316,18 @@ export async function syncGeofences() {
       notifyOnExit: false,
     }));
 
-    // startGeofencingAsync replaces the existing region set for this task.
+    // startGeofencingAsync replaces the region set wholesale, and doing that
+    // resets the OS's inside/outside state for every region — which can drop
+    // the very next crossing. Skip the restart when the set hasn't changed.
+    const signature = regions
+      .map(r => `${r.identifier}:${r.latitude.toFixed(5)},${r.longitude.toFixed(5)},${r.radius}`)
+      .sort()
+      .join("|");
+    const prev = await AsyncStorage.getItem(REGIONS_SIG_KEY).catch(() => null);
+    if (running && prev === signature) return true;
+
     await Location.startGeofencingAsync(GEOFENCE_TASK, regions);
+    await AsyncStorage.setItem(REGIONS_SIG_KEY, signature).catch(() => {});
     return true;
   } catch {
     return false;
@@ -318,29 +342,67 @@ export async function setSuggestionsEnabled(on) {
       await setSuggestionsEnabledFlag(false);
       return perm;
     }
+
+    // A place arrival's only output is a notification, so notification
+    // permission is part of the feature, not an unrelated setting. Asking here
+    // — right after the user opted in — is the one moment the request has
+    // obvious context. Not fatal if declined: geofencing still runs and the
+    // diagnostics will name this as the blocker rather than failing silently.
+    let notifOk = true;
+    if (notif?.requestNotificationPermission) {
+      notifOk = await notif.requestNotificationPermission().catch(() => false);
+    }
+    await syncGeofences();
+    return { granted: true, notifications: notifOk };
   }
   await syncGeofences();
-  return { granted: !!on };
+  return { granted: false };
 }
 
-// ── Arrival → notification ───────────────────────────────────
-// Called from the background task when a region is entered. Cooldown-guarded
-// so pacing in and out of the geofence can't spam the user (same discipline
-// as the "time's up" latch).
-export async function handleRegionEnter(regionId) {
-  if (!Notifications) return;
+// ── Arrival → notification ────────────────────────────
+// Called from the background task when a region is entered, from the
+// already-inside sweep below, and from testArrival(). Cooldown-guarded so
+// pacing in and out of the geofence can't spam the user (same discipline as
+// the "time's up" latch).
+//
+// `force` skips the cooldown. Only the test button passes it — a user checking
+// whether the feature works must not be told nothing happened because they
+// genuinely arrived three hours ago.
+//
+// Returns a reason on every failure path. This used to return void, so an
+// arrival that produced no notification gave the app nothing to report and the
+// user nothing to fix.
+export async function handleRegionEnter(regionId, { force = false, source = "geofence" } = {}) {
+  if (!Notifications) return { ok: false, reason: "no_notifications_module" };
   const places = await getPlaces();
   const place = places.find(p => p.id === regionId);
-  if (!place || place.enabled === false) return;
+  if (!place) return { ok: false, reason: "unknown_place" };
+  if (place.enabled === false) return { ok: false, reason: "place_disabled" };
 
   const now = Date.now();
-  if (now - (place.lastSuggestedAt || 0) < COOLDOWN_MS) return;
+  const since = now - (place.lastSuggestedAt || 0);
+  if (!force && since < COOLDOWN_MS) {
+    return { ok: false, reason: "cooldown", retryInMs: COOLDOWN_MS - since };
+  }
 
-  await writePlaces(places.map(p => p.id === regionId ? { ...p, lastSuggestedAt: now } : p));
+  // Permission is checked HERE, not only at enable time. Notifications can be
+  // revoked in Settings long after place suggestions were switched on, and the
+  // old code scheduled into the void and then marked the place as suggested —
+  // burning a four-hour cooldown on a notification nobody ever saw.
+  let allowed = false;
+  if (notif?.requestNotificationPermission) {
+    allowed = await notif.requestNotificationPermission().catch(() => false);
+  } else {
+    try { allowed = (await Notifications.getPermissionsAsync())?.status === "granted"; } catch {}
+  }
+  if (!allowed) return { ok: false, reason: "notifications_denied" };
 
   try {
     await Notifications.scheduleNotificationAsync({
-      identifier: `drift-place-${place.id}`,
+      // Unique per firing. A fixed identifier meant a second arrival REPLACED
+      // the first notification rather than adding one, so a suggestion the user
+      // hadn't tapped yet silently disappeared.
+      identifier: `drift-place-${place.id}-${now}`,
       content: {
         title: `You're at ${place.label}`,
         body: `Add "${place.title}" (${place.minutes}m)? Tap to confirm.`,
@@ -351,11 +413,145 @@ export async function handleRegionEnter(regionId) {
           cat: place.cat,
           minutes: place.minutes,
           label: place.label,
+          source,
         },
       },
       trigger: null,
     });
-  } catch {}
+  } catch {
+    return { ok: false, reason: "schedule_failed" };
+  }
+
+  // Only now is the cooldown spent.
+  await writePlaces(places.map(p => p.id === regionId ? { ...p, lastSuggestedAt: now } : p));
+  return { ok: true, place };
+}
+
+// ── The already-inside problem ────────────────────────
+// iOS fires an Enter event only when you CROSS a region boundary. If monitoring
+// begins while you are already inside — exactly what happens when someone saves
+// "Gym" while standing at the gym, or opens the app after arriving — no event
+// ever fires, and the feature looks broken on the one occasion the user is
+// watching for it.
+//
+// This closes that gap: on foreground, take a single position fix and treat
+// "inside a saved radius" as an arrival, subject to the same cooldown. It needs
+// only foreground permission, so it also works for people who granted While
+// Using but declined Always.
+const EARTH_R = 6371000;
+
+export function distanceMeters(a, b) {
+  const toRad = d => (d * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLon = toRad(b.longitude - a.longitude);
+  const lat1 = toRad(a.latitude), lat2 = toRad(b.latitude);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+export async function checkArrivalNow() {
+  if (!(await isSuggestionsEnabled())) return { ok: false, reason: "disabled" };
+  const places = (await getPlaces()).filter(p => p.enabled !== false);
+  if (!places.length) return { ok: false, reason: "no_places" };
+
+  const here = await getCurrentCoords();
+  if (!here) return { ok: false, reason: "no_fix" };
+
+  // Nearest first, so standing where two saved places overlap suggests the one
+  // you are actually at.
+  const inside = places
+    .map(p => ({ p, d: distanceMeters(here, p) }))
+    .filter(x => x.d <= (x.p.radius || DEFAULT_RADIUS_M))
+    .sort((a, b) => a.d - b.d);
+
+  if (!inside.length) return { ok: false, reason: "not_at_a_place" };
+  return await handleRegionEnter(inside[0].p.id, { source: "foreground" });
+}
+
+// ── Diagnostics ────────────────────────────────
+// Every failure path in syncGeofences() returned a bare `false`, so "arriving
+// at the gym does nothing" had six indistinguishable causes and no way to tell
+// them apart from inside the app. This names the one that applies.
+export async function getGeofenceStatus() {
+  const status = {
+    moduleOk: !!(Location && TaskManager),
+    taskDefined: false,
+    enabled: false,
+    placeCount: 0,
+    foreground: "unknown",
+    background: "unknown",
+    notifications: "unknown",
+    monitoring: false,
+    servicesEnabled: null,
+    ready: false,
+    blocker: null,
+  };
+
+  if (!status.moduleOk) {
+    status.blocker = "expo-location or expo-task-manager is missing from this build.";
+    return status;
+  }
+
+  try { status.taskDefined = !!TaskManager.isTaskDefined(GEOFENCE_TASK); } catch {}
+  status.enabled = await isSuggestionsEnabled();
+  status.placeCount = (await getPlaces()).filter(p => p.enabled !== false).length;
+
+  try { status.servicesEnabled = await Location.hasServicesEnabledAsync(); } catch {}
+  try { status.foreground = (await Location.getForegroundPermissionsAsync())?.status || "unknown"; } catch {}
+  try { status.background = (await Location.getBackgroundPermissionsAsync())?.status || "unknown"; } catch {}
+  try { status.monitoring = await Location.hasStartedGeofencingAsync(GEOFENCE_TASK); } catch {}
+  if (Notifications) {
+    try { status.notifications = (await Notifications.getPermissionsAsync())?.status || "unknown"; } catch {}
+  } else {
+    status.notifications = "unavailable";
+  }
+
+  // First blocker wins, listed in the order the user has to fix them.
+  status.blocker =
+    !status.enabled                      ? "Place suggestions are switched off."
+    : status.placeCount === 0            ? "No places saved yet — save one while you're standing at it."
+    : status.servicesEnabled === false   ? "Location Services is off for the whole device (Settings › Privacy › Location Services)."
+    : status.foreground !== "granted"    ? "Drift has no location permission (Settings › Drift › Location)."
+    : status.background !== "granted"    ? "Location is set to While Using. Arrivals need Always (Settings › Drift › Location › Always)."
+    : status.notifications !== "granted" ? "Notifications are off, so an arrival has no way to reach you (Settings › Drift › Notifications)."
+    : !status.taskDefined                ? "The background task didn't register. Fully quit and reopen Drift."
+    : !status.monitoring                 ? "Regions aren't being monitored yet — tap Re-arm."
+    : null;
+
+  status.ready = !status.blocker;
+  return status;
+}
+
+/**
+ * Fire the arrival flow for one saved place on demand.
+ *
+ * A test is only worth anything if it exercises the REAL path — same cooldown
+ * bookkeeping, same notification payload, same tap handler — so the only thing
+ * this skips is having to physically be there. When the pipeline isn't wired
+ * up it reports the blocker, which is the part that was previously invisible.
+ */
+export async function testArrival(placeId) {
+  const status = await getGeofenceStatus();
+
+  // Don't fail a notification test on the two blockers that affect only
+  // BACKGROUND firing — the user can still confirm the notification and its tap
+  // handler work, and the status object carries the caveat.
+  const fatal = !!status.blocker &&
+    !status.blocker.startsWith("Location is set to While Using") &&
+    !status.blocker.startsWith("Regions aren't");
+  if (fatal) return { ok: false, reason: "blocked", blocker: status.blocker, status };
+
+  let id = placeId;
+  if (!id) {
+    const places = (await getPlaces()).filter(p => p.enabled !== false);
+    if (!places.length) return { ok: false, reason: "blocked", blocker: "No places saved yet.", status };
+    id = places[0].id;
+  }
+
+  const res = await handleRegionEnter(id, { force: true, source: "test" });
+  return res.ok
+    ? { ok: true, place: res.place, status }
+    : { ok: false, reason: res.reason, status };
 }
 
 // ── Background task registration ─────────────────────────────
@@ -366,15 +562,24 @@ if (TaskManager) {
   try {
     if (!TaskManager.isTaskDefined(GEOFENCE_TASK)) {
       TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }) => {
-        if (error) return;
+        if (error) {
+          // Surfaced in the device log only. A geofence error here is usually
+          // the OS revoking Always permission mid-flight, which the in-app
+          // diagnostics report properly on next open.
+          console.warn("[places] geofence task error:", error?.message || error);
+          return;
+        }
         try {
           const eventType = data?.eventType;
           const region = data?.region;
           const ENTER = Location?.GeofencingEventType?.Enter ?? 1;
           if (eventType === ENTER && region?.identifier) {
-            await handleRegionEnter(region.identifier);
+            const res = await handleRegionEnter(region.identifier);
+            if (!res?.ok) console.warn("[places] arrival not delivered:", res?.reason);
           }
-        } catch {}
+        } catch (e) {
+          console.warn("[places] arrival threw:", e?.message);
+        }
       });
     }
   } catch {}

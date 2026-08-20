@@ -23,7 +23,7 @@ import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTim
 import { applyBlocking, clearBlocking } from "./blockedApps";
 // Importing places.js at module scope registers the geofence background task,
 // which iOS may wake the app directly into on a cold start.
-import { syncGeofences, isSuggestionsEnabled } from "./places";
+import { syncGeofences, isSuggestionsEnabled, checkArrivalNow } from "./places";
 import { fetchTodayEvents, markImported, isCalendarSyncEnabled, isCalendarAutoImportEnabled } from "./calendarSync";
 import SuggestedTaskModal from "./SuggestedTaskModal";
 import AutoTasksModal from "./AutoTasksModal";
@@ -5009,9 +5009,26 @@ export default function App() {
 
   // Re-register geofences at boot: the saved region set lives in the OS, and
   // permissions can be revoked in Settings between launches.
+  //
+  // The foreground sweep alongside it covers iOS's boundary-crossing rule: an
+  // Enter event only fires when you cross INTO a region, so someone who saved
+  // "Gym" while standing at the gym — or who opens Drift after arriving — never
+  // gets one. checkArrivalNow takes a single position fix and treats being
+  // inside a saved radius as an arrival, under the same 4h cooldown, so it
+  // can't double-notify on top of a geofence that did fire.
   useEffect(() => {
     if (appMode !== "personal") return;
-    syncGeofences().catch(() => {});
+
+    const arm = () => {
+      syncGeofences().catch(() => {});
+      checkArrivalNow().catch(() => {});
+    };
+
+    arm();
+    const sub = AppState.addEventListener("change", state => {
+      if (state === "active") arm();
+    });
+    return () => { try { sub.remove(); } catch {} };
   }, [appMode]);
 
   // Decide whether the Today nudge should appear. Re-checked when the settings
