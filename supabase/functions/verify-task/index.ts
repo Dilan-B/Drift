@@ -281,11 +281,26 @@ serve(async (req: Request) => {
 
     // ── 3b. Load the task. This read goes through the USER's client, so RLS
     // is what proves ownership — no manual user_id comparison to get wrong.
-    const { data: taskRow, error: taskErr } = await supabase
-      .from("tasks")
-      .select("id, title, minutes, created_at, done, deleted_at, verified_at, verify_attempts")
-      .eq("id", taskId)
-      .maybeSingle();
+    const FULL_COLS = "id, title, minutes, created_at, done, deleted_at, verified_at, verify_attempts";
+    const BASE_COLS = "id, title, minutes, created_at, done, deleted_at";
+
+    let { data: taskRow, error: taskErr } = await supabase
+      .from("tasks").select(FULL_COLS).eq("id", taskId).maybeSingle();
+
+    // verified_at / verify_attempts land with schema_v6_proof_gate.sql. If this
+    // function is deployed before that migration runs, PostgREST rejects the
+    // whole select — which would take AI Check down completely rather than
+    // degrading. Fall back to the columns that have always existed.
+    //
+    // The TIME GATE still holds on that path: it depends only on created_at.
+    // What's lost is replay protection and the attempt cap, so say so loudly.
+    let gateColumnsMissing = false;
+    if (taskErr && /verified_at|verify_attempts|schema cache|PGRST/i.test(taskErr.message || "")) {
+      console.error("schema_v6 not applied — running without replay protection");
+      gateColumnsMissing = true;
+      ({ data: taskRow, error: taskErr } = await supabase
+        .from("tasks").select(BASE_COLS).eq("id", taskId).maybeSingle());
+    }
 
     if (taskErr) {
       console.error("task lookup failed:", taskErr.code || "unknown");
@@ -298,14 +313,14 @@ serve(async (req: Request) => {
         message: "That task no longer exists. Pull to refresh and try again.",
       });
     }
-    if (taskRow.verified_at || taskRow.done) {
+    if ((!gateColumnsMissing && taskRow.verified_at) || taskRow.done) {
       return reject("already_verified", 409, {
         message: "This task has already been completed.",
       });
     }
 
     const attempts = Number(taskRow.verify_attempts) || 0;
-    if (attempts >= MAX_ATTEMPTS_PER_TASK) {
+    if (!gateColumnsMissing && attempts >= MAX_ATTEMPTS_PER_TASK) {
       return reject("too_many_attempts", 429, {
         message:
           `You've submitted proof for this task ${attempts} times. ` +
@@ -701,7 +716,7 @@ serve(async (req: Request) => {
     // The attempt counter and (on a pass) verified_at go through the service
     // role — the trigger from schema_v6_proof_gate.sql rejects these columns
     // from the user's own JWT, which is the whole point.
-    if (admin) {
+    if (admin && !gateColumnsMissing) {
       const patch: Record<string, unknown> = {
         verify_attempts: attempts + 1,
         proof_kind: proofKind,
@@ -716,7 +731,7 @@ serve(async (req: Request) => {
       admin.from("tasks").update(patch).eq("id", taskId).eq("user_id", user.id)
         .then(({ error }) => { if (error) console.error("verify stamp failed:", error.code || "unknown"); },
               () => {});
-    } else {
+    } else if (!admin) {
       // Without the service key the row cannot be stamped, so verified_at
       // stays NULL and the task remains re-submittable. Loud, because it
       // silently weakens the gate.
