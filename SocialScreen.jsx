@@ -227,13 +227,21 @@ const FriendPlant = React.memo(function FriendPlant({ friend, onPress, dark }) {
           @{friend.username}
         </Text>
       </View>
-      <View style={{
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: (friend.minutes || 0) > 0 ? th.sage : th.hairline,
+      {/* Screen time used today. Dimmed and italicised when the friend has no
+          row for today: "—" is honest about not knowing, where "0m" would be a
+          claim we can't make. */}
+      <Text style={{
+        fontFamily: FF.bodyMed,
+        fontSize: 11,
+        color: typeof friend.spentMinutes === "number" ? th.mid : th.faint,
         marginTop: 6,
-      }} />
+      }}>
+        {typeof friend.spentMinutes === "number"
+          ? (friend.spentMinutes < 60
+              ? `${friend.spentMinutes}m today`
+              : `${Math.floor(friend.spentMinutes / 60)}h ${friend.spentMinutes % 60}m today`)
+          : "no data today"}
+      </Text>
     </TouchableOpacity>
   );
 });
@@ -712,7 +720,7 @@ function PastChallengeRow({ item, myId, dark }) {
 // every App-level re-render (timer ticks, popups…) re-rendered this whole
 // tree and made Grove taps laggy/unresponsive. All props from Drift.jsx keep
 // stable identities.
-function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onChallengeResolved, dark = false }) {
+function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onChallengeResolved, mySpentToday = 0, dark = false }) {
   const th = palette(dark);
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1225,6 +1233,26 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
 
   const myGrowth = growthState(0); // self always shown thriving - we don't track our own screen time on this screen
 
+  // Lowest-screen-time board, me included. Split rather than sorted-with-nulls:
+  // a friend with no row for today has not scored zero, they have not played,
+  // and putting them at the top would let anyone win by never opening Drift.
+  const leaderboard = (() => {
+    const ranked = [];
+    const unreported = [];
+    for (const f of friends) {
+      if (typeof f.spentMinutes === "number") {
+        ranked.push({ id: f.id, username: f.username, minutes: f.spentMinutes, isMe: false });
+      } else {
+        unreported.push(f);
+      }
+    }
+    ranked.push({ id: "me", username: "You", minutes: Math.max(0, Math.round(mySpentToday)), isMe: true });
+    // Ties broken so I never appear above someone I actually tied with — the
+    // board should never flatter its owner.
+    ranked.sort((a, b) => a.minutes - b.minutes || (a.isMe ? 1 : b.isMe ? -1 : 0));
+    return { ranked, unreported };
+  })();
+
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
       {/* Aurora pools — the same quiet light as the Drift In door */}
@@ -1506,6 +1534,71 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                       </View>
                     );
                   })}
+                </View>
+              )}
+
+              {/* ── Least screen time today ──
+                  Ranked ASCENDING, which is the whole point: this is the one
+                  board where winning means the smallest number. Friends who
+                  haven't reported today (spentMinutes === null) are listed
+                  separately rather than ranked at zero — a perfect score for
+                  not opening the app would make the ranking worthless. */}
+              {leaderboard.ranked.length > 1 && (
+                <View style={{
+                  marginBottom: 14, padding: 16,
+                  borderRadius: 22,
+                  backgroundColor: th.card2,
+                  borderWidth: 1, borderColor: th.hairline,
+                }}>
+                  <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: th.faint, letterSpacing: 1.6, marginBottom: 12 }}>
+                    LEAST SCREEN TIME TODAY
+                  </Text>
+
+                  {leaderboard.ranked.map((r, idx) => (
+                    <View
+                      key={r.id}
+                      style={{
+                        flexDirection: "row", alignItems: "center", gap: 10,
+                        paddingVertical: 9,
+                        borderTopWidth: idx === 0 ? 0 : 0.5, borderTopColor: th.hairline,
+                      }}
+                    >
+                      <Text style={{
+                        fontFamily: FF.bodyBold, fontSize: 13,
+                        color: idx === 0 ? th.sage : th.faint,
+                        width: 20,
+                      }}>
+                        {idx + 1}
+                      </Text>
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          flex: 1, minWidth: 0,
+                          fontFamily: r.isMe ? FF.bodyBold : FF.bodyMed,
+                          fontSize: 14,
+                          color: r.isMe ? th.sage : th.ink,
+                        }}
+                      >
+                        {r.isMe ? "You" : `@${r.username}`}
+                      </Text>
+                      <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.mid }}>
+                        {r.minutes < 60
+                          ? `${r.minutes}m`
+                          : `${Math.floor(r.minutes / 60)}h ${r.minutes % 60}m`}
+                      </Text>
+                    </View>
+                  ))}
+
+                  {leaderboard.unreported.length > 0 && (
+                    <Text style={{
+                      fontFamily: FF.body, fontSize: 11, color: th.faint,
+                      marginTop: 10, lineHeight: 16,
+                    }}>
+                      {leaderboard.unreported.length === 1
+                        ? `@${leaderboard.unreported[0].username} hasn't reported today.`
+                        : `${leaderboard.unreported.length} friends haven't reported today.`}
+                    </Text>
+                  )}
                 </View>
               )}
 

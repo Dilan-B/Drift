@@ -24,6 +24,9 @@ import { applyBlocking, clearBlocking } from "./blockedApps";
 // Importing places.js at module scope registers the geofence background task,
 // which iOS may wake the app directly into on a cold start.
 import { syncGeofences, isSuggestionsEnabled, checkArrivalNow } from "./places";
+import {
+  recordSpend, getTodaySpentSeconds, flush as flushSpend, resetCache as resetSpendCache,
+} from "./screenTimeStats";
 import { fetchTodayEvents, markImported, isCalendarSyncEnabled, isCalendarAutoImportEnabled } from "./calendarSync";
 import SuggestedTaskModal from "./SuggestedTaskModal";
 import AutoTasksModal from "./AutoTasksModal";
@@ -2418,7 +2421,7 @@ function StatBlock({ dot, label, value, ink }) {
 // memo every App-level state tick re-renders this whole tree and starves the
 // JS thread (dropped taps). Props must keep stable identities — see the
 // stable-handler wrappers in App.
-const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
+const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, onAddTask, spentToday = 0, dark }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Dark text for the light-green `deep` button in dark mode (see TodayView).
@@ -2432,6 +2435,9 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
   const maxCat    = Math.max(...Object.values(catCounts), 1);
   const weekly    = computeWeekly(done);
   const streak    = computeStreak(done);
+  // Credits banked from tasks finished today — the denominator for the
+  // screen-time card. weekly.perDay's last entry is today by construction.
+  const earnedToday = weekly.perDay[weekly.perDay.length - 1] || 0;
   const maxDay    = Math.max(...weekly.perDay, 1);
   const DOW       = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -2621,6 +2627,53 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
             );
           })}
         </View>
+      </View>
+
+      {/* ── Screen time used today ──
+          Deliberately framed against what was earned rather than shown bare: a
+          number with no denominator invites the wrong reading in both
+          directions, and "18m of 45m earned" is the only version that says
+          whether the day is going well. */}
+      <View style={{
+        backgroundColor: paper.card,
+        borderRadius: 24, padding: 22,
+        borderWidth: 1, borderColor: ink.hairline,
+        marginBottom: 14,
+      }}>
+        <Text style={{ fontFamily: FF.kicker, fontSize: 10, color: ink.faint, letterSpacing: 2.4, marginBottom: 6 }}>
+          SCREEN TIME TODAY
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
+          <Text style={{ fontFamily: FF.display, fontSize: 30, color: ink.deep, letterSpacing: -0.3 }}>
+            {fmtMins(spentToday)}
+          </Text>
+          {earnedToday > 0 && (
+            <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid }}>
+              of {fmtMins(earnedToday)} earned
+            </Text>
+          )}
+        </View>
+
+        {earnedToday > 0 && (
+          <View style={{ height: 6, borderRadius: 3, backgroundColor: ink.hairline, overflow: "hidden", marginTop: 14 }}>
+            <View style={{
+              height: "100%",
+              width: `${Math.min(100, (spentToday / earnedToday) * 100)}%`,
+              backgroundColor: spentToday > earnedToday ? theme.danger.fg : earn.sage,
+              borderRadius: 3,
+            }} />
+          </View>
+        )}
+
+        <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 10, lineHeight: 17 }}>
+          {spentToday === 0
+            ? "Nothing spent yet today."
+            : earnedToday === 0
+              ? "Time carried over from earlier."
+              : spentToday >= earnedToday
+                ? "You've used everything you earned today."
+                : `${fmtMins(earnedToday - spentToday)} of today's earnings still banked.`}
+        </Text>
       </View>
 
       {/* Stat tiles */}
@@ -3359,6 +3412,12 @@ export default function App() {
   const [shareTask,   setShareTask]   = useState(null);
   const [levelUp,     setLevelUp]     = useState(null);
   const [secLeft,     setSecLeft]     = useState(0);
+  // Minutes of earned screen time actually used today. Read from the local
+  // ledger on mount and on foreground, incremented live by the drain tick.
+  const [spentToday,  setSpentToday]  = useState(0);
+  // Seconds behind `spentToday`, so the minute figure is derived rather than
+  // repeatedly re-rounded. Re-seeded from the ledger on every hydrate.
+  const spentSecRef = useRef(0);
 
   const [userId,         setUserId]         = useState(null);
   const [onboarding,     setOnboarding]     = useState(false);
@@ -3648,6 +3707,17 @@ export default function App() {
     // (boot restore trusts server balanceSeconds > 0 over fresher local state).
     if (userIdRef.current) {
       syncProfileStats(userIdRef.current, { balanceSeconds: rem }).catch(() => {});
+      // Per-day spend ledger, separate from credits.spent — that one is a
+      // session total that boot-restore zeroes, so it can't answer "today".
+      // Writes are local and throttled; see screenTimeStats.js.
+      recordSpend(userIdRef.current, usedSec).catch(() => {});
+      // Accumulate in SECONDS and derive minutes. Folding the displayed minute
+      // count back into seconds each tick throws away the remainder, and since
+      // drain ticks are only a few seconds apart almost every increment would
+      // round to zero — the number would sit near-still all day.
+      spentSecRef.current += usedSec;
+      const mins = Math.floor(spentSecRef.current / 60);
+      setSpentToday(prev => (prev === mins ? prev : mins));
     }
     // Local notifications: alert when time just ran out, or warn when crossing
     // below ~2 min. (Fires on the next drain/reconcile while the app is alive.)
@@ -4950,6 +5020,14 @@ export default function App() {
         balanceAfter: nc.balance,
       }).catch(() => {});
       syncProfileStats(userId, { totalXp: nx, balanceSeconds: newSec }).catch(() => {});
+      // Today's EARNED total on the shared screen_time row. syncScreenTime has
+      // existed in supabase.js since the friends grove shipped and was never
+      // called from anywhere, so no client ever wrote a row — which is why
+      // every friend rendered as a thriving plant with zero minutes.
+      const earnedTodayMins = nh
+        .filter(t => t.completedDate === todayKey())
+        .reduce((sum, t) => sum + (t.credits || 0), 0);
+      syncScreenTime(userId, earnedTodayMins).catch(() => {});
       cacheFullTasks(userId, nt);
       cache.saveXp(userId, nx);
     }
@@ -5006,6 +5084,45 @@ export default function App() {
     } catch {}
     return () => { try { sub?.remove(); } catch {} };
   }, [appMode, queueSuggestions]);
+
+  // Today's spend: hydrate from the ledger, re-read on foreground (the drain
+  // tick can't run while the app is backgrounded, but reconcile-on-resume
+  // credits the elapsed time, so the figure moves without a tick), and flush to
+  // the server on the way out so friends see a current number.
+  useEffect(() => {
+    if (!userId || appMode !== "personal") return;
+    let cancelled = false;
+
+    const hydrate = () => {
+      getTodaySpentSeconds(userId)
+        .then(sec => {
+          if (cancelled) return;
+          spentSecRef.current = sec;
+          setSpentToday(Math.floor(sec / 60));
+        })
+        .catch(() => {});
+    };
+
+    hydrate();
+    const sub = AppState.addEventListener("change", state => {
+      if (state === "active") hydrate();
+      else flushSpend(userId).catch(() => {});
+    });
+
+    // Day rollover: the ledger keys by local day, so at midnight today's total
+    // must drop to zero without waiting for a relaunch.
+    let day = todayKey();
+    const id = setInterval(() => {
+      if (todayKey() !== day) { day = todayKey(); hydrate(); }
+    }, 60_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      try { sub.remove(); } catch {}
+      flushSpend(userId).catch(() => {});
+    };
+  }, [userId, appMode]);
 
   // Re-register geofences at boot: the saved region set lives in the OS, and
   // permissions can be revoked in Settings between launches.
@@ -5385,6 +5502,13 @@ export default function App() {
       "drift_last_alive",
     ]).catch(() => {});
     launchDrainRanRef.current = false;
+    // Drop the in-memory spend ledger. It caches under the previous uid, so
+    // without this the next account on this device inherits their day's total.
+    // The stored per-user blob is left alone — signing back in should restore
+    // your own history, not start it over.
+    resetSpendCache();
+    spentSecRef.current = 0;
+    setSpentToday(0);
     setTasks([]);
     setTaskHistory([]);
     setCredits({ balance: 0, earned: 0, spent: 0 });
@@ -5665,13 +5789,17 @@ export default function App() {
               half={groveHalf}
               onHalfChange={setGroveHalf}
               dark={darkMode}
-              statsProps={{ tasks: statsTasks, totalXp, skips: 0, onAddTask: tryOpenAddTask }}
+              statsProps={{ tasks: statsTasks, totalXp, skips: 0, onAddTask: tryOpenAddTask, spentToday }}
               socialProps={{
                 userId,
                 isPremium: proAccess,
                 onOpenPaywall: NOOP,
                 onSwipeLockChange: setChildSwipeLockedNow,
                 onChallengeResolved: stableChallengeResolved,
+                // My own spend, so the leaderboard can place me without
+                // re-fetching a number the app already has locally (and which
+                // is fresher here than the throttled server copy).
+                mySpentToday: spentToday,
               }}
             />
           </View>

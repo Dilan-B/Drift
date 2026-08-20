@@ -370,21 +370,48 @@ export async function saveOnboardingResponses(userId, answers) {
 // ─────────────────────────────────────────────────────────────
 // Helper: sync today's screen time for current user
 // ─────────────────────────────────────────────────────────────
-export async function syncScreenTime(userId, minutesEarned) {
+/**
+ * Write today's screen-time row.
+ *
+ * `minutes` is time EARNED; `spentMinutes` is time actually consumed. They are
+ * different questions and the leaderboard wants the second one — a friend who
+ * earned four hours and used ten minutes is doing well, and a column that
+ * conflates them says the opposite.
+ *
+ * The date is the user's LOCAL day. It used to be derived from toISOString(),
+ * which is UTC — so for anyone west of Greenwich the evening's usage landed on
+ * tomorrow's row and "today" on the leaderboard reset in the middle of the
+ * afternoon.
+ */
+export async function syncScreenTime(userId, minutesEarned, { spentMinutes } = {}) {
   if (!userId) return;
-  const today = new Date().toISOString().slice(0, 10);
-  const { error } = await rateLimited(`screen_time_${userId}`, { limit: 60, windowMs: 60_000 }, () => supabase.rpc("upsert_screen_time", {
-    p_user_id: userId,
-    p_date:    today,
-    p_minutes: minutesEarned,
-  }));
-  // If RPC doesn't exist yet, fall back to direct upsert:
-  if (error) {
-    await rateLimited(`screen_time_${userId}`, { limit: 60, windowMs: 60_000 }, () => supabase.from("screen_time").upsert(
-      { user_id: userId, date: today, minutes: minutesEarned, unlocks: 1 },
-      { onConflict: "user_id,date", ignoreDuplicates: false }
-    ));
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const row = { user_id: userId, date: today };
+  if (typeof minutesEarned === "number") row.minutes = minutesEarned;
+  if (typeof spentMinutes === "number")  row.spent_minutes = spentMinutes;
+  // Nothing to say — don't burn a write or a rate-limit slot.
+  if (row.minutes === undefined && row.spent_minutes === undefined) return;
+
+  let { error } = await rateLimited(`screen_time_${userId}`, { limit: 60, windowMs: 60_000 }, () =>
+    supabase.from("screen_time").upsert(row, { onConflict: "user_id,date", ignoreDuplicates: false })
+  );
+
+  // spent_minutes lands with schema_v7. Until that migration is run, PostgREST
+  // rejects the whole row rather than ignoring the unknown column, which would
+  // take the earned figure down with it — so retry without it.
+  if (error && /spent_minutes|schema cache|PGRST204/i.test(error.message || "")) {
+    const { spent_minutes, ...rest } = row;
+    if (rest.minutes !== undefined) {
+      await rateLimited(`screen_time_${userId}`, { limit: 60, windowMs: 60_000 }, () =>
+        supabase.from("screen_time").upsert(rest, { onConflict: "user_id,date", ignoreDuplicates: false })
+      );
+    }
+    error = null;
   }
+  if (error) console.warn("syncScreenTime:", error.message);
+
   invalidateCache(`friends_screen_time_`);
 }
 
@@ -392,7 +419,10 @@ export async function syncScreenTime(userId, minutesEarned) {
 export async function getFriendsWithScreenTime(userId) {
   if (!userId) return [];
   return cached(`friends_screen_time_${userId}`, 15_000, async () => {
-  const today = new Date().toISOString().slice(0, 10);
+  // Local day, matching what syncScreenTime writes. A UTC date here would ask
+  // for a row the client never wrote under that key.
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   // Get accepted friends
   const { data: friends } = await supabase
@@ -407,20 +437,28 @@ export async function getFriendsWithScreenTime(userId) {
 
   // Get their profiles + today's screen time. Older live schemas may not have
   // avatar_url yet, so fall back without it instead of clearing the list.
-  let { data: profiles, error: profileErr } = await supabase
+  // Two columns can be absent on an older live schema — avatar_url, and
+  // spent_minutes until schema_v7 runs. Degrade one at a time rather than
+  // dropping the whole friends list, which is what a single failed select did.
+  const sel = (withAvatar, withSpent) =>
+    `id, username, avatar_seed${withAvatar ? ", avatar_url" : ""}, total_xp, ` +
+    `screen_time(minutes, unlocks, date${withSpent ? ", spent_minutes" : ""})`;
+
+  const attempt = (withAvatar, withSpent) => supabase
     .from("profiles")
-    .select(`id, username, avatar_seed, avatar_url, total_xp, screen_time(minutes, unlocks, date)`)
+    .select(sel(withAvatar, withSpent))
     .in("id", friendIds)
     .eq("screen_time.date", today);
 
-  if (profileErr && /avatar_url|schema cache/i.test(profileErr.message || "")) {
-    const fallback = await supabase
-      .from("profiles")
-      .select(`id, username, avatar_seed, total_xp, screen_time(minutes, unlocks, date)`)
-      .in("id", friendIds)
-      .eq("screen_time.date", today);
-    profiles = fallback.data;
+  let { data: profiles, error: profileErr } = await attempt(true, true);
+
+  if (profileErr && /spent_minutes|schema cache|PGRST/i.test(profileErr.message || "")) {
+    ({ data: profiles, error: profileErr } = await attempt(true, false));
   }
+  if (profileErr && /avatar_url|schema cache|PGRST/i.test(profileErr.message || "")) {
+    ({ data: profiles, error: profileErr } = await attempt(false, false));
+  }
+  if (profileErr) console.warn("getFriendsWithScreenTime:", profileErr.message);
 
   const cleanAvatarUrl = (url) =>
     typeof url === "string" && url.startsWith("data:image/") ? null : url;
@@ -438,6 +476,14 @@ export async function getFriendsWithScreenTime(userId) {
       totalXp:  Number(p.total_xp || 0),
       minutes:  p.screen_time?.find(s => s.date === today)?.minutes ?? 0,
       unlocks:  p.screen_time?.find(s => s.date === today)?.unlocks ?? 0,
+      // null, not 0, when the friend has no row for today. The leaderboard
+      // needs to tell "used nothing" apart from "hasn't reported" — ranking a
+      // friend who hasn't opened the app first for a perfect zero would make
+      // the whole board meaningless.
+      spentMinutes: (() => {
+        const row = p.screen_time?.find(s => s.date === today);
+        return row && typeof row.spent_minutes === "number" ? row.spent_minutes : null;
+      })(),
     }));
   });
 }
