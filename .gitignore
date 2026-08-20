@@ -25,3 +25,7 @@ yarn-error.*
 # default, so one-off queries against production data must stay local. Add new
 # ones here, or parameterise the identifier before committing.
 supabase/admin/diagnose_recurring_duplicates.sql
+
+# Supabase CLI version-check cache — rewritten on every CLI invocation.
+# project-ref stays tracked so a clone knows which project this is.
+supabase/.temp/cli-latest
