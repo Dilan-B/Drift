@@ -5769,14 +5769,8 @@ export default function App() {
     </View>
   );
 
-  // Family accounts render their own shells instead of the personal app.
-  if (appMode === "parent") return (
-    <ParentShell
-      userId={userId} userEmail={userEmail} username={myUsername}
-      dark={darkMode} onToggleTheme={toggleDark}
-      onSignOut={signOut} onDeleteAccount={deleteAccount}
-    />
-  );
+  // Children are entitled through their parent, so they render before the
+  // paywall and never see it.
   if (appMode === "child") return (
     <ChildShell
       userId={userId} username={myUsername} secLeft={secLeft}
@@ -5790,9 +5784,11 @@ export default function App() {
   // a modal because there is nothing behind it to go back to — a dismissible
   // paywall on a paid-only app is just a broken paywall.
   //
-  // Ordering matters: this sits AFTER the parent/child shells (a child is
-  // entitled through their parent and must never see it) and after the loading
-  // screen (so a slow RevenueCat call doesn't flash a paywall at a subscriber).
+  // Ordering matters, and it is not obvious: this sits AFTER the child shell
+  // (a child is entitled through their parent and must never see a paywall) but
+  // BEFORE the parent shell (the parent is the account that pays). It also sits
+  // after the loading screen, so a slow RevenueCat call doesn't flash a paywall
+  // at an existing subscriber.
   //
   // subLoading is respected for the same reason: getCustomerInfo() failing open
   // to "not entitled" would paywall paying users on a flaky connection.
@@ -5807,6 +5803,18 @@ export default function App() {
       />
     );
   }
+
+  // Family accounts render their own shells instead of the personal app.
+  // NOTE: this sits BELOW the paywall deliberately. The parent is the account
+  // that pays — rendering ParentShell first would walk the one person who owes
+  // us money straight past the paywall.
+  if (appMode === "parent") return (
+    <ParentShell
+      userId={userId} userEmail={userEmail} username={myUsername}
+      dark={darkMode} onToggleTheme={toggleDark}
+      onSignOut={signOut} onDeleteAccount={deleteAccount}
+    />
+  );
 
   const activeTheme = getTheme(darkMode);
   const { ink: th_ink, paper: th_paper, earn: th_earn } = activeTheme;
