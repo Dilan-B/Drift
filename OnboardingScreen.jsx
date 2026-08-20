@@ -119,10 +119,9 @@ const STEPS = [
     ],
   },
   // NOTE: the old "How strict should Drift be?" step (1/3/7/15 min per tap) was
-  // removed. iOS Screen Time only re-applies a shield on a ~15-minute
-  // granularity, so every setting behaved like 15 regardless of what was
-  // picked — the choice was cosmetic. The Take button now grants a flat
-  // GRANT_MINS (15) that matches what the OS actually enforces.
+  // removed, and so is the "Take 15m" button it configured — unearned screen
+  // time on a tap was working against the entire premise. Nothing in
+  // onboarding sets a grant size any more because nothing grants.
   //
   // Last stop: offer the hands-off sources. One decision, skippable, and it's
   // the only place in onboarding that asks for a system permission.

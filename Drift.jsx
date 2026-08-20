@@ -566,11 +566,11 @@ const MIN_REWARD_RATIO = 0.25;
 // long tail (a 3h+ task tops out here rather than scaling forever).
 const MAX_REWARD_MINUTES = 60;
 // const FREE_TASK_LIMIT = 5; // removed — no free tier limits for now
-// iOS Screen Time re-applies a shield on a ~15-minute granularity, so any grant
-// smaller than that doesn't actually block on time — the old per-difficulty
-// values (1/3/7 min) all behaved like 15 in practice. One honest constant
-// instead of a choice the OS ignores.
-const GRANT_MINS = 15;
+// GRANT_MINS and the "Take 15m" button it powered are gone. The button handed
+// out 15 unearned minutes, three times a day, on a tap — 45 minutes of the
+// exact thing the app exists to make you earn. The onboarding step that used to
+// pick its size had already been removed as cosmetic (iOS re-shields on a
+// ~15-minute granularity, so every setting behaved identically).
 
 const BLOCKED_TASK_RE = /\b(goon|gooning|fap|fapping|jerk\s*off|jack\s*off|wank|masturbat|porn|hentai|onlyfans|xvideo|xhamster|nhentai|rule\s*34|edg(e|ing)\b(?!.*code)|69|blow\s*job|hand\s*job|sex(?!t)|nud[ei]|xxx|orgasm|boner|erection|cum\b|suck\s*(my|a|it)|eat\s*ass|anal\b|dildo|vibrator|fleshlight)\b/i;
 const VAGUE_TASK_RE = /^(stuff|things?|work|task|do it|idk|whatever|something|nothing|asdf|aaa+|test|hi|hey|lol|bruh|hmm+|ok|yes|no|nah|yep|pls|help|bro|dude|chill|vibe|vibes|blah|meh|ugh|haha|lmao|yolo|swag|based|slay|cap|bet|fr|ngl|tbh|ong|fam|sus|ratio|w|l|x+|z+|\.+|!+|\?+|a{2,}|ha+)$/i;
@@ -822,6 +822,10 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
       aiPending: !!aiPending, // credits are provisional until the bg evaluator finishes
       aiReasoning: reasoning || "",
       task_date: todayKey(),
+      // Anchor for the AI Check unlock countdown. The server re-reads
+      // tasks.created_at and is the authority; this is only so the countdown
+      // is honest in the seconds before the insert round-trips.
+      createdAt: new Date().toISOString(),
     });
     const recurrence = recur !== "none" && isSubActive
       ? { frequency: recur, time: recurTime, days: recur === "custom" ? recurDays : recurrenceDaysFor(recur) }
@@ -1451,131 +1455,6 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
   );
 }
 
-function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant, grantMins }) {
-  const QUICK_SLIDES = [
-    { title: "Pause.", body: "This is unearned time." },
-    { title: "Use it well.", body: `${grantMins} minute${grantMins === 1 ? "" : "s"} goes fast.` },
-    { title: "Final check.", body: `Take ${grantMins} minute${grantMins === 1 ? "" : "s"}?` },
-  ];
-  const theme = getTheme(dark);
-  const { ink, paper, earn } = theme;
-  const [step, setStep] = useState(0);
-  const [breathing, setBreathing] = useState(false);
-  const [seconds, setSeconds] = useState(15);
-  const scale = useRef(new Animated.Value(0.96)).current;
-  const plant = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!visible) return;
-    setStep(0);
-    setBreathing(false);
-    setSeconds(15);
-    scale.setValue(0.96);
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 80, friction: 10 }).start();
-  }, [visible, scale]);
-
-  useEffect(() => {
-    if (!breathing) return;
-    plant.setValue(0);
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(plant, { toValue: 1, duration: 3200, useNativeDriver: true }),
-      Animated.timing(plant, { toValue: 0, duration: 3200, useNativeDriver: true }),
-    ]));
-    loop.start();
-    return () => loop.stop();
-  }, [breathing, plant]);
-
-  useEffect(() => {
-    if (!breathing || seconds <= 0) return;
-    const id = setTimeout(() => setSeconds(s => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [breathing, seconds]);
-
-  // OriginSheet manages mount/unmount; no early return so close anim plays.
-
-  const next = () => {
-    if (step < QUICK_SLIDES.length - 1) {
-      Animated.sequence([
-        Animated.timing(scale, { toValue: 0.985, duration: 120, useNativeDriver: true }),
-      ]).start();
-      setTimeout(() => {
-        setStep(s => s + 1);
-        Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 90, friction: 9 }).start();
-      }, 130);
-      return;
-    }
-    setBreathing(true);
-  };
-
-  const finish = () => {
-    if (seconds > 0) return;
-    onGrant?.();
-  };
-
-  const plantScale = plant.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.04] });
-  const stemScale = plant.interpolate({ inputRange: [0, 1], outputRange: [0.82, 1] });
-  const leafScale = plant.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.08] });
-  const leftLeafTilt = plant.interpolate({ inputRange: [0, 1], outputRange: ["-34deg", "-18deg"] });
-  const rightLeafTilt = plant.interpolate({ inputRange: [0, 1], outputRange: ["34deg", "18deg"] });
-  const plantGlow = plant.interpolate({ inputRange: [0, 1], outputRange: [0.18, 0.34] });
-  const progress = breathing ? 1 : (step + 1) / QUICK_SLIDES.length;
-  const primaryText = ink.deep;
-  const secondaryText = ink.mid;
-  const disabledBtn = ink.ghost;
-  const disabledBtnText = ink.faint;
-  const slide = QUICK_SLIDES[step] || QUICK_SLIDES[0];
-
-  return (
-    <OriginSheet visible={visible} onClose={onClose} align="bottom"
-      sheetStyle={[s2.panel, s2.bottomSheetPanel, { backgroundColor: paper.card, borderColor: ink.border }]}>
-      <Animated.View style={{ transform: [{ scale }] }}>
-          <Text style={[s2.kicker, { color: ink.faint }]}>RESET MINUTES</Text>
-          <View style={[s2.progressTrack, { backgroundColor: ink.ghost }]}>
-            <Animated.View style={[s2.progressFill, { width: `${progress * 100}%`, backgroundColor: earn.sage }]} />
-          </View>
-          {!breathing ? (
-            <View>
-              <Text style={[s2.panelTitle, { color: primaryText }]}>{slide.title}</Text>
-              <Text style={[s2.panelText, { color: secondaryText }]}>
-                {slide.body}
-              </Text>
-              <Text style={[s2.footerHint, { color: secondaryText, textAlign: "left", marginTop: -6, marginBottom: 12 }]}>
-                Step {step + 1} of {QUICK_SLIDES.length}
-              </Text>
-            </View>
-          ) : (
-            <View style={{ alignItems: "center", paddingVertical: 8 }}>
-              <Animated.View style={[s2.plantStage, { backgroundColor: paper.sand, borderColor: ink.border, transform: [{ scale: plantScale }] }]}>
-                <Animated.View style={[s2.plantGlow, { backgroundColor: earn.sage, opacity: plantGlow }]} />
-                <View style={[s2.plantSoil, { backgroundColor: dark ? "rgba(70,55,39,0.72)" : "rgba(116,88,58,0.28)" }]} />
-                <View style={[s2.plantPot, { backgroundColor: earn.clay, borderColor: dark ? "rgba(250,246,238,0.14)" : "rgba(71,51,31,0.12)" }]}>
-                  <View style={[s2.plantPotLip, { backgroundColor: dark ? "rgba(250,246,238,0.12)" : "rgba(255,255,255,0.22)" }]} />
-                </View>
-                <Animated.View style={[s2.plantStem, { backgroundColor: earn.sage, transform: [{ scaleY: stemScale }] }]} />
-                <Animated.View style={[s2.plantLeaf, s2.plantLeafLeft, { backgroundColor: earn.sage, transform: [{ rotate: leftLeafTilt }, { scale: leafScale }] }]} />
-                <Animated.View style={[s2.plantLeaf, s2.plantLeafRight, { backgroundColor: earn.sage, transform: [{ rotate: rightLeafTilt }, { scale: leafScale }] }]} />
-                <Animated.View style={[s2.plantLeaf, s2.plantTopLeaf, { backgroundColor: earn.green, transform: [{ scale: leafScale }] }]} />
-              </Animated.View>
-              <Text style={[s2.panelTitle, { color: primaryText, textAlign: "center" }]}>Take deep breaths</Text>
-              <Text style={[s2.panelText, { color: secondaryText, textAlign: "center" }]}>
-                Continue in {seconds}s.
-              </Text>
-            </View>
-          )}
-          <View style={[s2.actions, s2.quickActions]}>
-            <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, s2.quickActionBtn, { borderColor: ink.border }]}>
-              <Text numberOfLines={1} style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={breathing ? finish : next} disabled={breathing && seconds > 0} style={[s2.solidBtn, s2.quickActionBtn, { backgroundColor: breathing && seconds > 0 ? disabledBtn : earn.deep }, !(breathing && seconds > 0) && theme.fx.glow]}>
-              <Text numberOfLines={1} adjustsFontSizeToFit style={[s2.solidText, { color: breathing && seconds > 0 ? disabledBtnText : (dark ? "#1F3A2A" : "#FAF6EE") }]}>{breathing ? `Claim ${grantMins}m` : "Continue"}</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={[s2.footerHint, { color: ink.faint }]}>{Math.max(0, 3 - usedToday)} left today</Text>
-      </Animated.View>
-    </OriginSheet>
-  );
-}
-
 function FloatingFeedback({ popup }) {
   const scale = useRef(new Animated.Value(0.4)).current;
   const y = useRef(new Animated.Value(18)).current;
@@ -1869,7 +1748,7 @@ function LevelUpModal({ level, dark, onClose }) {
   );
 }
 
-function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, scrollRef, onReduceScreenTime, onQuickGrant, quickGrantCount, grantMins, onSwipeLockChange, dark, secLeft, showAutoTasksHint, onOpenAutoTasks, onDismissAutoTasksHint }) {
+function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, scrollRef, onReduceScreenTime, onSwipeLockChange, dark, secLeft, showAutoTasksHint, onOpenAutoTasks, onDismissAutoTasksHint }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Text color that sits on a `deep` (primary) button. In dark mode the deep
@@ -2159,28 +2038,6 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
                 style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.deep, textAlign: "center" }}
               >
                 Remove time
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={onQuickGrant}
-              disabled={quickGrantCount >= 3}
-              activeOpacity={0.8}
-              style={{
-                flex: 1,
-                paddingVertical: 13,
-                paddingHorizontal: 8,
-                borderRadius: 14,
-                alignItems: "center",
-                backgroundColor: quickGrantCount < 3 ? earn.sageLo : ink.ghost,
-              }}
-            >
-              <Text
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.82}
-                style={{ fontFamily: FF.bodyMed, fontSize: 13, color: quickGrantCount < 3 ? earn.sage : ink.faint, textAlign: "center" }}
-              >
-                Take {grantMins}m · {Math.max(0, 3 - quickGrantCount)} left
               </Text>
             </TouchableOpacity>
           </View>
@@ -3540,8 +3397,6 @@ export default function App() {
   const reviewPromptShownRef = useRef(false); // in-memory guard against double-triggering within a session
   const [showUsernameSetup,  setShowUsernameSetup]  = useState(false);
   const [showReduceTime,     setShowReduceTime]     = useState(false);
-  const [showQuickGrant,     setShowQuickGrant]     = useState(false);
-  const [quickGrantCount,    setQuickGrantCount]    = useState(0);
   const [userEmail,          setUserEmail]          = useState("");
   const [myUsername,         setUserName]           = useState("");
   const [screenTimeStatus,   setScreenTimeStatus]   = useState("unknown");
@@ -3550,7 +3405,6 @@ export default function App() {
   const [blockedHoursActive, setBlockedHoursActive] = useState(false);
   const [recurringTasks,     setRecurringTasks]     = useState([]);
   const [minuteTick,         setMinuteTick]         = useState(0);
-  const quickGrantDayRef = useRef(todayKey());
   const visibleTaskDayRef = useRef(todayKey());
   // Authoritative anti-duplicate / anti-resurrect guard for recurring tasks.
   // Records which recurring template ids have already been materialized OR
@@ -3637,9 +3491,8 @@ export default function App() {
       showBlockedHours ||
       showRecurringTasks ||
       showReduceTime ||
-      showQuickGrant ||
       childSwipeLocked;
-  }, [driftInActive, overlay, popup, showAccount, showBlockedApps, showBlockedHours, showRecurringTasks, showReduceTime, showQuickGrant, tab, childSwipeLocked]);
+  }, [driftInActive, overlay, popup, showAccount, showBlockedApps, showBlockedHours, showRecurringTasks, showReduceTime, tab, childSwipeLocked]);
 
   const stopTick = () => { if (tickRef.current) clearInterval(tickRef.current); };
 
@@ -3971,32 +3824,6 @@ export default function App() {
     });
   }, []);
 
-  const refreshQuickGrantCount = useCallback(async () => {
-    const day = todayKey();
-    quickGrantDayRef.current = day;
-    const raw = await AsyncStorage.getItem(`drift_quick_grants_${day}`).catch(() => "0");
-    const count = Number(raw || 0);
-    setQuickGrantCount(Number.isFinite(count) ? Math.max(0, Math.min(3, count)) : 0);
-  }, []);
-
-  useEffect(() => {
-    refreshQuickGrantCount();
-
-    const checkForNewDay = () => {
-      if (todayKey() !== quickGrantDayRef.current) refreshQuickGrantCount();
-    };
-
-    const id = setInterval(checkForNewDay, 60_000);
-    const sub = AppState.addEventListener("change", state => {
-      if (state === "active") refreshQuickGrantCount();
-    });
-
-    return () => {
-      clearInterval(id);
-      sub.remove();
-    };
-  }, [refreshQuickGrantCount]);
-
   useEffect(() => {
     if (screen !== "app") return;
     const refreshVisibleTasksForDay = async () => {
@@ -4126,6 +3953,7 @@ export default function App() {
       task_date: today,
       recurringTemplateId: t.id,
       scheduledTime: t.time,
+      createdAt: new Date().toISOString(),
     }));
     markRecurringHandled(due.map(t => t.id));
     const nt = [...created, ...tasks];
@@ -4325,6 +4153,7 @@ export default function App() {
               aiValued: false,
               aiReasoning: "",
               task_date: todayKey(),
+              createdAt: new Date().toISOString(),
             };
           });
         if (seeded.length > 0) {
@@ -5517,44 +5346,6 @@ export default function App() {
     }
   };
 
-  const handleQuickGrant = async () => {
-    const day = todayKey();
-    quickGrantDayRef.current = day;
-    const key = `drift_quick_grants_${day}`;
-    const stored = Number((await AsyncStorage.getItem(key).catch(() => "0")) || 0);
-    const latest = Number.isFinite(stored) ? Math.max(0, Math.min(3, stored)) : 0;
-    if (latest >= 3) {
-      setQuickGrantCount(3);
-      setShowQuickGrant(false);
-      return;
-    }
-    const newCount = latest + 1;
-    await AsyncStorage.setItem(key, String(newCount)).catch(() => {});
-    setQuickGrantCount(newCount);
-    setShowQuickGrant(false);
-
-    // Acts like completing a 10-minute light activity: a 10-min light task
-    // (0.5x multiplier) grants 5 minutes of screen time. We route it through
-    // the same applyBalanceSeconds path a real task uses so credits/ledger/
-    // sync all behave identically.
-    const addedMins = GRANT_MINS;
-    const newSec = secRef.current + addedMins * 60;
-    const nextCredits = {
-      ...credits,
-      balance: Math.ceil(newSec / 60),
-      balanceSec: newSec,
-      earned: credits.earned + addedMins,
-    };
-    applyBalanceSeconds(newSec, nextCredits, { credits: addedMins, xp: 0 });
-    if (userId) {
-      appendLedgerEntry(userId, {
-        delta: addedMins,
-        reason: "daily_grant",
-        balanceAfter: nextCredits.balance,
-      }).catch(() => {});
-    }
-  };
-
   const signOut = async () => {
     setShowAccount(false);
     try { await supabase.auth.signOut(); } catch {}
@@ -5834,9 +5625,6 @@ export default function App() {
               addRef={tutAddRef}
               scrollRef={todayScrollRef}
               onReduceScreenTime={() => setShowReduceTime(true)}
-              onQuickGrant={() => setShowQuickGrant(true)}
-              quickGrantCount={quickGrantCount}
-              grantMins={GRANT_MINS}
               onSwipeLockChange={setChildSwipeLockedNow}
               dark={darkMode}
               secLeft={displaySecLeft}
@@ -5953,11 +5741,17 @@ export default function App() {
             title, cat, minutes,
             done: false,
             credits, xp,
+            // Imported tasks are proven like any other. This used to be false,
+            // which made calendar import the one way to get screen time for a
+            // single tap: accept the suggestion, tap it done, collect the
+            // credits, having done nothing. A task Drift suggested is not a
+            // task Drift watched you do.
             aiCheck: proAccess,
             aiValued: false,
             aiPending: false,
             aiReasoning: reasoning || "",
             task_date: todayKey(),
+            createdAt: new Date().toISOString(),
           }, null);
           advanceSuggestion();
         }}
@@ -6062,14 +5856,6 @@ export default function App() {
         dark={darkMode}
         onClose={() => setShowReduceTime(false)}
         onReduce={handleReduceScreenTime}
-      />
-      <QuickGrantModal
-        visible={showQuickGrant}
-        usedToday={quickGrantCount}
-        dark={darkMode}
-        onClose={() => setShowQuickGrant(false)}
-        onGrant={handleQuickGrant}
-        grantMins={GRANT_MINS}
       />
     </TouchTracker>
     </ThemeContext.Provider>
