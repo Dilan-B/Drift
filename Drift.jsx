@@ -19,7 +19,7 @@ import {
   clearPendingBalance, cache,
 } from "./sync";
 import { registerBackgroundRefresh } from "./backgroundRefresh";
-import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTimeNotices, scheduleDailyReminder, cancelAllNotifications, registerForPushNotifications } from "./notifications";
+import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTimeNotices, scheduleDailyReminder, cancelAllNotifications, registerForPushNotifications, notifyLosingOnLeaderboard } from "./notifications";
 import { applyBlocking, clearBlocking } from "./blockedApps";
 // Importing places.js at module scope registers the geofence background task,
 // which iOS may wake the app directly into on a cold start.
@@ -72,7 +72,7 @@ import {
   endDriftInLiveActivity, consumePendingHealthEarn, setProStatus, setAppearance,
   consumePendingSiriTask,
 } from "./screenTime";
-import { supabase, syncScreenTime, safeGetSession, saveOnboardingResponses, getAppConfig, isVersionOutdated, fetchAppStoreLatest } from "./supabase";
+import { supabase, syncScreenTime, getFriendsWithScreenTime, safeGetSession, saveOnboardingResponses, getAppConfig, isVersionOutdated, fetchAppStoreLatest } from "./supabase";
 import ForceUpdateModal from "./ForceUpdateModal";
 import { handleSupabaseAuthCallback } from "./authLinks";
 import SocialScreen from "./SocialScreen";
@@ -3680,17 +3680,34 @@ export default function App() {
   //   - no credits to drain
   const bgTimeRef = useRef(null);
   const nativeArmedRef = useRef(false);
+  // True once the launch drain has subtracted the time spent while Drift was
+  // closed. After that the LOCAL balance is strictly fresher than anything the
+  // server can hand back during this boot, because the drain is computed from
+  // persisted state plus wall clock and its write-back is fire-and-forget.
+  // Guards the two restore sites below — see the comment there.
+  const launchDrainAppliedRef = useRef(false);
+  // Elapsed seconds the launch drain computed but could not apply yet (balance
+  // not hydrated). Carried rather than dropped: the old code reset
+  // drift_last_alive regardless, so a drain that no-opped erased the evidence
+  // and that period was never billed.
+  const pendingDrainSecRef = useRef(0);
   const nativeArmFailedSecondsRef = useRef(null);
 
   const persistLastAlive = useCallback(() => {
     AsyncStorage.setItem("drift_last_alive", String(Date.now())).catch(() => {});
   }, []);
 
+  // Returns true when the drain was applied (or was legitimately unnecessary),
+  // false when it could not be applied and the caller must retry. Callers use
+  // this to decide whether it is safe to reset the drift_last_alive heartbeat.
   const drainBy = useCallback((elapsedSec) => {
-    if (elapsedSec <= 0) return;
-    if (driftInActRef.current) return; // shield is up
+    if (elapsedSec <= 0) return true;
+    if (driftInActRef.current) return true; // shield is up; nothing is being spent
     const prevSec = secRef.current;
-    if (prevSec <= 0) return;
+    // Zero balance: nothing to take. Distinguishing "empty" from "not loaded
+    // yet" is the caller's job via the hydration ordering — from here both look
+    // the same, so report not-applied and let the retry effect sort it out.
+    if (prevSec <= 0) return false;
     const rem = Math.max(0, prevSec - elapsedSec);
     const usedSec = prevSec - rem;
     secRef.current = rem;
@@ -3731,6 +3748,7 @@ export default function App() {
     } else if (prevSec > 120 && rem <= 120) {
       notifyLowTime(Math.ceil(rem / 60));
     }
+    return true;
   }, []);
 
   const claimPendingHealthEarn = useCallback(async () => {
@@ -3807,7 +3825,11 @@ export default function App() {
   useEffect(() => {
     if (screen !== "app") return;
     persistLastAlive();
-    const id = setInterval(persistLastAlive, 15_000);
+    // 5s, not 15s: this timestamp is the ONLY record of when Drift was last
+    // in the foreground, and iOS can terminate a backgrounded app without the
+    // AppState listener ever firing. Every second of staleness here is a second
+    // of screen time the user gets for free.
+    const id = setInterval(persistLastAlive, 5_000);
     return () => clearInterval(id);
   }, [screen, persistLastAlive]);
 
@@ -3861,21 +3883,35 @@ export default function App() {
       try {
         const lastStr = await AsyncStorage.getItem("drift_last_alive");
         const last = lastStr ? parseInt(lastStr, 10) : null;
+
+        let toDrain = 0;
         if (nativeArmedRef.current) {
           const used = await consumeUsedSeconds();
           if (used > 0) {
-            drainBy(used);
+            toDrain = used;
           } else if (Number.isFinite(last)) {
-            const elapsedSec = Math.floor((Date.now() - last) / 1000);
-            const capped = Math.min(Math.max(0, elapsedSec), 86_400);
-            if (capped > 0) drainBy(capped);
+            toDrain = Math.min(Math.max(0, Math.floor((Date.now() - last) / 1000)), 86_400);
           }
         } else {
           if (!last || !Number.isFinite(last)) { persistLastAlive(); return; }
-          const elapsedSec = Math.floor((Date.now() - last) / 1000);
-          const capped = Math.min(Math.max(0, elapsedSec), 86_400);
-          if (capped > 0) drainBy(capped);
+          toDrain = Math.min(Math.max(0, Math.floor((Date.now() - last) / 1000)), 86_400);
         }
+
+        // drainBy is a no-op when the balance hasn't hydrated yet (it bails on
+        // secRef.current <= 0). The old code called persistLastAlive()
+        // unconditionally right after, which reset the clock and destroyed the
+        // only record that the time had passed — so a boot that lost the race
+        // never charged the user for that stretch, and never could again.
+        // That is the "sometimes it doesn't go down after a full close" report.
+        const applied = toDrain > 0 ? drainBy(toDrain) : true;
+        if (!applied) {
+          pendingDrainSecRef.current = toDrain;
+          // Deliberately NOT resetting drift_last_alive: leaving it stale is
+          // what lets the retry below (or the next launch) still see the gap.
+          return;
+        }
+        launchDrainAppliedRef.current = true;
+
         if (appModeRef.current === "personal" && secRef.current <= 0 && shieldStateRef.current !== "on") {
           await applyBlocking([], { freeTier: !proAccessRef.current }).catch(() => {});
           shieldStateRef.current = "on";
@@ -3884,6 +3920,18 @@ export default function App() {
       } catch {}
     })();
   }, [screen, drainBy, persistLastAlive]);
+
+  // Retry a launch drain that couldn't be applied because the balance landed
+  // after it ran. Fires when secLeft first becomes non-zero.
+  useEffect(() => {
+    if (!pendingDrainSecRef.current || secLeft <= 0) return;
+    const owed = pendingDrainSecRef.current;
+    pendingDrainSecRef.current = 0;
+    if (drainBy(owed)) {
+      launchDrainAppliedRef.current = true;
+      persistLastAlive();
+    }
+  }, [secLeft, drainBy, persistLastAlive]);
 
   useEffect(() => {
     AsyncStorage.getItem("drift_dark_mode").then(v => {
@@ -4157,7 +4205,19 @@ export default function App() {
         levelIdxRef.current = getLevelIdx(stats.totalXp);
         setTotalXp(prev => Math.max(prev, stats.totalXp));
       }
-      if (stats?.balanceSeconds > 0) {
+      // Skipped once the launch drain has run. Two boot paths race to set the
+      // balance: the drain (persisted state minus wall-clock time the app was
+      // closed) and this restore. The drain's write-back through
+      // syncProfileStats is fire-and-forget, and fetchProfileStats caches for
+      // 20s — so this can easily hand back the PRE-drain figure and silently
+      // undo the subtraction. That is the other half of "closing the app
+      // sometimes doesn't lower the counter".
+      //
+      // The local value is strictly fresher here by construction, so it wins.
+      // The cost is that time earned on another device during this same boot
+      // is deferred to the next foreground refresh, which is the right trade:
+      // under-crediting for a few seconds beats not charging at all.
+      if (stats?.balanceSeconds > 0 && !launchDrainAppliedRef.current) {
         setCredits({
           balance: Math.ceil(stats.balanceSeconds / 60),
           balanceSec: stats.balanceSeconds,
@@ -4756,7 +4816,9 @@ export default function App() {
             cache.saveXp(uid, Math.max(cachedXp || 0, stats.totalXp));
             remoteStatsApplied = true;
           }
-          if (stats.balanceSeconds > 0) {
+          // Same guard as the sign-in path above: never let a cached server
+          // balance resurrect time the launch drain already spent.
+          if (stats.balanceSeconds > 0 && !launchDrainAppliedRef.current) {
             const restoredCredits = {
               balance: Math.ceil(stats.balanceSeconds / 60),
               balanceSec: stats.balanceSeconds,
@@ -5121,6 +5183,58 @@ export default function App() {
       clearInterval(id);
       try { sub.remove(); } catch {}
       flushSpend(userId).catch(() => {});
+    };
+  }, [userId, appMode]);
+
+  // ── "You're behind on the leaderboard" nudge ──
+  // Runs on foreground, at most once per local day (the latch lives in
+  // notifications.js and is keyed by date, so it self-clears at midnight).
+  //
+  // Only fires when the user is actually losing. A daily nudge that goes out
+  // regardless of standing is noise, and people mute the whole category after
+  // about a week of it — so "you're winning" stays silent.
+  useEffect(() => {
+    if (!userId || appMode !== "personal") return;
+    let cancelled = false;
+
+    const check = async () => {
+      try {
+        const friends = await getFriendsWithScreenTime(userId);
+        if (cancelled || !friends?.length) return;
+
+        // Only friends who actually reported today can be compared. Someone
+        // with no row hasn't scored zero, they haven't played — ranking
+        // against them would mean anyone who ignores Drift beats everyone.
+        const reported = friends.filter(f => typeof f.spentMinutes === "number");
+        if (!reported.length) return;
+
+        const mine = Math.max(0, Math.round(spentSecRef.current / 60));
+        const ahead = reported.filter(f => f.spentMinutes < mine);
+        if (!ahead.length) return;
+
+        const leader = reported.reduce((a, b) => (b.spentMinutes < a.spentMinutes ? b : a));
+        await notifyLosingOnLeaderboard({
+          aheadCount: ahead.length,
+          total: reported.length,
+          leaderName: leader?.username,
+          myMinutes: mine,
+        });
+      } catch {}
+    };
+
+    // Deferred, not immediate: at launch the spend ledger hasn't hydrated yet,
+    // so an instant check would compare everyone against a stale zero and
+    // conclude the user is winning — burning the day's one notification on a
+    // reading that was never true.
+    const initial = setTimeout(check, 20_000);
+    const sub = AppState.addEventListener("change", state => {
+      if (state === "active") check();
+    });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(initial);
+      try { sub.remove(); } catch {}
     };
   }, [userId, appMode]);
 
