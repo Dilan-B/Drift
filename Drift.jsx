@@ -19,11 +19,14 @@ import {
   clearPendingBalance, cache,
 } from "./sync";
 import { registerBackgroundRefresh } from "./backgroundRefresh";
-import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTimeNotices, scheduleDailyReminder, cancelAllNotifications, registerForPushNotifications } from "./notifications";
+import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTimeNotices, scheduleDailyReminder, cancelAllNotifications, registerForPushNotifications, notifyLosingOnLeaderboard } from "./notifications";
 import { applyBlocking, clearBlocking } from "./blockedApps";
 // Importing places.js at module scope registers the geofence background task,
 // which iOS may wake the app directly into on a cold start.
-import { syncGeofences, isSuggestionsEnabled } from "./places";
+import { syncGeofences, isSuggestionsEnabled, checkArrivalNow } from "./places";
+import {
+  recordSpend, getTodaySpentSeconds, flush as flushSpend, resetCache as resetSpendCache,
+} from "./screenTimeStats";
 import { fetchTodayEvents, markImported, isCalendarSyncEnabled, isCalendarAutoImportEnabled } from "./calendarSync";
 import SuggestedTaskModal from "./SuggestedTaskModal";
 import AutoTasksModal from "./AutoTasksModal";
@@ -69,7 +72,7 @@ import {
   endDriftInLiveActivity, consumePendingHealthEarn, setProStatus, setAppearance,
   consumePendingSiriTask,
 } from "./screenTime";
-import { supabase, syncScreenTime, safeGetSession, saveOnboardingResponses, getAppConfig, isVersionOutdated, fetchAppStoreLatest } from "./supabase";
+import { supabase, syncScreenTime, getFriendsWithScreenTime, safeGetSession, saveOnboardingResponses, getAppConfig, isVersionOutdated, fetchAppStoreLatest } from "./supabase";
 import ForceUpdateModal from "./ForceUpdateModal";
 import { handleSupabaseAuthCallback } from "./authLinks";
 import SocialScreen from "./SocialScreen";
@@ -566,11 +569,11 @@ const MIN_REWARD_RATIO = 0.25;
 // long tail (a 3h+ task tops out here rather than scaling forever).
 const MAX_REWARD_MINUTES = 60;
 // const FREE_TASK_LIMIT = 5; // removed — no free tier limits for now
-// iOS Screen Time re-applies a shield on a ~15-minute granularity, so any grant
-// smaller than that doesn't actually block on time — the old per-difficulty
-// values (1/3/7 min) all behaved like 15 in practice. One honest constant
-// instead of a choice the OS ignores.
-const GRANT_MINS = 15;
+// GRANT_MINS and the "Take 15m" button it powered are gone. The button handed
+// out 15 unearned minutes, three times a day, on a tap — 45 minutes of the
+// exact thing the app exists to make you earn. The onboarding step that used to
+// pick its size had already been removed as cosmetic (iOS re-shields on a
+// ~15-minute granularity, so every setting behaved identically).
 
 const BLOCKED_TASK_RE = /\b(goon|gooning|fap|fapping|jerk\s*off|jack\s*off|wank|masturbat|porn|hentai|onlyfans|xvideo|xhamster|nhentai|rule\s*34|edg(e|ing)\b(?!.*code)|69|blow\s*job|hand\s*job|sex(?!t)|nud[ei]|xxx|orgasm|boner|erection|cum\b|suck\s*(my|a|it)|eat\s*ass|anal\b|dildo|vibrator|fleshlight)\b/i;
 const VAGUE_TASK_RE = /^(stuff|things?|work|task|do it|idk|whatever|something|nothing|asdf|aaa+|test|hi|hey|lol|bruh|hmm+|ok|yes|no|nah|yep|pls|help|bro|dude|chill|vibe|vibes|blah|meh|ugh|haha|lmao|yolo|swag|based|slay|cap|bet|fr|ngl|tbh|ong|fam|sus|ratio|w|l|x+|z+|\.+|!+|\?+|a{2,}|ha+)$/i;
@@ -725,6 +728,11 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
   const [evalError,  setEvalError]  = useState("");
   const [saved,      setSaved]      = useState(false);
   const [recur,    setRecur]    = useState("none");
+  // "I've already done this." Opens the proof gate immediately — the elapsed
+  // clock is meaningless for work that predates the task — at the cost of a
+  // stricter evidence rubric server-side. Fixed at creation and immutable
+  // afterwards, so it's a commitment rather than an escape hatch.
+  const [already,  setAlready]  = useState(false);
   const [recurDays, setRecurDays] = useState([new Date().getDay()]);
   const [recurTime, setRecurTime] = useState(() => {
     const d = new Date();
@@ -822,6 +830,11 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
       aiPending: !!aiPending, // credits are provisional until the bg evaluator finishes
       aiReasoning: reasoning || "",
       task_date: todayKey(),
+      loggedRetroactively: already,
+      // Anchor for the AI Check unlock countdown. The server re-reads
+      // tasks.created_at and is the authority; this is only so the countdown
+      // is honest in the seconds before the insert round-trips.
+      createdAt: new Date().toISOString(),
     });
     const recurrence = recur !== "none" && isSubActive
       ? { frequency: recur, time: recurTime, days: recur === "custom" ? recurDays : recurrenceDaysFor(recur) }
@@ -997,6 +1010,39 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                   );
                 })}
               </View>
+
+              <View style={cardDivider} />
+
+              {/* Already done.
+                  Without this the gate assumes create → do → prove, and anyone
+                  who washes the dishes and THEN opens Drift is told to wait to
+                  prove something already finished. That reads as broken rather
+                  than strict. */}
+              <TouchableOpacity
+                onPress={() => setAlready(v => !v)}
+                activeOpacity={0.7}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+              >
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Text style={[fieldKicker, { marginBottom: 0 }]}>ALREADY DONE</Text>
+                  {already && (
+                    <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.faint, marginTop: 4, lineHeight: 15 }}>
+                      Prove it right away — but you'll need solid evidence.
+                    </Text>
+                  )}
+                </View>
+                <View style={{
+                  width: 44, height: 26, borderRadius: 13, padding: 3,
+                  backgroundColor: already ? earn.sage : ink.ghost,
+                  justifyContent: "center",
+                  alignItems: already ? "flex-end" : "flex-start",
+                }}>
+                  <View style={{
+                    width: 20, height: 20, borderRadius: 10,
+                    backgroundColor: dark ? "#16261C" : "#FFFFFF",
+                  }} />
+                </View>
+              </TouchableOpacity>
 
               <View style={cardDivider} />
 
@@ -1451,131 +1497,6 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
   );
 }
 
-function QuickGrantModal({ visible, usedToday, dark, onClose, onGrant, grantMins }) {
-  const QUICK_SLIDES = [
-    { title: "Pause.", body: "This is unearned time." },
-    { title: "Use it well.", body: `${grantMins} minute${grantMins === 1 ? "" : "s"} goes fast.` },
-    { title: "Final check.", body: `Take ${grantMins} minute${grantMins === 1 ? "" : "s"}?` },
-  ];
-  const theme = getTheme(dark);
-  const { ink, paper, earn } = theme;
-  const [step, setStep] = useState(0);
-  const [breathing, setBreathing] = useState(false);
-  const [seconds, setSeconds] = useState(15);
-  const scale = useRef(new Animated.Value(0.96)).current;
-  const plant = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!visible) return;
-    setStep(0);
-    setBreathing(false);
-    setSeconds(15);
-    scale.setValue(0.96);
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 80, friction: 10 }).start();
-  }, [visible, scale]);
-
-  useEffect(() => {
-    if (!breathing) return;
-    plant.setValue(0);
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(plant, { toValue: 1, duration: 3200, useNativeDriver: true }),
-      Animated.timing(plant, { toValue: 0, duration: 3200, useNativeDriver: true }),
-    ]));
-    loop.start();
-    return () => loop.stop();
-  }, [breathing, plant]);
-
-  useEffect(() => {
-    if (!breathing || seconds <= 0) return;
-    const id = setTimeout(() => setSeconds(s => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [breathing, seconds]);
-
-  // OriginSheet manages mount/unmount; no early return so close anim plays.
-
-  const next = () => {
-    if (step < QUICK_SLIDES.length - 1) {
-      Animated.sequence([
-        Animated.timing(scale, { toValue: 0.985, duration: 120, useNativeDriver: true }),
-      ]).start();
-      setTimeout(() => {
-        setStep(s => s + 1);
-        Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 90, friction: 9 }).start();
-      }, 130);
-      return;
-    }
-    setBreathing(true);
-  };
-
-  const finish = () => {
-    if (seconds > 0) return;
-    onGrant?.();
-  };
-
-  const plantScale = plant.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.04] });
-  const stemScale = plant.interpolate({ inputRange: [0, 1], outputRange: [0.82, 1] });
-  const leafScale = plant.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.08] });
-  const leftLeafTilt = plant.interpolate({ inputRange: [0, 1], outputRange: ["-34deg", "-18deg"] });
-  const rightLeafTilt = plant.interpolate({ inputRange: [0, 1], outputRange: ["34deg", "18deg"] });
-  const plantGlow = plant.interpolate({ inputRange: [0, 1], outputRange: [0.18, 0.34] });
-  const progress = breathing ? 1 : (step + 1) / QUICK_SLIDES.length;
-  const primaryText = ink.deep;
-  const secondaryText = ink.mid;
-  const disabledBtn = ink.ghost;
-  const disabledBtnText = ink.faint;
-  const slide = QUICK_SLIDES[step] || QUICK_SLIDES[0];
-
-  return (
-    <OriginSheet visible={visible} onClose={onClose} align="bottom"
-      sheetStyle={[s2.panel, s2.bottomSheetPanel, { backgroundColor: paper.card, borderColor: ink.border }]}>
-      <Animated.View style={{ transform: [{ scale }] }}>
-          <Text style={[s2.kicker, { color: ink.faint }]}>RESET MINUTES</Text>
-          <View style={[s2.progressTrack, { backgroundColor: ink.ghost }]}>
-            <Animated.View style={[s2.progressFill, { width: `${progress * 100}%`, backgroundColor: earn.sage }]} />
-          </View>
-          {!breathing ? (
-            <View>
-              <Text style={[s2.panelTitle, { color: primaryText }]}>{slide.title}</Text>
-              <Text style={[s2.panelText, { color: secondaryText }]}>
-                {slide.body}
-              </Text>
-              <Text style={[s2.footerHint, { color: secondaryText, textAlign: "left", marginTop: -6, marginBottom: 12 }]}>
-                Step {step + 1} of {QUICK_SLIDES.length}
-              </Text>
-            </View>
-          ) : (
-            <View style={{ alignItems: "center", paddingVertical: 8 }}>
-              <Animated.View style={[s2.plantStage, { backgroundColor: paper.sand, borderColor: ink.border, transform: [{ scale: plantScale }] }]}>
-                <Animated.View style={[s2.plantGlow, { backgroundColor: earn.sage, opacity: plantGlow }]} />
-                <View style={[s2.plantSoil, { backgroundColor: dark ? "rgba(70,55,39,0.72)" : "rgba(116,88,58,0.28)" }]} />
-                <View style={[s2.plantPot, { backgroundColor: earn.clay, borderColor: dark ? "rgba(250,246,238,0.14)" : "rgba(71,51,31,0.12)" }]}>
-                  <View style={[s2.plantPotLip, { backgroundColor: dark ? "rgba(250,246,238,0.12)" : "rgba(255,255,255,0.22)" }]} />
-                </View>
-                <Animated.View style={[s2.plantStem, { backgroundColor: earn.sage, transform: [{ scaleY: stemScale }] }]} />
-                <Animated.View style={[s2.plantLeaf, s2.plantLeafLeft, { backgroundColor: earn.sage, transform: [{ rotate: leftLeafTilt }, { scale: leafScale }] }]} />
-                <Animated.View style={[s2.plantLeaf, s2.plantLeafRight, { backgroundColor: earn.sage, transform: [{ rotate: rightLeafTilt }, { scale: leafScale }] }]} />
-                <Animated.View style={[s2.plantLeaf, s2.plantTopLeaf, { backgroundColor: earn.green, transform: [{ scale: leafScale }] }]} />
-              </Animated.View>
-              <Text style={[s2.panelTitle, { color: primaryText, textAlign: "center" }]}>Take deep breaths</Text>
-              <Text style={[s2.panelText, { color: secondaryText, textAlign: "center" }]}>
-                Continue in {seconds}s.
-              </Text>
-            </View>
-          )}
-          <View style={[s2.actions, s2.quickActions]}>
-            <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, s2.quickActionBtn, { borderColor: ink.border }]}>
-              <Text numberOfLines={1} style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={breathing ? finish : next} disabled={breathing && seconds > 0} style={[s2.solidBtn, s2.quickActionBtn, { backgroundColor: breathing && seconds > 0 ? disabledBtn : earn.deep }, !(breathing && seconds > 0) && theme.fx.glow]}>
-              <Text numberOfLines={1} adjustsFontSizeToFit style={[s2.solidText, { color: breathing && seconds > 0 ? disabledBtnText : (dark ? "#1F3A2A" : "#FAF6EE") }]}>{breathing ? `Claim ${grantMins}m` : "Continue"}</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={[s2.footerHint, { color: ink.faint }]}>{Math.max(0, 3 - usedToday)} left today</Text>
-      </Animated.View>
-    </OriginSheet>
-  );
-}
-
 function FloatingFeedback({ popup }) {
   const scale = useRef(new Animated.Value(0.4)).current;
   const y = useRef(new Animated.Value(18)).current;
@@ -1869,7 +1790,7 @@ function LevelUpModal({ level, dark, onClose }) {
   );
 }
 
-function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, scrollRef, onReduceScreenTime, onQuickGrant, quickGrantCount, grantMins, onSwipeLockChange, dark, secLeft, showAutoTasksHint, onOpenAutoTasks, onDismissAutoTasksHint }) {
+function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, scrollRef, onReduceScreenTime, onSwipeLockChange, dark, secLeft, showAutoTasksHint, onOpenAutoTasks, onDismissAutoTasksHint }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Text color that sits on a `deep` (primary) button. In dark mode the deep
@@ -2159,28 +2080,6 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
                 style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.deep, textAlign: "center" }}
               >
                 Remove time
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={onQuickGrant}
-              disabled={quickGrantCount >= 3}
-              activeOpacity={0.8}
-              style={{
-                flex: 1,
-                paddingVertical: 13,
-                paddingHorizontal: 8,
-                borderRadius: 14,
-                alignItems: "center",
-                backgroundColor: quickGrantCount < 3 ? earn.sageLo : ink.ghost,
-              }}
-            >
-              <Text
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.82}
-                style={{ fontFamily: FF.bodyMed, fontSize: 13, color: quickGrantCount < 3 ? earn.sage : ink.faint, textAlign: "center" }}
-              >
-                Take {grantMins}m · {Math.max(0, 3 - quickGrantCount)} left
               </Text>
             </TouchableOpacity>
           </View>
@@ -2561,7 +2460,7 @@ function StatBlock({ dot, label, value, ink }) {
 // memo every App-level state tick re-renders this whole tree and starves the
 // JS thread (dropped taps). Props must keep stable identities — see the
 // stable-handler wrappers in App.
-const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, onAddTask, dark }) {
+const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, onAddTask, spentToday = 0, dark }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Dark text for the light-green `deep` button in dark mode (see TodayView).
@@ -2575,6 +2474,9 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
   const maxCat    = Math.max(...Object.values(catCounts), 1);
   const weekly    = computeWeekly(done);
   const streak    = computeStreak(done);
+  // Credits banked from tasks finished today — the denominator for the
+  // screen-time card. weekly.perDay's last entry is today by construction.
+  const earnedToday = weekly.perDay[weekly.perDay.length - 1] || 0;
   const maxDay    = Math.max(...weekly.perDay, 1);
   const DOW       = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -2764,6 +2666,53 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
             );
           })}
         </View>
+      </View>
+
+      {/* ── Screen time used today ──
+          Deliberately framed against what was earned rather than shown bare: a
+          number with no denominator invites the wrong reading in both
+          directions, and "18m of 45m earned" is the only version that says
+          whether the day is going well. */}
+      <View style={{
+        backgroundColor: paper.card,
+        borderRadius: 24, padding: 22,
+        borderWidth: 1, borderColor: ink.hairline,
+        marginBottom: 14,
+      }}>
+        <Text style={{ fontFamily: FF.kicker, fontSize: 10, color: ink.faint, letterSpacing: 2.4, marginBottom: 6 }}>
+          SCREEN TIME TODAY
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
+          <Text style={{ fontFamily: FF.display, fontSize: 30, color: ink.deep, letterSpacing: -0.3 }}>
+            {fmtMins(spentToday)}
+          </Text>
+          {earnedToday > 0 && (
+            <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid }}>
+              of {fmtMins(earnedToday)} earned
+            </Text>
+          )}
+        </View>
+
+        {earnedToday > 0 && (
+          <View style={{ height: 6, borderRadius: 3, backgroundColor: ink.hairline, overflow: "hidden", marginTop: 14 }}>
+            <View style={{
+              height: "100%",
+              width: `${Math.min(100, (spentToday / earnedToday) * 100)}%`,
+              backgroundColor: spentToday > earnedToday ? theme.danger.fg : earn.sage,
+              borderRadius: 3,
+            }} />
+          </View>
+        )}
+
+        <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 10, lineHeight: 17 }}>
+          {spentToday === 0
+            ? "Nothing spent yet today."
+            : earnedToday === 0
+              ? "Time carried over from earlier."
+              : spentToday >= earnedToday
+                ? "You've used everything you earned today."
+                : `${fmtMins(earnedToday - spentToday)} of today's earnings still banked.`}
+        </Text>
       </View>
 
       {/* Stat tiles */}
@@ -3502,6 +3451,12 @@ export default function App() {
   const [shareTask,   setShareTask]   = useState(null);
   const [levelUp,     setLevelUp]     = useState(null);
   const [secLeft,     setSecLeft]     = useState(0);
+  // Minutes of earned screen time actually used today. Read from the local
+  // ledger on mount and on foreground, incremented live by the drain tick.
+  const [spentToday,  setSpentToday]  = useState(0);
+  // Seconds behind `spentToday`, so the minute figure is derived rather than
+  // repeatedly re-rounded. Re-seeded from the ledger on every hydrate.
+  const spentSecRef = useRef(0);
 
   const [userId,         setUserId]         = useState(null);
   const [onboarding,     setOnboarding]     = useState(false);
@@ -3540,8 +3495,6 @@ export default function App() {
   const reviewPromptShownRef = useRef(false); // in-memory guard against double-triggering within a session
   const [showUsernameSetup,  setShowUsernameSetup]  = useState(false);
   const [showReduceTime,     setShowReduceTime]     = useState(false);
-  const [showQuickGrant,     setShowQuickGrant]     = useState(false);
-  const [quickGrantCount,    setQuickGrantCount]    = useState(0);
   const [userEmail,          setUserEmail]          = useState("");
   const [myUsername,         setUserName]           = useState("");
   const [screenTimeStatus,   setScreenTimeStatus]   = useState("unknown");
@@ -3550,7 +3503,6 @@ export default function App() {
   const [blockedHoursActive, setBlockedHoursActive] = useState(false);
   const [recurringTasks,     setRecurringTasks]     = useState([]);
   const [minuteTick,         setMinuteTick]         = useState(0);
-  const quickGrantDayRef = useRef(todayKey());
   const visibleTaskDayRef = useRef(todayKey());
   // Authoritative anti-duplicate / anti-resurrect guard for recurring tasks.
   // Records which recurring template ids have already been materialized OR
@@ -3637,9 +3589,8 @@ export default function App() {
       showBlockedHours ||
       showRecurringTasks ||
       showReduceTime ||
-      showQuickGrant ||
       childSwipeLocked;
-  }, [driftInActive, overlay, popup, showAccount, showBlockedApps, showBlockedHours, showRecurringTasks, showReduceTime, showQuickGrant, tab, childSwipeLocked]);
+  }, [driftInActive, overlay, popup, showAccount, showBlockedApps, showBlockedHours, showRecurringTasks, showReduceTime, tab, childSwipeLocked]);
 
   const stopTick = () => { if (tickRef.current) clearInterval(tickRef.current); };
 
@@ -3768,17 +3719,34 @@ export default function App() {
   //   - no credits to drain
   const bgTimeRef = useRef(null);
   const nativeArmedRef = useRef(false);
+  // True once the launch drain has subtracted the time spent while Drift was
+  // closed. After that the LOCAL balance is strictly fresher than anything the
+  // server can hand back during this boot, because the drain is computed from
+  // persisted state plus wall clock and its write-back is fire-and-forget.
+  // Guards the two restore sites below — see the comment there.
+  const launchDrainAppliedRef = useRef(false);
+  // Elapsed seconds the launch drain computed but could not apply yet (balance
+  // not hydrated). Carried rather than dropped: the old code reset
+  // drift_last_alive regardless, so a drain that no-opped erased the evidence
+  // and that period was never billed.
+  const pendingDrainSecRef = useRef(0);
   const nativeArmFailedSecondsRef = useRef(null);
 
   const persistLastAlive = useCallback(() => {
     AsyncStorage.setItem("drift_last_alive", String(Date.now())).catch(() => {});
   }, []);
 
+  // Returns true when the drain was applied (or was legitimately unnecessary),
+  // false when it could not be applied and the caller must retry. Callers use
+  // this to decide whether it is safe to reset the drift_last_alive heartbeat.
   const drainBy = useCallback((elapsedSec) => {
-    if (elapsedSec <= 0) return;
-    if (driftInActRef.current) return; // shield is up
+    if (elapsedSec <= 0) return true;
+    if (driftInActRef.current) return true; // shield is up; nothing is being spent
     const prevSec = secRef.current;
-    if (prevSec <= 0) return;
+    // Zero balance: nothing to take. Distinguishing "empty" from "not loaded
+    // yet" is the caller's job via the hydration ordering — from here both look
+    // the same, so report not-applied and let the retry effect sort it out.
+    if (prevSec <= 0) return false;
     const rem = Math.max(0, prevSec - elapsedSec);
     const usedSec = prevSec - rem;
     secRef.current = rem;
@@ -3795,6 +3763,17 @@ export default function App() {
     // (boot restore trusts server balanceSeconds > 0 over fresher local state).
     if (userIdRef.current) {
       syncProfileStats(userIdRef.current, { balanceSeconds: rem }).catch(() => {});
+      // Per-day spend ledger, separate from credits.spent — that one is a
+      // session total that boot-restore zeroes, so it can't answer "today".
+      // Writes are local and throttled; see screenTimeStats.js.
+      recordSpend(userIdRef.current, usedSec).catch(() => {});
+      // Accumulate in SECONDS and derive minutes. Folding the displayed minute
+      // count back into seconds each tick throws away the remainder, and since
+      // drain ticks are only a few seconds apart almost every increment would
+      // round to zero — the number would sit near-still all day.
+      spentSecRef.current += usedSec;
+      const mins = Math.floor(spentSecRef.current / 60);
+      setSpentToday(prev => (prev === mins ? prev : mins));
     }
     // Local notifications: alert when time just ran out, or warn when crossing
     // below ~2 min. (Fires on the next drain/reconcile while the app is alive.)
@@ -3808,6 +3787,7 @@ export default function App() {
     } else if (prevSec > 120 && rem <= 120) {
       notifyLowTime(Math.ceil(rem / 60));
     }
+    return true;
   }, []);
 
   const claimPendingHealthEarn = useCallback(async () => {
@@ -3884,7 +3864,11 @@ export default function App() {
   useEffect(() => {
     if (screen !== "app") return;
     persistLastAlive();
-    const id = setInterval(persistLastAlive, 15_000);
+    // 5s, not 15s: this timestamp is the ONLY record of when Drift was last
+    // in the foreground, and iOS can terminate a backgrounded app without the
+    // AppState listener ever firing. Every second of staleness here is a second
+    // of screen time the user gets for free.
+    const id = setInterval(persistLastAlive, 5_000);
     return () => clearInterval(id);
   }, [screen, persistLastAlive]);
 
@@ -3938,21 +3922,35 @@ export default function App() {
       try {
         const lastStr = await AsyncStorage.getItem("drift_last_alive");
         const last = lastStr ? parseInt(lastStr, 10) : null;
+
+        let toDrain = 0;
         if (nativeArmedRef.current) {
           const used = await consumeUsedSeconds();
           if (used > 0) {
-            drainBy(used);
+            toDrain = used;
           } else if (Number.isFinite(last)) {
-            const elapsedSec = Math.floor((Date.now() - last) / 1000);
-            const capped = Math.min(Math.max(0, elapsedSec), 86_400);
-            if (capped > 0) drainBy(capped);
+            toDrain = Math.min(Math.max(0, Math.floor((Date.now() - last) / 1000)), 86_400);
           }
         } else {
           if (!last || !Number.isFinite(last)) { persistLastAlive(); return; }
-          const elapsedSec = Math.floor((Date.now() - last) / 1000);
-          const capped = Math.min(Math.max(0, elapsedSec), 86_400);
-          if (capped > 0) drainBy(capped);
+          toDrain = Math.min(Math.max(0, Math.floor((Date.now() - last) / 1000)), 86_400);
         }
+
+        // drainBy is a no-op when the balance hasn't hydrated yet (it bails on
+        // secRef.current <= 0). The old code called persistLastAlive()
+        // unconditionally right after, which reset the clock and destroyed the
+        // only record that the time had passed — so a boot that lost the race
+        // never charged the user for that stretch, and never could again.
+        // That is the "sometimes it doesn't go down after a full close" report.
+        const applied = toDrain > 0 ? drainBy(toDrain) : true;
+        if (!applied) {
+          pendingDrainSecRef.current = toDrain;
+          // Deliberately NOT resetting drift_last_alive: leaving it stale is
+          // what lets the retry below (or the next launch) still see the gap.
+          return;
+        }
+        launchDrainAppliedRef.current = true;
+
         if (appModeRef.current === "personal" && secRef.current <= 0 && shieldStateRef.current !== "on") {
           await applyBlocking([], { freeTier: !proAccessRef.current }).catch(() => {});
           shieldStateRef.current = "on";
@@ -3962,6 +3960,18 @@ export default function App() {
     })();
   }, [screen, drainBy, persistLastAlive]);
 
+  // Retry a launch drain that couldn't be applied because the balance landed
+  // after it ran. Fires when secLeft first becomes non-zero.
+  useEffect(() => {
+    if (!pendingDrainSecRef.current || secLeft <= 0) return;
+    const owed = pendingDrainSecRef.current;
+    pendingDrainSecRef.current = 0;
+    if (drainBy(owed)) {
+      launchDrainAppliedRef.current = true;
+      persistLastAlive();
+    }
+  }, [secLeft, drainBy, persistLastAlive]);
+
   useEffect(() => {
     AsyncStorage.getItem("drift_dark_mode").then(v => {
       if (v === "1") setDarkMode(true);
@@ -3970,32 +3980,6 @@ export default function App() {
       setAppearance(v === "1").catch(() => {});
     });
   }, []);
-
-  const refreshQuickGrantCount = useCallback(async () => {
-    const day = todayKey();
-    quickGrantDayRef.current = day;
-    const raw = await AsyncStorage.getItem(`drift_quick_grants_${day}`).catch(() => "0");
-    const count = Number(raw || 0);
-    setQuickGrantCount(Number.isFinite(count) ? Math.max(0, Math.min(3, count)) : 0);
-  }, []);
-
-  useEffect(() => {
-    refreshQuickGrantCount();
-
-    const checkForNewDay = () => {
-      if (todayKey() !== quickGrantDayRef.current) refreshQuickGrantCount();
-    };
-
-    const id = setInterval(checkForNewDay, 60_000);
-    const sub = AppState.addEventListener("change", state => {
-      if (state === "active") refreshQuickGrantCount();
-    });
-
-    return () => {
-      clearInterval(id);
-      sub.remove();
-    };
-  }, [refreshQuickGrantCount]);
 
   useEffect(() => {
     if (screen !== "app") return;
@@ -4126,6 +4110,7 @@ export default function App() {
       task_date: today,
       recurringTemplateId: t.id,
       scheduledTime: t.time,
+      createdAt: new Date().toISOString(),
     }));
     markRecurringHandled(due.map(t => t.id));
     const nt = [...created, ...tasks];
@@ -4259,7 +4244,19 @@ export default function App() {
         levelIdxRef.current = getLevelIdx(stats.totalXp);
         setTotalXp(prev => Math.max(prev, stats.totalXp));
       }
-      if (stats?.balanceSeconds > 0) {
+      // Skipped once the launch drain has run. Two boot paths race to set the
+      // balance: the drain (persisted state minus wall-clock time the app was
+      // closed) and this restore. The drain's write-back through
+      // syncProfileStats is fire-and-forget, and fetchProfileStats caches for
+      // 20s — so this can easily hand back the PRE-drain figure and silently
+      // undo the subtraction. That is the other half of "closing the app
+      // sometimes doesn't lower the counter".
+      //
+      // The local value is strictly fresher here by construction, so it wins.
+      // The cost is that time earned on another device during this same boot
+      // is deferred to the next foreground refresh, which is the right trade:
+      // under-crediting for a few seconds beats not charging at all.
+      if (stats?.balanceSeconds > 0 && !launchDrainAppliedRef.current) {
         setCredits({
           balance: Math.ceil(stats.balanceSeconds / 60),
           balanceSec: stats.balanceSeconds,
@@ -4325,6 +4322,7 @@ export default function App() {
               aiValued: false,
               aiReasoning: "",
               task_date: todayKey(),
+              createdAt: new Date().toISOString(),
             };
           });
         if (seeded.length > 0) {
@@ -4857,7 +4855,9 @@ export default function App() {
             cache.saveXp(uid, Math.max(cachedXp || 0, stats.totalXp));
             remoteStatsApplied = true;
           }
-          if (stats.balanceSeconds > 0) {
+          // Same guard as the sign-in path above: never let a cached server
+          // balance resurrect time the launch drain already spent.
+          if (stats.balanceSeconds > 0 && !launchDrainAppliedRef.current) {
             const restoredCredits = {
               balance: Math.ceil(stats.balanceSeconds / 60),
               balanceSec: stats.balanceSeconds,
@@ -5121,6 +5121,14 @@ export default function App() {
         balanceAfter: nc.balance,
       }).catch(() => {});
       syncProfileStats(userId, { totalXp: nx, balanceSeconds: newSec }).catch(() => {});
+      // Today's EARNED total on the shared screen_time row. syncScreenTime has
+      // existed in supabase.js since the friends grove shipped and was never
+      // called from anywhere, so no client ever wrote a row — which is why
+      // every friend rendered as a thriving plant with zero minutes.
+      const earnedTodayMins = nh
+        .filter(t => t.completedDate === todayKey())
+        .reduce((sum, t) => sum + (t.credits || 0), 0);
+      syncScreenTime(userId, earnedTodayMins).catch(() => {});
       cacheFullTasks(userId, nt);
       cache.saveXp(userId, nx);
     }
@@ -5178,11 +5186,119 @@ export default function App() {
     return () => { try { sub?.remove(); } catch {} };
   }, [appMode, queueSuggestions]);
 
+  // Today's spend: hydrate from the ledger, re-read on foreground (the drain
+  // tick can't run while the app is backgrounded, but reconcile-on-resume
+  // credits the elapsed time, so the figure moves without a tick), and flush to
+  // the server on the way out so friends see a current number.
+  useEffect(() => {
+    if (!userId || appMode !== "personal") return;
+    let cancelled = false;
+
+    const hydrate = () => {
+      getTodaySpentSeconds(userId)
+        .then(sec => {
+          if (cancelled) return;
+          spentSecRef.current = sec;
+          setSpentToday(Math.floor(sec / 60));
+        })
+        .catch(() => {});
+    };
+
+    hydrate();
+    const sub = AppState.addEventListener("change", state => {
+      if (state === "active") hydrate();
+      else flushSpend(userId).catch(() => {});
+    });
+
+    // Day rollover: the ledger keys by local day, so at midnight today's total
+    // must drop to zero without waiting for a relaunch.
+    let day = todayKey();
+    const id = setInterval(() => {
+      if (todayKey() !== day) { day = todayKey(); hydrate(); }
+    }, 60_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      try { sub.remove(); } catch {}
+      flushSpend(userId).catch(() => {});
+    };
+  }, [userId, appMode]);
+
+  // ── "You're behind on the leaderboard" nudge ──
+  // Runs on foreground, at most once per local day (the latch lives in
+  // notifications.js and is keyed by date, so it self-clears at midnight).
+  //
+  // Only fires when the user is actually losing. A daily nudge that goes out
+  // regardless of standing is noise, and people mute the whole category after
+  // about a week of it — so "you're winning" stays silent.
+  useEffect(() => {
+    if (!userId || appMode !== "personal") return;
+    let cancelled = false;
+
+    const check = async () => {
+      try {
+        const friends = await getFriendsWithScreenTime(userId);
+        if (cancelled || !friends?.length) return;
+
+        // Only friends who actually reported today can be compared. Someone
+        // with no row hasn't scored zero, they haven't played — ranking
+        // against them would mean anyone who ignores Drift beats everyone.
+        const reported = friends.filter(f => typeof f.spentMinutes === "number");
+        if (!reported.length) return;
+
+        const mine = Math.max(0, Math.round(spentSecRef.current / 60));
+        const ahead = reported.filter(f => f.spentMinutes < mine);
+        if (!ahead.length) return;
+
+        const leader = reported.reduce((a, b) => (b.spentMinutes < a.spentMinutes ? b : a));
+        await notifyLosingOnLeaderboard({
+          aheadCount: ahead.length,
+          total: reported.length,
+          leaderName: leader?.username,
+          myMinutes: mine,
+        });
+      } catch {}
+    };
+
+    // Deferred, not immediate: at launch the spend ledger hasn't hydrated yet,
+    // so an instant check would compare everyone against a stale zero and
+    // conclude the user is winning — burning the day's one notification on a
+    // reading that was never true.
+    const initial = setTimeout(check, 20_000);
+    const sub = AppState.addEventListener("change", state => {
+      if (state === "active") check();
+    });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(initial);
+      try { sub.remove(); } catch {}
+    };
+  }, [userId, appMode]);
+
   // Re-register geofences at boot: the saved region set lives in the OS, and
   // permissions can be revoked in Settings between launches.
+  //
+  // The foreground sweep alongside it covers iOS's boundary-crossing rule: an
+  // Enter event only fires when you cross INTO a region, so someone who saved
+  // "Gym" while standing at the gym — or who opens Drift after arriving — never
+  // gets one. checkArrivalNow takes a single position fix and treats being
+  // inside a saved radius as an arrival, under the same 4h cooldown, so it
+  // can't double-notify on top of a geofence that did fire.
   useEffect(() => {
     if (appMode !== "personal") return;
-    syncGeofences().catch(() => {});
+
+    const arm = () => {
+      syncGeofences().catch(() => {});
+      checkArrivalNow().catch(() => {});
+    };
+
+    arm();
+    const sub = AppState.addEventListener("change", state => {
+      if (state === "active") arm();
+    });
+    return () => { try { sub.remove(); } catch {} };
   }, [appMode]);
 
   // Decide whether the Today nudge should appear. Re-checked when the settings
@@ -5517,44 +5633,6 @@ export default function App() {
     }
   };
 
-  const handleQuickGrant = async () => {
-    const day = todayKey();
-    quickGrantDayRef.current = day;
-    const key = `drift_quick_grants_${day}`;
-    const stored = Number((await AsyncStorage.getItem(key).catch(() => "0")) || 0);
-    const latest = Number.isFinite(stored) ? Math.max(0, Math.min(3, stored)) : 0;
-    if (latest >= 3) {
-      setQuickGrantCount(3);
-      setShowQuickGrant(false);
-      return;
-    }
-    const newCount = latest + 1;
-    await AsyncStorage.setItem(key, String(newCount)).catch(() => {});
-    setQuickGrantCount(newCount);
-    setShowQuickGrant(false);
-
-    // Acts like completing a 10-minute light activity: a 10-min light task
-    // (0.5x multiplier) grants 5 minutes of screen time. We route it through
-    // the same applyBalanceSeconds path a real task uses so credits/ledger/
-    // sync all behave identically.
-    const addedMins = GRANT_MINS;
-    const newSec = secRef.current + addedMins * 60;
-    const nextCredits = {
-      ...credits,
-      balance: Math.ceil(newSec / 60),
-      balanceSec: newSec,
-      earned: credits.earned + addedMins,
-    };
-    applyBalanceSeconds(newSec, nextCredits, { credits: addedMins, xp: 0 });
-    if (userId) {
-      appendLedgerEntry(userId, {
-        delta: addedMins,
-        reason: "daily_grant",
-        balanceAfter: nextCredits.balance,
-      }).catch(() => {});
-    }
-  };
-
   const signOut = async () => {
     setShowAccount(false);
     try { await supabase.auth.signOut(); } catch {}
@@ -5577,6 +5655,13 @@ export default function App() {
       "drift_last_alive",
     ]).catch(() => {});
     launchDrainRanRef.current = false;
+    // Drop the in-memory spend ledger. It caches under the previous uid, so
+    // without this the next account on this device inherits their day's total.
+    // The stored per-user blob is left alone — signing back in should restore
+    // your own history, not start it over.
+    resetSpendCache();
+    spentSecRef.current = 0;
+    setSpentToday(0);
     setTasks([]);
     setTaskHistory([]);
     setCredits({ balance: 0, earned: 0, spent: 0 });
@@ -5834,9 +5919,6 @@ export default function App() {
               addRef={tutAddRef}
               scrollRef={todayScrollRef}
               onReduceScreenTime={() => setShowReduceTime(true)}
-              onQuickGrant={() => setShowQuickGrant(true)}
-              quickGrantCount={quickGrantCount}
-              grantMins={GRANT_MINS}
               onSwipeLockChange={setChildSwipeLockedNow}
               dark={darkMode}
               secLeft={displaySecLeft}
@@ -5860,13 +5942,17 @@ export default function App() {
               half={groveHalf}
               onHalfChange={setGroveHalf}
               dark={darkMode}
-              statsProps={{ tasks: statsTasks, totalXp, skips: 0, onAddTask: tryOpenAddTask }}
+              statsProps={{ tasks: statsTasks, totalXp, skips: 0, onAddTask: tryOpenAddTask, spentToday }}
               socialProps={{
                 userId,
                 isPremium: proAccess,
                 onOpenPaywall: NOOP,
                 onSwipeLockChange: setChildSwipeLockedNow,
                 onChallengeResolved: stableChallengeResolved,
+                // My own spend, so the leaderboard can place me without
+                // re-fetching a number the app already has locally (and which
+                // is fresher here than the throttled server copy).
+                mySpentToday: spentToday,
               }}
             />
           </View>
@@ -5953,11 +6039,17 @@ export default function App() {
             title, cat, minutes,
             done: false,
             credits, xp,
+            // Imported tasks are proven like any other. This used to be false,
+            // which made calendar import the one way to get screen time for a
+            // single tap: accept the suggestion, tap it done, collect the
+            // credits, having done nothing. A task Drift suggested is not a
+            // task Drift watched you do.
             aiCheck: proAccess,
             aiValued: false,
             aiPending: false,
             aiReasoning: reasoning || "",
             task_date: todayKey(),
+            createdAt: new Date().toISOString(),
           }, null);
           advanceSuggestion();
         }}
@@ -6062,14 +6154,6 @@ export default function App() {
         dark={darkMode}
         onClose={() => setShowReduceTime(false)}
         onReduce={handleReduceScreenTime}
-      />
-      <QuickGrantModal
-        visible={showQuickGrant}
-        usedToday={quickGrantCount}
-        dark={darkMode}
-        onClose={() => setShowQuickGrant(false)}
-        onGrant={handleQuickGrant}
-        grantMins={GRANT_MINS}
       />
     </TouchTracker>
     </ThemeContext.Provider>

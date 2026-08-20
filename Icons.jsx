@@ -171,6 +171,20 @@ export const ImageIcon = make(({ color, strokeWidth }) => (
   </>
 ));
 
+export const VideoIcon = make(({ color, strokeWidth }) => (
+  <>
+    <Rect x="2" y="6" width="13" height="12" rx="2" stroke={color} strokeWidth={strokeWidth} fill="none" />
+    <Path d="M15 10.5l6-3.5v10l-6-3.5z" stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinejoin="round" />
+  </>
+));
+
+export const ClockIcon = make(({ color, strokeWidth }) => (
+  <>
+    <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={strokeWidth} fill="none" />
+    <Path d="M12 7v5l3.5 2" stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+  </>
+));
+
 export const PhoneIcon = make(({ color, strokeWidth }) => (
   <>
     <Rect x="7" y="2" width="10" height="20" rx="2" stroke={color} strokeWidth={strokeWidth} fill="none" />

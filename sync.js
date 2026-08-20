@@ -82,6 +82,10 @@ export async function insertTask(userId, task) {
     // recurring task on every launch. The unique index
     // tasks_one_instance_per_template_per_day now enforces it in the database.
     recurring_template_id: task.recurringTemplateId || null,
+    // Declared at creation, immutable afterwards (schema_v8 enforces it). Lets
+    // verify-task skip the elapsed-time gate for work that was already done
+    // before the task existed, in exchange for a stricter evidence rubric.
+    logged_retroactively: !!task.loggedRetroactively,
   };
   if (UUID_RE.test(String(task.id || ""))) row.id = task.id;
   const { data, error } = await rateLimited(`insert_task_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
@@ -94,6 +98,17 @@ export async function insertTask(userId, task) {
     // Report it so the caller can drop its optimistic local copy.
     if (error.code === "23505" && String(error.message || "").includes(RECURRING_UNIQUE_INDEX)) {
       return { duplicate: true };
+    }
+    // schema_v8 not applied yet. PostgREST rejects the whole insert over one
+    // unknown column, which would break ALL task creation — retry without it
+    // rather than letting a pending migration take the app down.
+    if (/logged_retroactively|schema cache|PGRST204/i.test(error.message || "")) {
+      const { logged_retroactively, ...legacy } = row;
+      const retry = await supabase.from("tasks").insert(legacy).select().single();
+      if (!retry.error) {
+        invalidateCache(`tasks_${userId}`);
+        return rowToTask(retry.data);
+      }
     }
     console.warn("insertTask:", error.message);
     return null;
@@ -166,6 +181,7 @@ function rowToTask(r) {
     // migration; rehydrateClientFields still backfills those from the local
     // cache, so the two sources cover each other during the transition.
     recurringTemplateId: r.recurring_template_id || undefined,
+    loggedRetroactively: !!r.logged_retroactively,
   };
 }
 

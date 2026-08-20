@@ -12,7 +12,16 @@ Expo / React Native productivity app. You earn screen-time by completing tasks; 
 - Secrets live in Supabase secrets or a gitignored `.env` (`EXPO_PUBLIC_*` only for non-sensitive keys). Never hardcode keys; never log tokens/bodies/PII.
 - All AI + subscription gating is enforced server-side in edge functions. Client checks are UX-only.
 - Data persistence is soft-delete only; never hard-delete user rows.
-- Deliver SQL changes as a full file for the user to paste into the Supabase SQL editor (their Windows CLI is flaky).
+- SQL changes live in two places. `supabase/admin/schema_v*.sql` is the annotated
+  reference (safe to re-run, explains *why*); `supabase/migrations/*.sql` is the
+  applied artifact, minus the trailing verification SELECTs. Apply with
+  `supabase db push --linked`. The CLI works as of 2026-08-20 — but invoke it by
+  absolute path (`C:\Users\dilan\AppData\Roaming\npm\supabase.cmd`): a bare
+  `supabase` resolves to the repo-root `supabase.js` via PATHEXT and gets executed
+  by Windows Script Host.
+- Verify a migration against the live schema afterwards rather than trusting the
+  push output. schema_v7 was reported as run and had not applied; a PostgREST
+  probe (`?select=<col>&limit=0`, 42703 = missing column) is what caught it.
 
 ## AI model / cost
 OpenAI calls live in two edge functions only: `evaluate-task` (text) and

@@ -216,6 +216,88 @@ export async function notifyTaskApproved(minutes) {
   await fireImmediate("drift-task-approved", "Task approved", `You earned ${m} more minutes of screen time.`);
 }
 
+/**
+ * A friend challenged you.
+ *
+ * Identifier is keyed on the challenge id, not the sender: two challenges from
+ * the same person are two events, and reusing an identifier makes the second
+ * REPLACE the first rather than stack — the same bug the place-arrival
+ * notifications had.
+ */
+export async function notifyChallengeReceived(fromUsername, title, challengeId) {
+  if (!(await ensureGranted())) return;
+  const who = fromUsername ? `@${fromUsername}` : "A friend";
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: `drift-challenge-${challengeId || Date.now()}`,
+      content: {
+        title: `${who} challenged you`,
+        body: title ? `"${title}" — open Drift to accept or decline.` : "Open Drift to accept or decline.",
+        data: { type: "challenge_received", challengeId },
+      },
+      trigger: null,
+    });
+  } catch {}
+}
+
+// ── Leaderboard nudge ────────────────────────────────────────
+// At most ONE per local day, and only when the user is actually behind.
+//
+// The latch is keyed by day rather than being a boolean, so it self-clears at
+// midnight without needing a reset call — the same trick would have saved the
+// out-of-time latch a reset path. Written BEFORE the notification is scheduled:
+// a duplicate nudge is worse than a missed one, and this is called from a
+// foreground handler that can fire twice in quick succession.
+const LEADERBOARD_LATCH_KEY = "drift_notified_leaderboard_day";
+
+const localDayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+/**
+ * "You're behind on the leaderboard today."
+ *
+ * @param aheadCount how many friends have LESS screen time than you
+ * @param total      how many friends are on today's board
+ * @param leaderName the friend currently in first place
+ * @returns true if a notification was posted
+ *
+ * Deliberately not sent when the user is winning, and not sent when nobody has
+ * reported — a nudge that fires every day regardless of standing is just noise,
+ * and people turn the whole category off after a week of it.
+ */
+export async function notifyLosingOnLeaderboard({ aheadCount, total, leaderName, myMinutes } = {}) {
+  if (!aheadCount || aheadCount < 1) return false;
+  if (!(await ensureGranted())) return false;
+
+  const today = localDayKey();
+  try {
+    if ((await AsyncStorage.getItem(LEADERBOARD_LATCH_KEY)) === today) return false;
+    await AsyncStorage.setItem(LEADERBOARD_LATCH_KEY, today);
+  } catch {
+    // Storage unavailable: skip rather than risk notifying on every foreground.
+    return false;
+  }
+
+  const mins = Math.max(0, Math.round(myMinutes || 0));
+  const spent = mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  const body = aheadCount === 1 && leaderName
+    ? `@${leaderName} is on less screen time than you today. You're at ${spent}.`
+    : `${aheadCount} of your ${total} friends are on less screen time than you today. You're at ${spent}.`;
+
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: `drift-leaderboard-${today}`,
+      content: { title: "You're slipping down the grove", body, data: { type: "leaderboard_nudge" } },
+      trigger: null,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ── Remote push token registration ──────────────────────────
 /**
  * Request push permission, obtain the Expo push token, and save it to the

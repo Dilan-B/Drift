@@ -3,8 +3,17 @@
  * AI task verification via the Supabase Edge Function proxy.
  * The OpenAI key never touches this client — it lives in Supabase secrets.
  * Rate limits (5/hour, 20/day) are enforced server-side.
+ *
+ * Three proof channels: a written account, a photo, or a short video. Video is
+ * the strong one — the server will accept a video as evidence of a COUNT
+ * ("10 push-ups") and will not accept a single photo for the same claim, since
+ * a still can show someone in position but never how many times.
+ *
+ * The countdown below is a courtesy, not a control. The real gate lives in
+ * verify-task, which reads created_at off the database row; this just spares
+ * the user a round-trip to be told to wait.
  */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, StyleSheet,
   ScrollView, Modal, ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform,
@@ -12,8 +21,12 @@ import {
 import { supabase } from "./supabase";
 import { FF, getTheme } from "./theme";
 import { Spinner } from "./Skeleton";
-import { CloseIcon, CameraIcon, ImageIcon, SparkleIcon, CheckIcon } from "./Icons";
+import { CloseIcon, CameraIcon, ImageIcon, SparkleIcon, CheckIcon, VideoIcon, ClockIcon } from "./Icons";
 import { rateLimited } from "./apiGuards";
+import {
+  preparePhoto, prepareVideo, videoSupported, photoSupported,
+  VIDEO_MAX_SECONDS,
+} from "./proofMedia";
 
 // Remapped onto the organic-editorial system — see theme.js FF.
 const FO  = FF.bodyBold;
@@ -21,11 +34,9 @@ const FOM = FF.kicker;
 const FK  = FF.bodyMed;
 const FB  = FF.body;
 
-// ── Attempt to import expo-image-picker + image manipulator ───
+// ── Attempt to import expo-image-picker ───────────────────────
 let ImagePicker = null;
-let ImageManipulator = null;
 try { ImagePicker = require("expo-image-picker"); } catch {}
-try { ImageManipulator = require("expo-image-manipulator"); } catch {}
 
 // Public Wi-Fi (gyms, cafés, campuses) is the single most common cause of this
 // failing while the phone insists it's online: the captive portal accepts the
@@ -37,10 +48,32 @@ const NO_REACH_MSG =
   "Couldn't reach the AI service. If you're on public Wi-Fi (a gym, café or campus network), it may be blocking Drift — turn Wi-Fi off to use cellular and try again.";
 
 // How long we'll wait for the edge function before giving up. The server aims
-// to answer within ~45s; past 50s the request is not going to land, and
+// to answer within ~45s; past 55s the request is not going to land, and
 // without this the platform default leaves the spinner up indefinitely on a
 // half-open connection — which is what a captive portal produces.
-const INVOKE_TIMEOUT_MS = 50_000;
+//
+// Raised from 50s because verification is now three model calls (transcribe,
+// then judge, plus the capturability pre-flight) instead of two, and a video
+// bundle is five images to read rather than one.
+const INVOKE_TIMEOUT_MS = 58_000;
+
+// Must match requiredWaitMs() in supabase/functions/verify-task/index.ts. If
+// these drift apart the countdown lies, so they are stated in both places
+// deliberately rather than shipped from the server per-task.
+const GATE_FRACTION = 0.5;
+const GATE_MIN_MS   = 60_000;
+const GATE_MAX_MS   = 120 * 60_000;
+const requiredWaitMs = (minutes) =>
+  Math.min(GATE_MAX_MS, Math.max(GATE_MIN_MS, (Number(minutes) || 0) * 60_000 * GATE_FRACTION));
+
+const mmss = (ms) => {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return h ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+           : `${m}:${String(s).padStart(2, "0")}`;
+};
 
 /**
  * Reject if `promise` hasn't settled in `ms`.
@@ -63,27 +96,6 @@ function withTimeout(promise, ms) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-// Force-shrink to at most ~600px on the long edge with JPEG 0.5 — keeps
-// the image under ~150 KB so OpenAI doesn't choke and we don't hit the
-// Edge Function WallClockTime limit.
-async function shrinkImage(uri) {
-  if (!ImageManipulator?.manipulateAsync) {
-    // Manipulator not installed yet — return original. Submission may still work
-    // for small photos but big ones will timeout. Tell user to install.
-    return null;
-  }
-  try {
-    const out = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: 600 } }],
-      { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-    );
-    return out.base64;
-  } catch {
-    return null;
-  }
-}
-
 // ── Main Modal Component ──────────────────────────────────────
 export default function AICheckModal({ visible, task, onVerified, onCancel, dark = false }) {
   const theme = getTheme(dark);
@@ -97,56 +109,153 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
 
   const [proofText, setProofText] = useState("");
   const [photo,     setPhoto]     = useState(null); // { uri, base64 } | null
+  const [video,     setVideo]     = useState(null); // { uri, frames, durationSec } | null
+  const [preparing, setPreparing] = useState("");   // progress label while encoding
   const [loading,   setLoading]   = useState(false);
   const [result,    setResult]    = useState(null); // { verified, confidence, message } | null
   const [rateLimitMsg, setRateLimitMsg] = useState("");
+  const [nowMs,     setNowMs]     = useState(() => Date.now());
+  // The verifier asked for one clarification instead of rejecting. Holding a
+  // question here means an ambiguous-but-honest submission gets a way through
+  // rather than a flat no — which is the failure mode that actually costs a
+  // real user their credits.
+  const [question,  setQuestion]  = useState("");
+  const [answer,    setAnswer]    = useState("");
+
+  // ── The unlock countdown ───────────────────────────────────
+  // A task can't be proven the instant it's created. Anchored on createdAt,
+  // which the server also holds — if the local field is missing (a task
+  // created before this shipped, or one not yet round-tripped), we treat the
+  // gate as open here and let the server be the one to say no. Guessing
+  // "locked" locally on missing data would strand old tasks permanently.
+  const createdMs = task?.createdAt ? Date.parse(task.createdAt) : NaN;
+  const gateMs    = requiredWaitMs(task?.minutes);
+  // Tasks logged after the fact have nothing to wait for — the work predates
+  // the row. The server agrees (it reads logged_retroactively off the task),
+  // so showing a countdown here would be a lie the server wouldn't enforce.
+  const retro     = !!task?.loggedRetroactively;
+  const unlocksAt = !retro && Number.isFinite(createdMs) ? createdMs + gateMs : null;
+  const remaining = unlocksAt ? Math.max(0, unlocksAt - nowMs) : 0;
+  const locked    = remaining > 0;
+
+  useEffect(() => {
+    if (!visible || !locked) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [visible, locked]);
 
   useEffect(() => {
     if (!visible) {
-      setProofText(""); setPhoto(null); setResult(null);
-      setLoading(false); setRateLimitMsg("");
+      setProofText(""); setPhoto(null); setVideo(null); setResult(null);
+      setLoading(false); setPreparing(""); setRateLimitMsg("");
+      setQuestion(""); setAnswer("");
+    } else {
+      setNowMs(Date.now());
     }
   }, [visible]);
 
-  // ── Photo picker ─────────────────────────────────────────────
-  const pickPhoto = async () => {
+  // ── Media capture ────────────────────────────────────────────
+  const needPicker = () => {
     if (!ImagePicker) {
       Alert.alert("Not available", "Run: npx expo install expo-image-picker");
-      return;
+      return true;
     }
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") { Alert.alert("Permission denied", "Allow photo access in Settings."); return; }
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.4,
-      base64: false,
-      exif: false,
-    });
-    if (!res.canceled && res.assets?.[0]) {
-      const shrunk = await shrinkImage(res.assets[0].uri);
-      if (!shrunk) {
-        Alert.alert("Photo too large", "Image processing is not available. Try text proof or restart the app.");
+    return false;
+  };
+
+  const acceptPhoto = async (asset) => {
+    setPreparing("Preparing photo…");
+    try {
+      const out = await preparePhoto(asset.uri);
+      if (out.error === "unsupported") {
+        Alert.alert("Not available", "Image processing isn't installed in this build. Use text or video proof.");
         return;
       }
-      setPhoto({ uri: res.assets[0].uri, base64: shrunk });
+      if (out.error) {
+        Alert.alert("Photo too large", "Couldn't compress that photo enough. Try another shot.");
+        return;
+      }
+      setVideo(null);
+      setPhoto({ uri: asset.uri, base64: out.base64 });
+    } finally {
+      setPreparing("");
     }
   };
 
+  const pickPhoto = async () => {
+    if (needPicker()) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") { Alert.alert("Permission denied", "Allow photo access in Settings."); return; }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.6,
+      base64: false,
+      exif: false,
+    });
+    if (!res.canceled && res.assets?.[0]) await acceptPhoto(res.assets[0]);
+  };
+
   const takePhoto = async () => {
-    if (!ImagePicker) {
-      Alert.alert("Not available", "Run: npx expo install expo-image-picker");
+    if (needPicker()) return;
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") { Alert.alert("Permission denied", "Allow camera in Settings."); return; }
+    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.6, base64: false });
+    if (!res.canceled && res.assets?.[0]) await acceptPhoto(res.assets[0]);
+  };
+
+  const recordVideo = async () => {
+    if (needPicker()) return;
+    if (!videoSupported()) {
+      Alert.alert(
+        "Video proof needs a new build",
+        "Run: npx expo install expo-video-thumbnails, then rebuild the app. Photo and written proof still work."
+      );
       return;
     }
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") { Alert.alert("Permission denied", "Allow camera in Settings."); return; }
-    const res = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: false });
-    if (!res.canceled && res.assets?.[0]) {
-      const shrunk = await shrinkImage(res.assets[0].uri);
-      if (!shrunk) {
-        Alert.alert("Photo too large", "Image processing is not available. Try text proof or restart the app.");
+
+    const res = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["videos"],
+      videoMaxDuration: VIDEO_MAX_SECONDS,
+      // Low quality on purpose. We only ever send sampled stills, so recording
+      // at 4K costs the user storage and us extraction time for pixels that
+      // get thrown away.
+      videoQuality: ImagePicker.UIImagePickerControllerQualityType?.Low ?? 2,
+      quality: 0.5,
+    });
+    if (res.canceled || !res.assets?.[0]) return;
+    const asset = res.assets[0];
+
+    setPreparing("Reading your clip…");
+    try {
+      const out = await prepareVideo(asset.uri, asset.duration, (done, total) =>
+        setPreparing(`Reading your clip… ${done}/${total}`)
+      );
+      if (out.error === "unsupported") {
+        Alert.alert("Video proof needs a new build", "Rebuild with expo-video-thumbnails installed.");
         return;
       }
-      setPhoto({ uri: res.assets[0].uri, base64: shrunk });
+      if (out.error === "too_long") {
+        Alert.alert("Clip too long", `Keep it under ${VIDEO_MAX_SECONDS} seconds — that's plenty to show the work.`);
+        return;
+      }
+      if (out.error === "file_too_large") {
+        Alert.alert("Clip too heavy", "That recording is enormous. Record a shorter clip and try again.");
+        return;
+      }
+      if (out.error === "no_frames") {
+        Alert.alert("Couldn't read that clip", "No frames came out of it. Try recording again.");
+        return;
+      }
+      if (out.error) {
+        Alert.alert("Clip too heavy", "Couldn't compress that clip down far enough. Record a shorter one.");
+        return;
+      }
+      setPhoto(null);
+      setVideo({ uri: asset.uri, frames: out.frames, durationSec: out.durationSec });
+    } finally {
+      setPreparing("");
     }
   };
 
@@ -154,16 +263,22 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
   // All AI calls happen server-side in the verify-task edge function.
   // There is no client-side OpenAI path in any build.
 
-  const submit = async () => {
-    if (!proofText.trim() && !photo) {
-      Alert.alert("Add proof", "Write a description or take a photo to verify.");
+  const submit = async ({ answering = false } = {}) => {
+    if (locked) return;
+    if (answering && !answer.trim()) {
+      Alert.alert("Add an answer", "Answer the question to finish verifying.");
+      return;
+    }
+    if (!answering && !proofText.trim() && !photo && !video) {
+      Alert.alert("Add proof", "Write what you did, or capture a photo or video.");
       return;
     }
     setLoading(true);
     setRateLimitMsg("");
     try {
       // Try the Supabase Edge Function. Read the JSON body even on non-2xx so
-      // we can distinguish 402 (paywall) from 429 (rate limit) from 500 (broken).
+      // we can distinguish 402 (paywall) from 425 (too early) from 429 (rate
+      // limit) from 500 (broken).
       let body = null;
       let status = 0;
       let invokeErr = null;
@@ -172,10 +287,32 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
           withTimeout(
             supabase.functions.invoke("verify-task", {
               body: {
+                // taskId is the real contract: the server reads the title,
+                // duration and creation time off the row, because anything sent
+                // from here is a field it would have to distrust.
+                taskId:      task.id,
+                // taskTitle/durationMins are ONLY here for the deploy window.
+                // The old verify-task reads them and 400s without them, so a
+                // build that shipped before the function was deployed would
+                // break AI Check for everyone who updated — the mirror image of
+                // deploying the function before the build ships. Sending both
+                // shapes means the two can be released in either order.
+                //
+                // The new function ignores these entirely, so they weaken
+                // nothing. Delete them once the new function is live everywhere.
                 taskTitle:    task.title,
                 durationMins: task.minutes,
-                proofText:    proofText.trim() || undefined,
-                imageBase64:  photo?.base64 || undefined,
+                proofText:   proofText.trim() || undefined,
+                // Answering a question resends NO media: the server rehydrates
+                // its own earlier reading of the image from proof_summary, so
+                // the round trip is one cheap text call instead of a second
+                // vision pass over a photo it already described.
+                imageBase64: answering ? undefined : (photo?.base64 || undefined),
+                frames:      answering ? undefined : (video?.frames || undefined),
+                videoMeta:   !answering && video
+                  ? { durationSec: video.durationSec, frameCount: video.frames.length }
+                  : undefined,
+                followUpAnswer: answering ? answer.trim() : undefined,
               },
             }),
             INVOKE_TIMEOUT_MS
@@ -204,6 +341,37 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
         return;
       }
 
+      // Too early. The server's clock is the one that counts — if it says wait,
+      // resynchronise the local countdown to its number rather than arguing.
+      if (body?.error === "too_early" || status === 425) {
+        const secs = Number(body?.secondsRemaining) || 0;
+        if (secs > 0) setNowMs(Date.now() - Math.max(0, gateMs - secs * 1000));
+        Alert.alert("Not yet", body?.message || "Give this task a bit more time before proving it.");
+        return;
+      }
+
+      // Already done, or burned through the per-task attempts.
+      if (body?.error === "already_verified" || body?.error === "too_many_attempts" ||
+          body?.error === "task_not_found" || body?.error === "task_untimed") {
+        Alert.alert("Can't verify this", body?.message || "This task can't be verified right now.", [
+          { text: "OK", onPress: onCancel },
+        ]);
+        return;
+      }
+
+      // Client predates the taskId contract (shouldn't happen — the force
+      // update gate should have caught it — but say something useful if it does).
+      if (body?.error === "question_expired") {
+        setQuestion(""); setAnswer("");
+        Alert.alert("That timed out", body?.message || "Submit your proof again.");
+        return;
+      }
+
+      if (body?.error === "task_id_required") {
+        Alert.alert("Update needed", body?.message || "Update Drift to use AI Check.");
+        return;
+      }
+
       // Rate limit. Also keyed on the raw 429 — when supabase-js has already
       // consumed the error body we get a status and no body, and reporting
       // that as a connection failure is what made a plain rate-limit look
@@ -214,13 +382,24 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
       }
 
       // OpenAI-side error (network, model down, image rejected)
-      if (body?.error === "ai_error" || body?.error === "ai_unreachable") {
+      if (body?.error === "ai_error" || body?.error === "ai_unreachable" || body?.error === "task_lookup_failed") {
         Alert.alert("Verification failed", body.message || "The AI service is having trouble. Please try again.");
+        return;
+      }
+
+      // The verifier wants one more thing before deciding. Deliberately NOT
+      // rendered as a rejection: it doesn't burn an attempt server-side, and
+      // showing a red "NOT VERIFIED" for what is really a follow-up would
+      // teach people the check is hostile.
+      if (body && !body.error && body.question) {
+        setQuestion(body.question);
+        setAnswer("");
         return;
       }
 
       // Success
       if (body && !body.error && (body.verified !== undefined)) {
+        setQuestion("");
         setResult(body);
         return;
       }
@@ -272,6 +451,23 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
 
   if (!task) return null;
 
+  const busy = loading || !!preparing;
+
+  const captureBtn = (label, Icon, onPress, disabled) => (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      style={{
+        flex: 1, paddingVertical: 12, borderRadius: 12,
+        borderWidth: 1, borderColor: BRD, backgroundColor: SURF,
+        alignItems: "center", opacity: disabled ? 0.45 : 1,
+      }}
+    >
+      <View style={{ marginBottom: 4 }}><Icon size={22} color={MID} /></View>
+      <Text style={{ fontFamily: FOM, fontSize: 9, color: MID, letterSpacing: 1 }}>{label}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCancel}>
       <KeyboardAvoidingView
@@ -316,8 +512,88 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
             </View>
           )}
 
+          {/* Unlock countdown. Shown instead of the proof form — there is
+              nothing useful to do until it expires, and letting people fill the
+              form out first only to be refused would be worse. */}
+          {!result && locked && (
+            <View style={{
+              backgroundColor: SURF, borderRadius: 16, padding: 22, alignItems: "center",
+              borderWidth: 1, borderColor: BRD,
+            }}>
+              <ClockIcon size={34} color={MID} />
+              <Text style={{
+                fontFamily: FO, fontSize: 12, color: TXT, letterSpacing: 2,
+                marginTop: 14, marginBottom: 6,
+              }}>
+                UNLOCKS IN {mmss(remaining)}
+              </Text>
+              <Text style={{ fontFamily: FB, fontSize: 13, color: MID, textAlign: "center", lineHeight: 20 }}>
+                This is a {task.minutes}-minute task, so proof opens {mmss(gateMs)} after you add it.
+                Go do it — we'll be here.
+              </Text>
+              <TouchableOpacity onPress={onCancel} style={{ paddingVertical: 16, paddingHorizontal: 24 }}>
+                <Text style={{ fontFamily: FOM, fontSize: 10, color: MID, letterSpacing: 1.5 }}>CLOSE</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* One clarifying question, in place of a rejection. */}
+          {!result && !locked && !!question && (
+            <>
+              <Text style={{ fontFamily: FOM, fontSize: 9, color: GRN, letterSpacing: 2, marginBottom: 10 }}>
+                ONE QUICK CHECK
+              </Text>
+              <View style={{
+                backgroundColor: SURF, borderRadius: 14, padding: 16, marginBottom: 14,
+                borderWidth: 1, borderColor: BRD,
+              }}>
+                <Text style={{ fontFamily: FK, fontSize: 15, color: TXT, lineHeight: 22 }}>
+                  {question}
+                </Text>
+              </View>
+
+              <TextInput
+                value={answer}
+                onChangeText={setAnswer}
+                placeholder="Your answer…"
+                placeholderTextColor={dark ? "#5C7263" : "#A8BFB5"}
+                multiline
+                maxLength={1000}
+                autoFocus
+                style={{
+                  backgroundColor: SURF, borderRadius: 12, padding: 14,
+                  borderWidth: 1, borderColor: BRD,
+                  color: TXT, fontFamily: FB, fontSize: 14,
+                  minHeight: 80, textAlignVertical: "top", marginBottom: 14,
+                }}
+              />
+
+              <TouchableOpacity
+                onPress={() => submit({ answering: true })}
+                disabled={busy}
+                style={{
+                  paddingVertical: 15, borderRadius: 14,
+                  backgroundColor: busy ? "rgba(47,171,114,0.4)" : GRN,
+                  alignItems: "center", justifyContent: "center",
+                  ...(busy ? null : theme.fx.glow),
+                }}
+              >
+                {loading
+                  ? <Spinner size={22} color={dark ? "#16261C" : "#fff"} />
+                  : <Text style={{ fontFamily: FO, fontSize: 12, color: dark ? "#16261C" : "#fff", letterSpacing: 2 }}>
+                      SEND ANSWER
+                    </Text>
+                }
+              </TouchableOpacity>
+
+              <Text style={{ fontFamily: FB, fontSize: 11, color: MID, textAlign: "center", marginTop: 10, lineHeight: 16 }}>
+                This doesn't count as an attempt — we just need one detail to be sure.
+              </Text>
+            </>
+          )}
+
           {/* Proof input */}
-          {!result && (
+          {!result && !locked && !question && (
             <>
               <Text style={{ fontFamily: FOM, fontSize: 9, color: MID, letterSpacing: 2, marginBottom: 10 }}>
                 YOUR PROOF
@@ -338,7 +614,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                 }}
               />
 
-              {/* Photo area */}
+              {/* Media area */}
               {photo ? (
                 <View style={{ marginBottom: 14 }}>
                   <Image
@@ -351,44 +627,67 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                     </Text>
                   </TouchableOpacity>
                 </View>
+              ) : video ? (
+                <View style={{ marginBottom: 14 }}>
+                  <View style={{ flexDirection: "row", gap: 6, marginBottom: 8 }}>
+                    {video.frames.slice(0, 5).map((_, i) => (
+                      <View
+                        key={i}
+                        style={{
+                          flex: 1, height: 62, borderRadius: 8,
+                          backgroundColor: SURF, borderWidth: 1, borderColor: BRD,
+                          alignItems: "center", justifyContent: "center",
+                        }}
+                      >
+                        <Text style={{ fontFamily: FOM, fontSize: 9, color: MID }}>{i + 1}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <Text style={{ fontFamily: FB, fontSize: 12, color: MID, textAlign: "center" }}>
+                    {video.durationSec}s clip · {video.frames.length} frames sent for review
+                  </Text>
+                  <TouchableOpacity onPress={() => setVideo(null)} style={{ alignItems: "center", paddingTop: 8 }}>
+                    <Text style={{ fontFamily: FOM, fontSize: 10, color: MID, letterSpacing: 1 }}>
+                      REMOVE VIDEO
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               ) : (
-                <View style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
-                  <TouchableOpacity
-                    onPress={takePhoto}
-                    style={{
-                      flex: 1, padding: 12, borderRadius: 12,
-                      borderWidth: 1, borderColor: BRD, backgroundColor: SURF, alignItems: "center",
-                    }}
-                  >
-                    <View style={{ marginBottom: 4 }}><CameraIcon size={22} color={MID} /></View>
-                    <Text style={{ fontFamily: FOM, fontSize: 9, color: MID, letterSpacing: 1 }}>
-                      TAKE PHOTO
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={pickPhoto}
-                    style={{
-                      flex: 1, padding: 12, borderRadius: 12,
-                      borderWidth: 1, borderColor: BRD, backgroundColor: SURF, alignItems: "center",
-                    }}
-                  >
-                    <View style={{ marginBottom: 4 }}><ImageIcon size={22} color={MID} /></View>
-                    <Text style={{ fontFamily: FOM, fontSize: 9, color: MID, letterSpacing: 1 }}>
-                      UPLOAD
-                    </Text>
-                  </TouchableOpacity>
+                <>
+                  <View style={{ flexDirection: "row", gap: 10, marginBottom: 10 }}>
+                    {captureBtn("TAKE PHOTO", CameraIcon, takePhoto, busy)}
+                    {captureBtn("RECORD VIDEO", VideoIcon, recordVideo, busy)}
+                    {captureBtn("UPLOAD", ImageIcon, pickPhoto, busy)}
+                  </View>
+                  <Text style={{
+                    fontFamily: FB, fontSize: 11, color: MID,
+                    textAlign: "center", marginBottom: 18, lineHeight: 16,
+                  }}>
+                    {/* Said plainly, because it changes what people capture:
+                        a still can't count reps, and users otherwise submit one
+                        and feel cheated by the rejection. */}
+                    Counting something — reps, laps, pages? Record a video. A single
+                    photo can't show a number.
+                  </Text>
+                </>
+              )}
+
+              {!!preparing && (
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 14 }}>
+                  <Spinner size={16} color={MID} />
+                  <Text style={{ fontFamily: FB, fontSize: 12, color: MID }}>{preparing}</Text>
                 </View>
               )}
 
               {/* Submit */}
               <TouchableOpacity
-                onPress={submit}
-                disabled={loading}
+                onPress={() => submit()}
+                disabled={busy}
                 style={{
                   paddingVertical: 15, borderRadius: 14,
-                  backgroundColor: loading ? "rgba(47,171,114,0.4)" : GRN,
+                  backgroundColor: busy ? "rgba(47,171,114,0.4)" : GRN,
                   alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8,
-                  ...(loading ? null : theme.fx.glow),
+                  ...(busy ? null : theme.fx.glow),
                 }}
               >
                 {loading
@@ -433,12 +732,39 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                 }}>
                   {result.message}
                 </Text>
+                {/* The specific gap, not just the verdict. "Not verified" with
+                    no reason is what makes an honest rejection feel arbitrary. */}
+                {!result.verified && !!result.shortfall && (
+                  <View style={{
+                    marginTop: 14, paddingTop: 12,
+                    borderTopWidth: 1, borderTopColor: "rgba(181,86,75,0.18)",
+                  }}>
+                    <Text style={{ fontFamily: FOM, fontSize: 9, color: MID, letterSpacing: 1.5, marginBottom: 4 }}>
+                      WHAT WAS MISSING
+                    </Text>
+                    <Text style={{ fontFamily: FB, fontSize: 13, color: TXT, lineHeight: 19 }}>
+                      {result.shortfall}
+                    </Text>
+                  </View>
+                )}
                 <Text style={{
                   fontFamily: FOM, fontSize: 9, color: MID,
                   letterSpacing: 1.5, textAlign: "center", marginTop: 8,
                 }}>
                   CONFIDENCE: {result.confidence?.toUpperCase()}
                 </Text>
+                {/* On a rejection, tell them how many tries are left. Finding
+                    out you're locked out only when it happens reads as a bug. */}
+                {!result.verified && typeof result.attemptsLeft === "number" && (
+                  <Text style={{
+                    fontFamily: FOM, fontSize: 9, color: MID,
+                    letterSpacing: 1.5, textAlign: "center", marginTop: 4,
+                  }}>
+                    {result.attemptsLeft > 0
+                      ? `${result.attemptsLeft} ATTEMPT${result.attemptsLeft === 1 ? "" : "S"} LEFT`
+                      : "NO ATTEMPTS LEFT ON THIS TASK"}
+                  </Text>
+                )}
               </View>
 
               {result.verified ? (
@@ -453,7 +779,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                     <CheckIcon size={14} color="#fff" />
                   </View>
                 </TouchableOpacity>
-              ) : (
+              ) : result.attemptsLeft === 0 ? null : (
                 <TouchableOpacity
                   onPress={() => setResult(null)}
                   style={{

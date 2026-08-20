@@ -19,6 +19,7 @@ import { LeafGlyph } from "./SproutArt";
 import {
   getPlaces, addPlace, removePlace, getCurrentCoords, setSuggestionsEnabled,
   isSuggestionsEnabled, matchPlaces, DEFAULT_PLACE, MAX_PLACES,
+  getGeofenceStatus, testArrival, syncGeofences,
 } from "./places";
 import {
   calendarAvailable, isCalendarSyncEnabled, setCalendarSyncEnabled,
@@ -42,6 +43,14 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
   // the typed name matched nothing and we fall back to DEFAULT_PLACE.
   const [preset, setPreset]       = useState(null);
   const [showSuggest, setShowSuggest] = useState(false);
+  // Live diagnosis of the arrival pipeline. Place suggestions depend on four
+  // separate grants (location, always-location, notifications, OS location
+  // services) plus a registered background task, and every one of them can be
+  // switched off elsewhere long after setup. Without this the only symptom is
+  // "nothing happens when I get to the gym", which is unfixable from inside the
+  // app because it looks identical no matter which piece is missing.
+  const [geoStatus, setGeoStatus] = useState(null);
+  const [testing, setTesting]     = useState(false);
 
   const placeMatches = matchPlaces(newLabel);
   const activeTemplate = preset || DEFAULT_PLACE;
@@ -64,6 +73,7 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
   const refresh = useCallback(async () => {
     setPlacesOn(await isSuggestionsEnabled());
     setPlaces(await getPlaces());
+    getGeofenceStatus().then(setGeoStatus).catch(() => setGeoStatus(null));
     setCalOn(await isCalendarSyncEnabled());
     setCalIds(await getSelectedCalendarIds());
     setCalSource(await getCalendarSource());
@@ -81,6 +91,16 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
   const togglePlaces = async (on) => {
     setPlacesOn(on); // optimistic
     const res = await setSuggestionsEnabled(on);
+    getGeofenceStatus().then(setGeoStatus).catch(() => {});
+    // Location granted but notifications refused: the feature is on and will
+    // never produce anything visible. Say so now rather than letting the user
+    // discover it at the gym.
+    if (on && res.granted && res.notifications === false) {
+      Alert.alert(
+        "Turn on notifications",
+        "Place suggestions arrive as a notification, so with notifications off nothing will reach you. Enable them in Settings › Drift › Notifications.",
+      );
+    }
     if (on && !res.granted) {
       setPlacesOn(false);
       Alert.alert(
@@ -92,6 +112,41 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
             : "Enable location access for Drift to use place suggestions.",
       );
     }
+  };
+
+  // Send a real arrival notification for a saved place without going there.
+  // It runs the same handleRegionEnter path the geofence uses — same payload,
+  // same tap handler — so a pass here means the whole chain works and only the
+  // physical trigger is untested.
+  const runArrivalTest = async (placeId) => {
+    setTesting(true);
+    try {
+      const res = await testArrival(placeId);
+      setGeoStatus(res.status || (await getGeofenceStatus()));
+      if (res.ok) {
+        Alert.alert(
+          "Test sent",
+          `A "You're at ${res.place.label}" notification should appear now. Tap it — ` +
+          `it should open Drift with "${res.place.title}" ready to confirm.` +
+          (res.status?.background !== "granted"
+            ? "\n\nNote: location is set to While Using, so real arrivals won't fire while Drift is closed."
+            : ""),
+        );
+      } else if (res.reason === "blocked") {
+        Alert.alert("Not set up yet", res.blocker);
+      } else if (res.reason === "notifications_denied") {
+        Alert.alert("Notifications are off", "Turn them on in Settings › Drift › Notifications, then test again.");
+      } else {
+        Alert.alert("Test failed", `The arrival didn't go through (${res.reason}).`);
+      }
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const rearm = async () => {
+    await syncGeofences().catch(() => {});
+    setGeoStatus(await getGeofenceStatus().catch(() => null));
   };
 
   const savePlaceHere = async () => {
@@ -277,6 +332,35 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
               <>
                 <View style={{ height: 1, backgroundColor: ink.hairline, marginVertical: 18 }} />
 
+                {/* Status. Green is not decoration here — it is the only way
+                    to know the chain is armed before relying on it. */}
+                {!!geoStatus && (
+                  <View style={{
+                    backgroundColor: geoStatus.ready ? earn.sageLo : theme.danger.bg,
+                    borderRadius: 14, padding: 13, marginBottom: 16,
+                  }}>
+                    <Text style={{
+                      fontFamily: FF.bodyMed, fontSize: 12,
+                      color: geoStatus.ready ? earn.deep : theme.danger.fg,
+                    }}>
+                      {geoStatus.ready ? "Arrivals are armed" : "Arrivals won't fire"}
+                    </Text>
+                    <Text style={{
+                      fontFamily: FF.body, fontSize: 11, lineHeight: 16, marginTop: 3,
+                      color: geoStatus.ready ? ink.mid : theme.danger.fg,
+                    }}>
+                      {geoStatus.ready
+                        ? `Monitoring ${geoStatus.placeCount} place${geoStatus.placeCount === 1 ? "" : "s"} in the background.`
+                        : geoStatus.blocker}
+                    </Text>
+                    {!geoStatus.ready && geoStatus.blocker?.startsWith("Regions aren't") && (
+                      <TouchableOpacity onPress={rearm} style={{ paddingTop: 8 }}>
+                        <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: earn.deep }}>Re-arm</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
                 <Text style={kicker}>SAVED PLACES</Text>
                 {places.length === 0 ? (
                   <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, lineHeight: 18, marginBottom: 14 }}>
@@ -299,6 +383,15 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                             {p.title} · {p.minutes}m
                           </Text>
                         </View>
+                        <TouchableOpacity
+                          onPress={() => runArrivalTest(p.id)}
+                          disabled={testing}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Text style={{ fontFamily: FF.body, fontSize: 12, color: earn.deep, opacity: testing ? 0.5 : 1 }}>
+                            Test
+                          </Text>
+                        </TouchableOpacity>
                         <TouchableOpacity onPress={() => deletePlace(p)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                           <Text style={{ fontFamily: FF.body, fontSize: 12, color: theme.danger.fg }}>Remove</Text>
                         </TouchableOpacity>
