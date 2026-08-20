@@ -80,6 +80,8 @@ import LabScreen from "./LabScreen";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
+import PaywallScreen from "./PaywallScreen";
+import { useSubscription } from "./useSubscription";
 import ReviewPromptScreen from "./ReviewPromptScreen";
 import TutorialOverlay from "./TutorialOverlay";
 import ParentShell from "./ParentShell";
@@ -3511,8 +3513,26 @@ export default function App() {
   const recurringHandledRef = useRef({ day: todayKey(), ids: new Set() });
 
   // ── Pro access — everything is free for now ────────────────────────────
-  const proAccess = true;
-  const proAccessRef = useRef(true);
+  // ── Entitlement ──────────────────────────────────────────────
+  // Drift is paid-only: $0.99/month after a 3-day trial, no free tier. This was
+  // hardcoded `true` while payments were switched off; it is now the real
+  // answer from RevenueCat, OR a manual grant in pro_overrides.
+  //
+  // Children are entitled through their PARENT and never see a paywall, so
+  // appMode === "child" short-circuits to true. The server agrees: is_pro()
+  // resolves a child to its parent's subscription and seat count, so a child
+  // whose parent lapses loses access on the next check rather than trusting
+  // this flag.
+  const {
+    proAccess: subProAccess,
+    loading: subLoading,
+    offerings: subOfferings,
+    purchase: subPurchase,
+    restore: subRestore,
+    refresh: subRefresh,
+  } = useSubscription(userId);
+  const proAccess = appMode === "child" || subProAccess;
+  const proAccessRef = useRef(false);
   useEffect(() => { setProStatus(true); }, []);
   const [driftInActive,  setDriftInActive]  = useState(false);
   const [darkMode,       setDarkMode]       = useState(false);
@@ -4929,6 +4949,7 @@ export default function App() {
   }, []);
 
   // Keep refs current every render so persist() never writes stale data.
+  proAccessRef.current   = proAccess;
   tasksRef.current       = tasks;
   taskHistoryRef.current = taskHistory;
   totalXpRef.current     = totalXp;
@@ -5763,6 +5784,29 @@ export default function App() {
       onSignOut={signOut} onDeleteAccount={deleteAccount}
     />
   );
+
+  // ── The paywall ──────────────────────────────────────────────
+  // Onboarding, then sign-up, then this. Rendered as a full screen rather than
+  // a modal because there is nothing behind it to go back to — a dismissible
+  // paywall on a paid-only app is just a broken paywall.
+  //
+  // Ordering matters: this sits AFTER the parent/child shells (a child is
+  // entitled through their parent and must never see it) and after the loading
+  // screen (so a slow RevenueCat call doesn't flash a paywall at a subscriber).
+  //
+  // subLoading is respected for the same reason: getCustomerInfo() failing open
+  // to "not entitled" would paywall paying users on a flaky connection.
+  if (userId && !proAccess && !subLoading) {
+    return (
+      <PaywallScreen
+        dark={darkMode}
+        offerings={subOfferings}
+        onPurchase={subPurchase}
+        onRestore={subRestore}
+        onSignOut={signOut}
+      />
+    );
+  }
 
   const activeTheme = getTheme(darkMode);
   const { ink: th_ink, paper: th_paper, earn: th_earn } = activeTheme;

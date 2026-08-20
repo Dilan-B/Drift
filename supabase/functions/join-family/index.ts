@@ -63,7 +63,10 @@ serve(async (req: Request) => {
     // 1. Validate the family code.
     const { data: family, error: famErr } = await admin
       .from("families")
-      .select("id, parent_id, active, deleted_at")
+      // seats: how many children the parent has paid for ($0.99/mo each).
+      // Without it in this select the seat check below reads undefined and
+      // silently never fires.
+      .select("id, parent_id, active, deleted_at, seats")
       .eq("code", code)
       .maybeSingle();
     if (famErr) {
@@ -126,6 +129,20 @@ serve(async (req: Request) => {
       console.error("join-family count:", countErr.message);
       return json({ error: "lookup_failed" }, 500);
     }
+    // Two different caps, and they mean different things:
+    //   MAX_CHILDREN_PER_FAMILY is an abuse ceiling on the whole feature.
+    //   families.seats is what the parent has PAID for ($0.99/mo per child).
+    //
+    // The seat check happens here, at join time, rather than letting the child
+    // in and having is_pro() quietly deny them later. A child who signs up and
+    // then finds the app inert has no idea why, and cannot fix it — only the
+    // parent can. Refusing at the door with a reason the parent can act on is
+    // the kinder failure.
+    const paidSeats = Math.max(0, Number((family as { seats?: number }).seats ?? 0));
+    if (paidSeats > 0 && (count ?? 0) >= paidSeats) {
+      return json({ success: false, reason: "no_seats", seats: paidSeats });
+    }
+
     if ((count ?? 0) >= MAX_CHILDREN_PER_FAMILY) {
       return json({ success: false, reason: "family_full" });
     }

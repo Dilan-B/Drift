@@ -206,19 +206,33 @@ serve(async (req: Request) => {
     // ── 1b. Subscription check (cached + dev-bypass) ─────────
     let subActive: boolean | null = cachedSub(user.id);
     if (subActive === null) {
-      // is_dev_user RPC may not exist on older schemas — treat failure as "not dev"
+      // is_pro() is the single definition of entitlement (schema_v9): an active
+      // subscription, a manual grant, a beta unlock, OR being a child inside a
+      // parent's paid seat count. Hand-rolling that OR in each edge function is
+      // how they drifted apart before — and none of them knew about children.
+      const proPromise = supabase.rpc("is_pro", { p_uid: user.id })
+        .then(r => r.data === true).catch(() => null);
+
+      // is_dev_user may not exist on older schemas — treat failure as "not dev".
       const devPromise = supabase.rpc("is_dev_user", { uid: user.id })
         .then(r => r.data === true).catch(() => false);
 
-      const profilePromise = supabase
-        .from("profiles").select("sub_active, sub_expires, beta_unlocked_at").eq("id", user.id).maybeSingle()
-        .then(r => r.data).catch(() => null);
+      const [isPro, isDev] = await Promise.all([proPromise, devPromise]);
 
-      const [isDev, profile] = await Promise.all([devPromise, profilePromise]);
-      const subOk  = !!profile?.sub_active &&
-        (!profile.sub_expires || new Date(profile.sub_expires) > new Date());
-      const betaOk = !!profile?.beta_unlocked_at;
-      subActive = isDev || subOk || betaOk;
+      if (isPro === null) {
+        // The RPC is missing or errored. Fall back to reading the columns
+        // directly rather than denying — a broken helper must not lock out
+        // paying users. Children are not covered by this path, which is the
+        // cost of the fallback and why it is only a fallback.
+        const profile = await supabase
+          .from("profiles").select("sub_active, sub_expires, beta_unlocked_at")
+          .eq("id", user.id).maybeSingle().then(r => r.data).catch(() => null);
+        const subOk = !!profile?.sub_active &&
+          (!profile.sub_expires || new Date(profile.sub_expires) > new Date());
+        subActive = isDev || subOk || !!profile?.beta_unlocked_at;
+      } else {
+        subActive = isDev || isPro;
+      }
       setCachedSub(user.id, subActive);
     }
     // TEMPORARY: Pro is free for everyone until Apple IAP is re-enabled

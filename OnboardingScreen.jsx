@@ -1261,6 +1261,10 @@ function ChildJoinSlide({ onDone }) {
         invalid_code: "That family code doesn't exist. Double-check it with your parent.",
         inactive:     "That family code isn't active anymore.",
         family_full:  "This family already has the maximum number of kids.",
+        // Distinct from family_full on purpose: this one is fixable, and only
+        // the parent can fix it. Saying "full" would send the kid to try again
+        // forever.
+        no_seats:     "Every seat in this family is taken. Ask your parent to add one in Drift, then try again.",
         bad_name:     "Enter your name.",
         network:      "Network error. Check your connection.",
         session:      "Couldn't finish signing in. Try again.",
