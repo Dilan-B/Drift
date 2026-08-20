@@ -287,10 +287,21 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
           withTimeout(
             supabase.functions.invoke("verify-task", {
               body: {
-                // The server reads the title, duration and creation time off
-                // the row itself. Sending them from here would just be three
-                // more fields it has to distrust.
+                // taskId is the real contract: the server reads the title,
+                // duration and creation time off the row, because anything sent
+                // from here is a field it would have to distrust.
                 taskId:      task.id,
+                // taskTitle/durationMins are ONLY here for the deploy window.
+                // The old verify-task reads them and 400s without them, so a
+                // build that shipped before the function was deployed would
+                // break AI Check for everyone who updated — the mirror image of
+                // deploying the function before the build ships. Sending both
+                // shapes means the two can be released in either order.
+                //
+                // The new function ignores these entirely, so they weaken
+                // nothing. Delete them once the new function is live everywhere.
+                taskTitle:    task.title,
+                durationMins: task.minutes,
                 proofText:   proofText.trim() || undefined,
                 // Answering a question resends NO media: the server rehydrates
                 // its own earlier reading of the image from proof_summary, so
