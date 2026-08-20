@@ -13,7 +13,7 @@ import AICheckModal from "./AICheckModal";
 import { supabase, getFriendsWithScreenTime } from "./supabase";
 import { CloseIcon, LockIcon, ShareIcon, UsersIcon, LevelIcon } from "./Icons";
 import { getLevelIdx, getLevel } from "./levels";
-import { notifyFriendRequest } from "./notifications";
+import { notifyFriendRequest, notifyChallengeReceived } from "./notifications";
 import { findContactsOnDrift, inviteContacts, contactsAvailable } from "./contacts";
 import ChallengeSheet from "./ChallengeModal";
 import RepChallengeModal from "./RepChallengeModal";
@@ -750,6 +750,9 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
   const [contactAddedIds, setContactAddedIds] = useState({});
   const showedCachedFriendsRef = useRef(false);
   const seenReqIdsRef = useRef(null); // null until first load; then a Set of seen request ids
+  // Same shape for challenges. null until the first load so the existing
+  // backlog doesn't fire a burst of notifications the moment the app opens.
+  const seenChallengeIdsRef = useRef(null);
 
   useEffect(() => {
     onSwipeLockChange?.(!!challengeTarget || showAdd || !!selectedChallenge || !!statsFriend || showPast || showContacts || !!repChallenge);
@@ -759,6 +762,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
   useEffect(() => {
     showedCachedFriendsRef.current = false;
     seenReqIdsRef.current = null;
+    seenChallengeIdsRef.current = null;
   }, [userId]);
 
   useEffect(() => {
@@ -912,6 +916,27 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
       return data || [];
     };
     const data = await cached(`challenges_${userId}`, 10_000, fetcher);
+
+    // Notify on genuinely new INCOMING challenges. Seeded on the first load so
+    // the existing backlog doesn't fire a burst at launch — same discipline as
+    // friend requests above.
+    //
+    // Filtered to challenges aimed at me and still pending: a challenge I sent,
+    // or one already accepted/declined, is not something to interrupt for.
+    const incoming = (data || []).filter(
+      c => c.challenged_id === userId && c.status === "pending"
+    );
+    if (seenChallengeIdsRef.current === null) {
+      seenChallengeIdsRef.current = new Set(incoming.map(c => c.id));
+    } else {
+      for (const c of incoming) {
+        if (!seenChallengeIdsRef.current.has(c.id)) {
+          seenChallengeIdsRef.current.add(c.id);
+          notifyChallengeReceived(c.challenger?.username, c.title, c.id);
+        }
+      }
+    }
+
     smoothUpdate(() => setChallenges(data || []));
   }, [userId]);
 
