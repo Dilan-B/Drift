@@ -80,7 +80,7 @@
     <key>NSContactsUsageDescription</key>
     <string>Drift can match your contacts to find friends already on Drift. Contact emails are hashed on your device and never uploaded in plain text.</string>
     <key>NSMotionUsageDescription</key>
-    <string>Drift uses motion data to detect exercise movement during workout challenges.</string>
+    <string>Drift uses motion data two ways: to detect exercise movement during workout challenges, and — if you turn on the phone-in-another-room guard — to check your phone stayed still overnight. Motion data is read on your device and never uploaded.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Drift needs access to your photos to attach a proof image to a task or to set your profile avatar.</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
