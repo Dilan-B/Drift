@@ -8,6 +8,8 @@ import {
 import Constants from "expo-constants";
 import * as Crypto from "expo-crypto";
 import { getTheme } from "./theme";
+import * as SleepGuard from "./sleepGuard";
+import { describeResult as describeSleepResult } from "./sleepGuard";
 import AICheckModal from "./AICheckModal";
 import { evaluateTask } from "./aiEvaluate";
 import BlockedAppsModal from "./BlockedAppsModal";
@@ -19,7 +21,7 @@ import {
   clearPendingBalance, cache,
 } from "./sync";
 import { registerBackgroundRefresh } from "./backgroundRefresh";
-import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTimeNotices, scheduleDailyReminder, cancelAllNotifications, registerForPushNotifications, notifyLosingOnLeaderboard } from "./notifications";
+import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTimeNotices, scheduleDailyReminder, cancelAllNotifications, registerForPushNotifications, notifyLosingOnLeaderboard, notifySleepGuardResult } from "./notifications";
 import { applyBlocking, clearBlocking } from "./blockedApps";
 // Importing places.js at module scope registers the geofence background task,
 // which iOS may wake the app directly into on a cold start.
@@ -1792,7 +1794,103 @@ function LevelUpModal({ level, dark, onClose }) {
   );
 }
 
-function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, scrollRef, onReduceScreenTime, onSwipeLockChange, dark, secLeft, showAutoTasksHint, onOpenAutoTasks, onDismissAutoTasksHint }) {
+// ── Sleep guard card ─────────────────────────────────────────
+// The nightly surface for "phone in another room". Lives on Today rather than
+// behind a settings screen on purpose: it is tapped at bedtime, half asleep,
+// on the way out of the room, and anything more than one tap from launch
+// simply won't get used. Time-gated so it costs nothing during the day.
+function SleepGuardCard({ mode, armedAt, result, streak, busy, onSetup, onArm, onCancel, onDismiss, dark }) {
+  const { ink, paper, earn } = getTheme(dark);
+  if (!mode) return null;
+
+  const moved = result?.status === "moved";
+  const won   = result?.status === "success";
+
+  const copy = {
+    setup: {
+      title: "Sleep with your phone in another room",
+      body: "Stick an NFC tag in the next room. Tap it at bedtime and Drift checks that your phone stayed there all night.",
+      cta: "Set it up",
+      onPress: onSetup,
+    },
+    ready: {
+      title: "Ready for bed?",
+      body: streak > 0
+        ? `Put your phone in the other room and tap the tag. ${streak} night${streak === 1 ? "" : "s"} in a row so far.`
+        : "Put your phone in the other room and tap the tag to start the night.",
+      cta: "Tap the tag",
+      onPress: onArm,
+    },
+    armed: {
+      title: "Good night",
+      body: armedAt
+        ? `Armed at ${new Date(armedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. Leave your phone where it is and Drift will check in the morning.`
+        : "Leave your phone where it is. Drift will check in the morning.",
+      cta: "Cancel tonight",
+      onPress: onCancel,
+      quiet: true,
+    },
+    result: {
+      title: won ? "Your phone stayed put" : moved ? "Your phone moved" : "Last night",
+      body: describeSleepResult(result),
+      cta: null,
+    },
+  }[mode];
+
+  if (!copy) return null;
+
+  const accent = mode === "result" ? (won ? earn.green : ink.mid) : earn.sage;
+
+  return (
+    <View style={{
+      borderRadius: 18, marginBottom: 14, padding: 16,
+      backgroundColor: paper.card,
+      borderWidth: 1, borderColor: dark ? "rgba(232,245,236,0.10)" : ink.hairline,
+      borderLeftWidth: 3, borderLeftColor: accent,
+    }}>
+      <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: FF.bodyBold, fontSize: 14.5, color: ink.deep, marginBottom: 4 }}>
+            {copy.title}
+          </Text>
+          <Text style={{ fontFamily: FF.body, fontSize: 12.5, color: ink.mid, lineHeight: 18 }}>
+            {copy.body}
+          </Text>
+        </View>
+        {(mode === "result" || mode === "setup") && (
+          <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Text style={{ fontSize: 16, color: ink.faint, lineHeight: 19 }}>×</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {copy.cta && (
+        <TouchableOpacity
+          onPress={copy.onPress}
+          disabled={busy}
+          activeOpacity={0.85}
+          style={{
+            marginTop: 12, alignSelf: "flex-start",
+            paddingVertical: 9, paddingHorizontal: 16, borderRadius: 12,
+            backgroundColor: copy.quiet ? "transparent" : earn.green,
+            borderWidth: copy.quiet ? 1 : 0,
+            borderColor: ink.hairline,
+            opacity: busy ? 0.5 : 1,
+          }}
+        >
+          {busy
+            ? <ActivityIndicator size="small" color={copy.quiet ? ink.mid : "#fff"} />
+            : <Text style={{
+                fontFamily: FF.bodyMed, fontSize: 13,
+                color: copy.quiet ? ink.mid : "#fff",
+              }}>{copy.cta}</Text>}
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, scrollRef, onReduceScreenTime, onSwipeLockChange, dark, secLeft, showAutoTasksHint, onOpenAutoTasks, onDismissAutoTasksHint, sleepGuard }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Text color that sits on a `deep` (primary) button. In dark mode the deep
@@ -2140,6 +2238,10 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
           </TouchableOpacity>
         </View>
       </Animated.View>
+
+      {/* Overnight "phone in another room" guard. Time-gated to the evening,
+          or showing last night's result in the morning. */}
+      {sleepGuard?.mode && <SleepGuardCard {...sleepGuard} dark={dark} />}
 
       {/* One-line nudge toward automatic tasks. Deliberately plain — a single
           row of text, no icon block or illustration — and it removes itself
@@ -3451,6 +3553,14 @@ export default function App() {
   const [overlay,     setOverlay]     = useState(null);
   const [popup,       setPopup]       = useState(null);
   const [shareTask,   setShareTask]   = useState(null);
+
+  // ── Sleep guard ("phone in another room") ──────────────────
+  const [sgTag,       setSgTag]       = useState(null);   // registered tag UID
+  const [sgArmed,     setSgArmed]     = useState(null);   // { startedAt, ... }
+  const [sgResult,    setSgResult]    = useState(null);   // last verified night
+  const [sgStreak,    setSgStreak]    = useState(0);
+  const [sgBusy,      setSgBusy]      = useState(false);
+  const [sgDismissed, setSgDismissed] = useState(false);  // per-app-session
   const [levelUp,     setLevelUp]     = useState(null);
   const [secLeft,     setSecLeft]     = useState(0);
   // Minutes of earned screen time actually used today. Read from the local
@@ -3831,6 +3941,49 @@ export default function App() {
       syncProfileStats(userIdRef.current, { balanceSeconds: newSec }).catch(() => {});
     }
     unlockAndArmBalance(newSec);
+  }, []);
+
+  // ── Sleep guard: settle any armed night, then refresh card state ────
+  // Runs on launch and every foreground. verifyNight() is a no-op when no
+  // night is armed, and it only consumes the session once it can actually
+  // reach motion data — a failed query leaves the night in flight to retry.
+  const refreshSleepGuard = useCallback(async () => {
+    if (!SleepGuard.isAvailable()) return;
+    try {
+      const verdict = await SleepGuard.verifyNight();
+
+      if (verdict.status === "success") {
+        const mins = Math.max(1, Math.round(verdict.rewardMinutes || 0));
+        const newSec = secRef.current + mins * 60;
+        secRef.current = newSec;
+        setSecLeft(newSec);
+        setCredits(c => {
+          const nc = { ...c, balance: Math.ceil(newSec / 60), balanceSec: newSec, earned: c.earned + mins };
+          persist({ credits: nc });
+          return nc;
+        });
+        if (userIdRef.current) {
+          syncProfileStats(userIdRef.current, { balanceSeconds: newSec }).catch(() => {});
+        }
+        unlockAndArmBalance(newSec);
+      }
+
+      if (verdict.status === "success" || verdict.status === "moved") {
+        setSgResult(verdict);
+        setSgDismissed(false);
+        notifySleepGuardResult(verdict).catch(() => {});
+        track("sleepguard_night_result", { status: verdict.status });
+      }
+
+      const [tag, armed, streak] = await Promise.all([
+        SleepGuard.getRegisteredTag(),
+        SleepGuard.getArmed(),
+        SleepGuard.getStreak(),
+      ]);
+      setSgTag(tag);
+      setSgArmed(armed);
+      setSgStreak(streak);
+    } catch {}
   }, []);
 
   // Reliability: on launch/foreground, (a) prompt once if Family Controls
@@ -4432,6 +4585,7 @@ export default function App() {
     // while offline so the server can't resurrect a stale balance.
     flushPendingStats(userId).catch(() => {});
     claimPendingHealthEarn().catch(() => {});
+    refreshSleepGuard().catch(() => {});
     consumePendingSiriTask().then(siri => {
       if (siri?.taskName) setOverlay("add");
       // driftInMinutes is handled by the sync loop below — requires UI to be ready.
@@ -4439,6 +4593,7 @@ export default function App() {
     reconcileMonitoring();
     const sync = async () => {
       await claimPendingHealthEarn().catch(() => {});
+      await refreshSleepGuard().catch(() => {});
       reconcileMonitoring();
       const depleted = await consumeDepletedFlag();
       if (!depleted) return;
@@ -4461,7 +4616,7 @@ export default function App() {
     sync();
     const sub = AppState.addEventListener("change", n => { if (n === "active") sync(); });
     return () => sub.remove();
-  }, [userId, reconcileMonitoring, claimPendingHealthEarn]);
+  }, [userId, reconcileMonitoring, claimPendingHealthEarn, refreshSleepGuard]);
 
   // Keep the Apple Screen Time shield in sync with balance.
   // balance == 0 → shield ON (blocked apps shielded)
@@ -5161,6 +5316,90 @@ export default function App() {
       unlockAndArmBalance(newSec);
     }
   };
+
+  // ── Sleep guard handlers + card state ──────────────────────
+  const sgSetup = useCallback(async () => {
+    setSgBusy(true);
+    try {
+      const motion = await SleepGuard.requestMotionAuth();
+      if (motion !== "authorized") {
+        Alert.alert(
+          "Motion access needed",
+          "Drift uses Motion & Fitness to check your phone stayed still overnight. Turn it on in Settings \u203a Drift \u203a Motion & Fitness.",
+        );
+        return;
+      }
+      const id = await SleepGuard.registerTag();
+      setSgTag(id);
+      track("sleepguard_tag_registered");
+      Alert.alert("Tag saved", "Leave it in the room where your phone will sleep. Tap it at bedtime to start a night.");
+    } catch (e) {
+      if (e?.code !== "cancelled" && e?.message !== "cancelled") {
+        Alert.alert("Couldn't read that tag", "Hold your phone still against the tag and try again.");
+      }
+    } finally {
+      setSgBusy(false);
+    }
+  }, []);
+
+  const sgArm = useCallback(async () => {
+    setSgBusy(true);
+    try {
+      const res = await SleepGuard.armForNight({ rewardMinutes: 30 });
+      if (res.armed) {
+        setSgArmed(res.session);
+        setSgResult(null);
+        track("sleepguard_armed");
+        return;
+      }
+      if (res.reason === "wrong_tag") {
+        Alert.alert("Different tag", "That isn't the tag you set up. Tap the one in your sleep room.");
+      } else if (res.reason === "motion_denied") {
+        Alert.alert("Motion access needed", "Turn on Motion & Fitness for Drift in Settings to use this.");
+      } else if (res.reason === "no_tag") {
+        await sgSetup();
+      }
+    } catch (e) {
+      if (e?.code !== "cancelled" && e?.message !== "cancelled") {
+        Alert.alert("Couldn't read that tag", "Hold your phone still against the tag and try again.");
+      }
+    } finally {
+      setSgBusy(false);
+    }
+  }, [sgSetup]);
+
+  const sgCancel = useCallback(async () => {
+    await SleepGuard.cancelNight();
+    setSgArmed(null);
+    track("sleepguard_cancelled");
+  }, []);
+
+  // Which face the card shows. Evening window is 8pm-4am: outside it, and with
+  // nothing to report, the card doesn't render at all.
+  const sleepGuardCard = useMemo(() => {
+    if (!SleepGuard.isAvailable() || appMode !== "personal") return null;
+    const hour = new Date().getHours();
+    const evening = hour >= 20 || hour < 4;
+
+    let mode = null;
+    if (sgResult && !sgDismissed)      mode = "result";
+    else if (sgArmed)                  mode = "armed";
+    else if (evening && sgTag)         mode = "ready";
+    else if (evening && !sgDismissed)  mode = "setup";
+    if (!mode) return null;
+
+    return {
+      mode,
+      armedAt: sgArmed?.startedAt || null,
+      result: sgResult,
+      streak: sgStreak,
+      busy: sgBusy,
+      onSetup: sgSetup,
+      onArm: sgArm,
+      onCancel: sgCancel,
+      onDismiss: () => setSgDismissed(true),
+    };
+  }, [appMode, sgTag, sgArmed, sgResult, sgStreak, sgBusy, sgDismissed, sgSetup, sgArm, sgCancel, minuteTick]);
 
   const tryOpenAddTask = useCallback(() => {
     setOverlay("add");
@@ -5977,6 +6216,7 @@ export default function App() {
               showAutoTasksHint={autoTasksHint}
               onOpenAutoTasks={() => setShowAutoTasks(true)}
               onDismissAutoTasksHint={dismissAutoTasksHint}
+              sleepGuard={sleepGuardCard}
             />
           </View>
           <View style={{ width: TAB_W, height: "100%", backgroundColor: driftInActive ? th_ink.void : th_paper.warm }}>

@@ -146,6 +146,35 @@ export async function notifyLowTime(minutesLeft) {
  * next depletion is a new episode and deserves exactly one new notification.
  * Also dismisses any stale "Time's up" banner still sitting in the tray.
  */
+/**
+ * Morning result for the overnight "phone in another room" guard. Fired on the
+ * first foreground after a night is verified, so the outcome reaches the user
+ * even if they don't open Drift.
+ *
+ * Not latched: a night is verified exactly once (verifyNight consumes the armed
+ * session), so there is no repeat to guard against.
+ */
+export async function notifySleepGuardResult({ status, rewardMinutes, firstMovementAt }) {
+  if (status === "success") {
+    await fireImmediate(
+      "drift-sleepguard-result",
+      "Your phone stayed put",
+      `A full night in the other room. +${Math.max(1, Math.round(rewardMinutes || 0))} minutes earned.`,
+    );
+    return;
+  }
+  if (status === "moved") {
+    const when = firstMovementAt
+      ? new Date(firstMovementAt * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+      : null;
+    await fireImmediate(
+      "drift-sleepguard-result",
+      "Your phone moved last night",
+      when ? `It was picked up around ${when}. No bonus this time.` : "No bonus this time.",
+    );
+  }
+}
+
 export async function resetTimeNotices() {
   outLatched = false;
   lowLatched = false;
