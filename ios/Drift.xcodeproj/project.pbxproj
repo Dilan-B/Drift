@@ -23,6 +23,8 @@
 		DR70010000000000000000A1 /* ScreenTimeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B1 /* ScreenTimeModule.swift */; };
 		DR70010000000000000000A2 /* ScreenTimeModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B2 /* ScreenTimeModule.m */; };
 		DR70010000000000000000A5 /* DriftAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B5 /* DriftAppIntents.swift */; };
+		DR70010000000000000000A7 /* SleepGuardModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B7 /* SleepGuardModule.m */; };
+		DR70010000000000000000A6 /* SleepGuardModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B6 /* SleepGuardModule.swift */; };
 		DR70010000000000000000C1 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000D1 /* FamilyControls.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		DR70010000000000000000C2 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000D2 /* ManagedSettings.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		DR70010000000000000000C3 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000D3 /* DeviceActivity.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
@@ -92,6 +94,8 @@
 		DR70020000000000000000B1 /* ScreenTimeModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScreenTimeModule.swift; path = Drift/ScreenTimeModule.swift; sourceTree = "<group>"; };
 		DR70020000000000000000B2 /* ScreenTimeModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ScreenTimeModule.m; path = Drift/ScreenTimeModule.m; sourceTree = "<group>"; };
 		DR70020000000000000000B5 /* DriftAppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DriftAppIntents.swift; path = Drift/DriftAppIntents.swift; sourceTree = "<group>"; };
+		DR70020000000000000000B7 /* SleepGuardModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = SleepGuardModule.m; path = Drift/SleepGuardModule.m; sourceTree = "<group>"; };
+		DR70020000000000000000B6 /* SleepGuardModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SleepGuardModule.swift; path = Drift/SleepGuardModule.swift; sourceTree = "<group>"; };
 		DR70020000000000000000D1 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 		DR70020000000000000000D2 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
 		DR70020000000000000000D3 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
@@ -212,6 +216,8 @@
 				F11748442D0722820044C1D9 /* Drift-Bridging-Header.h */,
 				DR70020000000000000000B1 /* ScreenTimeModule.swift */,
 				DR70020000000000000000B5 /* DriftAppIntents.swift */,
+				DR70020000000000000000B7 /* SleepGuardModule.m */,
+				DR70020000000000000000B6 /* SleepGuardModule.swift */,
 				DR70020000000000000000B2 /* ScreenTimeModule.m */,
 				DRP2020000000000000000B1 /* DriftPhase2Shared.swift */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
@@ -611,6 +617,8 @@
 				DRP2010000000000000000A1 /* DriftPhase2Shared.swift in Sources */,
 				DR70010000000000000000A1 /* ScreenTimeModule.swift in Sources */,
 				DR70010000000000000000A5 /* DriftAppIntents.swift in Sources */,
+				DR70010000000000000000A7 /* SleepGuardModule.m in Sources */,
+				DR70010000000000000000A6 /* SleepGuardModule.swift in Sources */,
 				DR70010000000000000000A2 /* ScreenTimeModule.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

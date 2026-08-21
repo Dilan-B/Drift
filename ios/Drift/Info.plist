@@ -50,6 +50,8 @@
          auth session at rest on-device. No proprietary or non-standard
          algorithms. Without this key App Store Connect flags every new build
          "Missing Compliance" and blocks submission until answered by hand. -->
+    <key>NFCReaderUsageDescription</key>
+    <string>Drift reads an NFC tag you place in another room, so you can prove your phone is there before you sleep. Drift only reads the tag's ID and never writes to it.</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSMinimumSystemVersion</key>
