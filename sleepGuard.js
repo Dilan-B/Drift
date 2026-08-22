@@ -35,7 +35,10 @@ const KEY_HISTORY = "drift_sleepguard_history";  // last 30 nights
 
 /** Minutes of armed time below which a night doesn't count. Stops someone
  *  arming at 6:58am to farm the reward. */
-const MIN_NIGHT_MINUTES = 240; // 4 hours
+// 4 hours in production. A real verification needs a real night, which makes
+// the feature impossible to iterate on — so dev builds settle after 2 minutes.
+// __DEV__ is false in release/TestFlight, so shipped builds keep the 4h floor.
+const MIN_NIGHT_MINUTES = __DEV__ ? 2 : 240;
 
 /** Share of samples that must read stationary. Not 1.0: a phone on a dresser
  *  picks up stray samples from a passing truck or a slammed door. */
@@ -131,6 +134,33 @@ export async function verifyNight() {
   const startSec = Math.floor(session.startedAt / 1000);
   const endSec   = Math.floor(Date.now() / 1000);
   const minutes  = Math.round((endSec - startSec) / 60);
+
+  // Check motion BEFORE the duration gate. A night that is already ruined
+  // should say so the moment the user next opens Drift, not stay silently
+  // "in progress" until the minimum elapses. iOS will not run us while the
+  // phone sits in another room, so this foreground moment is the earliest
+  // point we can possibly tell them.
+  let early;
+  try {
+    early = await Native.checkStillness(startSec, endSec);
+  } catch {
+    early = null;
+  }
+  if (early?.conclusive && (early.moved || early.movementEvents > 0)) {
+    await AsyncStorage.removeItem(KEY_ARMED).catch(() => {});
+    const rec = {
+      date: new Date(session.startedAt).toISOString().slice(0, 10),
+      startedAt: session.startedAt,
+      endedAt: Date.now(),
+      minutes,
+      status: "moved",
+      rewardMinutes: 0,
+      firstMovementAt: early.firstMovementAt || null,
+      stationaryRatio: early.stationaryRatio ?? null,
+    };
+    await appendHistory(rec);
+    return { status: "moved", ...rec };
+  }
 
   if (minutes < MIN_NIGHT_MINUTES) {
     return { status: "too_short", minutes, needed: MIN_NIGHT_MINUTES };

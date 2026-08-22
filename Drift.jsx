@@ -21,7 +21,7 @@ import {
   clearPendingBalance, cache,
 } from "./sync";
 import { registerBackgroundRefresh } from "./backgroundRefresh";
-import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTimeNotices, scheduleDailyReminder, cancelAllNotifications, registerForPushNotifications, notifyLosingOnLeaderboard, notifySleepGuardResult } from "./notifications";
+import { requestNotificationPermission, notifyOutOfTime, notifyLowTime, resetTimeNotices, scheduleDailyReminder, cancelAllNotifications, registerForPushNotifications, notifyLosingOnLeaderboard, notifySleepGuardResult, scheduleSleepGuardReminder, cancelSleepGuardReminder } from "./notifications";
 import { applyBlocking, clearBlocking } from "./blockedApps";
 // Importing places.js at module scope registers the geofence background task,
 // which iOS may wake the app directly into on a cold start.
@@ -4388,7 +4388,29 @@ export default function App() {
 
   const completeAuthenticatedUser = useCallback(async (user, answers = {}) => {
     const authUser = user?.id ? user : (await safeGetSession())?.data?.session?.user;
-    if (!authUser?.id) return;
+
+    // Both failure paths below MUST route the user somewhere. This function is
+    // the last thing onboarding calls, so a bare `return` leaves the final slide
+    // on screen forever — which is exactly what the "Getting it all set up for
+    // you" spinner-that-never-ends was, and why "Not now" appeared to do nothing.
+    // Neither symptom produced an error, because nothing was reported.
+    const backToSignIn = async () => {
+      const hasOnboarded = await AsyncStorage.getItem("drift_onboarded").catch(() => null);
+      setSignInOnly(hasOnboarded === "1");
+      setOnboarding(true);
+    };
+
+    if (!authUser?.id) {
+      console.warn("completeAuthenticatedUser: no session and no user — returning to sign-in");
+      track("onboarding_complete_no_session");
+      Alert.alert(
+        "Couldn't finish signing you in",
+        "Your session didn't stick. Please sign in again — nothing you set up was lost.",
+      );
+      await backToSignIn();
+      return;
+    }
+
     // Phone users confirm via SMS OTP (phone_confirmed_at), email users via
     // email link/code (email_confirmed_at). confirmed_at covers either, but we
     // check all three so neither method is wrongly treated as unverified.
@@ -4396,6 +4418,7 @@ export default function App() {
     if (!isVerified) {
       await supabase.auth.signOut().catch(() => {});
       Alert.alert("Verify your account", "Confirm your email or phone number before continuing.");
+      await backToSignIn();
       return;
     }
 
@@ -4646,7 +4669,11 @@ export default function App() {
     // Phase 1 (parents are never blocked; child enforcement comes later).
     if (appMode !== "personal") return;
     if (driftInActive) return; // session handler controls shield
-    if (blockedHoursActive) {
+    // An armed sleep-guard night blocks unconditionally, exactly like blocked
+    // hours: the phone is supposed to be in another room, so a positive balance
+    // must not leave the apps open. Cleared when the night is verified or
+    // cancelled, at which point the normal balance mapping resumes.
+    if (blockedHoursActive || sgArmed) {
       (async () => {
         try {
           await stopBalanceMonitoring();
@@ -4708,7 +4735,7 @@ export default function App() {
         shieldStateRef.current = desired;
       } catch {}
     })();
-  }, [appMode, credits.balance, credits.balanceSec, driftInActive, blockedHoursActive, lastArmedSeconds]);
+  }, [appMode, credits.balance, credits.balanceSec, driftInActive, blockedHoursActive, sgArmed, lastArmedSeconds]);
 
   // Refresh Screen Time auth status when the account sheet opens
   useEffect(() => {
@@ -5317,6 +5344,16 @@ export default function App() {
     }
   };
 
+  // Bedtime reminder at 21:45, but only for someone who has registered a tag —
+  // otherwise it advertises a feature they never set up. Cancelled while a night
+  // is armed (they already tapped, so it would just be noise) and restored once
+  // the night settles.
+  useEffect(() => {
+    if (appMode !== "personal" || !SleepGuard.isAvailable()) return;
+    if (sgTag && !sgArmed) scheduleSleepGuardReminder(21, 45).catch(() => {});
+    else cancelSleepGuardReminder().catch(() => {});
+  }, [appMode, sgTag, sgArmed]);
+
   // ── Sleep guard handlers + card state ──────────────────────
   const sgSetup = useCallback(async () => {
     setSgBusy(true);
@@ -5378,8 +5415,11 @@ export default function App() {
   // nothing to report, the card doesn't render at all.
   const sleepGuardCard = useMemo(() => {
     if (!SleepGuard.isAvailable() || appMode !== "personal") return null;
+    // The card is a bedtime surface, so it only exists 8pm-4am. That makes it
+    // untestable during the day, hence the __DEV__ escape (false in any release
+    // or TestFlight build, so users still only see it in the evening).
     const hour = new Date().getHours();
-    const evening = hour >= 20 || hour < 4;
+    const evening = __DEV__ || hour >= 20 || hour < 4;
 
     let mode = null;
     if (sgResult && !sgDismissed)      mode = "result";

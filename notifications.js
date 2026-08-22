@@ -29,6 +29,7 @@ try { Constants = require("expo-constants")?.default; } catch {}
 const OUT_OF_TIME_ID = "drift-out-of-time";
 const LOW_TIME_ID    = "drift-low-time";
 const DAILY_ID       = "drift-daily-reminder";
+const SLEEP_TAG_ID   = "drift-sleepguard-bedtime";
 
 // ── "Time's up" / "running low" latches ──────────────────────
 // Running out of time is ONE event, but several code paths notice it (the
@@ -207,6 +208,36 @@ export async function scheduleDailyReminder(hour = 10, minute = 0) {
 }
 
 /** A friend request just arrived. Unique id per sender so several can stack. */
+/**
+ * Nightly nudge to go tap the sleep-guard tag. Repeats daily at the given time.
+ *
+ * Only worth scheduling for someone who has actually registered a tag —
+ * otherwise it advertises a feature they never set up. Callers are expected to
+ * cancel it once a night is armed (they already tapped, so the reminder would
+ * just be noise) and reschedule when the night settles.
+ */
+export async function scheduleSleepGuardReminder(hour = 21, minute = 45) {
+  if (!(await ensureGranted())) return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(SLEEP_TAG_ID).catch(() => {});
+    const trigger = Notifications.SchedulableTriggerInputTypes
+      ? { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute }
+      : { hour, minute, repeats: true }; // fallback for older versions
+    await Notifications.scheduleNotificationAsync({
+      identifier: SLEEP_TAG_ID,
+      content: {
+        title: "Time to put your phone to bed",
+        body: "Take it to the other room and tap your tag to start the night.",
+      },
+      trigger,
+    });
+  } catch {}
+}
+
+export async function cancelSleepGuardReminder() {
+  try { await Notifications.cancelScheduledNotificationAsync(SLEEP_TAG_ID); } catch {}
+}
+
 export async function notifyFriendRequest(fromUsername) {
   if (!(await ensureGranted())) return;
   try {

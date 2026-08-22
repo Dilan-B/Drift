@@ -10,6 +10,10 @@ public class AppDelegate: ExpoAppDelegate {
   var reactNativeDelegate: ExpoReactNativeFactoryDelegate?
   var reactNativeFactory: RCTReactNativeFactory?
 
+  // Held for SceneDelegate: the scene connects AFTER didFinishLaunching, and
+  // startReactNative still wants the original launch options.
+  var pendingLaunchOptions: [UIApplication.LaunchOptionsKey: Any]?
+
   public override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -23,16 +27,46 @@ public class AppDelegate: ExpoAppDelegate {
     reactNativeDelegate = delegate
     reactNativeFactory = factory
     bindReactNativeFactory(factory)
+    pendingLaunchOptions = launchOptions
 
+    // React Native is started HERE, before super, exactly as Expo's template
+    // does it — NOT in SceneDelegate.
+    //
+    // expo-dev-launcher requires it: its subscriber runs during
+    // super.application(...) and calls EXDevLauncherController.autoSetupStart,
+    // which throws "was called before autoSetupPrepare:" unless the bridge was
+    // already created. Moving startReactNative into the scene (the textbook
+    // migration) breaks that ordering.
+    //
+    // SceneDelegate therefore does NOT start React Native. It only attaches this
+    // window to the scene. The UIApplicationSceneManifest in Info.plist is what
+    // satisfies the iOS 27 SDK's scene requirement; the startup order is
+    // unchanged from before the migration.
 #if os(iOS) || os(tvOS)
-    window = UIWindow(frame: UIScreen.main.bounds)
+    let mainWindow = UIWindow(frame: UIScreen.main.bounds)
+    window = mainWindow
     factory.startReactNative(
       withModuleName: "main",
-      in: window,
+      in: mainWindow,
       launchOptions: launchOptions)
+    mainWindow.makeKeyAndVisible()
 #endif
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  // Points UIKit at SceneDelegate. Must agree with the UISceneDelegateClassName
+  // in Info.plist's UIApplicationSceneManifest.
+  public func application(
+    _ application: UIApplication,
+    configurationForConnecting connectingSceneSession: UISceneSession,
+    options: UIScene.ConnectionOptions
+  ) -> UISceneConfiguration {
+    let config = UISceneConfiguration(
+      name: "Default Configuration",
+      sessionRole: connectingSceneSession.role)
+    config.delegateClass = SceneDelegate.self
+    return config
   }
 
   // Linking API
