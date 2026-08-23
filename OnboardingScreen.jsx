@@ -1405,6 +1405,21 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
     setStepIndex(0);
   }
   function devGoPostSignup() {
+    // Jumps past the auth step, so handleAuthDone never runs and
+    // authedUserRef stays nil. If there is also no Supabase session on the
+    // device, finish() then calls onComplete with no user and onboarding
+    // cannot complete — which looks like the last slide hanging forever.
+    // Say so up front instead of letting it look like a real bug.
+    if (!authedUserRef.current) {
+      supabase.auth.getSession().then(({ data }) => {
+        if (!data?.session?.user?.id) {
+          Alert.alert(
+            "DEV skip — no session",
+            "This jumps past sign-in, so onboarding won't be able to finish. Sign in normally to test the full flow.",
+          );
+        }
+      }).catch(() => {});
+    }
     setStepIndex(STEPS.findIndex((s) => s.id === "tasks"));
   }
 

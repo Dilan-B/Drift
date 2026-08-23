@@ -323,9 +323,21 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
         // FunctionsHttpError exposes status on its context
         status = res.error?.context?.status || (body && !res.error ? 200 : 0);
 
-        // If the SDK got a non-2xx, try to parse the body it received
-        if (res.error?.context?.response) {
-          try { body = await res.error.context.response.json(); } catch {}
+        // If the SDK got a non-2xx, parse the body it received.
+        //
+        // FunctionsHttpError is constructed as `new FunctionsHttpError(response)`,
+        // so `context` IS the Response — there is no `context.response`. Reading
+        // that nested property always came back undefined, so the server's real
+        // reason ("image_too_large", "proof_required", ...) was silently dropped
+        // and EVERY failure collapsed to the generic "error 400" message. The
+        // status kept working only because Response happens to have `.status`.
+        const ctx = res.error?.context;
+        if (ctx && typeof ctx.json === "function") {
+          try { body = await ctx.clone().json(); }
+          catch {
+            try { const t = await ctx.clone().text(); if (t) body = { error: "server_error", message: t.slice(0, 200) }; }
+            catch {}
+          }
         }
       } catch (e) {
         invokeErr = e;

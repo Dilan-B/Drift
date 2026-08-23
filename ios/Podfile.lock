@@ -266,6 +266,8 @@ PODS:
     - ExpoModulesCore
   - ExpoStoreReview (9.0.9):
     - ExpoModulesCore
+  - ExpoVideoThumbnails (10.0.8):
+    - ExpoModulesCore
   - ExpoWebBrowser (15.0.11):
     - ExpoModulesCore
   - EXTaskManager (14.0.9):
@@ -289,6 +291,8 @@ PODS:
   - libwebp/sharpyuv (1.5.0)
   - libwebp/webp (1.5.0):
     - libwebp/sharpyuv
+  - PurchasesHybridCommon (18.31.0):
+    - RevenueCat (= 5.84.0)
   - RCTDeprecation (0.81.5)
   - RCTRequired (0.81.5)
   - RCTTypeSafety (0.81.5):
@@ -2029,6 +2033,7 @@ PODS:
     - React-utils (= 0.81.5)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.81.5)
+  - RevenueCat (5.84.0)
   - RNCAsyncStorage (2.2.0):
     - hermes-engine
     - RCTRequired
@@ -2073,6 +2078,9 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNPurchases (10.7.2):
+    - PurchasesHybridCommon (= 18.31.0)
+    - React-Core
   - RNReanimated (4.1.7):
     - hermes-engine
     - RCTRequired
@@ -2335,6 +2343,7 @@ DEPENDENCIES:
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
   - ExpoStoreReview (from `../node_modules/expo-store-review/ios`)
+  - ExpoVideoThumbnails (from `../node_modules/expo-video-thumbnails/ios`)
   - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
   - EXTaskManager (from `../node_modules/expo-task-manager/ios`)
   - EXUpdatesInterface (from `../node_modules/expo-updates-interface/ios`)
@@ -2411,6 +2420,7 @@ DEPENDENCIES:
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
+  - RNPurchases (from `../node_modules/react-native-purchases`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
@@ -2422,6 +2432,8 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - libwebp
+    - PurchasesHybridCommon
+    - RevenueCat
     - SDWebImage
     - SDWebImageWebPCoder
 
@@ -2484,6 +2496,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-secure-store/ios"
   ExpoStoreReview:
     :path: "../node_modules/expo-store-review/ios"
+  ExpoVideoThumbnails:
+    :path: "../node_modules/expo-video-thumbnails/ios"
   ExpoWebBrowser:
     :path: "../node_modules/expo-web-browser/ios"
   EXTaskManager:
@@ -2635,6 +2649,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-async-storage/async-storage"
   RNDateTimePicker:
     :path: "../node_modules/@react-native-community/datetimepicker"
+  RNPurchases:
+    :path: "../node_modules/react-native-purchases"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNSVG:
@@ -2680,12 +2696,14 @@ SPEC CHECKSUMS:
   ExpoModulesCore: 9e6a5514828e7dd5ded9e99d33557be2d284e660
   ExpoSecureStore: d32f751874a2ceb5aaeebeb3578e165c1ba2b24a
   ExpoStoreReview: 32bb43b6fae9c8db3e33cad69996dff3785eef5f
+  ExpoVideoThumbnails: 503a79271416c8723f04b55ea4737282513ebe4f
   ExpoWebBrowser: 970dd4c64c29c955c3af664c8058ba768a4c9187
   EXTaskManager: 6f1a66e4c8cc6df6e24c3d90928704bc3013eae5
   EXUpdatesInterface: 5adf50cb41e079c861da6d9b4b954c3db9a50734
   FBLazyVector: e95a291ad2dadb88e42b06e0c5fb8262de53ec12
   hermes-engine: 9f4dfe93326146a1c99eb535b1cb0b857a3cd172
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
+  PurchasesHybridCommon: c3e8f89551e2c8b66691b9f3460ff0ba2e387ea8
   RCTDeprecation: 943572d4be82d480a48f4884f670135ae30bf990
   RCTRequired: 8f3cfc90cc25cf6e420ddb3e7caaaabc57df6043
   RCTTypeSafety: 16a4144ca3f959583ab019b57d5633df10b5e97c
@@ -2754,8 +2772,10 @@ SPEC CHECKSUMS:
   ReactCodegen: 7d4593f7591f002d137fe40cef3f6c11f13c88cc
   ReactCommon: 08810150b1206cc44aecf5f6ae19af32f29151a8
   ReactNativeDependencies: 71ce9c28beb282aa720ea7b46980fff9669f428a
+  RevenueCat: ab894398514fbeec7b1f9f5ae058be2c997f1403
   RNCAsyncStorage: 3a4f5e2777dae1688b781a487923a08569e27fe4
   RNDateTimePicker: be0e44bcb9ed0607c7c5f47dbedd88cf091f6791
+  RNPurchases: 98d91fe229002947b0e3cb9413641a1cf87447bc
   RNReanimated: 41f496c18437fd0aa841234917af84e98fd5b9a2
   RNSVG: 9b5d475f2c83235563f0be57d865415c721050b4
   RNWorklets: 76fce72926e28e304afb44f0da23b2d24f2c1fa0
