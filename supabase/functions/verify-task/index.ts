@@ -431,7 +431,20 @@ serve(async (req: Request) => {
     // thing this feature can do. The cost is the strict rubric below.
     const retroactive = taskRow.logged_retroactively === true;
 
-    if (!retroactive && elapsedMs < requiredMs) {
+    // COMPAT (delete with the taskId shim above): the time gate is server-only
+    // behaviour that has never shipped in a client. Build 65 has no countdown,
+    // no "unlocks in 30 min" copy, and no branch for 425 — it only reads 402
+    // and 429 by status — so a gated submission reaches the user as "the AI
+    // service rejected the request (error 425)". Enforcing a rule the client
+    // cannot explain turns a working feature into an intermittent error, which
+    // is a worse outcome than the pre-gate behaviour those users already had.
+    //
+    // So the gate applies only to clients that sent a taskId, which are exactly
+    // the clients that can render the countdown and the reason. Legacy clients
+    // get back what they had before 2026-08-20 and nothing more.
+    const gateApplies = !legacyClient && !retroactive;
+
+    if (gateApplies && elapsedMs < requiredMs) {
       const remainingMs = requiredMs - elapsedMs;
       logUsage("gated", null);
       // 425 Too Early is the honest status. The client reads secondsRemaining
