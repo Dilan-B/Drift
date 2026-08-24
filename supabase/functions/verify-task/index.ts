@@ -277,6 +277,7 @@ serve(async (req: Request) => {
     // ── 3. Parse & validate input ────────────────────────────
     let body: {
       taskId?: string;
+      taskTitle?: string;
       proofText?: string;
       imageBase64?: string;
       frames?: string[];
@@ -286,17 +287,71 @@ serve(async (req: Request) => {
     try { body = await req.json(); }
     catch { return reject("invalid_json", 400); }
 
-    const { taskId, proofText, imageBase64, frames, videoMeta, followUpAnswer } = body;
+    const { proofText, imageBase64, frames, videoMeta, followUpAnswer } = body;
 
-    // taskId is mandatory. The old contract accepted a bare title, which meant
-    // the server had no row to time-check against — a client could invent a
-    // task that never existed and get it verified. There is deliberately no
-    // fallback: an outdated client must update rather than silently keep the
-    // ungated path alive.
+    // taskId is the contract: the server reads title, duration and creation
+    // time off the row, because anything sent from here is a field it would
+    // have to distrust.
+    //
+    // ── COMPAT: clients that predate the taskId contract ─────────────────
+    // This function was redeployed requiring taskId while the client that
+    // sends it was still unreleased, so EVERY AI Check from the shipped build
+    // 400'd with task_id_required — the feature was down for 100% of users
+    // and the client couldn't even read the "update Drift" message back (see
+    // AICheckModal.jsx). "Make them update" is not available as a fix when
+    // there is no newer build on the App Store to update to.
+    //
+    // So an old client naming a task by TITLE gets the row looked up instead.
+    // This does NOT reopen the hole the taskId contract closed: the lookup
+    // runs through the user's own RLS-scoped client and returns a real row, so
+    // created_at, minutes and the attempt count still come from the database.
+    // The title only chooses WHICH of the caller's own rows is being checked —
+    // it can't invent one. A task that doesn't exist still 404s.
+    //
+    // Delete this branch once the taskId-sending build is the minimum
+    // supported version.
+    let taskId = body.taskId;
+    let legacyClient = false;
+
     if (!taskId || typeof taskId !== "string" || !UUID_RE.test(taskId)) {
-      return reject("task_id_required", 400, {
-        message: "Update Drift to the latest version to use AI Check.",
-      });
+      const legacyTitle = typeof body.taskTitle === "string"
+        ? body.taskTitle.trim().slice(0, 200)
+        : "";
+
+      if (!legacyTitle) {
+        return reject("task_id_required", 400, {
+          message: "Update Drift to the latest version to use AI Check.",
+        });
+      }
+
+      // Newest match first, and prefer one that isn't finished yet. Newest is
+      // the strict choice: with two same-titled tasks the younger one has less
+      // elapsed time, so the gate below is harder to clear, not easier.
+      //
+      // user_id is pinned explicitly rather than left to RLS. The "tasks:
+      // parent select" policy also grants a parent read access to their
+      // children's rows, and matching on a title alone could otherwise resolve
+      // a parent's submission onto a child's identically-named task.
+      const { data: candidates } = await supabase
+        .from("tasks")
+        .select("id, done")
+        .eq("user_id", user.id)
+        .eq("title", legacyTitle)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      const match = (candidates || []).find(t => t.done !== true) || (candidates || [])[0];
+      if (!match?.id) {
+        console.error("reject: legacy_title_no_match (404)");
+        return reject("task_not_found", 404, {
+          message: "That task no longer exists. Pull to refresh and try again.",
+        });
+      }
+
+      taskId = match.id as string;
+      legacyClient = true;
+      console.error("compat: resolved task by title (client predates taskId)");
     }
 
     // ── 3b. Load the task. This read goes through the USER's client, so RLS
@@ -762,7 +817,10 @@ If NO photo or video was submitted, reject and say what to capture.`);
 
         `Write "message" to the user directly, in one or two plain sentences. On a rejection, name the exact ` +
         `thing that was missing and what would settle it next time. Never be sarcastic or scolding.\n\n` +
-        (answering
+        // Suppressed for legacy clients too: they have no way to SEND an
+        // answer, so a question reaches them as a rejection whose message is
+        // a question — the worst of both.
+        (answering || legacyClient
           ? ""
           : `\nIF YOU ARE MINDED TO REJECT BUT THE EVIDENCE IS MERELY AMBIGUOUS RATHER THAN ABSENT OR ` +
             `CONTRADICTORY — it plausibly shows the task but doesn't settle it — do NOT reject. Instead set ` +
@@ -820,7 +878,7 @@ If NO photo or video was submitted, reject and say what to capture.`);
     // the four attempts — otherwise asking the user to clarify actively costs
     // them, and an honest person answering two questions would be halfway to
     // locked out of their own task.
-    const asking = !result.verified && !answering && !!result.question;
+    const asking = !result.verified && !answering && !legacyClient && !!result.question;
 
     // ── 8. Record the outcome ─────────────────────────────────
     logUsage(asking ? `${proofKind}_question` : proofKind, asking ? null : result.verified);
