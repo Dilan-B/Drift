@@ -79,6 +79,7 @@ import ForceUpdateModal from "./ForceUpdateModal";
 import { handleSupabaseAuthCallback } from "./authLinks";
 import SocialScreen from "./SocialScreen";
 import LabScreen from "./LabScreen";
+import SleepGuardModal from "./SleepGuardModal";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
@@ -3561,6 +3562,7 @@ export default function App() {
   const [sgStreak,    setSgStreak]    = useState(0);
   const [sgBusy,      setSgBusy]      = useState(false);
   const [sgDismissed, setSgDismissed] = useState(false);  // per-app-session
+  const [showSleepGuard, setShowSleepGuard] = useState(false);
   const [levelUp,     setLevelUp]     = useState(null);
   const [secLeft,     setSecLeft]     = useState(0);
   // Minutes of earned screen time actually used today. Read from the local
@@ -5350,7 +5352,11 @@ export default function App() {
   // the night settles.
   useEffect(() => {
     if (appMode !== "personal" || !SleepGuard.isAvailable()) return;
-    if (sgTag && !sgArmed) scheduleSleepGuardReminder(21, 45).catch(() => {});
+    if (sgTag && !sgArmed) {
+      SleepGuard.getPrefs()
+        .then(p => scheduleSleepGuardReminder(p.reminderHour, p.reminderMinute))
+        .catch(() => {});
+    }
     else cancelSleepGuardReminder().catch(() => {});
   }, [appMode, sgTag, sgArmed]);
 
@@ -5382,7 +5388,7 @@ export default function App() {
   const sgArm = useCallback(async () => {
     setSgBusy(true);
     try {
-      const res = await SleepGuard.armForNight({ rewardMinutes: 30 });
+      const res = await SleepGuard.armForNight();
       if (res.armed) {
         setSgArmed(res.session);
         setSgResult(null);
@@ -6298,6 +6304,7 @@ export default function App() {
               onOpenBlockedApps={openBlockedAppsPicker}
               onOpenBlockedHours={() => setShowBlockedHours(true)}
               onOpenRecurringTasks={() => setShowRecurringTasks(true)}
+              onOpenSleepGuard={() => setShowSleepGuard(true)}
               // The tour spotlights elements on Today, so jump there before
               // opening it — measuring the hero while it's scrolled off to the
               // side would put the highlight off-screen. The delay lets the tab
@@ -6386,6 +6393,15 @@ export default function App() {
           advanceSuggestion();
         }}
         onDismiss={advanceSuggestion}
+      />
+
+      {/* Sleep guard setup — the only place the tag can be changed or the
+          feature turned off. The nightly tap lives on the Today card. */}
+      <SleepGuardModal
+        visible={showSleepGuard}
+        dark={darkMode}
+        onClose={() => setShowSleepGuard(false)}
+        onChanged={() => { refreshSleepGuard().catch(() => {}); }}
       />
 
       {/* Automatic-task settings (places + calendar) */}

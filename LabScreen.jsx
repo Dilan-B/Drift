@@ -96,6 +96,7 @@ export default function LabScreen({
   onOpenBlockedApps,
   onOpenBlockedHours,
   onOpenRecurringTasks,
+  onOpenSleepGuard,
   onReplayTour,
 }) {
   const theme = getTheme(dark);
@@ -237,6 +238,13 @@ export default function LabScreen({
             title="Blocked hours"
             sub="Windows where apps stay locked no matter your balance."
             onPress={onOpenBlockedHours}
+          />
+          <LinkRow
+            theme={theme}
+            Icon={LockIcon}
+            title="Sleep guard"
+            sub="Tap an NFC tag in another room at bedtime. Apps stay locked until morning."
+            onPress={onOpenSleepGuard}
             last
           />
         </View>

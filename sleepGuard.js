@@ -32,6 +32,7 @@ const Native = NativeModules.SleepGuardModule;
 const KEY_TAG     = "drift_sleepguard_tag";      // the registered tag's UID
 const KEY_ARMED   = "drift_sleepguard_armed";    // the in-flight night
 const KEY_HISTORY = "drift_sleepguard_history";  // last 30 nights
+const KEY_PREFS   = "drift_sleepguard_prefs";    // reward + reminder time
 
 /** Minutes of armed time below which a night doesn't count. Stops someone
  *  arming at 6:58am to farm the reward. */
@@ -89,6 +90,29 @@ export async function clearTag() {
   await AsyncStorage.multiRemove([KEY_TAG, KEY_ARMED]).catch(() => {});
 }
 
+// ── Preferences ──────────────────────────────────────────────
+// Reward size and reminder time were hardcoded (30 min, 21:45). Reasonable
+// defaults, but bedtimes vary enough that a fixed 21:45 nudge is noise for
+// half the people who'd otherwise use this.
+export const DEFAULT_PREFS = {
+  rewardMinutes: 30,
+  reminderHour: 21,
+  reminderMinute: 45,
+};
+
+export async function getPrefs() {
+  try {
+    const raw = await AsyncStorage.getItem(KEY_PREFS);
+    return raw ? { ...DEFAULT_PREFS, ...JSON.parse(raw) } : { ...DEFAULT_PREFS };
+  } catch { return { ...DEFAULT_PREFS }; }
+}
+
+export async function setPrefs(patch) {
+  const next = { ...(await getPrefs()), ...patch };
+  await AsyncStorage.setItem(KEY_PREFS, JSON.stringify(next)).catch(() => {});
+  return next;
+}
+
 // ── Arming ───────────────────────────────────────────────────
 export async function getArmed() {
   try {
@@ -101,7 +125,9 @@ export async function getArmed() {
  * Tap the registered tag to start a night. Rejects a different tag, so the
  * user can't just tap any tag on the fridge next to their bed.
  */
-export async function armForNight({ rewardMinutes = 30 } = {}) {
+export async function armForNight({ rewardMinutes } = {}) {
+  // Falls back to the stored preference so callers don't have to know it.
+  const mins = rewardMinutes ?? (await getPrefs()).rewardMinutes;
   const registered = await getRegisteredTag();
   if (!registered) return { armed: false, reason: "no_tag" };
 
@@ -111,7 +137,7 @@ export async function armForNight({ rewardMinutes = 30 } = {}) {
   const motion = await motionAuthStatus();
   if (motion !== "authorized") return { armed: false, reason: "motion_denied", motion };
 
-  const session = { startedAt: Date.now(), tagId: id, rewardMinutes };
+  const session = { startedAt: Date.now(), tagId: id, rewardMinutes: mins };
   await AsyncStorage.setItem(KEY_ARMED, JSON.stringify(session));
   return { armed: true, session };
 }
