@@ -265,6 +265,9 @@ ROWS = [
     ("2026-08-24", "ac41f39", "Bug Fix", "AI Check", "Time gate fired as an unexplained error on the shipped build",
      "The gate (no proof until half the task duration has elapsed) is server-only behaviour that has never shipped in a client. Build 65 has no countdown, no 'unlocks in 30 min' copy and no branch for 425 - it reads only 402 and 429 by status - so a 60-minute task had a 30-minute window where AI Check just errored with no visible reason. The gate now applies only to clients that send a taskId, which are exactly the clients that can render the countdown and the reason. Same class of mistake as the 400 above: a rule enforced server-side that the client in users' hands cannot express.",
      "Unreleased", "Edge deploy"),
+    ("2026-08-24", "2282249", "Bug Fix", "AI Check", "Legacy title lookup could block a task the user had never verified",
+     "The compat path resolves a task by title, and same-title duplicates turn out to be the norm rather than an exception - production carries up to 23 unfinished rows under one title, spanning 19 days, because people re-add 'Make Bed' every morning. Newest-first lands on today's instance correctly, but the client marks ITS row done locally rather than whichever row the server stamped, so two same-titled tasks added on one day could diverge and the next honest submission would come back 'already verified'. Selection now prefers a row that is neither done nor already stamped. Replay protection is unaffected: when the replayed row is the only candidate it is still the one picked. A failed lookup now returns 503 rather than 404, which had been telling users to refresh a list that was fine.",
+     "Unreleased", "Edge deploy"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
