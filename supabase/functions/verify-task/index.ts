@@ -324,24 +324,46 @@ serve(async (req: Request) => {
         });
       }
 
-      // Newest match first, and prefer one that isn't finished yet. Newest is
-      // the strict choice: with two same-titled tasks the younger one has less
-      // elapsed time, so the gate below is harder to clear, not easier.
-      //
       // user_id is pinned explicitly rather than left to RLS. The "tasks:
       // parent select" policy also grants a parent read access to their
       // children's rows, and matching on a title alone could otherwise resolve
       // a parent's submission onto a child's identically-named task.
-      const { data: candidates } = await supabase
+      const { data: candidates, error: lookupErr } = await supabase
         .from("tasks")
-        .select("id, done")
+        .select("id, done, verified_at")
         .eq("user_id", user.id)
         .eq("title", legacyTitle)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(5);
 
-      const match = (candidates || []).find(t => t.done !== true) || (candidates || [])[0];
+      // A failed lookup is not "no such task" — saying so would send the user
+      // to refresh a list that is perfectly fine. 503 is the honest answer.
+      if (lookupErr) {
+        console.error("legacy title lookup failed:", lookupErr.code || "unknown");
+        return reject("task_lookup_failed", 503, {
+          message: "Couldn't load that task. Try again in a moment.",
+        });
+      }
+
+      // Same-title duplicates are the NORM here, not an exception: people
+      // re-add "Make Bed" every morning, so one user can carry twenty
+      // unfinished rows under a single title. Newest-first therefore lands on
+      // today's instance, which is the only one the client puts on screen.
+      //
+      // Skipping rows already stamped verified matters because the client
+      // marks ITS row done locally, not whichever row the server stamped. If
+      // those diverge — two tasks sharing a title added on the same day — the
+      // next honest submission would otherwise re-select the stamped row and
+      // come back "already verified" for a task the user never verified.
+      // Preferring an unstamped row keeps that from blocking real work.
+      // Replay protection is untouched: when the row being replayed is the
+      // only candidate, it is still the one that gets picked, and the
+      // already_verified check below still fires on it.
+      const rows = candidates || [];
+      const match = rows.find(t => t.done !== true && !t.verified_at) ||
+                    rows.find(t => t.done !== true) ||
+                    rows[0];
       if (!match?.id) {
         console.error("reject: legacy_title_no_match (404)");
         return reject("task_not_found", 404, {
