@@ -262,6 +262,9 @@ ROWS = [
     ("2026-08-24", "0d07a1a", "Infra", "AI Check", "Three commits of undeployed verify-task work went live",
      "The deployed function was pinned at the 2026-08-20 16:18 build, predating retroactive-task support and the ask-a-clarifying-question-before-rejecting flow. Caught by diffing the downloaded artifact against the repo - worth doing routinely, since nothing in the deploy path reports drift.",
      "Unreleased", "Edge deploy"),
+    ("2026-08-24", "ac41f39", "Bug Fix", "AI Check", "Time gate fired as an unexplained error on the shipped build",
+     "The gate (no proof until half the task duration has elapsed) is server-only behaviour that has never shipped in a client. Build 65 has no countdown, no 'unlocks in 30 min' copy and no branch for 425 - it reads only 402 and 429 by status - so a 60-minute task had a 30-minute window where AI Check just errored with no visible reason. The gate now applies only to clients that send a taskId, which are exactly the clients that can render the countdown and the reason. Same class of mistake as the 400 above: a rule enforced server-side that the client in users' hands cannot express.",
+     "Unreleased", "Edge deploy"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
