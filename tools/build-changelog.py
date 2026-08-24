@@ -251,6 +251,17 @@ ROWS = [
     ("2026-08-16", "2c2ced7", "Docs", "Website", "Blog section, AI and Siri articles, sitemap and structured data",
      "Adds a blog index plus posts on AI verification and Siri control, a sitemap.xml and robots.txt (neither existed before), and JSON-LD MobileApplication/Article/FAQPage markup. Published to the GitHub Pages site, NOT to driftproductivity.com - see SITEBLOG.md for that handoff.",
      "1.1.6", "—"),
+
+    # ── 2026-08-24 ────────────────────────────────────────────
+    ("2026-08-24", "0d07a1a", "Bug Fix", "AI Check", "AI Check was rejecting every submission from every live user",
+     "verify-task was redeployed on 2026-08-20 making taskId mandatory with a deliberate no-fallback policy, but the client change that sends taskId never shipped - the build in users' hands is 65, which still sends only taskTitle/durationMins. Every submission returned task_id_required (400) for four days. An old client naming a task by TITLE now gets the row looked up instead: the lookup runs through the caller's own RLS-scoped client and returns a real row, so created_at, minutes and the attempt count still come from the database and the time gate still holds - the title only chooses WHICH of the caller's own rows is being checked. user_id is pinned explicitly because the 'tasks: parent select' policy would otherwise let a parent's submission resolve onto a child's identically-named task. Temporary: delete once the taskId-sending build is the minimum supported version.",
+     "Unreleased", "Edge deploy"),
+    ("2026-08-24", "0d07a1a", "Bug Fix", "AI Check", "Server error messages never reached the user - everything read as a bare status code",
+     "The client looked for the error body at res.error.context.response. In functions-js error.context IS the Response; there is no .response wrapper, so body stayed null and every status under 500 fell through to a generic 'the AI service rejected the request (error N)' alert. That is why a four-day outage surfaced as an unexplained 400 instead of the server's own 'Update Drift'. The 402 paywall, 425 too-early, follow-up-question and ai_error branches all read body, so they were silently dead too.",
+     "Unreleased", "—"),
+    ("2026-08-24", "0d07a1a", "Infra", "AI Check", "Three commits of undeployed verify-task work went live",
+     "The deployed function was pinned at the 2026-08-20 16:18 build, predating retroactive-task support and the ask-a-clarifying-question-before-rejecting flow. Caught by diffing the downloaded artifact against the repo - worth doing routinely, since nothing in the deploy path reports drift.",
+     "Unreleased", "Edge deploy"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
