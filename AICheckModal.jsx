@@ -320,24 +320,27 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
         );
         body = res.data;
         invokeErr = res.error;
-        // FunctionsHttpError exposes status on its context
-        status = res.error?.context?.status || (body && !res.error ? 200 : 0);
 
-        // If the SDK got a non-2xx, parse the body it received.
+        // On a non-2xx, functions-js throws FunctionsHttpError and returns
+        // `{ data: null, error, response }` — where BOTH `res.response` and
+        // `error.context` are the raw Response. There is no `.context.response`
+        // wrapper; looking for one meant this never found a body, so every
+        // error below 500 fell through to the generic "the AI service rejected
+        // the request (error N)" alert. The server's actual reason — and the
+        // 402 / 425 / 429 / follow-up-question branches that all read `body` —
+        // were unreachable. That is what turned a plain "update Drift" into an
+        // unexplained 400.
         //
-        // FunctionsHttpError is constructed as `new FunctionsHttpError(response)`,
-        // so `context` IS the Response — there is no `context.response`. Reading
-        // that nested property always came back undefined, so the server's real
-        // reason ("image_too_large", "proof_required", ...) was silently dropped
-        // and EVERY failure collapsed to the generic "error 400" message. The
-        // status kept working only because Response happens to have `.status`.
-        const ctx = res.error?.context;
-        if (ctx && typeof ctx.json === "function") {
-          try { body = await ctx.clone().json(); }
-          catch {
-            try { const t = await ctx.clone().text(); if (t) body = { error: "server_error", message: t.slice(0, 200) }; }
-            catch {}
-          }
+        // The SDK does NOT read the body before throwing, so .json() here is
+        // the first and only read.
+        const errRes = res.response || res.error?.context || null;
+        const isResponse = !!errRes && typeof errRes.json === "function";
+
+        status = (isResponse ? errRes.status : res.error?.context?.status) ||
+                 (body && !res.error ? 200 : 0);
+
+        if (res.error && isResponse) {
+          try { body = await errRes.json(); } catch {}
         }
       } catch (e) {
         invokeErr = e;

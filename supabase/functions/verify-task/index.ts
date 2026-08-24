@@ -277,6 +277,7 @@ serve(async (req: Request) => {
     // ── 3. Parse & validate input ────────────────────────────
     let body: {
       taskId?: string;
+      taskTitle?: string;
       proofText?: string;
       imageBase64?: string;
       frames?: string[];
@@ -286,17 +287,93 @@ serve(async (req: Request) => {
     try { body = await req.json(); }
     catch { return reject("invalid_json", 400); }
 
-    const { taskId, proofText, imageBase64, frames, videoMeta, followUpAnswer } = body;
+    const { proofText, imageBase64, frames, videoMeta, followUpAnswer } = body;
 
-    // taskId is mandatory. The old contract accepted a bare title, which meant
-    // the server had no row to time-check against — a client could invent a
-    // task that never existed and get it verified. There is deliberately no
-    // fallback: an outdated client must update rather than silently keep the
-    // ungated path alive.
+    // taskId is the contract: the server reads title, duration and creation
+    // time off the row, because anything sent from here is a field it would
+    // have to distrust.
+    //
+    // ── COMPAT: clients that predate the taskId contract ─────────────────
+    // This function was redeployed requiring taskId while the client that
+    // sends it was still unreleased, so EVERY AI Check from the shipped build
+    // 400'd with task_id_required — the feature was down for 100% of users
+    // and the client couldn't even read the "update Drift" message back (see
+    // AICheckModal.jsx). "Make them update" is not available as a fix when
+    // there is no newer build on the App Store to update to.
+    //
+    // So an old client naming a task by TITLE gets the row looked up instead.
+    // This does NOT reopen the hole the taskId contract closed: the lookup
+    // runs through the user's own RLS-scoped client and returns a real row, so
+    // created_at, minutes and the attempt count still come from the database.
+    // The title only chooses WHICH of the caller's own rows is being checked —
+    // it can't invent one. A task that doesn't exist still 404s.
+    //
+    // Delete this branch once the taskId-sending build is the minimum
+    // supported version.
+    let taskId = body.taskId;
+    let legacyClient = false;
+
     if (!taskId || typeof taskId !== "string" || !UUID_RE.test(taskId)) {
-      return reject("task_id_required", 400, {
-        message: "Update Drift to the latest version to use AI Check.",
-      });
+      const legacyTitle = typeof body.taskTitle === "string"
+        ? body.taskTitle.trim().slice(0, 200)
+        : "";
+
+      if (!legacyTitle) {
+        return reject("task_id_required", 400, {
+          message: "Update Drift to the latest version to use AI Check.",
+        });
+      }
+
+      // user_id is pinned explicitly rather than left to RLS. The "tasks:
+      // parent select" policy also grants a parent read access to their
+      // children's rows, and matching on a title alone could otherwise resolve
+      // a parent's submission onto a child's identically-named task.
+      const { data: candidates, error: lookupErr } = await supabase
+        .from("tasks")
+        .select("id, done, verified_at")
+        .eq("user_id", user.id)
+        .eq("title", legacyTitle)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      // A failed lookup is not "no such task" — saying so would send the user
+      // to refresh a list that is perfectly fine. 503 is the honest answer.
+      if (lookupErr) {
+        console.error("legacy title lookup failed:", lookupErr.code || "unknown");
+        return reject("task_lookup_failed", 503, {
+          message: "Couldn't load that task. Try again in a moment.",
+        });
+      }
+
+      // Same-title duplicates are the NORM here, not an exception: people
+      // re-add "Make Bed" every morning, so one user can carry twenty
+      // unfinished rows under a single title. Newest-first therefore lands on
+      // today's instance, which is the only one the client puts on screen.
+      //
+      // Skipping rows already stamped verified matters because the client
+      // marks ITS row done locally, not whichever row the server stamped. If
+      // those diverge — two tasks sharing a title added on the same day — the
+      // next honest submission would otherwise re-select the stamped row and
+      // come back "already verified" for a task the user never verified.
+      // Preferring an unstamped row keeps that from blocking real work.
+      // Replay protection is untouched: when the row being replayed is the
+      // only candidate, it is still the one that gets picked, and the
+      // already_verified check below still fires on it.
+      const rows = candidates || [];
+      const match = rows.find(t => t.done !== true && !t.verified_at) ||
+                    rows.find(t => t.done !== true) ||
+                    rows[0];
+      if (!match?.id) {
+        console.error("reject: legacy_title_no_match (404)");
+        return reject("task_not_found", 404, {
+          message: "That task no longer exists. Pull to refresh and try again.",
+        });
+      }
+
+      taskId = match.id as string;
+      legacyClient = true;
+      console.error("compat: resolved task by title (client predates taskId)");
     }
 
     // ── 3b. Load the task. This read goes through the USER's client, so RLS
@@ -376,7 +453,20 @@ serve(async (req: Request) => {
     // thing this feature can do. The cost is the strict rubric below.
     const retroactive = taskRow.logged_retroactively === true;
 
-    if (!retroactive && elapsedMs < requiredMs) {
+    // COMPAT (delete with the taskId shim above): the time gate is server-only
+    // behaviour that has never shipped in a client. Build 65 has no countdown,
+    // no "unlocks in 30 min" copy, and no branch for 425 — it only reads 402
+    // and 429 by status — so a gated submission reaches the user as "the AI
+    // service rejected the request (error 425)". Enforcing a rule the client
+    // cannot explain turns a working feature into an intermittent error, which
+    // is a worse outcome than the pre-gate behaviour those users already had.
+    //
+    // So the gate applies only to clients that sent a taskId, which are exactly
+    // the clients that can render the countdown and the reason. Legacy clients
+    // get back what they had before 2026-08-20 and nothing more.
+    const gateApplies = !legacyClient && !retroactive;
+
+    if (gateApplies && elapsedMs < requiredMs) {
       const remainingMs = requiredMs - elapsedMs;
       logUsage("gated", null);
       // 425 Too Early is the honest status. The client reads secondsRemaining
@@ -762,7 +852,10 @@ If NO photo or video was submitted, reject and say what to capture.`);
 
         `Write "message" to the user directly, in one or two plain sentences. On a rejection, name the exact ` +
         `thing that was missing and what would settle it next time. Never be sarcastic or scolding.\n\n` +
-        (answering
+        // Suppressed for legacy clients too: they have no way to SEND an
+        // answer, so a question reaches them as a rejection whose message is
+        // a question — the worst of both.
+        (answering || legacyClient
           ? ""
           : `\nIF YOU ARE MINDED TO REJECT BUT THE EVIDENCE IS MERELY AMBIGUOUS RATHER THAN ABSENT OR ` +
             `CONTRADICTORY — it plausibly shows the task but doesn't settle it — do NOT reject. Instead set ` +
@@ -820,7 +913,7 @@ If NO photo or video was submitted, reject and say what to capture.`);
     // the four attempts — otherwise asking the user to clarify actively costs
     // them, and an honest person answering two questions would be halfway to
     // locked out of their own task.
-    const asking = !result.verified && !answering && !!result.question;
+    const asking = !result.verified && !answering && !legacyClient && !!result.question;
 
     // ── 8. Record the outcome ─────────────────────────────────
     logUsage(asking ? `${proofKind}_question` : proofKind, asking ? null : result.verified);
