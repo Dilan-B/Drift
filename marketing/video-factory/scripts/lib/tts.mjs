@@ -11,6 +11,10 @@ import { parseFile } from "music-metadata";
 import { KEYS, MODELS, transcribeWords, trackUsage } from "./openai.mjs";
 import { alignToScript, chunkWords, evenChunks } from "../../src/captions.js";
 
+// The ElevenLabs paywall is a per-run fact, not a per-beat one. Logging it on
+// every beat buried the rest of a cron log under six identical lines.
+let warnedFallback = false;
+
 export function pickProvider() {
   if (KEYS.eleven()) return "elevenlabs";
   if (KEYS.openai()) return "openai";
@@ -75,14 +79,38 @@ export async function speakBeat(beat, { dir, index, provider, voice }) {
   const file = `beat-${index + 1}.${ext}`;
   const outFile = join(dir, file);
 
-  if (provider === "elevenlabs") await ttsElevenLabs(beat.say, outFile, voice);
-  else if (provider === "openai") await ttsOpenAI(beat.say, outFile, voice);
-  else ttsMacSay(beat.say, outFile, voice);
+  // Providers are tried in order of quality, falling back on failure. This
+  // matters because the failure is not hypothetical: an ElevenLabs FREE key
+  // authenticates fine and then 402s on every synthesis ("Free users cannot
+  // use library voices via the API"). Without a fallback, adding a key that
+  // looks valid takes the whole pipeline down.
+  let used = provider;
+  if (provider === "elevenlabs") {
+    try {
+      await ttsElevenLabs(beat.say, outFile, voice);
+    } catch (err) {
+      const paywalled = /402|payment_required|paid_plan_required/i.test(err.message);
+      used = KEYS.openai() ? "openai" : "say";
+      if (!warnedFallback) {
+        warnedFallback = true;
+        console.log(
+          `[tts] ElevenLabs unavailable (${paywalled ? "free plan cannot synthesise via API" : err.message.slice(0, 90)})` +
+          ` — using ${used === "openai" ? "OpenAI" : "macOS say"} for this run`
+        );
+      }
+      if (used === "openai") await ttsOpenAI(beat.say, outFile, DEFAULT_VOICE.openai);
+      else ttsMacSay(beat.say, outFile, DEFAULT_VOICE.say);
+    }
+  } else if (provider === "openai") {
+    await ttsOpenAI(beat.say, outFile, voice);
+  } else {
+    ttsMacSay(beat.say, outFile, voice);
+  }
 
   const meta = await parseFile(outFile);
   const seconds = meta.format.duration || beat.say.split(/\s+/).length / 2.8;
 
-  if (provider === "openai") {
+  if (used === "openai") {
     // gpt-4o-mini-tts bills text in + audio out; audio tokens track duration.
     trackUsage({ model: MODELS.tts(), in: beat.say.length / 4, out: (seconds / 60) * 1000 });
   }
@@ -106,5 +134,5 @@ export async function speakBeat(beat, { dir, index, provider, voice }) {
     chunks = evenChunks(beat.say, seconds);
   }
 
-  return { file, seconds, chunks, timingSource };
+  return { file, seconds, chunks, timingSource, provider: used };
 }
