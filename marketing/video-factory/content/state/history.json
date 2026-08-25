@@ -130,5 +130,17 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-25T18:24:49.989Z"
+  },
+  {
+    "ideaKey": "2422a1c581b5",
+    "hook": "Parents nag about your screen time but don’t trust you?",
+    "format": "problem-agitate",
+    "title": "parents-nag-but-dont-trust-your-screen-time",
+    "file": "out/2026-08-25-problem-agitate-2422a1.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-25T18:43:42.089Z"
   }
 ]

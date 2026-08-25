@@ -48,8 +48,17 @@ NODE="$(resolve_node)" || {
 export PATH="$(dirname "$NODE"):/usr/bin:/bin:/usr/sbin:/sbin"
 cd "$REPO" || { log "[wrapper] FATAL: cannot cd to $REPO"; exit 1; }
 
-log "[wrapper] starting autopilot with $NODE ($("$NODE" -v))"
-"$NODE" scripts/autopilot.mjs "$@" >> "$LOG" 2>&1
+# launchd does not tell a job which StartCalendarInterval fired, so derive the
+# slot from the clock. It only steers which theme the run picks, so the exact
+# boundaries do not need to match the schedule precisely.
+HOUR=$(date +%H)
+if   [ "$HOUR" -lt 12 ]; then SLOT=0
+elif [ "$HOUR" -lt 18 ]; then SLOT=1
+else                          SLOT=2
+fi
+
+log "[wrapper] starting autopilot (slot $SLOT) with $NODE ($("$NODE" -v))"
+"$NODE" scripts/autopilot.mjs --slot "$SLOT" "$@" >> "$LOG" 2>&1
 STATUS=$?
 log "[wrapper] finished with exit code $STATUS"
 exit $STATUS
