@@ -142,5 +142,17 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-25T18:43:42.089Z"
+  },
+  {
+    "ideaKey": "713b5f5bc8ea",
+    "hook": "We built Drift so screen time feels earned, not taken.",
+    "format": "build-in-public",
+    "title": "built-drift-to-earn-screen-time",
+    "file": "out/2026-08-25-build-in-public-713b5f.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-25T19:31:53.417Z"
   }
 ]
