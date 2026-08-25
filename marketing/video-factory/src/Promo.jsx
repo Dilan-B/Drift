@@ -116,7 +116,7 @@ const Caption = ({ text, delay = 10 }) => {
 };
 
 // Low-opacity seedling watermark — the brand motif.
-const Sprout = ({ size = 520, opacity = 0.07, style }) => (
+export const Sprout = ({ size = 520, opacity = 0.07, style, stem, leafA, leafB }) => (
   <svg
     viewBox="0 0 100 100"
     width={size}
@@ -125,18 +125,18 @@ const Sprout = ({ size = 520, opacity = 0.07, style }) => (
   >
     <path
       d="M50 92 C50 70 50 55 50 42"
-      stroke={C.deep}
+      stroke={stem || C.deep}
       strokeWidth="4"
       strokeLinecap="round"
       fill="none"
     />
     <path
       d="M50 46 C36 46 26 38 24 24 C40 24 50 32 50 46 Z"
-      fill={C.sage}
+      fill={leafA || C.sage}
     />
     <path
       d="M50 38 C62 38 72 30 74 18 C58 18 50 26 50 38 Z"
-      fill={C.terra}
+      fill={leafB || C.terra}
     />
   </svg>
 );
@@ -282,7 +282,7 @@ const TASKS = [
   { label: "Clean your room", mins: 10 },
 ];
 
-const TasksVisual = ({ delay = 16 }) => {
+export const TasksVisual = ({ delay = 16 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   return (
@@ -362,7 +362,7 @@ const TasksVisual = ({ delay = 16 }) => {
   );
 };
 
-const EarnVisual = ({ delay = 14 }) => {
+export const EarnVisual = ({ delay = 14 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const p = spring({ frame: frame - delay, fps, config: { damping: 200 }, durationInFrames: 70 });

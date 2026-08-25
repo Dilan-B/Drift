@@ -1,0 +1,45 @@
+{
+  "title": "test-native",
+  "format": "problem-agitate",
+  "beats": [
+    {
+      "say": "Your phone is not going to ask if you finished anything.",
+      "onscreen": "It never asks",
+      "kind": "statement"
+    },
+    {
+      "say": "So I stopped negotiating with it and locked the apps instead.",
+      "onscreen": "So I locked them",
+      "kind": "ui",
+      "ui": "tasks"
+    },
+    {
+      "say": "Finish something real, photograph it, and the AI checks you actually did it.",
+      "onscreen": "Prove it happened",
+      "kind": "statement"
+    },
+    {
+      "say": "Only then do the minutes land.",
+      "onscreen": "Then you earn",
+      "kind": "ui",
+      "ui": "earn"
+    },
+    {
+      "say": "My screen time dropped because scrolling finally had a price.",
+      "onscreen": "Scrolling has a price",
+      "kind": "statement"
+    },
+    {
+      "say": "Drift is ninety nine cents a month after three free days, iPhone only.",
+      "onscreen": "Earn your scroll",
+      "kind": "statement"
+    }
+  ],
+  "postCaption": "I got tired of negotiating with my own phone, so I built something that just says no until the work is done.",
+  "hashtags": [
+    "#screentime",
+    "#studytok",
+    "#productivity",
+    "#buildinpublic"
+  ]
+}

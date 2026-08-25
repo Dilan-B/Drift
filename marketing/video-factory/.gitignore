@@ -1,5 +1,14 @@
 node_modules/
 out/
+.env
+
+# Generated media and per-run artefacts
 public/audio/
 public/broll/
-.env
+public/capture/
+content/*.native.json
+
+# NEVER commit: TikTok access/refresh tokens
+content/state/tiktok-tokens.json
+content/state/qc/
+content/state/clip-frames/

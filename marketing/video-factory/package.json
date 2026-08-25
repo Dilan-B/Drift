@@ -6,12 +6,17 @@
   "description": "On-demand marketing video generator for Drift: brief -> script -> voiceover -> rendered MP4",
   "scripts": {
     "studio": "remotion studio src/entry.jsx",
+    "autopilot": "node scripts/autopilot.mjs",
+    "dry-run": "node scripts/autopilot.mjs --dry-run",
+    "auth:tiktok": "node scripts/tiktok-auth.mjs",
     "make": "node scripts/make-video.mjs",
-    "render": "remotion render src/entry.jsx DriftPromo"
+    "render": "remotion render src/entry.jsx DriftNative",
+    "render:promo": "remotion render src/entry.jsx DriftPromo"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
     "@remotion/google-fonts": "^4.0.0",
+    "@remotion/layout-utils": "^4.0.484",
     "music-metadata": "^10.0.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
