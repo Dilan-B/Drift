@@ -1,0 +1,46 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Drift — TikTok authorisation</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+         max-width: 640px; margin: 0 auto; padding: 48px 24px; line-height: 1.5;
+         background: #F7F7F4; color: #1A2820; }
+  @media (prefers-color-scheme: dark) { body { background: #0F1A14; color: #E8EFE9; } }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p  { color: #6B7A6E; margin: 0 0 24px; }
+  code { display: block; background: rgba(127,127,127,.14); padding: 16px; border-radius: 10px;
+         font-size: 13px; word-break: break-all; user-select: all; margin-bottom: 12px; }
+  button { background: #2D7A52; color: #fff; border: 0; border-radius: 999px;
+           padding: 12px 22px; font-size: 15px; cursor: pointer; }
+  .err { color: #B5564B; }
+</style>
+<h1>TikTok authorisation</h1>
+<p id="sub">Reading the response…</p>
+<div id="out"></div>
+<script>
+  // TikTok will not accept a localhost redirect URI, so authorisation lands
+  // here instead. This page never sees the client secret — it only surfaces
+  // the one-time code so it can be pasted into the terminal, where the token
+  // exchange actually happens.
+  const q = new URLSearchParams(location.search);
+  const code = q.get('code'), err = q.get('error'), state = q.get('state');
+  const sub = document.getElementById('sub'), out = document.getElementById('out');
+
+  if (err) {
+    sub.className = 'err';
+    sub.textContent = 'Authorisation failed: ' + err + (q.get('error_description') ? ' — ' + q.get('error_description') : '');
+  } else if (code) {
+    sub.textContent = 'Copy this and paste it into the terminal. It is single-use and expires within minutes.';
+    const c = document.createElement('code'); c.textContent = code; out.appendChild(c);
+    if (state) { const s = document.createElement('p');
+      s.style.fontSize = '12px'; s.textContent = 'state: ' + state; out.appendChild(s); }
+    const b = document.createElement('button'); b.textContent = 'Copy code';
+    b.onclick = () => navigator.clipboard.writeText(code).then(() => b.textContent = 'Copied');
+    out.appendChild(b);
+  } else {
+    sub.textContent = 'No authorisation code in this URL. Start the flow from the terminal.';
+  }
+</script>
