@@ -46,6 +46,51 @@ export const FORMATS = {
 
 const HISTORY_PATH = "content/state/history.json";
 
+/**
+ * Near-duplicate checks look at the most recent N videos, not the whole log.
+ * Comparing against everything forever is a slow deadlock: at three a day the
+ * history passes a thousand entries inside a year, by which point almost any
+ * new hook shares 60% of its words with SOMETHING. Revisiting an angle after
+ * two months is fine; repeating one verbatim is not — so exact repeats are
+ * still checked against all of history.
+ */
+const SIMILARITY_WINDOW = 60;
+
+/**
+ * Territory to steer idea generation around. Rotated per run so consecutive
+ * videos explore different ground instead of the model returning to its
+ * favourite framing — the first eleven videos used only three of six formats
+ * and leaned heavily on "problem-agitate".
+ */
+export const THEMES = [
+  "the specific moment you pick the phone up without deciding to",
+  "homework or coursework you keep pushing to tomorrow",
+  "what your screen time number actually looks like, honestly",
+  "the gap between wanting to stop and actually stopping",
+  "parents and teenagers arguing about phones",
+  "why willpower-based screen time apps get uninstalled in a week",
+  "proving you did something, rather than claiming you did",
+  "morning routines that collapse into scrolling",
+  "revising for exams with a phone in the room",
+  "the difference between blocking apps and earning them back",
+  "being a teenager who builds software instead of just using it",
+  "what you would do with the hours back",
+  "how the shield actually works on iOS",
+  "getting your evening back",
+  "the tiny task that unlocks the first ten minutes",
+  "sports, gym or training sessions as earned time",
+  "chores nobody wants to do",
+  "going from six hours of screen time to two",
+  "why an AI checking your proof changes the incentive",
+  "the first week of using something that says no to you",
+];
+
+/** Deterministic theme for a given day + slot, so a day's runs differ. */
+export function themeForRun(date = new Date(), slot = 0) {
+  const dayIndex = Math.floor(date.getTime() / 86400000);
+  return THEMES[(dayIndex * 3 + slot) % THEMES.length];
+}
+
 export function loadHistory(root) {
   const p = join(root, HISTORY_PATH);
   if (!existsSync(p)) return [];
@@ -91,8 +136,12 @@ function similarity(a, b) {
 
 export function isTooSimilar(idea, history, threshold = 0.6) {
   const key = ideaKey(idea);
+  const recent = history.slice(-SIMILARITY_WINDOW);
+  // Exact repeats are barred forever; near-duplicates only within the window.
   for (const h of history) {
     if (h.ideaKey === key) return { dup: true, reason: "exact repeat", against: h.hook };
+  }
+  for (const h of recent) {
     if (h.hook && similarity(idea.hook, h.hook) >= threshold) {
       return { dup: true, reason: "near-duplicate hook", against: h.hook };
     }
@@ -104,7 +153,7 @@ export function isTooSimilar(idea, history, threshold = 0.6) {
  * Ask the model for a batch of ideas, then filter against history locally.
  * Over-generating and filtering beats asking for one idea and hoping.
  */
-export async function generateIdeas(root, { count = 6, seed, availableFormats } = {}) {
+export async function generateIdeas(root, { count = 10, seed, availableFormats, threshold = 0.6 } = {}) {
   const history = loadHistory(root);
   const recent = history.slice(-25);
   const formats = availableFormats?.length ? availableFormats : Object.keys(FORMATS);
@@ -149,7 +198,7 @@ Return ONLY JSON: {"ideas":[{"format":string,"hook":string,"angle":string,"why":
       rejected.push({ idea, reason: `claim: ${claims[0].why}` });
       continue;
     }
-    const dup = isTooSimilar(idea, [...history, ...accepted]);
+    const dup = isTooSimilar(idea, [...history, ...accepted], threshold);
     if (dup.dup) {
       rejected.push({ idea, reason: `${dup.reason} (vs "${dup.against}")` });
       continue;

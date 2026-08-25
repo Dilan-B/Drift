@@ -17,7 +17,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { ROOT, usageReport } from "./lib/openai.mjs";
-import { generateIdeas, recordRun, loadHistory, FORMATS } from "./lib/ideas.mjs";
+import { generateIdeas, recordRun, loadHistory, themeForRun, FORMATS } from "./lib/ideas.mjs";
 import { writeScript, validateScript } from "./lib/script.mjs";
 import { speakBeat, pickProvider, DEFAULT_VOICE } from "./lib/tts.mjs";
 import { describeClips } from "./lib/capture.mjs";
@@ -34,6 +34,7 @@ const has = (n) => args.includes(`--${n}`);
 const opts = {
   count: Number(flag("count") || 1),
   seed: flag("seed"),
+  slot: Number(flag("slot") ?? 0),
   dryRun: has("dry-run"),
   noPost: has("no-post") || has("dry-run"),
   maxAttempts: Number(flag("max-attempts") || 3),
@@ -147,11 +148,26 @@ async function makeOne(index) {
       (f) => !FORMATS[f].needsCapture || captures.length || brollClips.length
     );
 
-    const { accepted, rejected, historyCount } = await generateIdeas(ROOT, {
-      count: 6, seed: opts.seed, availableFormats: usable,
-    });
+    // Steer each run at different territory. Without this the model returns to
+    // the same framing repeatedly, which matters a lot more at three a day.
+    const seed = opts.seed || themeForRun(new Date(), opts.slot + index);
+    log(`theme: ${seed}`);
+
+    let accepted = [], rejected = [], historyCount = 0;
+    // If nothing survives, relax the near-duplicate bar before giving up. A run
+    // that produces nothing is worse than one that revisits a related angle.
+    for (const threshold of [0.6, 0.72, 0.85]) {
+      ({ accepted, rejected, historyCount } = await generateIdeas(ROOT, {
+        count: 10, seed, availableFormats: usable, threshold,
+      }));
+      if (accepted.length) {
+        if (threshold > 0.6) log(`relaxed the duplicate bar to ${threshold} to find a usable idea`);
+        break;
+      }
+      log(`no ideas survived at similarity ${threshold} — retrying looser`);
+    }
     if (rejected.length) log(`rejected ${rejected.length} idea(s): ${rejected.map((r) => r.reason).join(" | ")}`);
-    if (!accepted.length) throw new Error("No usable ideas survived filtering — try a --seed, or clear old history.");
+    if (!accepted.length) throw new Error("No usable ideas survived even a relaxed filter — the angle bank may be exhausted; add THEMES in scripts/lib/ideas.mjs.");
 
     // Prefer a format we have not used recently. Without this the model keeps
     // choosing its favourite (three "problem-agitate" videos in a row), and an
