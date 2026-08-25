@@ -55,7 +55,7 @@
 - Target: "Best Productivity Apps 2026" listicle videos — reach out to creators
 
 ## Education / School Channels
-- Email school counselors — "free tool for students struggling with phone addiction"
+- Email school counselors — "a tool for students struggling with phone addiction"
 - PTA newsletters — "parent-approved screen time management"
 - Teacher forums (r/Teachers, education Facebook groups)
 - After-school program coordinators
@@ -64,7 +64,7 @@
 ## Press / Media
 - Email template for tech bloggers:
   Subject: "Two teens built an app that blocks TikTok until you do homework"
-  Angle: teen founders + real problem + free app
+  Angle: teen founders + real problem + a dollar a month
 - Target outlets: TechCrunch (teen founder angle), The Verge, 9to5Mac, Cult of Mac
 - Local press: your hometown newspaper, school newspaper
 - Education press: EdSurge, EdTech Magazine

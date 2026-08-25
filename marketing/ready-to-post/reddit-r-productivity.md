@@ -23,4 +23,4 @@ Has anyone else tried something like this? Curious what variations work for peop
 
 ---
 
-*If someone asks what app: "It's called Drift — I'm one of the people who built it so I'm biased, but it's free and no ads. driftproductivity.com"*
+*If someone asks what app: "It's called Drift — I'm one of the people who built it so I'm biased, but it's a dollar a month and no ads. driftproductivity.com"*
