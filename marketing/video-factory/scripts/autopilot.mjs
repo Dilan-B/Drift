@@ -70,11 +70,14 @@ async function attempt({ idea, name, captures, brollClips, provider, voice, feed
 
   const audioDir = join(ROOT, "public", "audio", name);
   const beats = [];
+  // The requested provider can fall back mid-run; QC judges what was actually used.
+  let actualProvider = provider;
   log(`attempt ${n}: voicing ${script.beats.length} beats (${provider})`);
   for (const [i, beat] of script.beats.entries()) {
-    const { file, seconds, chunks, timingSource } = await speakBeat(beat, {
+    const { file, seconds, chunks, timingSource, provider: usedProvider } = await speakBeat(beat, {
       dir: audioDir, index: i, provider, voice,
     });
+    actualProvider = usedProvider;
     beats.push({
       ...beat,
       audio: file,
@@ -104,7 +107,7 @@ async function attempt({ idea, name, captures, brollClips, provider, voice, feed
     videoPath: outFile,
     script,
     beats,
-    ttsProvider: provider,
+    ttsProvider: actualProvider,
     scratchDir: join(ROOT, "content", "state", "qc", name),
   });
 
