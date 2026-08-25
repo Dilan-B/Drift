@@ -152,6 +152,11 @@ export async function publishVideo({
   disableComment = false,
   disableDuet = false,
   disableStitch = false,
+  // Declares the video as AI-generated content. Defaults ON: the script, the
+  // voice and the visuals are all machine-made, and an undisclosed-AI strike
+  // on an account that posts automatically is a far worse outcome than the
+  // modest reach cost of the label. Set TIKTOK_IS_AIGC=false to override.
+  isAigc = process.env.TIKTOK_IS_AIGC !== "false",
   dryRun = false,
 }) {
   const size = statSync(videoPath).size;
@@ -176,7 +181,7 @@ export async function publishVideo({
   }
 
   if (dryRun) {
-    return { dryRun: true, mode, privacyLevel, sizeBytes: size, chunks: count, creator, caption };
+    return { dryRun: true, mode, privacyLevel, isAigc, sizeBytes: size, chunks: count, creator, caption };
   }
 
   const source_info = {
@@ -199,6 +204,7 @@ export async function publishVideo({
           disable_comment: disableComment,
           disable_duet: disableDuet,
           disable_stitch: disableStitch,
+          is_aigc: isAigc,
         },
         source_info,
       };
@@ -208,7 +214,7 @@ export async function publishVideo({
 
   await uploadChunks(upload_url, videoPath, size, chunkSize, count);
 
-  return { publishId: publish_id, mode, privacyLevel, sizeBytes: size, chunks: count, creator };
+  return { publishId: publish_id, mode, privacyLevel, isAigc, sizeBytes: size, chunks: count, creator };
 }
 
 /** Poll until TikTok finishes processing, so failures surface here. */
