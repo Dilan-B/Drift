@@ -27,7 +27,6 @@ export const MODELS = {
   text: () => process.env.VF_MODEL_TEXT || "gpt-4.1-mini",
   vision: () => process.env.VF_MODEL_VISION || "gpt-4.1-mini",
   tts: () => process.env.VF_MODEL_TTS || "gpt-4o-mini-tts",
-  transcribe: () => process.env.VF_MODEL_TRANSCRIBE || "whisper-1",
 };
 
 // USD per 1M tokens / per minute. Verified against OpenAI's published pricing
@@ -37,7 +36,6 @@ export const PRICES = {
   "gpt-4.1": { in: 2.00, out: 8.00 },
   "gpt-4o-mini": { in: 0.15, out: 0.60 },
   "gpt-4o-mini-tts": { in: 0.60, audioOut: 12.00 },
-  "whisper-1": { perMinute: 0.006 },
 };
 
 // Running tally for the current process, so a run can report what it cost.
@@ -139,29 +137,6 @@ export async function chat({ system, user, json = false, model, images = [], tem
     const text = data.choices?.[0]?.message?.content ?? "";
     return json ? JSON.parse(text) : text;
   }, { label: "chat" });
-}
-
-/** Word-level timestamps for an audio file, used to drive karaoke captions. */
-export async function transcribeWords(audioPath) {
-  const key = requireOpenAI("Caption timing");
-  const buf = readFileSync(audioPath);
-  const form = new FormData();
-  form.append("file", new Blob([buf]), audioPath.split("/").pop());
-  form.append("model", MODELS.transcribe());
-  form.append("response_format", "verbose_json");
-  form.append("timestamp_granularities[]", "word");
-
-  return withRetry(async () => {
-    const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}` },
-      body: form,
-    });
-    if (!res.ok) throw new Error(`Whisper ${res.status}: ${(await res.text()).slice(0, 300)}`);
-    const data = await res.json();
-    trackUsage({ model: MODELS.transcribe(), minutes: (data.duration ?? 0) / 60 });
-    return (data.words || []).map((w) => ({ word: w.word, start: w.start, end: w.end }));
-  }, { label: "transcribe" });
 }
 
 export { writeFileSync };

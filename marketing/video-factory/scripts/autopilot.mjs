@@ -74,7 +74,7 @@ async function attempt({ idea, name, captures, brollClips, provider, voice, feed
   let actualProvider = provider;
   log(`attempt ${n}: voicing ${script.beats.length} beats (${provider})`);
   for (const [i, beat] of script.beats.entries()) {
-    const { file, seconds, chunks, timingSource, provider: usedProvider } = await speakBeat(beat, {
+    const { file, seconds, provider: usedProvider } = await speakBeat(beat, {
       dir: audioDir, index: i, provider, voice,
     });
     actualProvider = usedProvider;
@@ -82,8 +82,6 @@ async function attempt({ idea, name, captures, brollClips, provider, voice, feed
       ...beat,
       audio: file,
       frames: Math.ceil(seconds * FPS) + PAD_FRAMES,
-      chunks,
-      timingSource,
     });
   }
 

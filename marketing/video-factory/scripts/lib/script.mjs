@@ -5,7 +5,7 @@
 // the format that actually retains on a For You page: hook on frame 0, a
 // visual change every ~2.5s, short spoken lines, no intro, no sign-off.
 
-import { brandPrompt, lintScript, FACTS } from "./brand.mjs";
+import { brandPrompt, lintScript } from "./brand.mjs";
 import { FORMATS } from "./ideas.mjs";
 import { chat } from "./openai.mjs";
 
@@ -66,15 +66,20 @@ HARD RULES
   ACROSS THE WHOLE SCRIPT. Count them before you answer. Six beats of ten words
   is a good shape. Going over is the most common failure — cut, don't pad.
 - Every beat changes the visual. No two consecutive beats share the same "src".
-- "onscreen" is the big burned-in text for that beat: max 6 words, it is NOT a
-  copy of the spoken line — it is the punchy version. It is what someone reads
-  with the sound off.
-- The last beat is the CTA and must use "statement" or footage, never "ui". Be specific and honest: ${FACTS.price} after a
-  ${FACTS.trialDays}-day free trial, ${FACTS.platform} only. Never say the app is free.
+- Every beat makes a NEW point. Do not restate an earlier beat in different
+  words — with one line per shot, repetition is obvious and reads as padding.
+- "onscreen" is the ONLY text on screen. There are no subtitles. Max 7 words.
+  It is NOT a copy of the spoken line — it is the punchy version, and it must
+  make sense on its own to someone watching with the sound off. Every beat
+  needs one and it has to carry that beat's point by itself.
+- The last beat is the CTA and must use "statement" or footage, never "ui".
+  NEVER mention money — no price, no cost, no trial, no subscription, and never
+  the word "free". The CTA is the product name and where to get it, e.g.
+  "Drift. On the App Store." or "Link in bio." Nothing about what it costs.
 - No emoji in "onscreen" text. No hashtags inside spoken lines.
-- The word "free" may ONLY appear as "3-day free trial" / "free for 3 days".
-  Never "it's free", "free app", "try it free". This is the single most common
-  reason a draft gets rejected — get it right the first time.
+- Say NOTHING about money anywhere — not in the beats, not in the postCaption,
+  not in the hashtags. No price, cost, trial, subscription, or the word "free".
+  This is the most common reason a draft gets rejected.
 
 VISUAL KINDS
 ${Object.entries(VISUAL_KINDS).map(([k, v]) => `  - ${k}: ${v}`).join("\n")}
@@ -173,7 +178,7 @@ export function validateScript(script, { captureNames = [], brollClips = [] } = 
     if (words > TIMING.maxWordsPerBeat) problems.push(`beat[${i}] is ${words} words, max ${TIMING.maxWordsPerBeat}. Split or cut it.`);
     if (!b.onscreen) problems.push(`beat[${i}] has no "onscreen" text.`);
     const onWords = (b.onscreen || "").split(/\s+/).filter(Boolean).length;
-    if (onWords > 6) problems.push(`beat[${i}].onscreen is ${onWords} words, max 6.`);
+    if (onWords > 7) problems.push(`beat[${i}].onscreen is ${onWords} words, max 7.`);
     if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(b.onscreen || "")) {
       problems.push(`beat[${i}].onscreen contains an emoji — remove it.`);
     }
@@ -197,8 +202,29 @@ export function validateScript(script, { captureNames = [], brollClips = [] } = 
     }
   });
 
+  // With one line per beat, a repeated line makes the video feel padded — and
+  // it is invisible to the visual QC pass, which only ever sees single frames.
+  const tokenSet = (t) => new Set(String(t).toLowerCase().match(/[a-z']+/g) || []);
+  const overlap = (a, b) => {
+    const A = tokenSet(a), B = tokenSet(b);
+    if (!A.size || !B.size) return 0;
+    let shared = 0;
+    for (const w of A) if (B.has(w)) shared++;
+    return shared / Math.min(A.size, B.size);
+  };
+  for (let i = 1; i < beats.length; i++) {
+    for (let j = 0; j < i; j++) {
+      if (overlap(beats[i].onscreen, beats[j].onscreen) >= 0.6) {
+        problems.push(
+          `beat[${i}].onscreen ("${beats[i].onscreen}") repeats beat[${j}] ("${beats[j].onscreen}"). ` +
+          `Each beat must make a NEW point — merge them or cut one.`
+        );
+      }
+    }
+  }
+
   const hookWords = (beats[0].onscreen || "").split(/\s+/).filter(Boolean).length;
-  if (hookWords > 6) problems.push(`The hook's onscreen text is ${hookWords} words — it must be under 6 to read instantly.`);
+  if (hookWords > 6) problems.push(`The hook's onscreen text is ${hookWords} words — it must be 6 or fewer to read instantly.`);
   if (/^(hey|hi|hello|what'?s up|so |in this video|let me)/i.test(beats[0].say || "")) {
     problems.push(`beat[0] opens with a greeting/preamble. Start on the hook itself.`);
   }

@@ -23,7 +23,7 @@ export const Root = () => (
         durationInFrames: Math.max(sumFrames(props.scenes || [], 105), FPS),
       })}
     />
-    {/* TikTok-native: footage-first, karaoke captions, hard cuts. */}
+    {/* TikTok-native: footage-first, one burned-in line per beat, hard cuts. */}
     <Composition
       id="DriftNative"
       component={Native}

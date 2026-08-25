@@ -20,9 +20,8 @@ import {
 import { loadFont as loadAnton } from "@remotion/google-fonts/Anton";
 import { fitTextOnNLines } from "@remotion/layout-utils";
 import { C, FF } from "./theme.js";
-import { BOX, BOX_W, CAPTION_Y, SAFE } from "./safeArea.js";
+import { BOX, BOX_W, CTA_PILL_Y, SAFE, UI_TEXT_Y } from "./safeArea.js";
 import { TasksVisual, EarnVisual, Sprout } from "./Promo.jsx";
-import { activeWordIndex } from "./captions.js";
 
 const anton = loadAnton();
 
@@ -191,7 +190,7 @@ const ShieldMock = ({ delay = 0 }) => {
 };
 
 // These mocks were authored for the brand-film layout, where they sat low in
-// an otherwise empty frame. Here the lower third belongs to the captions, so
+// an otherwise empty frame. Here the lower third belongs to the text line, so
 // each one is lifted to occupy roughly y 440-1000 instead.
 const UI_MOCKS = {
   tasks: { Component: TasksVisual, offsetY: -470 },
@@ -229,78 +228,11 @@ const Scrim = ({ light = false }) => (
 
 // ── text layers ──────────────────────────────────────────────
 
-/** Word-by-word karaoke captions — the thing viewers actually read. */
-const Captions = ({ chunks, onLight = false }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const t = frame / fps;
-
-  // Each beat has a short pad after the voiceover ends. Dropping the caption
-  // during it made the text blink out for ~0.2s at every cut, which reads as a
-  // glitch — so the final chunk is held until the beat ends.
-  const last = chunks[chunks.length - 1];
-  const chunk =
-    chunks.find((c) => t >= c.start && t < c.end) ?? (t >= last.end ? last : chunks[0]);
-  if (!chunk) return null;
-
-  const active = activeWordIndex(chunk, t);
-  // Pop on chunk change rather than fade — fades feel like an advert.
-  const age = t - chunk.start;
-  const pop = spring({ frame: age * fps, fps, config: { damping: 14, mass: 0.5 } });
-  const scale = 0.92 + pop * 0.08;
-
-  return (
-    // Outer box owns the position; the inner row hugs the text so the plate
-    // never stretches into dead space on a short chunk.
-    <div
-      style={{
-        position: "absolute",
-        left: BOX.x0,
-        width: BOX_W,
-        top: CAPTION_Y,
-        display: "flex",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        style={{
-          position: "relative",
-          display: "inline-flex",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          alignItems: "baseline",
-          maxWidth: BOX_W,
-          gap: "0 18px",
-          padding: onLight ? "18px 30px" : 0,
-          borderRadius: 26,
-          backgroundColor: onLight ? "rgba(10,20,14,0.86)" : "transparent",
-          transform: `scale(${scale})`,
-          transformOrigin: "center top",
-          ...punchText(autoFit(chunk.text, 74, 2, BOX_W - (onLight ? 60 : 0))),
-        }}
-      >
-        {chunk.words.map((w, i) => (
-          <span
-            key={i}
-            style={{
-              color: i === active ? HILITE : "#FFFFFF",
-              transform: i === active ? "translateY(-4px)" : "none",
-              display: "inline-block",
-            }}
-          >
-            {w.word.replace(/^\s+/, "")}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 /** The big scroll-stopper line. Used on the hook, statements and the CTA. */
-const Onscreen = ({ text, size = 118 }) => {
+const Onscreen = ({ text, size = 118, top, onLight = false, maxLines = 3 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const fitted = autoFit(text, size, 3, BOX_W);
+  const fitted = autoFit(text, size, maxLines, BOX_W - (onLight ? 60 : 0));
   // No fade-in on frame 0 — the hook has to be legible before it animates.
   const s = spring({ frame, fps, config: { damping: 18, mass: 0.6 } });
   const scale = 0.96 + s * 0.04;
@@ -310,14 +242,24 @@ const Onscreen = ({ text, size = 118 }) => {
         position: "absolute",
         left: BOX.x0,
         width: BOX_W,
-        top: BOX.y0 + 60,
-        textAlign: "center",
+        top,
+        display: "flex",
+        justifyContent: "center",
         transform: `scale(${scale})`,
         transformOrigin: "center top",
-        ...punchText(fitted),
       }}
     >
-      {text}
+      <div
+        style={{
+          textAlign: "center",
+          padding: onLight ? "20px 32px" : 0,
+          borderRadius: 28,
+          backgroundColor: onLight ? "rgba(10,20,14,0.86)" : "transparent",
+          ...punchText(fitted),
+        }}
+      >
+        {text}
+      </div>
     </div>
   );
 };
@@ -350,7 +292,7 @@ const CtaPill = ({ label }) => {
         position: "absolute",
         left: BOX.x0,
         width: BOX_W,
-        top: CAPTION_Y - 190,
+        top: CTA_PILL_Y,
         display: "flex",
         justifyContent: "center",
         opacity: s,
@@ -381,10 +323,10 @@ const CtaPill = ({ label }) => {
 const Beat = ({ beat, index, isLast, audioBase, statementIndex }) => {
   const frames = beat.frames;
   const isLight = beat.kind === "ui";
-  // The UI mocks occupy the upper-middle of the frame, exactly where the big
-  // line sits — so it is suppressed over them and the captions carry the beat.
-  // The script validator also forbids a "ui" CTA, this is the belt-and-braces.
-  const showBigText = (index === 0 || beat.kind === "statement" || isLast) && !isLight;
+  // With subtitles gone this line is the ONLY text, so every beat gets one.
+  // UI mocks occupy roughly y470-1000, so on those beats the line sits below
+  // them instead of on top, in the band that used to hold the subtitles.
+  const textTop = isLight ? UI_TEXT_Y : BOX.y0 + 60;
 
   let bg;
   if (beat.kind === "capture" || beat.kind === "broll") bg = <VideoBg src={beat.src} frames={frames} />;
@@ -396,11 +338,18 @@ const Beat = ({ beat, index, isLast, audioBase, statementIndex }) => {
       {bg}
       <Scrim light={isLight} />
       <Wordmark light={isLight} />
-      {showBigText && beat.onscreen ? (
-        <Onscreen text={beat.onscreen} size={index === 0 ? 130 : 112} />
+      {beat.onscreen ? (
+        <Onscreen
+          text={beat.onscreen}
+          size={index === 0 ? 130 : 112}
+          top={textTop}
+          onLight={isLight}
+          // A ui beat's text sits low, so a third line would run under
+          // TikTok's chrome. Top-placed text has the room for three.
+          maxLines={isLight ? 2 : 3}
+        />
       ) : null}
       {isLast ? <CtaPill label={beat.ctaLabel || "Drift on the App Store"} /> : null}
-      {beat.chunks?.length ? <Captions chunks={beat.chunks} onLight={isLight} /> : null}
       {beat.audio ? <Audio src={staticFile(`${audioBase}/${beat.audio}`)} /> : null}
     </AbsoluteFill>
   );

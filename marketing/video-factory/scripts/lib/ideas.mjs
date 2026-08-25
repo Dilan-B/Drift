@@ -144,7 +144,7 @@ Return ONLY JSON: {"ideas":[{"format":string,"hook":string,"angle":string,"why":
     if (!idea?.hook || !idea?.format) continue;
     if (!FORMATS[idea.format]) idea.format = "problem-agitate";
 
-    const claims = lintClaims(`${idea.hook} ${idea.angle}`, { label: "idea" });
+    const claims = lintClaims(`${idea.hook} ${idea.angle}`, { label: "idea", scope: "script" });
     if (claims.length) {
       rejected.push({ idea, reason: `claim: ${claims[0].why}` });
       continue;

@@ -46,5 +46,29 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-25T17:45:44.954Z"
+  },
+  {
+    "ideaKey": "a5579a868e92",
+    "hook": "Screen-time blockers fail because you can cheat them.",
+    "format": "myth-bust",
+    "title": "ai-photo-verification-beats-cheats",
+    "file": "out/2026-08-25-myth-bust-a5579a.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-25T17:52:30.825Z"
+  },
+  {
+    "ideaKey": "012461c6be32",
+    "hook": "Staring at your phone but not really living?",
+    "format": "problem-agitate",
+    "title": "staring-at-phone-not-living",
+    "file": "out/2026-08-25-problem-agitate-012461-r2.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-25T17:55:32.707Z"
   }
 ]
