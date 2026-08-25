@@ -23,7 +23,6 @@ export const FACTS = {
     "Parents can approve tasks and send time to their kid's phone",
     "Works hands-free with Siri via App Intents",
     "No ads, no tracking, no data selling",
-    "$0.99/month after a 3-day free trial",
     "Built by two teenagers who were tired of their own doomscrolling",
   ],
 };
@@ -74,6 +73,28 @@ export const CLAIM_RULES = [
     why: "The only correct price is $0.99/month.",
   },
   {
+    id: "no-pricing",
+    scope: "script",
+    check: (text) => {
+      const hits = [];
+      const patterns = [
+        /\$\s?\d+(?:\.\d{1,2})?/g,
+        /\b\d+(?:\.\d{1,2})?\s*(?:dollars?|cents?|bucks?|quid|pounds?)\b/gi,
+        /\b(?:ninety[- ]?nine|nine[- ]?nine)\s*cents?\b/gi,
+        /\b(?:per|a)\s+month\b/gi,
+        /\bmonthly\b/gi,
+        /\bfree\s+trial\b/gi,
+        /\btrial\b/gi,
+        /\bsubscription\b|\bsubscribe\s+for\b/gi,
+        /\bfree\b/gi,
+        /\bpricing\b|\bcosts?\b|\bpaid\b|\bpay\b/gi,
+      ];
+      for (const re of patterns) for (const m of text.matchAll(re)) hits.push(m[0].trim());
+      return hits;
+    },
+    why: "Video scripts must never mention price, cost, trials, subscriptions or the word 'free'. End on what the app does and the App Store, nothing about money.",
+  },
+  {
     id: "android",
     pattern: /\bandroid\b|\bgoogle play\b|\bsamsung\b/i,
     why: "Drift is iOS-only. Never imply Android or Play Store availability.",
@@ -117,10 +138,17 @@ export const FORBIDDEN_ONSCREEN_ASSETS = [
 export { SAFE as SAFE_AREA, BOX as SAFE_BOX } from "../../src/safeArea.js";
 
 /** Lint arbitrary copy. Returns [] when clean. */
-export function lintClaims(text, { label = "copy" } = {}) {
+/**
+ * `scope` selects which rules apply. Default "copy" runs the rules that hold
+ * everywhere; "script" adds the stricter video-only rules (no pricing talk at
+ * all), which would otherwise fail the marketing docs that legitimately quote
+ * a price.
+ */
+export function lintClaims(text, { label = "copy", scope = "copy" } = {}) {
   if (!text) return [];
   const found = [];
   for (const rule of CLAIM_RULES) {
+    if (rule.scope && rule.scope !== scope) continue;
     // Rules too subtle for a single regex supply a `check` returning matches.
     if (rule.check) {
       for (const matched of rule.check(text)) {
@@ -146,7 +174,7 @@ export function lintScript(script) {
   const issues = [];
   for (const [i, s] of (script.scenes || []).entries()) {
     for (const field of ["kicker", "headline", "voiceover", "caption"]) {
-      issues.push(...lintClaims(s[field], { label: `scene[${i}].${field}` }));
+      issues.push(...lintClaims(s[field], { label: `scene[${i}].${field}`, scope: "script" }));
     }
     if (s.src && FORBIDDEN_ONSCREEN_ASSETS.includes(s.src)) {
       issues.push({
@@ -157,8 +185,8 @@ export function lintScript(script) {
       });
     }
   }
-  issues.push(...lintClaims(script.postCaption, { label: "postCaption" }));
-  issues.push(...lintClaims((script.hashtags || []).join(" "), { label: "hashtags" }));
+  issues.push(...lintClaims(script.postCaption, { label: "postCaption", scope: "script" }));
+  issues.push(...lintClaims((script.hashtags || []).join(" "), { label: "hashtags", scope: "script" }));
   return issues;
 }
 
@@ -166,10 +194,13 @@ export function lintScript(script) {
 export function brandPrompt() {
   return [
     `${FACTS.name} — ${FACTS.platform} app. ${FACTS.tagline}`,
-    `Price: ${FACTS.price} after a ${FACTS.trialDays}-day free trial. There is NO free tier.`,
+    `NEVER discuss money. No price, no cost, no trial, no subscription, and never`,
+    `the word "free". If asked to give a reason to download, talk about what the app`,
+    `does, not what it costs.`,
     `True things you may say:`,
     ...FACTS.truths.map((t) => `  - ${t}`),
-    `NEVER say: the app is free; any price other than ${FACTS.price}; that it works on Android;`,
-    `superlatives like "#1" or "the best"; medical claims; fake urgency; named competitor comparisons.`,
+    `NEVER say: anything about price, cost, trials, subscriptions or "free";`,
+    `that it works on Android; superlatives like "#1" or "the best"; medical claims;`,
+    `fake urgency; named competitor comparisons.`,
   ].join("\n");
 }

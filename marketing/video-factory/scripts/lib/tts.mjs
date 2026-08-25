@@ -1,4 +1,4 @@
-// Voiceover + the word timings that drive the karaoke captions.
+// Voiceover for each beat.
 //
 // Provider order: ElevenLabs > OpenAI > macOS `say`. The macOS voice is a
 // last-resort fallback so the pipeline still produces something offline — it
@@ -8,8 +8,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseFile } from "music-metadata";
-import { KEYS, MODELS, transcribeWords, trackUsage } from "./openai.mjs";
-import { alignToScript, chunkWords, evenChunks } from "../../src/captions.js";
+import { KEYS, MODELS, trackUsage } from "./openai.mjs";
 
 // The ElevenLabs paywall is a per-run fact, not a per-beat one. Logging it on
 // every beat buried the rest of a cron log under six identical lines.
@@ -67,12 +66,7 @@ function ttsMacSay(text, outFile, voice) {
   rmSync(aiff, { force: true });
 }
 
-/**
- * Speak one beat and return its audio file, duration and caption chunks.
- * Word timings come from Whisper on the generated audio, which works for every
- * provider. If transcription is unavailable the words are spread evenly — less
- * precise, but the video still ships with captions.
- */
+/** Speak one beat. Duration drives the beat's frame count. */
 export async function speakBeat(beat, { dir, index, provider, voice }) {
   mkdirSync(dir, { recursive: true });
   const ext = provider === "say" ? "wav" : "mp3";
@@ -115,24 +109,5 @@ export async function speakBeat(beat, { dir, index, provider, voice }) {
     trackUsage({ model: MODELS.tts(), in: beat.say.length / 4, out: (seconds / 60) * 1000 });
   }
 
-  let chunks;
-  let timingSource = "whisper";
-  try {
-    const words = await transcribeWords(outFile);
-    if (!words.length) throw new Error("no words returned");
-    // Whisper's tokens are not our words — realign before chunking, or a
-    // caption can break in the middle of a word.
-    const aligned = alignToScript(words, beat.say);
-    if (aligned) {
-      chunks = chunkWords(aligned);
-    } else {
-      timingSource = "whisper-unaligned";
-      chunks = chunkWords(words);
-    }
-  } catch (err) {
-    timingSource = "estimated";
-    chunks = evenChunks(beat.say, seconds);
-  }
-
-  return { file, seconds, chunks, timingSource, provider: used };
+  return { file, seconds, provider: used };
 }

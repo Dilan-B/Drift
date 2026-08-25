@@ -8,7 +8,7 @@
 import { join } from "node:path";
 import { existsSync } from "node:fs";
 import { SAFE_AREA } from "./brand.mjs";
-import { CAPTION_Y } from "../../src/safeArea.js";
+import { UI_TEXT_Y } from "../../src/safeArea.js";
 import { lintScript, FACTS } from "./brand.mjs";
 import { probe, extractFrames, asBase64, silenceSeconds } from "./media.mjs";
 import { chat, KEYS } from "./openai.mjs";
@@ -90,18 +90,14 @@ export function hardChecks({ videoPath, script, beats, ttsProvider }) {
       : fail("claims", claimIssues.map((i) => `${i.label}: "${i.matched}" — ${i.why}`).join("; "))
   );
 
-  // Every beat must actually have captions, or the video is unwatchable muted.
-  const missing = (beats || []).filter((b) => !b.chunks?.length).length;
+  // There are no subtitles, so the burned-in line is the only thing a muted
+  // viewer reads. A beat without one is a blank beat.
+  const missing = (beats || []).filter((b) => !b.onscreen).length;
   results.push(
     missing === 0
-      ? pass("captions", `${beats?.length ?? 0} beats captioned`)
-      : fail("captions", `${missing} beat(s) have no captions`)
+      ? pass("onscreen-text", `${beats?.length ?? 0} beats have on-screen text`)
+      : fail("onscreen-text", `${missing} beat(s) have no on-screen text`)
   );
-
-  const estimated = (beats || []).filter((b) => b.timingSource === "estimated").length;
-  if (estimated) {
-    results.push(pass("caption-timing", `${estimated} beat(s) using estimated timing (not word-accurate)`));
-  }
 
   return results;
 }
@@ -111,11 +107,10 @@ Be harsh. This video posts automatically with no human review, so anything
 embarrassing is a real cost to the brand.
 
 HOW THIS VIDEO IS BUILT — read before scoring, or you will report false faults:
-- Captions are KARAOKE-STYLE. Three or four words appear at a time and the word
-  currently being spoken is highlighted in mint. Any single frame therefore shows
-  a PARTIAL PHRASE, e.g. "WANT TO STOP BUT". That is correct and deliberate.
-  Do NOT report it as cut-off, truncated, or an incomplete sentence. Only report
-  a genuine defect: a word clipped mid-letter, or text running off the frame edge.
+- There are NO SUBTITLES, deliberately. Each shot carries one short burned-in
+  line, and it is a headline rather than a transcript of the narration. Do not
+  report the absence of captions, or the fact that the text does not match the
+  spoken words, as a fault.
 - Layout is verified separately and by construction. Do NOT try to judge from the
   image whether something sits under TikTok's buttons — you cannot measure that
   reliably from a downscaled frame, and guesses here are worse than silence.
@@ -153,19 +148,22 @@ empty list is the expected result for a competent video. Do not pad it.`;
 export function layoutInvariants() {
   const results = [];
   const floor = SAFE_AREA.height - SAFE_AREA.bottom;
+  const lineHeight = (size) => Math.ceil(size * 1.04);
 
-  const captionBottom = CAPTION_Y + 2 * Math.ceil(74 * 1.04) + 36; // 2 lines + plate padding
+  // "ui" beats put the line below the mock, capped at 2 lines + plate padding.
+  const uiTextBottom = UI_TEXT_Y + 2 * lineHeight(112) + 40;
   results.push(
-    captionBottom <= floor
-      ? pass("layout-captions", `caption block ends at ${captionBottom}px, floor is ${floor}px`)
-      : fail("layout-captions", `caption block reaches ${captionBottom}px, past the ${floor}px safe floor`)
+    uiTextBottom <= floor
+      ? pass("layout-ui-text", `ui text ends at ${uiTextBottom}px, floor is ${floor}px`)
+      : fail("layout-ui-text", `ui text reaches ${uiTextBottom}px, past the ${floor}px safe floor`)
   );
 
-  const headlineBottom = SAFE_AREA.top + 60 + 3 * Math.ceil(130 * 1.04); // 3 lines at hook size
+  // Top-placed text (hook, statements, CTA) gets 3 lines at the hook size.
+  const topTextBottom = SAFE_AREA.top + 60 + 3 * lineHeight(130);
   results.push(
-    headlineBottom <= CAPTION_Y
-      ? pass("layout-headline", `headline ends at ${headlineBottom}px, captions start at ${CAPTION_Y}px`)
-      : fail("layout-headline", `headline reaches ${headlineBottom}px and would collide with captions at ${CAPTION_Y}px`)
+    topTextBottom <= floor
+      ? pass("layout-top-text", `top text ends at ${topTextBottom}px, floor is ${floor}px`)
+      : fail("layout-top-text", `top text reaches ${topTextBottom}px, past the ${floor}px safe floor`)
   );
 
   return results;

@@ -23,5 +23,12 @@ export const BOX = {
 export const BOX_W = BOX.x1 - BOX.x0;
 export const BOX_H = BOX.y1 - BOX.y0;
 
-/** Where the karaoke caption block sits — lower third, still clear of chrome. */
-export const CAPTION_Y = 1180;
+/**
+ * Where the on-screen line sits on a "ui" beat. The mocks occupy roughly
+ * y470-1000, so the text goes below them — in the band the subtitles used to
+ * hold — rather than on top of the cards.
+ */
+export const UI_TEXT_Y = 1100;
+
+/** CTA pill, above the text line on the final beat. */
+export const CTA_PILL_Y = 960;
