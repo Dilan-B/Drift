@@ -50,9 +50,11 @@ async function ttsOpenAI(text, outFile, voice) {
       model: MODELS.tts(),
       voice,
       input: text,
-      instructions:
-        "Young, natural, slightly wry. Talking to a friend, not reading an advert. " +
-        "Quick pace, clear consonants, no radio-announcer lilt, no upsell energy.",
+      instructions: process.env.VF_VOICE_DIRECTION ||
+        "Sound like a nineteen year old talking to their phone camera. Relaxed and " +
+        "offhand, not performing, not selling. Vary the pace naturally — rush a few " +
+        "unimportant words, slow down on the ones that matter. Slightly imperfect is " +
+        "better than polished.",
       response_format: "mp3",
     }),
   });
@@ -102,10 +104,9 @@ export async function speakBeat(beat, { dir, index, provider, voice }) {
     ttsMacSay(beat.say, outFile, voice);
   }
 
-  // Measured delivery is ~2.2 words/sec, which puts a 5-beat script near 20s.
-  // A small tempo lift brings it to the 15s target without cutting content,
-  // and reads as more energetic. VF_VOICE_TEMPO=1 disables it.
-  const tempo = Number(process.env.VF_VOICE_TEMPO ?? 1.2);
+  // No tempo lift by default. Speeding up already-synthetic speech is what made
+  // the voice sound processed; length is controlled by beat count instead.
+  const tempo = Number(process.env.VF_VOICE_TEMPO ?? 1);
   const { saved } = tightenVoice(outFile, { tempo });
   const meta = await parseFile(outFile);
   const seconds = meta.format.duration || beat.say.split(/\s+/).length / 2.35;

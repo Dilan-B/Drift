@@ -18,7 +18,7 @@ export const LIMITS = {
   // the script's word budget aims at the middle. TikTok allows far more, but
   // short retains better and that is the whole point of the format.
   minSeconds: 10,
-  maxSeconds: 19,
+  maxSeconds: 21,
   maxSilenceRatio: 0.3, // >30% dead air means the voiceover probably failed.
   maxBytes: 250 * 1024 * 1024,
   // Split by what the dimension measures. legibility/polish are DEFECT checks —
