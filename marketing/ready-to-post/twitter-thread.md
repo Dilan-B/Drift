@@ -48,7 +48,7 @@ You're not fighting willpower. You're channeling it.
 
 Not because I'm more disciplined. The system just makes productivity the easier path.
 
-7/ The app is free. No ads. No premium tier. No data selling.
+7/ $0.99 a month after a 3-day free trial. No ads. No data selling.
 
 We built it for ourselves and figured other people might want it too.
 

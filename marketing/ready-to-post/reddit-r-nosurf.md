@@ -10,7 +10,7 @@ What finally worked was changing the model entirely. Instead of trying to LIMIT 
 
 The deal I made with myself: every real task I complete earns me a chunk of phone time. Homework = 30 min. A run = 20 min. Clean my room = 15 min. No task = no apps.
 
-My friend and I actually built a free app (Drift) that automates this — it uses Apple's Screen Time API to literally block your apps until you've earned time, and you submit photo proof of your tasks so you can't cheat. But honestly, the concept works even without the app. You just need the mindset shift.
+My friend and I actually built an app (Drift) that automates this — it uses Apple's Screen Time API to literally block your apps until you've earned time, and you submit photo proof of your tasks so you can't cheat. But honestly, the concept works even without the app. You just need the mindset shift.
 
 Here's why I think it works when limits don't:
 - **No willpower needed.** You're not resisting temptation — the apps are just locked.
