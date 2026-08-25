@@ -106,5 +106,29 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-25T18:06:31.024Z"
+  },
+  {
+    "ideaKey": "962139c5ca0b",
+    "hook": "We got tired of our own scrolling ruining everything",
+    "format": "build-in-public",
+    "title": "built-drift-to-fix-our-own-scrolling",
+    "file": "out/2026-08-25-build-in-public-962139-r3.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-25T18:19:02.953Z"
+  },
+  {
+    "ideaKey": "db42c97683cc",
+    "hook": "Most screen blockers don’t check if you actually did anything.",
+    "format": "myth-bust",
+    "title": "ai-verifies-your-tasks-before-unlocking",
+    "file": "out/2026-08-25-myth-bust-db42c9-r3.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-25T18:24:49.989Z"
   }
 ]

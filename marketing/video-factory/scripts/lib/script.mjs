@@ -29,16 +29,16 @@ export const VISUAL_KINDS = {
 //
 // So the way to a 15s video is fewer beats, not shorter sentences. Budgeting on
 // words alone is what produced 20s videos from a "15s" brief.
-const SECONDS_PER_BEAT = 3.95;   // includes the per-beat pad
+const SECONDS_PER_BEAT = 5.0;    // measured at natural speed, includes the per-beat pad
 const WORDS_PER_SECOND = 2.32;   // only used as a sanity guard
 
 const TIMING = {
   targetSeconds: 15,
   minSeconds: 11,
-  maxSeconds: 19,
+  maxSeconds: 21,
   maxWordsPerBeat: 8,
-  minBeats: 4,
-  maxBeats: 5,   // 5 beats lands ~20s; 4 is the shape that hits 15s
+  minBeats: 3,
+  maxBeats: 4,   // a beat costs ~5s at natural speed, so 3 beats is the 15s shape
 };
 
 function systemPrompt({ format, captures, brollClips }) {
@@ -73,8 +73,8 @@ HARD RULES
 - The FIRST beat is the hook. It must work with zero context, appear on screen
   immediately, and be under 12 words. Never open with a greeting, "in this
   video", "let me show you", or the product name.
-- THIS IS A ${TIMING.targetSeconds}-SECOND VIDEO. That is FOUR beats. Five only if one
-  of them is genuinely essential. Every beat costs about four seconds of runtime
+- THIS IS A ${TIMING.targetSeconds}-SECOND VIDEO. That is THREE beats. A fourth only if it is
+  genuinely essential. Every beat costs about four seconds of runtime
   no matter how short the sentence is, so the way to keep it tight is FEWER
   BEATS, not shorter lines.
 - Each beat is ONE short spoken sentence, max ${TIMING.maxWordsPerBeat} words. Aim for seven.
@@ -131,7 +131,7 @@ export function estimateSeconds(beats) {
 export const WORD_BUDGET = {
   min: TIMING.minBeats * 4,
   max: TIMING.maxBeats * TIMING.maxWordsPerBeat,
-  target: 4 * 7,
+  target: 3 * 7,
 };
 
 /**
@@ -139,7 +139,7 @@ export const WORD_BUDGET = {
  * structural checks fail, the specific complaints are fed back for a rewrite
  * rather than blindly re-rolling.
  */
-export async function writeScript(idea, { captures = [], brollClips = [], attempts = 3 } = {}) {
+export async function writeScript(idea, { captures = [], brollClips = [], attempts = 3, qcFeedback = null } = {}) {
   const system = systemPrompt({ format: idea.format, captures, brollClips });
   const captureNames = captures.map((c) => c.file);
   let feedback = "";
@@ -152,6 +152,13 @@ export async function writeScript(idea, { captures = [], brollClips = [], attemp
       `  why it works: ${idea.why || "n/a"}`,
       ``,
       `Open the video on that hook (you may sharpen the wording).`,
+      // Failures from a PREVIOUS rendered video that got rejected by the
+      // quality gate. These persist across every attempt in this call.
+      qcFeedback
+        ? `\nA previous version of this video was RENDERED and then REJECTED by the ` +
+          `quality review. Write a materially different script that avoids these:\n${qcFeedback}`
+        : "",
+      // Failures from this call's own previous attempt at writing valid JSON.
       feedback ? `\nYour previous attempt was REJECTED. Fix exactly these problems:\n${feedback}` : "",
     ].join("\n");
 
@@ -236,7 +243,11 @@ export function validateScript(script, { captureNames = [], brollClips = [] } = 
   };
   for (let i = 1; i < beats.length; i++) {
     for (let j = 0; j < i; j++) {
-      if (overlap(beats[i].onscreen, beats[j].onscreen) >= 0.6) {
+      // The opening pair is what a scroller actually sees, so it gets the
+      // strictest test — the quality gate has flagged "repetitive text on the
+      // first two frames" as an editing error.
+      const limit = i === 1 && j === 0 ? 0.4 : 0.5;
+      if (overlap(beats[i].onscreen, beats[j].onscreen) >= limit) {
         problems.push(
           `beat[${i}].onscreen ("${beats[i].onscreen}") repeats beat[${j}] ("${beats[j].onscreen}"). ` +
           `Each beat must make a NEW point — merge them or cut one.`

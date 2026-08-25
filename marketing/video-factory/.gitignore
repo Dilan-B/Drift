@@ -12,3 +12,6 @@ content/*.native.json
 content/state/tiktok-tokens.json
 content/state/qc/
 content/state/clip-frames/
+
+# scheduled-run log
+autopilot.log

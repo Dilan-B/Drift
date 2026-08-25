@@ -59,13 +59,10 @@ async function attempt({ idea, name, captures, brollClips, provider, voice, feed
     script = structuredClone(fixedScript);
   } else {
     log(`attempt ${n}: writing script`);
-    ({ script } = await writeScript(idea, {
-      captures,
-      brollClips,
-      // Prior QC failures become writing constraints on the retry.
-      ...(feedback ? { attempts: 2 } : {}),
-    }));
-    if (feedback) script._qcFeedback = feedback;
+    // Prior QC failures are passed INTO the writer as constraints. Assigning
+    // them to the returned script afterwards (as this did) fed back nothing —
+    // the "self-correcting" retry was really just re-rolling.
+    ({ script } = await writeScript(idea, { captures, brollClips, qcFeedback: feedback }));
   }
 
   const audioDir = join(ROOT, "public", "audio", name);
