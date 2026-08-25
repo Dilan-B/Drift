@@ -5,7 +5,7 @@
 // the format that actually retains on a For You page: hook on frame 0, a
 // visual change every ~2.5s, short spoken lines, no intro, no sign-off.
 
-import { brandPrompt, lintScript } from "./brand.mjs";
+import { brandPrompt, lintScript, FACTS } from "./brand.mjs";
 import { FORMATS } from "./ideas.mjs";
 import { chat } from "./openai.mjs";
 
@@ -21,12 +21,24 @@ export const VISUAL_KINDS = {
       `earn = the minutes-earned progress ring.`,
 };
 
+// Length is driven by BEAT COUNT, not word count. Measured across real renders,
+// a 6-word beat and a 9-word beat both land at roughly 4 seconds — the TTS
+// per-utterance overhead dominates anything said inside it:
+//
+//   7w -> 3.5s   7w -> 4.5s   8w -> 3.6s   7w -> 4.3s   7w -> 3.8s
+//
+// So the way to a 15s video is fewer beats, not shorter sentences. Budgeting on
+// words alone is what produced 20s videos from a "15s" brief.
+const SECONDS_PER_BEAT = 3.95;   // includes the per-beat pad
+const WORDS_PER_SECOND = 2.32;   // only used as a sanity guard
+
 const TIMING = {
-  minSeconds: 12,
-  maxSeconds: 34,
-  maxWordsPerBeat: 16,
-  minBeats: 5,
-  maxBeats: 10,
+  targetSeconds: 15,
+  minSeconds: 11,
+  maxSeconds: 19,
+  maxWordsPerBeat: 8,
+  minBeats: 4,
+  maxBeats: 5,   // 5 beats lands ~20s; 4 is the shape that hits 15s
 };
 
 function systemPrompt({ format, captures, brollClips }) {
@@ -61,10 +73,13 @@ HARD RULES
 - The FIRST beat is the hook. It must work with zero context, appear on screen
   immediately, and be under 12 words. Never open with a greeting, "in this
   video", "let me show you", or the product name.
-- ${TIMING.minBeats}-${TIMING.maxBeats} beats. Each beat is ONE spoken sentence, max ${TIMING.maxWordsPerBeat} words.
-- WORD BUDGET: the "say" fields must total between ${WORD_BUDGET.min} and ${WORD_BUDGET.max} words
-  ACROSS THE WHOLE SCRIPT. Count them before you answer. Six beats of ten words
-  is a good shape. Going over is the most common failure — cut, don't pad.
+- THIS IS A ${TIMING.targetSeconds}-SECOND VIDEO. That is FOUR beats. Five only if one
+  of them is genuinely essential. Every beat costs about four seconds of runtime
+  no matter how short the sentence is, so the way to keep it tight is FEWER
+  BEATS, not shorter lines.
+- Each beat is ONE short spoken sentence, max ${TIMING.maxWordsPerBeat} words. Aim for seven.
+- You have room for ONE idea: a hook, the mechanism, the payoff, and the CTA.
+  That is the whole video. No setup, no second example, no recap.
 - Every beat changes the visual. No two consecutive beats share the same "src".
 - Every beat makes a NEW point. Do not restate an earlier beat in different
   words — with one line per shot, repetition is obvious and reads as padding.
@@ -74,8 +89,9 @@ HARD RULES
   needs one and it has to carry that beat's point by itself.
 - The last beat is the CTA and must use "statement" or footage, never "ui".
   NEVER mention money — no price, no cost, no trial, no subscription, and never
-  the word "free". The CTA is the product name and where to get it, e.g.
-  "Drift. On the App Store." or "Link in bio." Nothing about what it costs.
+  the word "free". The CTA tells them exactly what to search: "${FACTS.appStoreSearch}"
+  on the App Store. Searching "Drift" alone does not find it, so use the full
+  name. Nothing about what it costs.
 - No emoji in "onscreen" text. No hashtags inside spoken lines.
 - Say NOTHING about money anywhere — not in the beats, not in the postCaption,
   not in the hashtags. No price, cost, trial, subscription, or the word "free".
@@ -105,15 +121,17 @@ export function countWords(beats) {
   return beats.reduce((n, b) => n + (b.say || "").split(/\s+/).filter(Boolean).length, 0);
 }
 
+/** Predicted finished length. Beat count is the dominant term. */
 export function estimateSeconds(beats) {
-  return countWords(beats) / 2.8;
+  return beats.length * SECONDS_PER_BEAT;
 }
 
 // Models are poor at estimating spoken duration but good at counting words, so
 // the budget is expressed in words in the prompt and enforced in words here.
 export const WORD_BUDGET = {
-  min: Math.round(TIMING.minSeconds * 2.8),
-  max: Math.round(TIMING.maxSeconds * 2.8),
+  min: TIMING.minBeats * 4,
+  max: TIMING.maxBeats * TIMING.maxWordsPerBeat,
+  target: 4 * 7,
 };
 
 /**
@@ -161,15 +179,19 @@ export function validateScript(script, { captureNames = [], brollClips = [] } = 
   }
   if (beats.length > TIMING.maxBeats) problems.push(`Too many beats (${beats.length}), max ${TIMING.maxBeats}.`);
 
-  const words = countWords(beats);
-  if (words < WORD_BUDGET.min) {
-    problems.push(`Only ${words} spoken words; the minimum is ${WORD_BUDGET.min}. Add substance, not filler.`);
-  }
-  if (words > WORD_BUDGET.max) {
+  const predicted = estimateSeconds(beats);
+  if (predicted > TIMING.maxSeconds) {
     problems.push(
-      `${words} spoken words across ${beats.length} beats — the maximum is ${WORD_BUDGET.max}. ` +
-      `Cut about ${words - WORD_BUDGET.max} words: drop the weakest beat entirely rather than trimming every line.`
+      `${beats.length} beats predicts about ${predicted.toFixed(0)}s, over the ${TIMING.maxSeconds}s limit. ` +
+      `Each beat costs ~4s regardless of length — CUT A WHOLE BEAT. Trimming words will not help.`
     );
+  }
+  if (predicted < TIMING.minSeconds) {
+    problems.push(`${beats.length} beats predicts only ${predicted.toFixed(0)}s, under the ${TIMING.minSeconds}s minimum. Add a beat.`);
+  }
+  const words = countWords(beats);
+  if (words > WORD_BUDGET.max) {
+    problems.push(`${words} spoken words is over the ${WORD_BUDGET.max}-word guard; shorten the longest lines.`);
   }
 
   beats.forEach((b, i) => {

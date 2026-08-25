@@ -72,18 +72,22 @@ async function attempt({ idea, name, captures, brollClips, provider, voice, feed
   const beats = [];
   // The requested provider can fall back mid-run; QC judges what was actually used.
   let actualProvider = provider;
+  let trimmedTotal = 0;
   log(`attempt ${n}: voicing ${script.beats.length} beats (${provider})`);
   for (const [i, beat] of script.beats.entries()) {
-    const { file, seconds, provider: usedProvider } = await speakBeat(beat, {
+    const { file, seconds, provider: usedProvider, saved } = await speakBeat(beat, {
       dir: audioDir, index: i, provider, voice,
     });
     actualProvider = usedProvider;
+    trimmedTotal += saved || 0;
     beats.push({
       ...beat,
       audio: file,
       frames: Math.ceil(seconds * FPS) + PAD_FRAMES,
     });
   }
+
+  if (trimmedTotal > 0.5) log(`attempt ${n}: tightened voiceover by ${trimmedTotal.toFixed(1)}s`);
 
   const props = {
     beats,
