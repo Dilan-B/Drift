@@ -11,6 +11,9 @@ export const FACTS = {
   tagline: "Earn your scroll.",
   platform: "iOS",
   appStoreUrl: "https://apps.apple.com/app/drift-screentime/id6778215875",
+  // What a viewer types into App Store search to actually find it. "Drift"
+  // alone returns a pile of unrelated apps, so the CTA must say this in full.
+  appStoreSearch: "Drift Productivity",
   price: "$0.99/month",
   priceNumeric: 0.99,
   trialDays: 3,
@@ -194,6 +197,7 @@ export function lintScript(script) {
 export function brandPrompt() {
   return [
     `${FACTS.name} — ${FACTS.platform} app. ${FACTS.tagline}`,
+    `To tell someone where to get it, say: search "${FACTS.appStoreSearch}" on the App Store.`,
     `NEVER discuss money. No price, no cost, no trial, no subscription, and never`,
     `the word "free". If asked to give a reason to download, talk about what the app`,
     `does, not what it costs.`,

@@ -70,5 +70,41 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-25T17:55:32.707Z"
+  },
+  {
+    "ideaKey": "70c33ef0f66c",
+    "hook": "We’re teens who built an app to battle our biggest distraction.",
+    "format": "build-in-public",
+    "title": "teens-fight-our-biggest-distraction",
+    "file": "out/2026-08-25-build-in-public-70c33e.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-25T17:59:35.994Z"
+  },
+  {
+    "ideaKey": "ee2b0fdf1d84",
+    "hook": "Screen time blockers are easy to cheat. Here’s why.",
+    "format": "myth-bust",
+    "title": "screen-time-blockers-are-easy-to-cheat-heres-why-drift-uses-ai",
+    "file": "out/2026-08-25-myth-bust-ee2b0f.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-25T18:03:29.083Z"
+  },
+  {
+    "ideaKey": "1da2b866c2bd",
+    "hook": "Doing chores feels impossible when your phone screams for attention",
+    "format": "problem-agitate",
+    "title": "earn-screen-time-by-doing-chores",
+    "file": "out/2026-08-25-problem-agitate-1da2b8-r2.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-25T18:06:31.024Z"
   }
 ]

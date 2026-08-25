@@ -21,6 +21,9 @@ import { loadFont as loadAnton } from "@remotion/google-fonts/Anton";
 import { fitTextOnNLines } from "@remotion/layout-utils";
 import { C, FF } from "./theme.js";
 import { BOX, BOX_W, CTA_PILL_Y, SAFE, UI_TEXT_Y } from "./safeArea.js";
+
+// Mirrors FACTS.appStoreSearch — "Drift" alone does not find the app.
+const APP_STORE_SEARCH = "Drift Productivity";
 import { TasksVisual, EarnVisual, Sprout } from "./Promo.jsx";
 
 const anton = loadAnton();
@@ -304,7 +307,8 @@ const CtaPill = ({ label }) => {
           backgroundColor: HILITE,
           color: "#0A140E",
           fontFamily: anton.fontFamily,
-          fontSize: 44,
+          // Fitted, not fixed: a longer label must shrink rather than overrun.
+          fontSize: autoFit(label, 44, 1, BOX_W - 120),
           textTransform: "uppercase",
           letterSpacing: 1,
           padding: "26px 54px",
@@ -349,7 +353,7 @@ const Beat = ({ beat, index, isLast, audioBase, statementIndex }) => {
           maxLines={isLight ? 2 : 3}
         />
       ) : null}
-      {isLast ? <CtaPill label={beat.ctaLabel || "Drift on the App Store"} /> : null}
+      {isLast ? <CtaPill label={beat.ctaLabel || `Search "${APP_STORE_SEARCH}"`} /> : null}
       {beat.audio ? <Audio src={staticFile(`${audioBase}/${beat.audio}`)} /> : null}
     </AbsoluteFill>
   );

@@ -3,7 +3,7 @@
 // rather than assuming one is on PATH (this machine has none).
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, readdirSync, existsSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, existsSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import { ROOT } from "./openai.mjs";
 
@@ -93,4 +93,52 @@ export function listClips(subdir) {
   const dir = join(ROOT, "public", subdir);
   if (!existsSync(dir)) return [];
   return readdirSync(dir).filter((f) => /\.(mp4|mov|webm)$/i.test(f));
+}
+
+/**
+ * Tighten a voice clip: shave the edge silence, then speed it up slightly.
+ *
+ * The edge trim is minor — gpt-4o-mini-tts leaves only ~0.09s at the head and
+ * nothing at the tail. The pacing is what makes beats long: it delivers about
+ * 2.2 words/sec including its own inter-word pauses, so a 9-word line runs 4s.
+ * A modest tempo lift is the honest fix, and it reads as more energetic, which
+ * suits the format — TikTok voiceovers are fast.
+ *
+ * `silenceremove` is not compiled into Remotion's ffmpeg; `silencedetect`,
+ * `atrim` and `atempo` are.
+ */
+export function tightenVoice(file, { threshold = "-40dB", minDur = 0.06, keep = 0.03, tempo = 1 } = {}) {
+  const total = probe(file).seconds;
+
+  const det = spawnSync("npx",
+    ["remotion", "ffmpeg", "-hide_banner", "-nostats", "-i", file, "-af",
+     `silencedetect=noise=${threshold}:d=${minDur}`, "-f", "wav", "-y", "/dev/null"],
+    { cwd: ROOT, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+  const log = `${det.stderr || ""}${det.stdout || ""}`;
+  const starts = [...log.matchAll(/silence_start:\s*(-?[\d.]+)/g)].map((m) => Number(m[1]));
+  const ends = [...log.matchAll(/silence_end:\s*([\d.]+)/g)].map((m) => Number(m[1]));
+
+  let from = 0;
+  if (starts.length && starts[0] <= 0.05 && ends.length) from = Math.max(0, ends[0] - keep);
+  let to = total;
+  if (starts.length > ends.length) to = Math.min(total, starts[starts.length - 1] + keep);
+
+  const needsTrim = from > 0.01 || to < total - 0.01;
+  const needsTempo = Math.abs(tempo - 1) > 0.001;
+  if (!needsTrim && !needsTempo) return { seconds: total, saved: 0 };
+
+  const chain = [];
+  if (needsTrim) chain.push(`atrim=start=${from.toFixed(3)}:end=${to.toFixed(3)}`, "asetpts=PTS-STARTPTS");
+  // atempo is only valid in 0.5-2.0 per stage; our range is well inside it.
+  if (needsTempo) chain.push(`atempo=${tempo.toFixed(3)}`);
+
+  const tmp = file.replace(/(\.\w+)$/, ".tight$1");
+  const cut = spawnSync("npx",
+    ["remotion", "ffmpeg", "-hide_banner", "-nostats", "-y", "-i", file, "-af", chain.join(","), tmp],
+    { cwd: ROOT, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+  if (cut.status !== 0 || !existsSync(tmp)) return { seconds: total, saved: 0 };
+
+  renameSync(tmp, file);
+  const after = probe(file).seconds;
+  return { seconds: after, saved: Number((total - after).toFixed(2)) };
 }

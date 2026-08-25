@@ -8,6 +8,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseFile } from "music-metadata";
+import { tightenVoice } from "./media.mjs";
 import { KEYS, MODELS, trackUsage } from "./openai.mjs";
 
 // The ElevenLabs paywall is a per-run fact, not a per-beat one. Logging it on
@@ -101,13 +102,18 @@ export async function speakBeat(beat, { dir, index, provider, voice }) {
     ttsMacSay(beat.say, outFile, voice);
   }
 
+  // Measured delivery is ~2.2 words/sec, which puts a 5-beat script near 20s.
+  // A small tempo lift brings it to the 15s target without cutting content,
+  // and reads as more energetic. VF_VOICE_TEMPO=1 disables it.
+  const tempo = Number(process.env.VF_VOICE_TEMPO ?? 1.2);
+  const { saved } = tightenVoice(outFile, { tempo });
   const meta = await parseFile(outFile);
-  const seconds = meta.format.duration || beat.say.split(/\s+/).length / 2.8;
+  const seconds = meta.format.duration || beat.say.split(/\s+/).length / 2.35;
 
   if (used === "openai") {
     // gpt-4o-mini-tts bills text in + audio out; audio tokens track duration.
     trackUsage({ model: MODELS.tts(), in: beat.say.length / 4, out: (seconds / 60) * 1000 });
   }
 
-  return { file, seconds, provider: used };
+  return { file, seconds, provider: used, saved };
 }
