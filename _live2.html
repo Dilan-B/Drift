@@ -1,0 +1,682 @@
+<title>Drift — The Attention Economy</title>
+<style>
+  :root{
+    --ink:#16261C; --deep:#1F3A2A; --deepHi:#2A4D38;
+    --paper:#F7F7F4; --card:#FFFFFF; --line:#E4E7E2;
+    --sage:#3E6B4E; --sageLo:#E4ECE0; --terra:#2D7A52; --terraBr:#3DA870;
+    --clay:#B0764E; --clayLo:#EEE0CF; --mid:#6B7A6E; --faint:#9AA69C; --sun:#E9E4B0;
+    --serif:Georgia,"Iowan Old Style","Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#0d1712; color:var(--ink);
+    font-family:var(--sans);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; -webkit-font-smoothing:antialiased;
+  }
+  /* ---- stage: fixed 16:9, scales to viewport, container units drive all sizing ---- */
+  .stage{
+    position:relative;
+    width:min(100vw, 177.78vh);
+    aspect-ratio:16/9;
+    container-type:size;
+    overflow:hidden;
+    box-shadow:0 30px 90px rgba(0,0,0,.55);
+  }
+  .slide{
+    position:absolute; inset:0;
+    padding:7cqh 6cqw;
+    display:none;
+    flex-direction:column;
+  }
+  .slide.active{display:flex}
+  .slide.dark{background:var(--deep); color:#fff}
+  .slide.ink{background:var(--ink); color:#fff}
+  .slide.light{background:var(--paper); color:var(--ink)}
+
+  /* type */
+  .kicker{font-family:var(--sans); font-weight:700; letter-spacing:.28em;
+    font-size:1.7cqw; color:var(--terra); text-transform:uppercase}
+  .dark .kicker,.ink .kicker{color:var(--terraBr)}
+  h1{font-family:var(--serif); font-weight:700; line-height:1.0; text-wrap:balance}
+  .title{font-family:var(--serif); font-weight:700; font-size:4.4cqw; line-height:1.0;
+    letter-spacing:-.01em; margin-top:.9cqh; text-wrap:balance}
+  .lede{font-family:var(--serif); font-style:italic; font-size:2.5cqw; line-height:1.15; color:var(--sageLo)}
+  .body{font-size:2.1cqw; line-height:1.32; color:var(--mid)}
+  .dark .body,.ink .body{color:var(--sageLo)}
+  .ink-t{color:var(--ink)} .white{color:#fff}
+  b,strong{font-weight:700}
+  .em{font-family:var(--serif); font-style:italic}
+
+  /* header block for light content slides */
+  .head{margin-bottom:3.4cqh}
+  .head .title{font-size:4.2cqw; color:var(--ink)}
+
+  /* portal motif */
+  .portal{position:absolute; border-radius:50%; pointer-events:none}
+
+  /* cards / grids */
+  .grid{display:grid; gap:2.2cqw}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:1.4cqw;
+    box-shadow:0 3cqh 6cqh rgba(31,58,42,.07); padding:2.6cqh 2cqw}
+  .stat-big{font-family:var(--serif); font-weight:700; font-size:5.3cqw; line-height:1;
+    text-align:center; color:var(--terra)}
+  .stat-lab{text-align:center; font-size:1.55cqw; line-height:1.15; color:var(--mid); margin-top:1.4cqh}
+
+  .badge{flex:0 0 auto; display:grid; place-items:center; border-radius:50%;
+    background:var(--terra); color:#fff; font-weight:700}
+  .row{display:flex; gap:1.5cqw; align-items:flex-start;
+    background:var(--card); border:1px solid var(--line); border-radius:1.2cqw;
+    box-shadow:0 3cqh 5cqh rgba(31,58,42,.06); padding:2.2cqh 1.8cqw}
+  .row .badge{width:4.6cqh; height:4.6cqh; font-size:2cqw}
+  .row h3{font-size:2cqw; font-weight:700; color:var(--ink); font-family:var(--sans)}
+  .row p{font-size:1.55cqw; line-height:1.2; color:var(--mid); margin-top:.5cqh}
+
+  .pill{display:inline-grid; place-items:center; border-radius:50%; background:var(--terra);
+    color:#fff; font-weight:700}
+
+  .footer{position:absolute; left:6cqw; right:6cqw; bottom:2.8cqh;
+    display:flex; justify-content:space-between; font-size:1.15cqw; color:var(--faint)}
+
+  /* nav chrome */
+  .nav{position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:14px; z-index:20;
+    background:rgba(22,38,28,.82); backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:8px 14px;
+    color:#dfe9e0; font-family:var(--sans); font-size:13px}
+  .nav button{all:unset; cursor:pointer; width:30px; height:30px; border-radius:50%;
+    display:grid; place-items:center; color:#dfe9e0; transition:background .15s}
+  .nav button:hover{background:rgba(255,255,255,.14)}
+  .nav button:focus-visible{outline:2px solid var(--terraBr); outline-offset:2px}
+  .counter{min-width:52px; text-align:center; font-variant-numeric:tabular-nums; letter-spacing:.04em}
+  .progress{position:fixed; top:0; left:0; height:3px; background:var(--terraBr); z-index:20;
+    transition:width .3s ease}
+  .hint{position:fixed; top:14px; right:16px; z-index:20; color:#9fb0a2; font-size:12px;
+    font-family:var(--sans); opacity:.75}
+  /* click zones */
+  .zone{position:fixed; top:0; bottom:56px; width:22%; z-index:10; cursor:pointer}
+  .zone.left{left:0} .zone.right{right:0}
+
+  /* entrance motion — subtle rise + fade on each slide */
+  @keyframes riseIn { from { opacity:0; transform:translateY(1.4cqh); } to { opacity:1; transform:none; } }
+  .slide.active{ animation: riseIn .42s cubic-bezier(.2,.7,.2,1) both; }
+
+  /* life-in-weeks grid */
+  .lifewrap{ position:relative; flex:0 0 auto; }
+  canvas.life{ width:100%; height:100%; display:block; }
+  .legend{ display:flex; gap:2cqw; align-items:center; font-size:1.35cqw; color:var(--sageLo); }
+  .legend i{ width:1.3cqw; height:1.3cqw; border-radius:.25cqw; display:inline-block; margin-right:.6cqw; vertical-align:-.1cqw; }
+
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important; animation:none!important} }
+</style>
+
+<div class="progress" id="progress"></div>
+<div class="hint">← → to navigate · F fullscreen</div>
+
+<div class="stage" id="stage">
+
+  <!-- 1 TITLE -->
+  <section class="slide ink active">
+    <div class="portal" style="width:38cqw;height:38cqw;right:-2cqw;top:15cqh;background:var(--deep)"></div>
+    <div class="portal" style="width:26cqw;height:26cqw;right:4cqw;top:26cqh;background:var(--sage);opacity:.8"></div>
+    <div class="portal" style="width:14.5cqw;height:14.5cqw;right:10cqw;top:37cqh;background:var(--sun)"></div>
+    <div style="margin-top:12cqh">
+      <div class="kicker">A Community Talk</div>
+      <h1 style="font-size:5.6cqw;color:#fff;margin-top:2cqh;max-width:52cqw;line-height:1.02">The Attention Economy</h1>
+      <p class="lede" style="margin-top:2.6cqh;max-width:50cqw">The science of screen time — and how to take it back.</p>
+    </div>
+    <div style="margin-top:auto">
+      <div style="font-size:1.9cqw;font-weight:700;color:#fff">Presented by [Your Name]</div>
+      <div style="font-size:1.7cqw;color:var(--faint);margin-top:.6cqh">Founder, Drift · [Library Name] · [Date]</div>
+    </div>
+  </section>
+
+  <!-- 2 HOOK -->
+  <section class="slide dark">
+    <div style="margin:auto 0">
+      <div class="kicker">The habit we barely notice</div>
+      <h1 style="font-size:6cqw;color:#fff;margin-top:2.4cqh">When did you last<br>check your phone?</h1>
+      <p class="body" style="margin-top:3.4cqh;max-width:72cqw">The average person now checks <b class="white">205 times a day</b> — about once every five waking minutes. Ask people to guess their own number, and most say ten.</p>
+    </div>
+  </section>
+
+  <!-- 3 SCALE -->
+  <section class="slide light">
+    <div class="head"><div class="kicker">The scale of it</div><div class="title">This is the average — not the extreme</div></div>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="card"><div class="stat-big">4h 39m</div><div class="stat-lab">Average time an adult spends on their phone every day (2024)</div></div>
+      <div class="card"><div class="stat-big" style="color:var(--clay)">205×</div><div class="stat-lab">Times a day we check it — about once every 5 waking minutes</div></div>
+      <div class="card"><div class="stat-big" style="color:var(--sage)">2,617</div><div class="stat-lab">Separate taps, swipes and clicks on it every single day</div></div>
+    </div>
+    <div style="display:flex;gap:3cqw;align-items:center;margin-top:3.4cqh">
+      <p class="em" style="flex:1;font-size:2.15cqw;line-height:1.25;color:var(--ink)">That's more than <b>70 full days a year</b> — over two months of your waking life, every single year, spent looking at a screen.</p>
+      <div style="flex:0 0 auto;display:flex;gap:1.6cqw;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:1.2cqw;padding:1.8cqh 1.6cqw;box-shadow:0 3cqh 6cqh rgba(31,58,42,.07)">
+        <img src="data:image/png;base64,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" alt="QR code linking to the screen-time calculator" style="width:11cqw;height:11cqw;border-radius:.5cqw;display:block">
+        <div style="max-width:17cqw">
+          <div class="kicker" style="font-size:1.25cqw">Your turn</div>
+          <div style="font-family:var(--serif);font-weight:700;font-size:1.95cqw;color:var(--ink);margin-top:.5cqh;line-height:1.05">Scan to see<br>your own number</div>
+          <div style="font-size:1.3cqw;color:var(--mid);margin-top:.6cqh;line-height:1.2">A 20-second calculator: how many <em>years</em> of your life your phone adds up to.</div>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>3</span></div>
+  </section>
+
+  <!-- 3b LIFE IN WEEKS (the loss) -->
+  <section class="slide ink">
+    <div class="kicker">A lifetime, to scale</div>
+    <h1 style="font-size:3.7cqw;color:#fff;margin-top:.8cqh;max-width:76cqw">Your whole life — one dot per week</h1>
+    <div style="display:flex;gap:5cqw;align-items:center;margin-top:2.4cqh">
+      <div style="flex:1">
+        <p class="body" style="font-size:1.95cqw;max-width:44cqw">A long life is about <b class="white">4,420 weeks</b>. At four and a half hours a day, the weeks in <span style="color:#E3A667;font-weight:700">amber</span> are the ones you'll hand to your phone.</p>
+        <div style="margin-top:3.2cqh;display:flex;align-items:baseline;gap:1.4cqw">
+          <div style="font-family:var(--serif);font-weight:700;font-size:8cqw;color:#E3A667;line-height:.85">16</div>
+          <div style="font-family:var(--serif);font-style:italic;font-size:2.4cqw;color:var(--sageLo)">years of your<br>life — gone</div>
+        </div>
+        <div class="legend" style="margin-top:3.4cqh">
+          <span><i style="background:#3C5645"></i>a week lived</span>
+          <span><i style="background:#E3A667"></i>a week on your phone</span>
+        </div>
+      </div>
+      <div class="lifewrap" style="aspect-ratio:52/85;height:71cqh">
+        <canvas class="life" data-shaded="0.1875" data-base="3C5645" data-shade="E3A667"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 PART 1 -->
+  <section class="slide dark" data-divider>
+    <div class="portal" style="width:44cqw;height:44cqw;right:-8cqw;top:-18cqh;background:var(--deepHi)"></div>
+    <div class="portal" style="width:26cqw;height:26cqw;right:-2cqw;top:-2cqh;background:var(--terra);opacity:.65"></div>
+    <div style="margin:auto 0">
+      <div class="kicker">Part 1</div>
+      <h1 style="font-size:5.6cqw;color:#fff;margin-top:1.6cqh">Why it's so hard<br>to put down</h1>
+      <p class="body" style="margin-top:2.6cqh;max-width:62cqw">Four forces engineered into the apps in your pocket — none of them about your character.</p>
+    </div>
+  </section>
+
+  <!-- 5 NOT WILLPOWER -->
+  <section class="slide light">
+    <div class="head"><div class="kicker">The myth</div><div class="title">It is not a willpower problem</div></div>
+    <div style="display:flex;gap:3.5cqw">
+      <div style="flex:1;padding-top:1cqh">
+        <p class="em" style="font-size:2.3cqw;line-height:1.2;color:var(--ink)">We treat phone habits like a moral failing — <span style="color:var(--mid)">just put it down, show some discipline.</span></p>
+        <p class="body" style="font-size:1.95cqw;margin-top:3cqh"><b class="ink-t">But you are not facing a neutral tool.</b> You're facing thousands of the world's best designers, data scientists and behavioral psychologists — whose full-time job is to keep your attention.</p>
+      </div>
+      <div style="flex:0 0 34cqw;background:var(--deep);color:#fff;border-radius:1.4cqw;padding:3cqh 2.2cqw">
+        <div class="kicker" style="font-size:1.4cqw">The asymmetry</div>
+        <div style="font-family:var(--serif);font-weight:700;font-size:2.8cqw;margin-top:1.6cqh">You</div>
+        <p style="font-size:1.6cqw;line-height:1.2;color:var(--sageLo);margin-top:.6cqh">A few minutes of willpower, at the end of a tired day.</p>
+        <p class="em" style="font-size:1.9cqw;color:var(--faint);margin-top:1.8cqh">vs.</p>
+        <div style="font-family:var(--serif);font-weight:700;font-size:2.6cqw;color:var(--sun);margin-top:.6cqh;line-height:1.05">A billion-dollar industry</div>
+        <p style="font-size:1.6cqw;line-height:1.2;color:var(--sageLo);margin-top:.8cqh">Optimizing every pixel, 24/7, with your data as feedback.</p>
+      </div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>5</span></div>
+  </section>
+
+  <!-- 6 SLOT MACHINE -->
+  <section class="slide light">
+    <div class="head"><div class="kicker">Force 1 · The reward loop</div><div class="title">A slot machine in your pocket</div></div>
+    <div style="display:flex;gap:3.5cqw">
+      <div style="flex:1;padding-top:.5cqh">
+        <p class="body" style="font-size:1.95cqw"><b class="ink-t">Variable-ratio reinforcement.</b> B.F. Skinner found that rewards delivered on an unpredictable schedule are the most compulsive of all — more than a predictable reward every time.</p>
+        <p class="body" style="font-size:1.95cqw;margin-top:2.6cqh"><b class="ink-t">Pull to refresh. Maybe something great, maybe nothing.</b> That "maybe" is the exact mechanism slot machines use — now on the screen you check 205 times a day.</p>
+      </div>
+      <div style="flex:0 0 34cqw;display:flex;flex-direction:column;gap:1.6cqh">
+        <div class="row"><div class="badge" style="background:var(--clay)">1</div><div><h3>Pull to refresh</h3><p class="em">the lever</p></div></div>
+        <div class="row"><div class="badge" style="background:var(--clay)">2</div><div><h3>Unpredictable payoff</h3><p class="em">the jackpot</p></div></div>
+        <div class="row"><div class="badge" style="background:var(--clay)">3</div><div><h3>Do it again</h3><p class="em">the compulsion</p></div></div>
+      </div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>6</span></div>
+  </section>
+
+  <!-- 7 DOPAMINE -->
+  <section class="slide light">
+    <div class="head"><div class="kicker">Force 2 · Brain chemistry</div><div class="title">Dopamine isn't the pleasure chemical</div></div>
+    <div style="display:flex;gap:2.5cqw">
+      <div style="flex:1;background:var(--sageLo);border-radius:1.4cqw;padding:3cqh 2.2cqw">
+        <div class="kicker" style="color:var(--sage);font-size:1.4cqw">The myth</div>
+        <p class="em" style="font-size:2.5cqw;line-height:1.12;color:var(--ink);margin-top:1.4cqh">"Dopamine = pleasure. Likes make us feel good."</p>
+        <p style="font-size:1.6cqw;line-height:1.25;color:var(--sage);margin-top:2.4cqh">If it were really pleasure, we'd feel satisfied and stop. We don't.</p>
+      </div>
+      <div style="flex:1;background:var(--deep);border-radius:1.4cqw;padding:3cqh 2.2cqw;color:#fff">
+        <div class="kicker" style="font-size:1.4cqw">What the research shows</div>
+        <p style="font-family:var(--serif);font-weight:700;font-size:2.5cqw;line-height:1.08;margin-top:1.4cqh">Dopamine drives wanting — not liking.</p>
+        <p style="font-size:1.65cqw;line-height:1.28;color:var(--sageLo);margin-top:2cqh">Berridge &amp; Robinson's work separates <b style="color:var(--sun)">seeking</b> from <b style="color:var(--sun)">enjoying</b>. Apps flood the 'seeking' system — so you keep chasing a hit you never quite land. That's the itch you can't scratch.</p>
+      </div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>7</span></div>
+  </section>
+
+  <!-- 8 NO STOPPING CUES -->
+  <section class="slide light">
+    <div class="head"><div class="kicker">Force 3 · No brakes</div><div class="title">Designed to have no natural stopping point</div></div>
+    <div style="display:flex;gap:2.5cqw">
+      <div style="flex:1;display:flex;flex-direction:column;gap:1.5cqh">
+        <div class="row"><div class="badge">1</div><div><h3>Infinite scroll</h3><p>The page never ends. Older designs had page 2, page 3 — a natural 'shall I go on?' moment. That pause was deliberately removed.</p></div></div>
+        <div class="row"><div class="badge">2</div><div><h3>Autoplay</h3><p>The next video starts before you decide to watch it. The default is 'keep going,' and defaults win.</p></div></div>
+        <div class="row"><div class="badge">3</div><div><h3>Streaks &amp; badges</h3><p>Manufactured obligations that punish you for stopping — quit and you 'lose' something.</p></div></div>
+      </div>
+      <div style="flex:0 0 30cqw;background:var(--clayLo);border-radius:1.4cqw;padding:3cqh 2.2cqw">
+        <p style="font-family:var(--serif);font-weight:700;font-size:2.4cqw;line-height:1.05;color:var(--ink)">The old way had stopping cues</p>
+        <p style="font-size:1.65cqw;line-height:1.28;color:var(--clay);margin-top:1.8cqh">An empty plate. The end of a chapter. The last page of the newspaper. A signal that said: you're done.</p>
+        <p style="font-size:1.7cqw;font-weight:700;font-style:italic;color:var(--ink);margin-top:1.8cqh;font-family:var(--serif)">The feed removed all of them.</p>
+      </div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>8</span></div>
+  </section>
+
+  <!-- 9 ATTENTION RESIDUE -->
+  <section class="slide light">
+    <div class="head"><div class="kicker">Force 4 · The hidden tax</div><div class="title">Every glance costs more than the glance</div></div>
+    <div style="display:flex;gap:3cqw">
+      <div style="flex:1;padding-top:.5cqh">
+        <p class="body" style="font-size:1.9cqw"><b class="ink-t">Attention residue.</b> Every time you switch — even a five-second glance at a notification — part of your mind stays stuck on the last thing. Sophie Leroy named this in 2009: your full attention doesn't arrive with you.</p>
+        <p class="body" style="font-size:1.9cqw;margin-top:2.4cqh"><b class="ink-t">So a five-second check doesn't cost five seconds.</b> UC Irvine's Gloria Mark clocked the average return to full focus at <b class="ink-t">23 minutes</b>. Her latest work: our attention on any one screen now lasts about <b class="ink-t">47 seconds</b>.</p>
+      </div>
+      <div style="flex:0 0 32cqw;display:flex;flex-direction:column;gap:2cqh">
+        <div class="card"><div class="stat-big" style="color:var(--sage);font-size:4.4cqw">5 sec</div><div class="stat-lab">The glance you notice</div></div>
+        <div class="card"><div class="stat-big" style="color:var(--clay);font-size:4.4cqw">23 min</div><div class="stat-lab">To refocus fully after a single interruption</div></div>
+      </div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>9</span></div>
+  </section>
+
+  <!-- 10 SLEEP -->
+  <section class="slide light">
+    <div class="head"><div class="kicker">The body keeps the score</div><div class="title">It follows you into the night</div></div>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="card" style="padding:3cqh 2cqw"><div style="font-family:var(--serif);font-weight:700;font-size:2.2cqw;color:var(--terra)">Blue light delays sleep</div><p style="font-size:1.6cqw;line-height:1.34;color:var(--mid);margin-top:1.4cqh">In a Harvard study (PNAS, 2015), reading on a screen before bed cut melatonin by <b class="ink-t">50%+</b> and pushed the body clock back ~<b class="ink-t">1.5 hours</b> — with groggier mornings after.</p></div>
+      <div class="card" style="padding:3cqh 2cqw"><div style="font-family:var(--serif);font-weight:700;font-size:2.2cqw;color:var(--terra)">The bedtime doomscroll</div><p style="font-size:1.6cqw;line-height:1.34;color:var(--mid);margin-top:1.4cqh">The variable-reward loop is most powerful when you're tired and your guard is down — exactly when you meant to sleep.</p></div>
+      <div class="card" style="padding:3cqh 2cqw"><div style="font-family:var(--serif);font-weight:700;font-size:2.2cqw;color:var(--terra)">Displacement</div><p style="font-size:1.6cqw;line-height:1.34;color:var(--mid);margin-top:1.4cqh">Every hour on the phone is an hour not spent sleeping, moving, or with people. Often it's the sleep and face-to-face time that lose.</p></div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>10</span></div>
+  </section>
+
+  <!-- 10b YOUTH MENTAL HEALTH -->
+  <section class="slide light">
+    <div class="head"><div class="kicker">The generation that grew up on it</div><div class="title">The timing is hard to ignore</div></div>
+    <div style="display:flex;gap:3cqw">
+      <div style="flex:1;padding-top:.5cqh">
+        <p class="body" style="font-size:1.9cqw">Teen mental health held broadly steady through the 2000s — then turned sharply downward around <b class="ink-t">2012–2013</b>, just as smartphones and social media became near-universal. The rise in anxiety, depression and self-harm was steepest among <b class="ink-t">teen girls</b>.</p>
+        <p class="body" style="font-size:1.9cqw;margin-top:2.4cqh">Psychologist <b class="ink-t">Jonathan Haidt</b> (<em>The Anxious Generation</em>, 2024) calls it a "great rewiring of childhood." The science is still <b class="ink-t">correlational and debated</b> — but few dispute the pattern.</p>
+      </div>
+      <div style="flex:0 0 34cqw;display:flex;flex-direction:column;gap:2cqh">
+        <div style="background:var(--deep);color:#fff;border-radius:1.4cqw;padding:2.8cqh 2.2cqw">
+          <div style="font-family:var(--serif);font-weight:700;font-size:4.6cqw;line-height:1;color:var(--sun)">~2012</div>
+          <p style="font-size:1.5cqw;line-height:1.2;color:var(--sageLo);margin-top:.8cqh">When the curves for teen depression and self-harm began to climb</p>
+        </div>
+        <div class="card"><div class="stat-big" style="color:var(--clay);font-size:4.2cqw">~20 hrs</div><div class="stat-lab">A week the average teen girl now spends on social media</div></div>
+      </div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>11</span></div>
+  </section>
+
+  <!-- 11 PART 2 -->
+  <section class="slide dark" data-divider>
+    <div class="portal" style="width:44cqw;height:44cqw;right:-8cqw;top:-18cqh;background:var(--deepHi)"></div>
+    <div class="portal" style="width:26cqw;height:26cqw;right:-2cqw;top:-2cqh;background:var(--terra);opacity:.65"></div>
+    <div style="margin:auto 0">
+      <div class="kicker">Part 2</div>
+      <h1 style="font-size:5.4cqw;color:#fff;margin-top:1.6cqh">The reframe<br>that changes everything</h1>
+      <p class="body" style="margin-top:2.6cqh;max-width:60cqw">Stop fighting yourself. Start changing the design around you.</p>
+    </div>
+  </section>
+
+  <!-- 12 REFRAME -->
+  <section class="slide light">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:1.6cqw;padding:4cqh 3cqw;box-shadow:0 3cqh 6cqh rgba(31,58,42,.07)">
+      <p style="font-family:var(--serif);font-weight:700;font-size:4cqw;line-height:1.08;color:var(--ink)">The problem was never your <span style="color:var(--mid);text-decoration:line-through">willpower.</span><br>The problem is the <span style="color:var(--terra)">design.</span></p>
+    </div>
+    <div class="kicker" style="margin-top:3.4cqh">What follows from that</div>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:1.8cqh">
+      <div class="card" style="padding:2.4cqh 1.8cqw"><div class="pill" style="width:4cqh;height:4cqh;background:var(--sage);font-size:1.9cqw">→</div><h3 style="font-family:var(--sans);font-size:1.9cqw;font-weight:700;color:var(--ink);margin-top:1.4cqh">Willpower doesn't scale</h3><p style="font-size:1.5cqw;line-height:1.28;color:var(--mid);margin-top:.8cqh">You can't out-discipline a system optimizing against you 24/7. It works a day and fails on the tired ones.</p></div>
+      <div class="card" style="padding:2.4cqh 1.8cqw"><div class="pill" style="width:4cqh;height:4cqh;background:var(--sage);font-size:1.9cqw">→</div><h3 style="font-family:var(--sans);font-size:1.9cqw;font-weight:700;color:var(--ink);margin-top:1.4cqh">Design does scale</h3><p style="font-size:1.5cqw;line-height:1.28;color:var(--mid);margin-top:.8cqh">Change your environment once and it keeps working while you sleep — no daily heroics required.</p></div>
+      <div class="card" style="padding:2.4cqh 1.8cqw;background:var(--sageLo)"><div class="pill" style="width:4cqh;height:4cqh;background:var(--terra);font-size:1.9cqw">→</div><h3 style="font-family:var(--sans);font-size:1.9cqw;font-weight:700;color:var(--ink);margin-top:1.4cqh">This is good news</h3><p style="font-size:1.5cqw;line-height:1.28;color:var(--mid);margin-top:.8cqh">The fix isn't 'become a better person.' It's 'set things up smarter.' That's learnable.</p></div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>12</span></div>
+  </section>
+
+  <!-- 13 PART 3 -->
+  <section class="slide dark" data-divider>
+    <div class="portal" style="width:44cqw;height:44cqw;right:-8cqw;top:-18cqh;background:var(--deepHi)"></div>
+    <div class="portal" style="width:26cqw;height:26cqw;right:-2cqw;top:-2cqh;background:var(--terra);opacity:.65"></div>
+    <div style="margin:auto 0">
+      <div class="kicker">Part 3</div>
+      <h1 style="font-size:5.8cqw;color:#fff;margin-top:1.6cqh">What actually<br>works</h1>
+      <p class="body" style="margin-top:2.6cqh;max-width:60cqw">Five design principles you can use tonight — no app required.</p>
+    </div>
+  </section>
+
+  <!-- 14 TOOLKIT -->
+  <section class="slide light">
+    <div class="head"><div class="kicker">The toolkit</div><div class="title">Five principles that beat willpower</div></div>
+    <div style="display:flex;gap:2.5cqw">
+      <div style="flex:1;display:flex;flex-direction:column;gap:1.4cqh">
+        <div class="row"><div class="badge">1</div><div><h3>Add friction</h3><p>Make the pull-to-open cost a few seconds more.</p></div></div>
+        <div class="row"><div class="badge">2</div><div><h3>Design your environment</h3><p>Change defaults so the easy path is the good one.</p></div></div>
+        <div class="row"><div class="badge">3</div><div><h3>Use a commitment device</h3><p>Lock in your future self while you're clear-headed.</p></div></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:1.4cqh">
+        <div class="row"><div class="badge" style="background:var(--clay)">4</div><div><h3>Replace, don't just remove</h3><p>Give the freed-up time somewhere to go.</p></div></div>
+        <div class="row"><div class="badge" style="background:var(--clay)">5</div><div><h3>Make it accountable</h3><p>Borrow social pressure — do it with others.</p></div></div>
+        <div style="background:var(--deep);border-radius:1.2cqw;padding:2.2cqh 1.8cqw;color:#fff"><p class="em" style="font-size:1.85cqw;line-height:1.2">None of these require more discipline. They require better setup — done once.</p></div>
+      </div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>14</span></div>
+  </section>
+
+  <!-- 15 FRICTION -->
+  <section class="slide light">
+    <div class="head" style="margin-bottom:2cqh"><div class="kicker">Principle 1</div><div class="title">Add friction to the bad, remove it from the good</div></div>
+    <p class="em" style="font-size:2cqw;color:var(--ink);margin-bottom:2.4cqh">Small speed bumps beat big intentions. A 15-second delay is often enough to break the automatic reach.</p>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:1.8cqw">
+      <div class="card" style="padding:2cqh 1.6cqw"><h3 style="font-size:1.85cqw;font-weight:700;color:var(--terra);font-family:var(--sans)">Grayscale mode</h3><p style="font-size:1.45cqw;line-height:1.25;color:var(--mid);margin-top:.7cqh">Draining the color makes the feed far less magnetic — the dopamine cues dim.</p></div>
+      <div class="card" style="padding:2cqh 1.6cqw"><h3 style="font-size:1.85cqw;font-weight:700;color:var(--terra);font-family:var(--sans)">Delete, don't just close</h3><p style="font-size:1.45cqw;line-height:1.25;color:var(--mid);margin-top:.7cqh">Kill the app; use it in the browser. The extra step is the point.</p></div>
+      <div class="card" style="padding:2cqh 1.6cqw"><h3 style="font-size:1.85cqw;font-weight:700;color:var(--terra);font-family:var(--sans)">Log out every time</h3><p style="font-size:1.45cqw;line-height:1.25;color:var(--mid);margin-top:.7cqh">Re-typing the password is a 15-second pause that lets the urge pass.</p></div>
+      <div class="card" style="padding:2cqh 1.6cqw"><h3 style="font-size:1.85cqw;font-weight:700;color:var(--terra);font-family:var(--sans)">Hide the triggers</h3><p style="font-size:1.45cqw;line-height:1.25;color:var(--mid);margin-top:.7cqh">Off the home screen, into a folder on page 3. Out of sight, out of thumb.</p></div>
+      <div class="card" style="padding:2cqh 1.6cqw"><h3 style="font-size:1.85cqw;font-weight:700;color:var(--terra);font-family:var(--sans)">Kill the badges</h3><p style="font-size:1.45cqw;line-height:1.25;color:var(--mid);margin-top:.7cqh">Turn off red notification dots — they manufacture urgency that isn't real.</p></div>
+      <div class="card" style="padding:2cqh 1.6cqw"><h3 style="font-size:1.85cqw;font-weight:700;color:var(--terra);font-family:var(--sans)">Charge it in another room</h3><p style="font-size:1.45cqw;line-height:1.25;color:var(--mid);margin-top:.7cqh">Friction for the worst offender: the bedtime and first-thing scroll.</p></div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>15</span></div>
+  </section>
+
+  <!-- 16 ENVIRONMENT -->
+  <section class="slide light">
+    <div class="head"><div class="kicker">Principle 2</div><div class="title">Design defaults, because defaults win</div></div>
+    <p class="body" style="font-size:1.9cqw;max-width:70cqw;margin-bottom:2.6cqh">You will not make a fresh, wise decision 96 times a day. So don't rely on deciding — set the default once, and let it carry you.</p>
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:2.5cqw">
+      <div class="row"><div class="badge" style="background:var(--sage)">✓</div><div><h3>Phone-free zones</h3><p>The dinner table. The bedroom. The first 30 minutes awake. Make the rule about the place, not the moment.</p></div></div>
+      <div class="row"><div class="badge" style="background:var(--sage)">✓</div><div><h3>A basket by the door</h3><p>A home for the phone when you walk in, so it isn't fused to your hand all evening.</p></div></div>
+      <div class="row"><div class="badge" style="background:var(--sage)">✓</div><div><h3>Analog alarm clock</h3><p>Breaks the most damaging loop: phone last thing at night, first in the morning.</p></div></div>
+      <div class="row"><div class="badge" style="background:var(--sage)">✓</div><div><h3>Scheduled downtime</h3><p>Use the phone's own tools to auto-lock distracting apps at set hours — a default you don't renegotiate.</p></div></div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>16</span></div>
+  </section>
+
+  <!-- 17 COMMITMENT -->
+  <section class="slide light">
+    <div class="head" style="margin-bottom:2cqh"><div class="kicker">Principle 3</div><div class="title">Commitment devices: bind your future self</div></div>
+    <p class="em" style="font-size:2cqw;line-height:1.2;color:var(--ink);margin-bottom:2.6cqh;max-width:88cqw">A choice you make now, while you're clear-headed, that limits what tired-you can do later. Odysseus tying himself to the mast so he couldn't chase the sirens — same idea, modern problem.</p>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="card" style="padding:3cqh 2cqw"><div style="font-family:var(--serif);font-weight:700;font-size:2.1cqw;color:var(--terra)">App limits with teeth</div><p style="font-size:1.55cqw;line-height:1.32;color:var(--mid);margin-top:1.3cqh">Set a hard cap you can't casually override in the moment of weakness.</p></div>
+      <div class="card" style="padding:3cqh 2cqw"><div style="font-family:var(--serif);font-weight:700;font-size:2.1cqw;color:var(--terra)">Stakes &amp; promises</div><p style="font-size:1.55cqw;line-height:1.32;color:var(--mid);margin-top:1.3cqh">Tell someone your goal, or put money on it. Now quitting has a cost.</p></div>
+      <div class="card" style="padding:3cqh 2cqw"><div style="font-family:var(--serif);font-weight:700;font-size:2.1cqw;color:var(--terra)">Earn-it systems</div><p style="font-size:1.55cqw;line-height:1.32;color:var(--mid);margin-top:1.3cqh">Make screen time contingent on something first — a walk, a task, real life.</p></div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>17</span></div>
+  </section>
+
+  <!-- 18 REPLACE -->
+  <section class="slide light">
+    <div class="head" style="margin-bottom:2cqh"><div class="kicker">Principle 4</div><div class="title">Replace the habit — don't just delete it</div></div>
+    <div style="background:var(--clayLo);border-radius:1.2cqw;padding:2.4cqh 2.2cqw;margin-bottom:2.6cqh">
+      <p style="font-size:1.85cqw;line-height:1.2"><b class="ink-t">A phone habit fills a real need — boredom, stress, connection, a moment's rest.</b> <span style="color:var(--clay)">Remove it without a replacement and the vacuum pulls you right back.</span></p>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:2.5cqw">
+      <div class="card" style="padding:2.2cqh 1.8cqw"><p style="font-size:1.85cqw;line-height:1.2"><span class="em" style="color:var(--mid)">Bored in a queue</span> <b style="color:var(--terra)">→</b> <b class="ink-t">A book or podcast queued and ready</b></p></div>
+      <div class="card" style="padding:2.2cqh 1.8cqw"><p style="font-size:1.85cqw;line-height:1.2"><span class="em" style="color:var(--mid)">Winding down at night</span> <b style="color:var(--terra)">→</b> <b class="ink-t">A bath, a stretch, a few pages of fiction</b></p></div>
+      <div class="card" style="padding:2.2cqh 1.8cqw"><p style="font-size:1.85cqw;line-height:1.2"><span class="em" style="color:var(--mid)">Craving connection</span> <b style="color:var(--terra)">→</b> <b class="ink-t">A text to a real friend, or a call</b></p></div>
+      <div class="card" style="padding:2.2cqh 1.8cqw"><p style="font-size:1.85cqw;line-height:1.2"><span class="em" style="color:var(--mid)">Need a mental break</span> <b style="color:var(--terra)">→</b> <b class="ink-t">A walk outside — five minutes resets more than a scroll</b></p></div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>18</span></div>
+  </section>
+
+  <!-- 19 ACCOUNTABLE -->
+  <section class="slide light">
+    <div class="head"><div class="kicker">Principle 5</div><div class="title">Do it with other people</div></div>
+    <p class="em" style="font-size:2cqw;color:var(--ink);margin-bottom:2.6cqh;max-width:82cqw">Willpower is a solo sport and it loses. Accountability borrows other people's — and turns a private struggle into a shared one.</p>
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:2.5cqw">
+      <div class="row"><div class="badge" style="background:var(--sage)">✓</div><div><h3>Phone stacks</h3><p>At dinner, everyone's phone goes in a pile. First to reach for it does the dishes.</p></div></div>
+      <div class="row"><div class="badge" style="background:var(--sage)">✓</div><div><h3>A screen-time buddy</h3><p>Share weekly numbers with a friend. Being seen changes behavior more than any setting.</p></div></div>
+      <div class="row"><div class="badge" style="background:var(--sage)">✓</div><div><h3>Family charging station</h3><p>One spot where everyone's phone sleeps at night. The rule applies to parents too.</p></div></div>
+      <div class="row"><div class="badge" style="background:var(--sage)">✓</div><div><h3>Tell people your why</h3><p>Saying the goal out loud makes backing out cost something social.</p></div></div>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>19</span></div>
+  </section>
+
+  <!-- 20 RECAP -->
+  <section class="slide dark">
+    <div class="kicker">So far</div>
+    <h1 style="font-size:4.2cqw;color:#fff;margin-top:1cqh">What we've covered</h1>
+    <div style="display:flex;gap:2.5cqw;margin-top:3cqh">
+      <div style="flex:1;display:flex;flex-direction:column;gap:1.8cqh">
+        <div style="background:var(--deepHi);border-radius:1.2cqw;padding:2.4cqh 2cqw"><div style="font-size:1.9cqw;font-weight:700;color:var(--sun)">The science</div><p style="font-size:1.6cqw;line-height:1.28;color:var(--sageLo);margin-top:.8cqh">It's not willpower. Reward loops, dopamine-seeking, no stopping cues and attention residue are engineered in.</p></div>
+        <div style="background:var(--deepHi);border-radius:1.2cqw;padding:2.4cqh 2cqw"><div style="font-size:1.9cqw;font-weight:700;color:var(--sun)">The reframe</div><p style="font-size:1.6cqw;line-height:1.28;color:var(--sageLo);margin-top:.8cqh">Stop fighting yourself. Change the design around you — that's what scales.</p></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:1.2cqh">
+        <div style="background:var(--deepHi);border-radius:.9cqw;padding:1.5cqh 1.6cqw;display:flex;gap:1.2cqw;align-items:center"><span class="pill" style="width:3.4cqh;height:3.4cqh;font-size:1.5cqw">✓</span><span style="font-size:1.65cqw"><b class="white">Add friction</b> <span style="color:var(--sageLo)">— slow the bad, speed the good.</span></span></div>
+        <div style="background:var(--deepHi);border-radius:.9cqw;padding:1.5cqh 1.6cqw;display:flex;gap:1.2cqw;align-items:center"><span class="pill" style="width:3.4cqh;height:3.4cqh;font-size:1.5cqw">✓</span><span style="font-size:1.65cqw"><b class="white">Design defaults</b> <span style="color:var(--sageLo)">— decide once; let it carry you.</span></span></div>
+        <div style="background:var(--deepHi);border-radius:.9cqw;padding:1.5cqh 1.6cqw;display:flex;gap:1.2cqw;align-items:center"><span class="pill" style="width:3.4cqh;height:3.4cqh;font-size:1.5cqw">✓</span><span style="font-size:1.65cqw"><b class="white">Commit ahead</b> <span style="color:var(--sageLo)">— bind your future self.</span></span></div>
+        <div style="background:var(--deepHi);border-radius:.9cqw;padding:1.5cqh 1.6cqw;display:flex;gap:1.2cqw;align-items:center"><span class="pill" style="width:3.4cqh;height:3.4cqh;font-size:1.5cqw">✓</span><span style="font-size:1.65cqw"><b class="white">Replace &amp; share</b> <span style="color:var(--sageLo)">— fill the gap; do it with others.</span></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 21 PART 4 -->
+  <section class="slide dark" data-divider>
+    <div class="portal" style="width:44cqw;height:44cqw;right:-8cqw;top:-18cqh;background:var(--deepHi)"></div>
+    <div class="portal" style="width:26cqw;height:26cqw;right:-2cqw;top:-2cqh;background:var(--terra);opacity:.65"></div>
+    <div style="margin:auto 0">
+      <div class="kicker">Part 4</div>
+      <h1 style="font-size:5.4cqw;color:#fff;margin-top:1.6cqh">One tool that does<br>this for you</h1>
+      <p class="body" style="margin-top:2.6cqh;max-width:62cqw">Full disclosure: this is the part I built. Everything before it stands on its own.</p>
+    </div>
+  </section>
+
+  <!-- 22 ORIGIN -->
+  <section class="slide ink">
+    <div class="portal" style="width:34cqw;height:34cqw;right:2cqw;top:16cqh;background:var(--deep)"></div>
+    <div class="portal" style="width:14cqw;height:14cqw;right:12cqw;top:26cqh;background:var(--sun)"></div>
+    <div style="margin:auto 0;max-width:62cqw">
+      <div class="kicker">Why I built Drift</div>
+      <h1 style="font-size:4.2cqw;color:#fff;margin-top:1.4cqh">I couldn't out-willpower my own phone either.</h1>
+      <p class="body" style="font-size:1.95cqw;margin-top:3cqh">I tried every tip on the last few slides. They worked — until a tired evening, when I'd just turn the limit off.</p>
+      <p style="font-size:1.95cqw;line-height:1.32;margin-top:1.6cqh"><b class="white">So I built the commitment device I wished existed: one that makes the good thing the price of the screen time.</b> <span style="color:var(--sageLo)">Not more discipline — better design, running for me.</span></p>
+    </div>
+  </section>
+
+  <!-- 23 HOW IT WORKS -->
+  <section class="slide light">
+    <div class="head" style="margin-bottom:2.4cqh"><div class="kicker">How Drift works</div><div class="title">Earn your screen time</div></div>
+    <div style="display:flex;gap:1.6cqw;align-items:stretch">
+      <div class="card" style="flex:1;padding:3cqh 1.9cqw"><div class="badge" style="width:5.2cqh;height:5.2cqh;font-size:2.4cqw">1</div><h3 style="font-family:var(--sans);font-size:2cqw;font-weight:700;color:var(--ink);margin-top:1.6cqh">Choose what to block</h3><p style="font-size:1.5cqw;line-height:1.3;color:var(--mid);margin-top:.9cqh">Pick the apps that eat your day. Drift puts a Screen Time shield in front of them.</p></div>
+      <div style="display:flex;align-items:center;font-family:var(--serif);font-size:3cqw;color:var(--faint)">→</div>
+      <div class="card" style="flex:1;padding:3cqh 1.9cqw"><div class="badge" style="width:5.2cqh;height:5.2cqh;font-size:2.4cqw">2</div><h3 style="font-family:var(--sans);font-size:2cqw;font-weight:700;color:var(--ink);margin-top:1.6cqh">Do something real first</h3><p style="font-size:1.5cqw;line-height:1.3;color:var(--mid);margin-top:.9cqh">Complete a task, a walk, a goal — the things you actually want to spend time on.</p></div>
+      <div style="display:flex;align-items:center;font-family:var(--serif);font-size:3cqw;color:var(--faint)">→</div>
+      <div class="card" style="flex:1;padding:3cqh 1.9cqw"><div class="badge" style="width:5.2cqh;height:5.2cqh;font-size:2.4cqw">3</div><h3 style="font-family:var(--sans);font-size:2cqw;font-weight:700;color:var(--ink);margin-top:1.6cqh">Unlock earned time</h3><p style="font-size:1.5cqw;line-height:1.3;color:var(--mid);margin-top:.9cqh">Real effort converts into minutes. The shield lifts for exactly what you've earned — then it's back.</p></div>
+    </div>
+    <div style="background:var(--sageLo);border-radius:1.2cqw;padding:2.4cqh 2.2cqw;margin-top:2.6cqh">
+      <p style="font-size:1.8cqw;line-height:1.2"><b style="color:var(--terra)">The flip:</b> <span class="ink-t">screens stop being the default you fall into, and become the reward you unlock — after real life gets its turn first.</span></p>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>23</span></div>
+  </section>
+
+  <!-- 24 MAPS TO SCIENCE -->
+  <section class="slide light">
+    <div class="head"><div class="kicker">Why it works</div><div class="title">Drift is tonight's science, automated</div></div>
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:2.5cqw">
+      <div class="row"><div class="badge">✓</div><div><h3>Adds friction</h3><p>The shield is a real speed bump in front of the apps you chose — not a reminder you can wave away.</p></div></div>
+      <div class="row"><div class="badge">✓</div><div><h3>It's a commitment device</h3><p>You set the rules clear-headed; tired-you can't casually override them at 11pm.</p></div></div>
+      <div class="row"><div class="badge">✓</div><div><h3>Earn-it, built in</h3><p>Screen time becomes contingent on real effort — Principle 3, running automatically.</p></div></div>
+      <div class="row"><div class="badge">✓</div><div><h3>Replaces, doesn't just block</h3><p>The 'task first' step points you at the better thing, so blocking doesn't leave a vacuum.</p></div></div>
+    </div>
+    <div style="background:var(--deep);border-radius:1.2cqw;padding:2.2cqh 2.2cqw;margin-top:2.4cqh;color:#fff">
+      <p style="font-size:1.7cqw;line-height:1.25"><b class="white">You don't have to remember to do all five by hand.</b> <span style="color:var(--sageLo)">That's the only thing the app really sells: it makes the good design the default, so you don't have to.</span></p>
+    </div>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>24</span></div>
+  </section>
+
+  <!-- 24b TAKE IT BACK (the reclaim) -->
+  <section class="slide ink">
+    <div class="kicker" style="color:var(--terraBr)">The good news</div>
+    <h1 style="font-size:3.9cqw;color:#fff;margin-top:.8cqh;max-width:76cqw">Now take some of it back</h1>
+    <div style="display:flex;gap:5cqw;align-items:center;margin-top:2.4cqh">
+      <div style="flex:1">
+        <p class="body" style="font-size:1.95cqw;max-width:44cqw">Trade even <b class="white">two hours a day</b> of scrolling for the things you actually want, and you win back <b class="white">seven years</b> of your life. Drift makes that trade the default — you earn your screen time by doing what matters first.</p>
+        <div style="margin-top:3.2cqh;display:flex;align-items:baseline;gap:1.4cqw">
+          <div style="font-family:var(--serif);font-weight:700;font-size:8cqw;color:var(--terraBr);line-height:.85">7</div>
+          <div style="font-family:var(--serif);font-style:italic;font-size:2.4cqw;color:var(--sageLo)">years of your<br>life — back</div>
+        </div>
+        <div class="legend" style="margin-top:3.4cqh">
+          <span><i style="background:#3C5645"></i>a week as it was</span>
+          <span><i style="background:#3DA870"></i>a week you reclaim</span>
+        </div>
+      </div>
+      <div class="lifewrap" style="aspect-ratio:52/85;height:71cqh">
+        <canvas class="life" data-shaded="0.083" data-base="3C5645" data-shade="3DA870"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- 24c THE MOVEMENT -->
+  <section class="slide dark">
+    <div class="portal" style="width:46cqw;height:46cqw;right:-10cqw;bottom:-16cqh;background:var(--deepHi)"></div>
+    <div class="portal" style="width:22cqw;height:22cqw;right:-2cqw;bottom:2cqh;background:var(--terra);opacity:.5"></div>
+    <div style="position:relative;z-index:1">
+      <div class="kicker">Bigger than an app</div>
+      <h1 style="font-size:4.6cqw;color:#fff;margin-top:1.2cqh;max-width:74cqw;line-height:1.02">Your attention is the most valuable thing you own.</h1>
+      <p class="body" style="font-size:2.1cqw;margin-top:2.4cqh;max-width:64cqw">Everyone is competing for it. Drift is the rare thing built to hand it back — and it's just getting started.</p>
+      <div style="display:flex;gap:2.2cqw;margin-top:4cqh;max-width:78cqw">
+        <div style="flex:1;background:var(--deepHi);border-radius:1.2cqw;padding:2.6cqh 2cqw"><div style="font-family:var(--serif);font-weight:700;font-size:2.1cqw;color:var(--sun)">Get in early</div><p style="font-size:1.5cqw;line-height:1.28;color:var(--sageLo);margin-top:.9cqh">The earliest users shape the roadmap — and keep founding-member status as Drift grows.</p></div>
+        <div style="flex:1;background:var(--deepHi);border-radius:1.2cqw;padding:2.6cqh 2cqw"><div style="font-family:var(--serif);font-weight:700;font-size:2.1cqw;color:var(--sun)">Make it yours</div><p style="font-size:1.5cqw;line-height:1.28;color:var(--sageLo);margin-top:.9cqh">Your shields, your goals, your rules. It bends to your life — not the other way round.</p></div>
+        <div style="flex:1;background:var(--deepHi);border-radius:1.2cqw;padding:2.6cqh 2cqw"><div style="font-family:var(--serif);font-weight:700;font-size:2.1cqw;color:var(--sun)">Pass it on</div><p style="font-size:1.5cqw;line-height:1.28;color:var(--sageLo);margin-top:.9cqh">This is a shared problem. Tell one person tonight — that's how a movement starts.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 25 CTA -->
+  <section class="slide dark">
+    <div class="portal" style="width:34cqw;height:34cqw;left:-12cqw;bottom:-14cqh;background:var(--deepHi)"></div>
+    <div class="kicker">Try it tonight</div>
+    <h1 style="font-size:4.6cqw;color:#fff;margin-top:1cqh;position:relative;z-index:1">Start with one small thing</h1>
+    <div style="display:flex;gap:3cqw;margin-top:3cqh;align-items:flex-start;position:relative;z-index:1">
+      <div style="flex:1;display:flex;flex-direction:column;gap:1.5cqh">
+        <div style="background:var(--deepHi);border-radius:1cqw;padding:2.2cqh 1.8cqw;display:flex;gap:1.4cqw;align-items:flex-start"><span class="pill" style="flex:0 0 auto;width:4cqh;height:4cqh;font-size:1.8cqw;margin-top:.2cqh">1</span><div><div style="font-size:1.9cqw;font-weight:700;color:#fff">Pick one tip</div><div style="font-size:1.5cqw;color:var(--sageLo);margin-top:.4cqh">Grayscale, or charge your phone outside the bedroom.</div></div></div>
+        <div style="background:var(--deepHi);border-radius:1cqw;padding:2.2cqh 1.8cqw;display:flex;gap:1.4cqw;align-items:flex-start"><span class="pill" style="flex:0 0 auto;width:4cqh;height:4cqh;font-size:1.8cqw;margin-top:.2cqh">2</span><div><div style="font-size:1.9cqw;font-weight:700;color:#fff">Try Drift free</div><div style="font-size:1.5cqw;color:var(--sageLo);margin-top:.4cqh">Set up your first shield and earn time in two minutes.</div></div></div>
+        <div style="background:var(--deepHi);border-radius:1cqw;padding:2.2cqh 1.8cqw;display:flex;gap:1.4cqw;align-items:flex-start"><span class="pill" style="flex:0 0 auto;width:4cqh;height:4cqh;font-size:1.8cqw;margin-top:.2cqh">3</span><div><div style="font-size:1.9cqw;font-weight:700;color:#fff">Keep the calculator</div><div style="font-size:1.5cqw;color:var(--sageLo);margin-top:.4cqh">Revisit your number anytime, and pass it to a friend.</div></div></div>
+      </div>
+      <div style="flex:0 0 26cqw;display:flex;flex-direction:column;align-items:center;gap:1.4cqh">
+        <div style="width:22cqw;height:22cqw;background:#fff;border-radius:1.4cqw;display:grid;place-items:center;padding:1.6cqw"><img src="data:image/png;base64,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" alt="QR code to the Drift app" style="width:100%;height:100%;display:block"></div>
+        <div style="background:var(--clay);color:#fff;border-radius:.8cqw;padding:1.2cqh 2cqw;font-weight:700;font-size:1.7cqw">Code: LIBRARY</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 26 Q&A -->
+  <section class="slide ink">
+    <div class="portal" style="width:40cqw;height:40cqw;right:-4cqw;top:6cqh;background:var(--deep)"></div>
+    <div class="portal" style="width:22cqw;height:22cqw;right:6cqw;top:22cqh;background:var(--terra);opacity:.55"></div>
+    <div class="portal" style="width:10cqw;height:10cqw;right:12cqw;top:34cqh;background:var(--sun)"></div>
+    <div style="margin:auto 0;max-width:62cqw">
+      <div class="kicker">Over to you</div>
+      <h1 style="font-size:7cqw;color:#fff;margin-top:1cqh">Questions?</h1>
+      <p class="lede" style="font-size:2.3cqw;margin-top:2.4cqh">If one idea tonight earns back even an hour of your week, that's a win.</p>
+    </div>
+  </section>
+
+  <!-- 27 SOURCES -->
+  <section class="slide light">
+    <div class="head" style="margin-bottom:2.4cqh"><div class="kicker">Sources &amp; further reading</div><div class="title">Go deeper</div></div>
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:1.2cqw 2.5cqw">
+      <div class="card" style="padding:1.4cqh 1.5cqw"><div style="font-size:1.55cqw;font-weight:700;color:var(--terra)">eMarketer / Data.ai (2024)</div><div style="font-size:1.35cqw;color:var(--mid);margin-top:.25cqh">US adults average ~4h 39m of daily phone use.</div></div>
+      <div class="card" style="padding:1.4cqh 1.5cqw"><div style="font-size:1.55cqw;font-weight:700;color:var(--terra)">Reviews.org (2024)</div><div style="font-size:1.35cqw;color:var(--mid);margin-top:.25cqh">Americans check their phones 205× a day, up from 144.</div></div>
+      <div class="card" style="padding:1.4cqh 1.5cqw"><div style="font-size:1.55cqw;font-weight:700;color:var(--terra)">dscout (2016)</div><div style="font-size:1.35cqw;color:var(--mid);margin-top:.25cqh">2,617 daily touches; 5,427 for heavy users.</div></div>
+      <div class="card" style="padding:1.4cqh 1.5cqw"><div style="font-size:1.55cqw;font-weight:700;color:var(--terra)">Skinner · Harris / CHT</div><div style="font-size:1.35cqw;color:var(--mid);margin-top:.25cqh">Variable-ratio rewards &amp; persuasive design.</div></div>
+      <div class="card" style="padding:1.4cqh 1.5cqw"><div style="font-size:1.55cqw;font-weight:700;color:var(--terra)">Berridge &amp; Robinson (2016)</div><div style="font-size:1.35cqw;color:var(--mid);margin-top:.25cqh">Dopamine as 'wanting,' not 'liking.'</div></div>
+      <div class="card" style="padding:1.4cqh 1.5cqw"><div style="font-size:1.55cqw;font-weight:700;color:var(--terra)">Leroy (2009) · Mark, UC Irvine</div><div style="font-size:1.35cqw;color:var(--mid);margin-top:.25cqh">Attention residue; 23-min refocus; 47-sec spans.</div></div>
+      <div class="card" style="padding:1.4cqh 1.5cqw"><div style="font-size:1.55cqw;font-weight:700;color:var(--terra)">Chang et al., PNAS (2015)</div><div style="font-size:1.35cqw;color:var(--mid);margin-top:.25cqh">Evening screen light suppresses melatonin, delays sleep.</div></div>
+      <div class="card" style="padding:1.4cqh 1.5cqw"><div style="font-size:1.55cqw;font-weight:700;color:var(--terra)">Haidt (2024)</div><div style="font-size:1.35cqw;color:var(--mid);margin-top:.25cqh"><em>The Anxious Generation</em> — youth &amp; screens (debated).</div></div>
+      <div class="card" style="padding:1.4cqh 1.5cqw;grid-column:1 / -1"><div style="font-size:1.55cqw;font-weight:700;color:var(--terra)">Read further</div><div style="font-size:1.35cqw;color:var(--mid);margin-top:.25cqh"><em>Stolen Focus</em> (Hari) · <em>Indistractable</em> (Eyal) · <em>Atomic Habits</em> (Clear) · <em>Digital Minimalism</em> (Newport).</div></div>
+    </div>
+    <p class="em" style="font-size:1.7cqw;color:var(--ink);margin-top:2cqh">Thank you. — [Your Name], Drift · [email / getdriftapp.org]</p>
+    <div class="footer"><span>Drift · The Science of Screen Time</span><span>27</span></div>
+  </section>
+
+</div>
+
+<div class="nav">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span class="counter" id="counter">1 / 27</span>
+  <button id="next" aria-label="Next slide">›</button>
+  <button id="full" aria-label="Toggle fullscreen" title="Fullscreen (F)">⤢</button>
+</div>
+<div class="zone left" id="zoneL" aria-hidden="true"></div>
+<div class="zone right" id="zoneR" aria-hidden="true"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  // auto-number footers by true slide position so inserts never break numbering
+  slides.forEach((s,idx)=>{ const f=s.querySelector('.footer'); if(f && f.lastElementChild){ f.lastElementChild.textContent = idx+1; } });
+  let i = 0;
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- life-in-weeks canvas ----
+  function drawLife(cv, animate){
+    const cols=52, rows=85, total=cols*rows;
+    const dpr=Math.max(1, window.devicePixelRatio||1);
+    const rect=cv.getBoundingClientRect();
+    if(rect.width<2||rect.height<2) return;
+    const W=Math.round(rect.width*dpr), H=Math.round(rect.height*dpr);
+    cv.width=W; cv.height=H;
+    const ctx=cv.getContext('2d');
+    const cw=W/cols, ch=H/rows, r=Math.min(cw,ch)*0.32;
+    const base='#'+(cv.dataset.base||'3C5645'), shade='#'+(cv.dataset.shade||'E3A667');
+    const rec='#'+(cv.dataset.reclaimColor||'3DA870');
+    const shadedTgt=Math.round(total*parseFloat(cv.dataset.shaded||0));
+    const recTgt=Math.round(total*parseFloat(cv.dataset.reclaim||0));
+    function frame(t){
+      const sN=Math.round(shadedTgt*t), rN=Math.round(recTgt*t);
+      ctx.clearRect(0,0,W,H);
+      for(let idx=0; idx<total; idx++){
+        const row=Math.floor(idx/cols), col=idx%cols;
+        let color=base;
+        if(idx>=total-sN) color=shade;
+        if(idx>=total-rN) color=rec;
+        ctx.fillStyle=color;
+        ctx.beginPath(); ctx.arc(col*cw+cw/2, row*ch+ch/2, r, 0, 6.2832); ctx.fill();
+      }
+    }
+    if(animate && !reduceMotion){
+      const dur=900, st=performance.now();
+      (function loop(now){ let t=Math.min(1,(now-st)/dur); t=1-Math.pow(1-t,3); frame(t); if(t<1) requestAnimationFrame(loop); })(st);
+    } else frame(1);
+  }
+  function drawAllLife(){ document.querySelectorAll('canvas.life').forEach(cv=>drawLife(cv,false)); }
+
+  function show(n){
+    i = Math.max(0, Math.min(total-1, n));
+    slides.forEach((s,idx)=>s.classList.toggle('active', idx===i));
+    counter.textContent = (i+1)+' / '+total;
+    progress.style.width = ((i+1)/total*100)+'%';
+    const cvs = slides[i].querySelectorAll('canvas.life');
+    if(cvs.length) requestAnimationFrame(()=>cvs.forEach(cv=>drawLife(cv,true)));
+  }
+  function next(){ show(i+1); }
+  function prev(){ show(i-1); }
+  document.getElementById('next').onclick = next;
+  document.getElementById('prev').onclick = prev;
+  document.getElementById('zoneR').onclick = next;
+  document.getElementById('zoneL').onclick = prev;
+  document.getElementById('full').onclick = ()=>{
+    if(!document.fullscreenElement){ document.documentElement.requestFullscreen?.(); }
+    else { document.exitFullscreen?.(); }
+  };
+  window.addEventListener('keydown', e=>{
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){ e.preventDefault(); next(); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key==='Home'){ show(0); }
+    else if(e.key==='End'){ show(total-1); }
+    else if(e.key==='f'||e.key==='F'){ document.getElementById('full').click(); }
+  });
+  drawAllLife();
+  show(0);
+  let rz; window.addEventListener('resize', ()=>{ clearTimeout(rz); rz=setTimeout(drawAllLife,150); });
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(drawAllLife);
+</script>
