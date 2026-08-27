@@ -208,3 +208,39 @@ export function brandPrompt() {
     `fake urgency; named competitor comparisons.`,
   ].join("\n");
 }
+
+/**
+ * Settings that must hold for a run to be trustworthy. A .env can silently
+ * revert — an editor restoring an older copy once wiped the redirect URI, the
+ * AI-disclosure flag and the chosen voice all at once, and nothing noticed
+ * until authorisation failed. Cheap to check, expensive to miss.
+ */
+export function preflight(env = process.env) {
+  const problems = [];
+
+  if (!env.OPENAI_API_KEY) problems.push("OPENAI_API_KEY is unset — QC cannot run, so nothing can post.");
+
+  if (env.TIKTOK_CLIENT_KEY || env.TIKTOK_CLIENT_SECRET) {
+    if (!env.TIKTOK_CLIENT_KEY || !env.TIKTOK_CLIENT_SECRET) {
+      problems.push("Only one of TIKTOK_CLIENT_KEY / TIKTOK_CLIENT_SECRET is set.");
+    }
+    const uri = env.TIKTOK_REDIRECT_URI || "";
+    if (!uri.startsWith("https://")) {
+      problems.push(`TIKTOK_REDIRECT_URI must be https (TikTok rejects http and localhost) — got "${uri}".`);
+    }
+  }
+
+  if (env.TIKTOK_IS_AIGC !== undefined && !["true", "false"].includes(env.TIKTOK_IS_AIGC)) {
+    problems.push(`TIKTOK_IS_AIGC should be "true" or "false" — got "${env.TIKTOK_IS_AIGC}".`);
+  }
+  if (env.TIKTOK_IS_AIGC === undefined) {
+    problems.push("TIKTOK_IS_AIGC is unset — AI-generated posts would go out undisclosed. Set it to true.");
+  }
+
+  const privacy = env.TIKTOK_PRIVACY_LEVEL;
+  if (privacy && !["SELF_ONLY", "PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "FOLLOWER_OF_CREATOR"].includes(privacy)) {
+    problems.push(`TIKTOK_PRIVACY_LEVEL "${privacy}" is not a value TikTok accepts.`);
+  }
+
+  return problems;
+}

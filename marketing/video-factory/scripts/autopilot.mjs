@@ -17,6 +17,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { ROOT, usageReport } from "./lib/openai.mjs";
+import { preflight } from "./lib/brand.mjs";
 import { generateIdeas, recordRun, loadHistory, themeForRun, FORMATS } from "./lib/ideas.mjs";
 import { writeScript, validateScript } from "./lib/script.mjs";
 import { speakBeat, pickProvider, DEFAULT_VOICE } from "./lib/tts.mjs";
@@ -242,6 +243,14 @@ async function post(result) {
 }
 
 // ── main ─────────────────────────────────────────────────────
+const configProblems = preflight();
+if (configProblems.length) {
+  rule();
+  log("CONFIG PROBLEMS — fix these before trusting a run:");
+  for (const p of configProblems) console.log(`   • ${p}`);
+  rule();
+}
+
 mkdirSync(join(ROOT, "out"), { recursive: true });
 mkdirSync(join(ROOT, "content", "state"), { recursive: true });
 
