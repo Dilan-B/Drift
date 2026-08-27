@@ -236,8 +236,10 @@ async function post(result) {
 
   const status = await tiktok.waitForPublish(pub.publishId);
   log(`TikTok status: ${status.status}${status.timedOut ? " (still processing)" : ""}`);
-  if (pub.privacyLevel === "SELF_ONLY") {
-    log("Posted PRIVATE — this is the unaudited-client restriction, not a bug.");
+  if (pub.mode === "inbox") {
+    log("In your TikTok drafts — open the app's inbox notification to post it.");
+  } else if (pub.privacyLevel === "SELF_ONLY") {
+    log("Posted PRIVATE — the unaudited-client restriction, not a bug.");
   }
   return { ...pub, status: status.status, caption };
 }

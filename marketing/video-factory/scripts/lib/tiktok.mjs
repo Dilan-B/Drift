@@ -209,7 +209,24 @@ export async function publishVideo({
         source_info,
       };
 
-  const init = await api(initPath, token, body);
+  let init;
+  try {
+    init = await api(initPath, token, body);
+  } catch (err) {
+    // The restriction is on the ACCOUNT, not the post: an unaudited client may
+    // only direct-post to an account that is itself set to private. Sending
+    // privacy_level SELF_ONLY is not enough.
+    if (/unaudited_client_can_only_post_to_private_accounts/.test(err.message)) {
+      throw new Error(
+        "TikTok rejected the direct post: an unaudited client can only publish to an " +
+        "account that is set to PRIVATE in TikTok's own settings — the post's privacy " +
+        "level is irrelevant.\n" +
+        "Either set TIKTOK_POST_MODE=inbox (lands in drafts, account can stay public), " +
+        "or make the account private until the API client passes audit."
+      );
+    }
+    throw err;
+  }
   const { publish_id, upload_url } = init.data;
 
   await uploadChunks(upload_url, videoPath, size, chunkSize, count);

@@ -190,5 +190,17 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-27T20:19:10.940Z"
+  },
+  {
+    "ideaKey": "af45225539b0",
+    "hook": "Chores don’t get done because screen blockers don’t prove effort.",
+    "format": "myth-bust",
+    "title": "chores-dont-get-done-screen-blockers-fail",
+    "file": "out/2026-08-27-myth-bust-af4522-r2.mp4",
+    "qcOverall": 4,
+    "posted": true,
+    "publishId": "v_inbox_file~v2.7678813503326930974",
+    "privacy": "SELF_ONLY",
+    "at": "2026-08-27T20:42:13.600Z"
   }
 ]
