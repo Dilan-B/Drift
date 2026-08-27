@@ -21,6 +21,7 @@ import { preflight } from "./lib/brand.mjs";
 import { generateIdeas, recordRun, loadHistory, themeForRun, FORMATS } from "./lib/ideas.mjs";
 import { writeScript, validateScript, beatSeconds } from "./lib/script.mjs";
 import { describeClips } from "./lib/capture.mjs";
+import { renderMusic } from "./lib/music.mjs";
 import { existsSync as fileExists, readdirSync } from "node:fs";
 import { runQC } from "./lib/qc.mjs";
 import * as tiktok from "./lib/tiktok.mjs";
@@ -73,18 +74,31 @@ async function attempt({ idea, name, captures, brollClips, feedback, n, fixedScr
     frames: Math.ceil(beatSeconds(beat) * FPS),
   }));
 
-  // A music bed is optional. Posting through TikTok's drafts means a trending
-  // sound can be added in the app at post time — free, licensed, and better for
-  // reach than anything baked in here — so silence is a fine default.
+  const totalSeconds = beats.reduce((a, b) => a + b.frames, 0) / FPS;
+
+  // A hand-supplied track in public/music/ wins; otherwise generate one sized
+  // to this video. Generating avoids any licensing question and lets the bed
+  // vary per run, so the account does not sound identical every day.
   const musicDir = join(ROOT, "public", "music");
-  const track = fileExists(musicDir)
-    ? readdirSync(musicDir).find((f) => /\.(mp3|m4a|wav)$/i.test(f))
+  const supplied = fileExists(musicDir)
+    ? readdirSync(musicDir).find((f) => /\.(mp3|m4a)$/i.test(f))
     : null;
-  if (track) log(`music bed: ${track}`);
+
+  let track;
+  if (supplied) {
+    track = supplied;
+    log(`music: ${supplied} (supplied)`);
+  } else {
+    const seed = loadHistory(ROOT).length + n;
+    const file = `bed-${name}.wav`;
+    const m = renderMusic(totalSeconds + 0.3, join(musicDir, file), { seed });
+    track = file;
+    log(`music: generated ${m.progression} at ${m.bpm}bpm`);
+  }
 
   const props = {
     beats,
-    music: track ? `music/${track}` : null,
+    music: `music/${track}`,
     title: script.title,
     postCaption: script.postCaption,
     hashtags: script.hashtags,
@@ -93,8 +107,7 @@ async function attempt({ idea, name, captures, brollClips, feedback, n, fixedScr
   writeFileSync(propsFile, JSON.stringify(props, null, 2));
 
   const outFile = join(ROOT, "out", `${name}.mp4`);
-  const totalSec = beats.reduce((a, b) => a + b.frames, 0) / FPS;
-  log(`attempt ${n}: rendering ${totalSec.toFixed(1)}s silent -> out/${name}.mp4`);
+  log(`attempt ${n}: rendering ${totalSeconds.toFixed(1)}s -> out/${name}.mp4`);
   renderVideo(propsFile, outFile);
 
   log(`attempt ${n}: running QC`);
@@ -102,7 +115,7 @@ async function attempt({ idea, name, captures, brollClips, feedback, n, fixedScr
     videoPath: outFile,
     script,
     beats,
-    silent: !track,
+    silent: false,
     scratchDir: join(ROOT, "content", "state", "qc", name),
   });
 

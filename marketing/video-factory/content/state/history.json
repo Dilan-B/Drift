@@ -214,5 +214,17 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-27T20:49:06.409Z"
+  },
+  {
+    "ideaKey": "a36bda93b3aa",
+    "hook": "We built an app that makes you prove your chores are done.",
+    "format": "build-in-public",
+    "title": "how-we-stop-fake-screen-time-cheats",
+    "file": "out/2026-08-27-build-in-public-a36bda-r2.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-27T20:58:00.725Z"
   }
 ]

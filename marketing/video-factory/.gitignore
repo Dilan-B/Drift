@@ -15,3 +15,6 @@ content/state/clip-frames/
 
 # scheduled-run log
 autopilot.log
+
+# generated music beds (one per video)
+public/music/bed-*
