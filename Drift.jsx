@@ -6171,6 +6171,9 @@ export default function App() {
       <PaywallScreen
         dark={darkMode}
         plan={paywallPlan}
+        // Parents open on Family, personal accounts on Pro. Children never get
+        // here — they render in ChildShell above, entitled through their parent.
+        accountType={appMode}
         offerings={subOfferings}
         onPurchase={subPurchase}
         onRestore={subRestore}

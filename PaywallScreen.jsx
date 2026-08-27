@@ -86,14 +86,22 @@ const FEATURES = [
 ];
 
 export default function PaywallScreen({
-  onPurchase, onRestore, onSignOut, offerings, plan = null, dark = false,
+  onPurchase, onRestore, onSignOut, offerings, plan = null,
+  accountType = "personal", dark = false,
 }) {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring,  setRestoring]  = useState(false);
   // 0 = just me. 1..MAX_KIDS = a parent buying a seat per child.
-  // Defaults to 0 because most users are not parents, and a family plan chosen
-  // by accident is a refund request.
-  const [kids, setKids] = useState(0);
+  //
+  // Defaults by ACCOUNT TYPE, which is permanent and chosen during onboarding.
+  // A parent opens on Family (1 child, the cheapest tier they can actually use)
+  // and a personal account opens on Pro. Landing a parent on the solo plan made
+  // them hunt for the selector to find the only plan that covers their kids,
+  // and landing a solo user on a family tier is a refund request.
+  //
+  // Both remain reachable from the selector either way — this only changes
+  // where each account STARTS.
+  const [kids, setKids] = useState(accountType === "parent" ? 1 : 0);
   // Defaults to ANNUAL on purpose. Annual subscribers retain ~44% at 12 months
   // against ~17% for monthly — roughly a 3x LTV gap at the same price — and for
   // Drift's under-18 users it clears Apple's Ask to Buy parental approval once
@@ -355,7 +363,7 @@ export default function PaywallScreen({
             fontFamily: FF.kicker, fontSize: 10, color: earn.green,
             letterSpacing: 2.6, marginBottom: 10,
           }}>
-            {plan ? "ONE STEP LEFT" : "ONE LAST THING"}
+            {kids > 0 ? "ONE STEP LEFT" : plan ? "ONE STEP LEFT" : "ONE LAST THING"}
           </Text>
           <Text style={{
             fontFamily: FF.display, fontSize: 36, color: ink.deep,
