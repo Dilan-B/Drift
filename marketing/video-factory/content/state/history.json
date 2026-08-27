@@ -166,5 +166,29 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-27T00:03:23.540Z"
+  },
+  {
+    "ideaKey": "2d725a066824",
+    "hook": "Six hours on your phone feels like too much, right?",
+    "format": "problem-agitate",
+    "title": "cut-your-screen-time-by-earning-it",
+    "file": "out/2026-08-27-problem-agitate-2d725a.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-27T19:31:19.651Z"
+  },
+  {
+    "ideaKey": "ac481b9a39f8",
+    "hook": "We hated how easy it was to cheat screen time apps.",
+    "format": "build-in-public",
+    "title": "how-we-stopped-cheating-screen-time-apps",
+    "file": "out/2026-08-27-build-in-public-ac481b.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-27T20:19:10.940Z"
   }
 ]

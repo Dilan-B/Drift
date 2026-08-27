@@ -72,7 +72,7 @@ export function requireOpenAI(what) {
   return k;
 }
 
-async function withRetry(fn, { tries = 3, label = "request" } = {}) {
+async function withRetry(fn, { tries = 4, label = "request" } = {}) {
   let lastErr;
   for (let i = 0; i < tries; i++) {
     try {
@@ -90,12 +90,23 @@ async function withRetry(fn, { tries = 3, label = "request" } = {}) {
           "and check the project's own budget limit if you are using a sk-proj- key."
         );
       }
-      const wait = 800 * 2 ** i;
+      // A bare "fetch failed" is a transport error, not an API one — usually a
+      // laptop that has just woken and has no route yet. Those need seconds,
+      // not milliseconds, so back off far harder than for an API hiccup.
+      const network = /fetch failed|ENOTFOUND|ECONNRESET|EAI_AGAIN|ETIMEDOUT|socket hang up/i
+        .test(String(err.message));
+      const wait = network ? 5000 * (i + 1) : 800 * 2 ** i;
       console.log(`[retry] ${label} failed (${err.message.slice(0, 120)}) — retrying in ${wait}ms`);
       await new Promise((r) => setTimeout(r, wait));
     }
   }
   throw lastErr;
+}
+
+/** Retry a bare fetch for transport errors. TTS calls bypassed withRetry, so a
+ *  single network blip mid-run killed the whole video. */
+export async function retryNetwork(label, fn) {
+  return withRetry(fn, { label });
 }
 
 /** Chat completion. Set `json:true` to force a JSON object back. */

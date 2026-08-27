@@ -57,6 +57,25 @@ elif [ "$HOUR" -lt 18 ]; then SLOT=1
 else                          SLOT=2
 fi
 
+# Three of the first eight scheduled runs died with "fetch failed": launchd
+# fires on wake, and the network is not up yet. Wait for connectivity before
+# spending a run on it.
+wait_for_network() {
+  local tries=0
+  until curl -s --max-time 5 -o /dev/null https://api.openai.com/v1/models; do
+    tries=$((tries + 1))
+    if [ "$tries" -ge 12 ]; then
+      log "[wrapper] no network after 2 minutes — skipping this run"
+      return 1
+    fi
+    sleep 10
+  done
+  [ "$tries" -gt 0 ] && log "[wrapper] network came up after ~$((tries * 10))s"
+  return 0
+}
+
+if ! wait_for_network; then exit 0; fi
+
 log "[wrapper] starting autopilot (slot $SLOT) with $NODE ($("$NODE" -v))"
 "$NODE" scripts/autopilot.mjs --slot "$SLOT" "$@" >> "$LOG" 2>&1
 STATUS=$?

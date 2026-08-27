@@ -9,7 +9,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseFile } from "music-metadata";
 import { tightenVoice } from "./media.mjs";
-import { KEYS, MODELS, trackUsage } from "./openai.mjs";
+import { KEYS, MODELS, trackUsage, retryNetwork } from "./openai.mjs";
 
 // The ElevenLabs paywall is a per-run fact, not a per-beat one. Logging it on
 // every beat buried the rest of a cron log under six identical lines.
@@ -28,7 +28,7 @@ export const DEFAULT_VOICE = {
 };
 
 async function ttsElevenLabs(text, outFile, voice) {
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}`, {
+  const res = await retryNetwork("elevenlabs tts", () => fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}`, {
     method: "POST",
     headers: { "xi-api-key": KEYS.eleven(), "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -37,13 +37,13 @@ async function ttsElevenLabs(text, outFile, voice) {
       // Slightly lower stability reads as more natural on short social lines.
       voice_settings: { stability: 0.42, similarity_boost: 0.78, style: 0.25 },
     }),
-  });
+  }));
   if (!res.ok) throw new Error(`ElevenLabs TTS ${res.status}: ${(await res.text()).slice(0, 200)}`);
   writeFileSync(outFile, Buffer.from(await res.arrayBuffer()));
 }
 
 async function ttsOpenAI(text, outFile, voice) {
-  const res = await fetch("https://api.openai.com/v1/audio/speech", {
+  const res = await retryNetwork("openai tts", () => fetch("https://api.openai.com/v1/audio/speech", {
     method: "POST",
     headers: { Authorization: `Bearer ${KEYS.openai()}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -57,7 +57,7 @@ async function ttsOpenAI(text, outFile, voice) {
         "better than polished.",
       response_format: "mp3",
     }),
-  });
+  }));
   if (!res.ok) throw new Error(`OpenAI TTS ${res.status}: ${(await res.text()).slice(0, 200)}`);
   writeFileSync(outFile, Buffer.from(await res.arrayBuffer()));
 }
