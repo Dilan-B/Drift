@@ -598,6 +598,18 @@ function Field({ label, inputRef, style, ...props }) {
 }
 
 // ─── Social auth provider buttons (Apple + Google) ───────────────────────────
+//
+// NOT RENDERED. Drift is email-only. Kept intact rather than deleted so
+// re-enabling is a one-line change at the (single) call site in AuthSlide, and
+// so oauthSignIn.js / appleSignIn.js don't become orphaned dead code.
+//
+// If you DO re-enable it, two things travel with it:
+//   1. Guideline 4.8 requires an equivalent privacy-preserving login alongside
+//      Google. That is what the Apple button below is for — ship both or
+//      neither, never Google alone.
+//   2. EXPO_PUBLIC_GOOGLE_*_CLIENT_ID must reach the BUILD, not just your
+//      local .env. Xcode Cloud clones the repo and .env is gitignored, so the
+//      IDs have to be injected in ci_post_clone.sh or the block renders null.
 function OAuthButtons({ mode, loading, setLoading, setError, onDone, dark = false }) {
   // Google sign-in hook — handles PKCE under the hood
   const google = useGoogleSignIn(async (res) => {
@@ -1140,17 +1152,14 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
         )}
       </TouchableOpacity>
 
-      {/* Social + terms + switch link — hidden while typing so they don't crowd
-          the form. The primary button above stays, and Enter/Return submits. */}
-      {!keyboardUp && (
-      <OAuthButtons
-        mode={mode}
-        loading={loading}
-        setLoading={setLoading}
-        setError={setError}
-        onDone={onDone}
-      />
-      )}
+      {/* Auth is EMAIL ONLY. OAuthButtons (Apple + Google) is deliberately not
+          rendered — see the note on the component itself for why and for how to
+          turn it back on. Leaving it out explicitly beats the previous state,
+          where the buttons happened to disappear in shipped builds only because
+          the EXPO_PUBLIC_GOOGLE_* client IDs were missing from CI. That made
+          behaviour depend on whether a gitignored .env existed at build time:
+          visible-but-broken in Expo Go, absent in TestFlight, and silently back
+          the moment anyone wired those vars into Xcode Cloud. */}
 
       {/* Terms + privacy disclosure shown to anyone creating an account */}
       {!keyboardUp && mode === "signup" && (

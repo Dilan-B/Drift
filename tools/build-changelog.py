@@ -300,6 +300,9 @@ ROWS = [
     ("2026-08-27", "—", "UI", "Payments", "Paywall opens on the plan that matches the account type",
      "The who-is-using-Drift selector always defaulted to \"Just me\", so a parent account landed on the solo plan and had to find the selector to reach the only tier that covers their children. PaywallScreen now takes accountType and starts a parent on Family (1 child, the cheapest usable tier) and a personal account on Pro. Both remain reachable from the selector either way - this only changes where each account starts. Children never reach the paywall; they render in ChildShell above it, entitled through their parent.",
      "1.1.7", "—"),
+    ("2026-08-27", "—", "Feature", "Auth", "Sign-in is email only - Google and Apple buttons removed",
+     "Product decision. Also removes an accidental dependency: the buttons were gated on google.isConfigured, which reads EXPO_PUBLIC_GOOGLE_*_CLIENT_ID from a gitignored .env. Behaviour therefore depended on whether a .env existed at build time - visible but non-functional in Expo Go (Google no longer accepts exp:// redirect URIs), absent entirely from Xcode Cloud builds since CI never recreates .env, and silently back the moment anyone wired those vars into CI. Now explicit. OAuthButtons and oauthSignIn.js / appleSignIn.js are kept intact, not deleted, so re-enabling is a one-line change at the single call site. NOTE for whoever re-enables it: Guideline 4.8 requires Apple sign-in alongside Google, so ship both or neither.",
+     "1.1.7", "—"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
