@@ -154,5 +154,17 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-25T19:31:53.417Z"
+  },
+  {
+    "ideaKey": "cf1daa6f9ad4",
+    "hook": "Screen time apps don’t work because they let you cheat",
+    "format": "myth-bust",
+    "title": "screen-time-apps-let-you-cheat-not-drift",
+    "file": "out/2026-08-27-myth-bust-cf1daa-r2.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-27T00:03:23.540Z"
   }
 ]
