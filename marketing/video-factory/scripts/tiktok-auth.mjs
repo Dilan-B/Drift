@@ -18,7 +18,7 @@ import { stdin, stdout } from "node:process";
 import { execFile } from "node:child_process";
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { ROOT } from "./lib/openai.mjs";
 
 const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY;
@@ -43,10 +43,20 @@ if (existsSync(TOKEN_PATH)) {
 }
 
 const state = randomBytes(16).toString("hex");
+
+// TikTok requires PKCE on this flow — without a code_challenge the authorize
+// call fails with "Something went wrong ... code_challenge".
+//
+// Note it deviates from RFC 7636: the challenge is the HEX digest of the
+// SHA-256 hash, not base64url. Sending the standard base64url form is rejected.
+const codeVerifier = randomBytes(48).toString("base64url").slice(0, 64);
+const codeChallenge = createHash("sha256").update(codeVerifier).digest("hex");
+
 const authUrl =
   `https://www.tiktok.com/v2/auth/authorize/?client_key=${encodeURIComponent(CLIENT_KEY)}` +
   `&scope=${encodeURIComponent(SCOPES)}&response_type=code` +
-  `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${state}`;
+  `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${state}` +
+  `&code_challenge=${codeChallenge}&code_challenge_method=S256`;
 
 console.log("1. Open this URL and authorise the Drift TikTok account:\n");
 console.log(`   ${authUrl}\n`);
@@ -76,6 +86,7 @@ try {
     code: decodeURIComponent(code),
     grant_type: "authorization_code",
     redirect_uri: REDIRECT_URI,
+    code_verifier: codeVerifier,
   });
   const res = await fetch("https://open.tiktokapis.com/v2/oauth/token/", {
     method: "POST",
