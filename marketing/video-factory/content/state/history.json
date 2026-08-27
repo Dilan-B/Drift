@@ -202,5 +202,17 @@
     "publishId": "v_inbox_file~v2.7678813503326930974",
     "privacy": "SELF_ONLY",
     "at": "2026-08-27T20:42:13.600Z"
+  },
+  {
+    "ideaKey": "98f521b8615d",
+    "hook": "Why does the laundry pile only get bigger?",
+    "format": "problem-agitate",
+    "title": "laundry-pile-why-keeps-growing",
+    "file": "out/2026-08-27-problem-agitate-98f521.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-27T20:49:06.409Z"
   }
 ]

@@ -19,9 +19,9 @@ import { join } from "node:path";
 import { ROOT, usageReport } from "./lib/openai.mjs";
 import { preflight } from "./lib/brand.mjs";
 import { generateIdeas, recordRun, loadHistory, themeForRun, FORMATS } from "./lib/ideas.mjs";
-import { writeScript, validateScript } from "./lib/script.mjs";
-import { speakBeat, pickProvider, DEFAULT_VOICE } from "./lib/tts.mjs";
+import { writeScript, validateScript, beatSeconds } from "./lib/script.mjs";
 import { describeClips } from "./lib/capture.mjs";
+import { existsSync as fileExists, readdirSync } from "node:fs";
 import { runQC } from "./lib/qc.mjs";
 import * as tiktok from "./lib/tiktok.mjs";
 
@@ -54,7 +54,7 @@ function renderVideo(propsFile, outFile) {
 }
 
 /** One full attempt: script -> voiceover -> render -> QC. */
-async function attempt({ idea, name, captures, brollClips, provider, voice, feedback, n, fixedScript }) {
+async function attempt({ idea, name, captures, brollClips, feedback, n, fixedScript }) {
   let script;
   if (fixedScript) {
     log(`attempt ${n}: using supplied script ${opts.scriptFile}`);
@@ -67,30 +67,24 @@ async function attempt({ idea, name, captures, brollClips, provider, voice, feed
     ({ script } = await writeScript(idea, { captures, brollClips, qcFeedback: feedback }));
   }
 
-  const audioDir = join(ROOT, "public", "audio", name);
-  const beats = [];
-  // The requested provider can fall back mid-run; QC judges what was actually used.
-  let actualProvider = provider;
-  let trimmedTotal = 0;
-  log(`attempt ${n}: voicing ${script.beats.length} beats (${provider})`);
-  for (const [i, beat] of script.beats.entries()) {
-    const { file, seconds, provider: usedProvider, saved } = await speakBeat(beat, {
-      dir: audioDir, index: i, provider, voice,
-    });
-    actualProvider = usedProvider;
-    trimmedTotal += saved || 0;
-    beats.push({
-      ...beat,
-      audio: file,
-      frames: Math.ceil(seconds * FPS) + PAD_FRAMES,
-    });
-  }
+  // No voiceover: each beat lasts as long as its line takes to read.
+  const beats = script.beats.map((beat) => ({
+    ...beat,
+    frames: Math.ceil(beatSeconds(beat) * FPS),
+  }));
 
-  if (trimmedTotal > 0.5) log(`attempt ${n}: tightened voiceover by ${trimmedTotal.toFixed(1)}s`);
+  // A music bed is optional. Posting through TikTok's drafts means a trending
+  // sound can be added in the app at post time — free, licensed, and better for
+  // reach than anything baked in here — so silence is a fine default.
+  const musicDir = join(ROOT, "public", "music");
+  const track = fileExists(musicDir)
+    ? readdirSync(musicDir).find((f) => /\.(mp3|m4a|wav)$/i.test(f))
+    : null;
+  if (track) log(`music bed: ${track}`);
 
   const props = {
     beats,
-    audioBase: `audio/${name}`,
+    music: track ? `music/${track}` : null,
     title: script.title,
     postCaption: script.postCaption,
     hashtags: script.hashtags,
@@ -100,7 +94,7 @@ async function attempt({ idea, name, captures, brollClips, provider, voice, feed
 
   const outFile = join(ROOT, "out", `${name}.mp4`);
   const totalSec = beats.reduce((a, b) => a + b.frames, 0) / FPS;
-  log(`attempt ${n}: rendering ${totalSec.toFixed(1)}s -> out/${name}.mp4`);
+  log(`attempt ${n}: rendering ${totalSec.toFixed(1)}s silent -> out/${name}.mp4`);
   renderVideo(propsFile, outFile);
 
   log(`attempt ${n}: running QC`);
@@ -108,7 +102,7 @@ async function attempt({ idea, name, captures, brollClips, provider, voice, feed
     videoPath: outFile,
     script,
     beats,
-    ttsProvider: actualProvider,
+    silent: !track,
     scratchDir: join(ROOT, "content", "state", "qc", name),
   });
 
@@ -186,15 +180,13 @@ async function makeOne(index) {
     );
   }
 
-  const provider = pickProvider();
-  const voice = opts.voice || DEFAULT_VOICE[provider];
   const stamp = new Date().toISOString().slice(0, 10);
   const base = `${stamp}-${(idea.format || "video")}-${idea.ideaKey.slice(0, 6)}`;
 
   let feedback = null;
   for (let n = 1; n <= opts.maxAttempts; n++) {
     const name = n === 1 ? base : `${base}-r${n}`;
-    const result = await attempt({ idea, name, captures, brollClips, provider, voice, feedback, n, fixedScript });
+    const result = await attempt({ idea, name, captures, brollClips, feedback, n, fixedScript });
 
     if (result.qc.ok) {
       log(`QC PASSED (vision overall ${result.qc.vision?.overall ?? "n/a"}/5)`);

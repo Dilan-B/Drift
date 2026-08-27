@@ -21,24 +21,20 @@ export const VISUAL_KINDS = {
       `earn = the minutes-earned progress ring.`,
 };
 
-// Length is driven by BEAT COUNT, not word count. Measured across real renders,
-// a 6-word beat and a 9-word beat both land at roughly 4 seconds — the TTS
-// per-utterance overhead dominates anything said inside it:
-//
-//   7w -> 3.5s   7w -> 4.5s   8w -> 3.6s   7w -> 4.3s   7w -> 3.8s
-//
-// So the way to a 15s video is fewer beats, not shorter sentences. Budgeting on
-// words alone is what produced 20s videos from a "15s" brief.
-const SECONDS_PER_BEAT = 5.0;    // measured at natural speed, includes the per-beat pad
-const WORDS_PER_SECOND = 2.32;   // only used as a sanity guard
+// There is no voiceover, so a beat lasts exactly as long as it takes to READ.
+// That is far quicker than the old TTS pacing, where per-utterance overhead
+// pinned every beat near 4 seconds regardless of length — so a 15s video now
+// fits five or six beats instead of three.
+const READ_WORDS_PER_SECOND = 3.0;   // large bold text, glanced at, not studied
+const BEAT_DWELL_SECONDS = 0.8;      // floor, so a short line does not flash past
 
 const TIMING = {
   targetSeconds: 15,
-  minSeconds: 11,
+  minSeconds: 10,
   maxSeconds: 21,
-  maxWordsPerBeat: 8,
-  minBeats: 3,
-  maxBeats: 4,   // a beat costs ~5s at natural speed, so 3 beats is the 15s shape
+  maxWordsPerBeat: 8,   // 6 beats x 8 words is ~21s, the ceiling
+  minBeats: 4,
+  maxBeats: 6,
 };
 
 function systemPrompt({ format, captures, brollClips }) {
@@ -70,23 +66,22 @@ You are writing for the For You page. Judge every line by: would a real person
 keep watching? Marketing cadence kills retention. Write how someone talks.
 
 HARD RULES
-- The FIRST beat is the hook. It must work with zero context, appear on screen
-  immediately, and be under 12 words. Never open with a greeting, "in this
-  video", "let me show you", or the product name.
-- THIS IS A ${TIMING.targetSeconds}-SECOND VIDEO. That is THREE beats. A fourth only if it is
-  genuinely essential. Every beat costs about four seconds of runtime
-  no matter how short the sentence is, so the way to keep it tight is FEWER
-  BEATS, not shorter lines.
-- Each beat is ONE short spoken sentence, max ${TIMING.maxWordsPerBeat} words. Aim for seven.
-- You have room for ONE idea: a hook, the mechanism, the payoff, and the CTA.
-  That is the whole video. No setup, no second example, no recap.
+- The FIRST beat is the hook. It must work with zero context and be SIX WORDS
+  OR FEWER — it has to be readable at a glance. Never open with a greeting,
+  "in this video", "let me show you", or the product name.
+- THIS IS A ${TIMING.targetSeconds}-SECOND SILENT VIDEO — text on screen, no narration, no captions.
+- ${TIMING.minBeats}-${TIMING.maxBeats} beats. Reading is quick, so FIVE is the shape to aim for:
+  hook, the problem, the mechanism, the payoff, the CTA.
+- Each beat is one line, max ${TIMING.maxWordsPerBeat} words. A beat lasts as long as its line
+  takes to read, so a longer line is not free — but you have room for five.
 - Every beat changes the visual. No two consecutive beats share the same "src".
 - Every beat makes a NEW point. Do not restate an earlier beat in different
   words — with one line per shot, repetition is obvious and reads as padding.
-- "onscreen" is the ONLY text on screen. There are no subtitles. Max 7 words.
-  It is NOT a copy of the spoken line — it is the punchy version, and it must
-  make sense on its own to someone watching with the sound off. Every beat
-  needs one and it has to carry that beat's point by itself.
+- "onscreen" is the ONLY thing the viewer gets. There is NO voiceover and NO
+  subtitles — this is a silent, text-on-screen video. Max ${TIMING.maxWordsPerBeat} words per beat.
+  Every line must land on its own and carry that beat's point completely.
+  Write them as a sequence someone reads straight through, like a thought
+  unfolding — not as captions for narration that is not there.
 - The last beat is the CTA and must use "statement" or footage, never "ui".
   NEVER mention money — no price, no cost, no trial, no subscription, and never
   the word "free". The CTA tells them exactly what to search: "${FACTS.appStoreSearch}"
@@ -106,7 +101,7 @@ Return ONLY JSON:
 {
   "title": "kebab-case-slug",
   "beats": [
-    {"say": "spoken line", "onscreen": "big text", "kind": "capture|broll|statement|ui",
+    {"onscreen": "the line on screen", "kind": "capture|broll|statement|ui",
      "src": "filename if kind is capture/broll, else omit",
      "ui": "one of ${UI_MOCKS.join('|')} if kind is ui, else omit"}
   ],
@@ -118,20 +113,26 @@ Return ONLY JSON:
 
 /** Rough spoken-duration estimate at ~2.8 words/sec, before real TTS timing. */
 export function countWords(beats) {
-  return beats.reduce((n, b) => n + (b.say || "").split(/\s+/).filter(Boolean).length, 0);
+  return beats.reduce((n, b) => n + String(b.onscreen || "").split(/\s+/).filter(Boolean).length, 0);
 }
 
-/** Predicted finished length. Beat count is the dominant term. */
+/** How long one beat needs to be readable. */
+export function beatSeconds(beat) {
+  const words = String(beat.onscreen || "").split(/\s+/).filter(Boolean).length;
+  return BEAT_DWELL_SECONDS + words / READ_WORDS_PER_SECOND;
+}
+
+/** Predicted finished length, from reading time. */
 export function estimateSeconds(beats) {
-  return beats.length * SECONDS_PER_BEAT;
+  return beats.reduce((t, b) => t + beatSeconds(b), 0);
 }
 
 // Models are poor at estimating spoken duration but good at counting words, so
 // the budget is expressed in words in the prompt and enforced in words here.
 export const WORD_BUDGET = {
-  min: TIMING.minBeats * 4,
+  min: TIMING.minBeats * 3,
   max: TIMING.maxBeats * TIMING.maxWordsPerBeat,
-  target: 3 * 7,
+  target: 5 * 7,
 };
 
 /**
@@ -190,24 +191,20 @@ export function validateScript(script, { captureNames = [], brollClips = [] } = 
   if (predicted > TIMING.maxSeconds) {
     problems.push(
       `${beats.length} beats predicts about ${predicted.toFixed(0)}s, over the ${TIMING.maxSeconds}s limit. ` +
-      `Each beat costs ~4s regardless of length — CUT A WHOLE BEAT. Trimming words will not help.`
+      `Shorten the lines or drop a beat.`
     );
   }
   if (predicted < TIMING.minSeconds) {
     problems.push(`${beats.length} beats predicts only ${predicted.toFixed(0)}s, under the ${TIMING.minSeconds}s minimum. Add a beat.`);
   }
-  const words = countWords(beats);
-  if (words > WORD_BUDGET.max) {
-    problems.push(`${words} spoken words is over the ${WORD_BUDGET.max}-word guard; shorten the longest lines.`);
-  }
+
 
   beats.forEach((b, i) => {
-    const words = (b.say || "").split(/\s+/).filter(Boolean).length;
-    if (!b.say) problems.push(`beat[${i}] has no "say".`);
-    if (words > TIMING.maxWordsPerBeat) problems.push(`beat[${i}] is ${words} words, max ${TIMING.maxWordsPerBeat}. Split or cut it.`);
     if (!b.onscreen) problems.push(`beat[${i}] has no "onscreen" text.`);
     const onWords = (b.onscreen || "").split(/\s+/).filter(Boolean).length;
-    if (onWords > 7) problems.push(`beat[${i}].onscreen is ${onWords} words, max 7.`);
+    if (onWords > TIMING.maxWordsPerBeat) {
+      problems.push(`beat[${i}].onscreen is ${onWords} words, max ${TIMING.maxWordsPerBeat}. Tighten it.`);
+    }
     if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(b.onscreen || "")) {
       problems.push(`beat[${i}].onscreen contains an emoji — remove it.`);
     }
@@ -258,7 +255,7 @@ export function validateScript(script, { captureNames = [], brollClips = [] } = 
 
   const hookWords = (beats[0].onscreen || "").split(/\s+/).filter(Boolean).length;
   if (hookWords > 6) problems.push(`The hook's onscreen text is ${hookWords} words — it must be 6 or fewer to read instantly.`);
-  if (/^(hey|hi|hello|what'?s up|so |in this video|let me)/i.test(beats[0].say || "")) {
+  if (/^(hey|hi|hello|what'?s up|so |in this video|let me)/i.test(beats[0].onscreen || "")) {
     problems.push(`beat[0] opens with a greeting/preamble. Start on the hook itself.`);
   }
 
@@ -274,7 +271,7 @@ export function validateScript(script, { captureNames = [], brollClips = [] } = 
   if (!Array.isArray(script.hashtags) || script.hashtags.length < 3) problems.push(`Need at least 3 hashtags.`);
 
   for (const issue of lintScript({
-    scenes: beats.map((b) => ({ headline: b.onscreen, voiceover: b.say, src: b.src })),
+    scenes: beats.map((b) => ({ headline: b.onscreen, src: b.src })),
     postCaption: script.postCaption,
     hashtags: script.hashtags,
   })) {

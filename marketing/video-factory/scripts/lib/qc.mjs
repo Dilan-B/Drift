@@ -35,7 +35,7 @@ const fail = (check, detail) => ({ ok: false, check, detail });
 const pass = (check, detail) => ({ ok: true, check, detail });
 
 /** Checks that need no model and no network. These are absolute. */
-export function hardChecks({ videoPath, script, beats, ttsProvider }) {
+export function hardChecks({ videoPath, script, beats, silent = true }) {
   const results = [...layoutInvariants()];
 
   if (!existsSync(videoPath)) return [fail("file-exists", `${videoPath} was not produced`)];
@@ -61,24 +61,22 @@ export function hardChecks({ videoPath, script, beats, ttsProvider }) {
       ? pass("filesize", `${(info.bytes / 1e6).toFixed(1)}MB`)
       : fail("filesize", `${info.bytes} bytes`)
   );
-  results.push(info.hasAudio ? pass("audio-track", info.audioCodec) : fail("audio-track", "no audio stream"));
-
-  if (info.hasAudio) {
-    const silent = silenceSeconds(videoPath);
-    const ratio = silent / info.seconds;
-    results.push(
-      ratio <= LIMITS.maxSilenceRatio
-        ? pass("audio-content", `${(ratio * 100).toFixed(0)}% silent`)
-        : fail("audio-content", `${(ratio * 100).toFixed(0)}% of the video is silent — voiceover likely failed`)
-    );
+  // These videos are silent by design — a trending sound gets added in the
+  // TikTok app at post time. So an empty audio track is expected, and the old
+  // silence and voice-quality checks no longer apply.
+  if (silent) {
+    results.push(pass("audio", "silent by design — sound added at post time"));
+  } else {
+    results.push(info.hasAudio ? pass("audio-track", info.audioCodec) : fail("audio-track", "music bed missing from the render"));
+    if (info.hasAudio) {
+      const ratio = silenceSeconds(videoPath) / info.seconds;
+      results.push(
+        ratio <= LIMITS.maxSilenceRatio
+          ? pass("audio-content", `${(ratio * 100).toFixed(0)}% silent`)
+          : fail("audio-content", `${(ratio * 100).toFixed(0)}% silent — the music bed did not attach`)
+      );
+    }
   }
-
-  // The macOS `say` voice is fine for a local preview and not fine to publish.
-  results.push(
-    ttsProvider !== "say"
-      ? pass("voice-quality", ttsProvider)
-      : fail("voice-quality", "macOS 'say' voice — set ELEVENLABS_API_KEY or OPENAI_API_KEY before posting")
-  );
 
   // Claims are re-linted against the FINAL script, not just the draft, so a
   // late edit can't slip a bad claim past the writer's own validation.
