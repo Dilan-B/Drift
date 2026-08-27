@@ -67,15 +67,26 @@ const encryptedAuthStorage = {
     const raw = await AsyncStorage.getItem(key);
     if (!raw) return null;
 
+    let payload;
     try {
-      const payload = JSON.parse(raw);
-      // Legacy / unencrypted session stored in the clear → migrate to encrypted.
-      if (payload?.access_token || payload?.refresh_token || payload?.currentSession) {
-        await encryptedAuthStorage.setItem(key, raw);
-        return raw;
-      }
-      // Encrypted blob.
-      if (payload?.iv && payload?.value) {
+      payload = JSON.parse(raw);
+    } catch {
+      // Not JSON at all — an unknown shape we didn't write. Hand it back
+      // untouched rather than destroying something we don't understand.
+      return raw;
+    }
+
+    // Legacy / unencrypted session stored in the clear → migrate to encrypted.
+    // A failed migration is not fatal: the plaintext session is still valid and
+    // returning it keeps the user signed in; we'll re-encrypt on the next write.
+    if (payload?.access_token || payload?.refresh_token || payload?.currentSession) {
+      try { await encryptedAuthStorage.setItem(key, raw); } catch {}
+      return raw;
+    }
+
+    // Encrypted blob.
+    if (payload?.iv && payload?.value) {
+      try {
         const cipherKey = await getAuthCipherKey();
         const iv = aes.utils.hex.toBytes(payload.iv);
         const encrypted = aes.utils.hex.toBytes(payload.value);
@@ -88,13 +99,33 @@ const encryptedAuthStorage = {
         // instead of handing Supabase junk that it treats as a corrupt session.
         const t = decrypted.trimStart();
         return (t.startsWith("{") || t.startsWith("[")) ? decrypted : null;
+      } catch {
+        // ── The random-logout bug, and why this returns null rather than raw ──
+        // getAuthCipherKey() is DELIBERATELY allowed to throw (see above) so a
+        // transient Keychain miss can't mint a new key and orphan the session.
+        // This used to be caught by one outer catch whose fallback was
+        // `return raw` — which handed Supabase the CIPHERTEXT. Supabase parses
+        // {"iv":…,"value":…} fine, finds no access_token, concludes the session
+        // is corrupt, signs the user out AND overwrites this key — so the
+        // ciphertext is gone and the next launch can't recover it either. A
+        // transient miss became a permanent logout.
+        //
+        // How it fires in the wild: the key is stored
+        // AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY, and backgroundRefresh.js
+        // registers a background task on a 15-minute floor. iOS can wake the app
+        // after a REBOOT but BEFORE the user's first unlock, when that Keychain
+        // item genuinely cannot be read. No UI is on screen, so nothing looks
+        // wrong — until the user next opens the app and is signed out.
+        //
+        // Returning null means "no session THIS read" and leaves the ciphertext
+        // untouched, so the next read with an unlocked Keychain restores it.
+        // Same contract as the wrong-key path directly above.
+        return null;
       }
-      // Unknown shape — hand back as-is rather than destroying it.
-      return raw;
-    } catch {
-      // Never wipe on a transient read/parse error.
-      return raw;
     }
+
+    // Unknown shape — hand back as-is rather than destroying it.
+    return raw;
   },
   async setItem(key, value) {
     const cipherKey = await getAuthCipherKey();
