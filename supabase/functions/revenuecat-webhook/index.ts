@@ -16,13 +16,19 @@
 // with the rc_* columns kept alongside as diagnostics. schema_v9 created them.
 //
 // ── Pricing model ───────────────────────────────────────────────────────────
-// $0.99/month per person. Children never pay: the PARENT buys a tier sized to
+// $4.99/month or $29.99/year. Children never pay: the PARENT buys a tier sized to
 // how many children they have, and every child under that family inherits
 // access. Auto-renewable subscriptions cannot use StoreKit quantity, so "per
 // child" is modelled as tiered products in one subscription group:
 //
-//     drift_pro_monthly   -> a solo user, no children
-//     drift_family_1..5   -> a parent paying for 1..5 children
+//     com.drift.pro.month   -> a solo user, no children
+//     com.drift.pro.annual  -> the same, billed yearly (0 child seats)
+//     drift_family_1..5     -> a parent paying for 1..5 children
+//
+// The solo products are reverse-DNS and the family tiers are not. That is how
+// they exist in App Store Connect and product IDs cannot be renamed, so the
+// regex below matches the family scheme and everything else falls through to
+// "solo", which is the correct default for both solo products.
 //
 // The tier drives families.seats. is_pro() then entitles children in join
 // order up to that number.
@@ -62,7 +68,7 @@ function seatsForProduct(productId: string | null): number {
     const n = parseInt(m[1], 10);
     return Number.isFinite(n) ? Math.max(0, Math.min(20, n)) : 0;
   }
-  return 0; // drift_pro_monthly and anything else: solo
+  return 0; // com.drift.pro.month / .annual and anything else: solo
 }
 
 serve(async (req: Request) => {
@@ -123,7 +129,7 @@ serve(async (req: Request) => {
   }
 
   // 4. Entitlement state. Active while not hard-revoked and not past expiry.
-  // period_type 'trial' is ACTIVE — the 3-day free trial grants full access.
+  // period_type 'trial' is ACTIVE — the 7-day free trial grants full access.
   const notExpired = !expiresAtMs || expiresAtMs > Date.now();
   const active = !HARD_REVOKE.has(type) && notExpired;
 

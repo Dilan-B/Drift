@@ -21,12 +21,29 @@
  * A paywall with no way out is a trap, and a reviewer who cannot get past it
  * fails the build. There is deliberately no dismiss, but there IS sign-out —
  * so a user who doesn't want to pay can leave, and support can move an account.
+ *
+ * ── Why this screen has two beats ────────────────────────────────────────────
+ * When a `plan` is passed (the tasks the user just picked in onboarding) the
+ * first view shows a short REVEAL — "your plan is ready", their tasks, what
+ * they'd earn per day — before the offer. Two reasons, both measured:
+ *
+ *   1. Mirroring onboarding answers on the paywall beats essentially every
+ *      layout experiment. It reframes the ask from "pay to use this app" into
+ *      "unlock the thing you just built", which is the difference between
+ *      Noom-style quiz funnels converting >10% and the ~2.7% median.
+ *   2. Multi-page onboarding paywalls convert ~37% better than single-page
+ *      (12.41% vs 9.07% across 40M+ opens). The reveal IS the second page.
+ *
+ * The reveal is shown ONCE per install. A user who declines and comes back
+ * lands straight on the offer — repeating the ceremony every launch would read
+ * as a stall, not a delivery.
  */
 import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, TouchableOpacity, ScrollView, Platform,
   Animated, Alert, Linking, StatusBar,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FF } from "./theme";
 import { SparkleIcon, CheckIcon, ShieldKeyIcon, ChartIcon, LockIcon } from "./Icons";
 import { Spinner } from "./Skeleton";
@@ -36,6 +53,28 @@ import {
 
 const TERMS_URL   = "https://dilan-b.github.io/Drift/terms.html";
 const PRIVACY_URL = "https://dilan-b.github.io/Drift/privacy.html";
+
+// Marks the reveal as spent. Per install, not per user: it is a first-run
+// flourish, and a second account on the same phone does not need the ceremony.
+const REVEAL_SEEN_KEY = "drift_paywall_reveal_seen";
+
+// ── Placeholders, shown ONLY until the live offering loads ───────────────────
+// These must mirror App Store Connect exactly. StoreKit is the source of truth
+// and overwrites them the moment the offering arrives; they exist so a slow
+// network shows the right number instead of a wrong one. If you reprice in App
+// Store Connect, reprice here in the same change.
+const FALLBACK_MONTHLY    = "$4.99";
+const FALLBACK_ANNUAL     = "$29.99";
+const FALLBACK_TRIAL_DAYS = 7;
+
+// Per-seat estimate for a family tier before its real price loads. A base seat
+// for the parent plus each child. Labelled as an estimate wherever it is shown,
+// because App Store price points are not perfectly linear and quietly
+// presenting this multiplication as fact risks advertising a price StoreKit
+// will not charge.
+const FAMILY_BASE     = 4.99;
+const FAMILY_PER_KID  = 3.00;
+const familyEstimate = (kids) => FAMILY_BASE + (FAMILY_PER_KID * kids);
 
 // What the subscription actually buys. Written as capabilities rather than
 // feature names — "AI-valued rewards" means nothing to someone who has used the
@@ -47,33 +86,96 @@ const FEATURES = [
 ];
 
 export default function PaywallScreen({
-  onPurchase, onRestore, onSignOut, offerings, dark = false,
+  onPurchase, onRestore, onSignOut, offerings, plan = null, dark = false,
 }) {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring,  setRestoring]  = useState(false);
-  // 0 = just me. 1..MAX_KIDS = a parent paying $0.99/mo per child.
+  // 0 = just me. 1..MAX_KIDS = a parent buying a seat per child.
   // Defaults to 0 because most users are not parents, and a family plan chosen
   // by accident is a refund request.
   const [kids, setKids] = useState(0);
+  // Defaults to ANNUAL on purpose. Annual subscribers retain ~44% at 12 months
+  // against ~17% for monthly — roughly a 3x LTV gap at the same price — and for
+  // Drift's under-18 users it clears Apple's Ask to Buy parental approval once
+  // instead of putting a recurring charge on a parent's statement every month,
+  // which is the line item that gets cancelled.
+  const [billing, setBilling] = useState("annual");
+  // "pending" until we've read whether the reveal was already spent. Rendering
+  // the offer during that read and then yanking it away would flash the price
+  // at someone we're about to show the reveal to.
+  const [phase, setPhase] = useState(plan ? "pending" : "offer");
   const entrance = useRef(new Animated.Value(0)).current;
+  const reveal   = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!plan) { setPhase("offer"); return; }
+    AsyncStorage.getItem(REVEAL_SEEN_KEY)
+      .then(seen => { if (!cancelled) setPhase(seen === "1" ? "offer" : "reveal"); })
+      // Storage unavailable: show the offer. Erring toward the reveal would
+      // risk replaying the ceremony on every launch.
+      .catch(() => { if (!cancelled) setPhase("offer"); });
+    return () => { cancelled = true; };
+  }, [plan]);
+
+  useEffect(() => {
+    if (phase !== "reveal") return;
+    reveal.setValue(0);
+    Animated.timing(reveal, { toValue: 1, duration: 520, useNativeDriver: true }).start();
+  }, [phase, reveal]);
+
+  const dismissReveal = () => {
+    AsyncStorage.setItem(REVEAL_SEEN_KEY, "1").catch(() => {});
+    setPhase("offer");
+  };
 
   const offering = resolveOffering(offerings);
   const monthly  = pickPackage(offering, "monthly");
+  const annual   = pickPackage(offering, "annual");
   const familyPkg = kids > 0 ? pickFamilyPackage(offering, kids) : null;
-  const activePkg = kids > 0 ? familyPkg : monthly;
-  const { priceString, trialDays, isFreeTrial } = describeOffer(activePkg || monthly);
+  // Family tiers are monthly-only products, so the billing toggle is hidden
+  // for them and the selection is forced back to monthly.
+  //
+  // `annualOffered` is the guard that matters. Before the offering loads we
+  // assume annual exists (so the default selection paints its real placeholder
+  // rather than flashing the monthly price); once it HAS loaded and there is no
+  // annual product, the option disappears entirely. Without this, selecting
+  // Yearly against a misconfigured offering would render "$29.99/year" and
+  // "renews automatically at $29.99/year" over a package that bills monthly —
+  // a false price on a paid screen, which is both a 3.1.2 rejection and the
+  // kind of thing that becomes a chargeback.
+  const annualOffered = !offering || !!annual;
+  const effBilling = (kids === 0 && billing === "annual" && annualOffered) ? "annual" : "monthly";
+  const soloPkg  = effBilling === "annual" ? annual : monthly;
+  const activePkg = kids > 0 ? familyPkg : soloPkg;
+  const { trialDays, isFreeTrial } = describeOffer(activePkg || monthly);
+
+  // Real savings, computed from the two live StoreKit prices — never a
+  // hardcoded "SAVE 50%". If the products are ever repriced independently, a
+  // baked-in percentage becomes a false advertising claim on a paid screen.
+  const monthlyNum = Number(monthly?.product?.price) || 0;
+  const annualNum  = Number(annual?.product?.price)  || 0;
+  const annualSavingsPct = (monthlyNum > 0 && annualNum > 0)
+    ? Math.round((1 - (annualNum / (monthlyNum * 12))) * 100)
+    : 0;
 
   // Placeholder until the offering loads. Kept identical to the configured
   // product so a slow network shows the right number rather than a wrong one.
   //
   // For a family tier we show the REAL package price once it loads. Before
-  // that, 0.99 x kids is an estimate, and it is labelled as one — App Store
+  // that, familyEstimate(kids) is an estimate, and it is labelled as one — App Store
   // price points are not perfectly linear, so quietly presenting the
   // multiplication as fact risks advertising a price StoreKit won't charge.
   const loadedPrice = activePkg?.product?.priceString || null;
-  const price = loadedPrice || (kids > 0 ? `about $${(0.99 * kids).toFixed(2)}` : "$0.99");
+  const price = loadedPrice || (
+    kids > 0            ? `about $${familyEstimate(kids).toFixed(2)}`
+    : effBilling === "annual" ? FALLBACK_ANNUAL
+    :                        FALLBACK_MONTHLY
+  );
   const priceIsEstimate = !loadedPrice && kids > 0;
-  const trial = trialDays || 3;
+  const trial = trialDays || FALLBACK_TRIAL_DAYS;
+  // Annual is billed once a year; every other product on this screen is monthly.
+  const perPeriod = effBilling === "annual" ? "/year" : "/month";
 
   const REASON_MSG = {
     no_offering:  "Plans aren't loading right now. Check your connection and try again.",
@@ -103,7 +205,7 @@ export default function PaywallScreen({
     if (purchasing || restoring) return;
     setPurchasing(true);
     try {
-      const result = await onPurchase(kids > 0 ? { kids } : "monthly");
+      const result = await onPurchase(kids > 0 ? { kids } : effBilling);
       // Success needs no navigation: proAccess flips and the gate in Drift.jsx
       // stops rendering this screen. Dismissing here as well would race it.
       if (!result?.success && result?.reason && result.reason !== "cancelled") {
@@ -138,6 +240,101 @@ export default function PaywallScreen({
 
   const busy = purchasing || restoring;
 
+  // Nothing yet — we're still deciding which beat to show. A blank field in the
+  // page colour, not a spinner: this read is a single AsyncStorage hit and a
+  // spinner for it reads as a stall.
+  if (phase === "pending") return <View style={{ flex: 1, backgroundColor: paper.bg }} />;
+
+  // ── Beat one: the reveal ──────────────────────────────────────────────────
+  // Their tasks, their number, their plan. No price on this screen at all — the
+  // moment this becomes a pitch it stops being a delivery.
+  if (phase === "reveal") {
+    return (
+      <View style={{ flex: 1, backgroundColor: paper.bg }}>
+        <StatusBar barStyle={dark ? "light-content" : "dark-content"} />
+        <ScrollView
+          contentContainerStyle={{
+            paddingHorizontal: 26,
+            paddingTop: Platform.OS === "ios" ? 96 : 56,
+            paddingBottom: 40,
+            flexGrow: 1,
+            justifyContent: "center",
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={{
+            opacity: reveal,
+            transform: [{ translateY: reveal.interpolate({ inputRange: [0, 1], outputRange: [22, 0] }) }],
+          }}>
+            <Text style={{
+              fontFamily: FF.kicker, fontSize: 10, color: earn.green,
+              letterSpacing: 2.6, marginBottom: 10,
+            }}>
+              YOUR PLAN IS READY
+            </Text>
+            <Text style={{
+              fontFamily: FF.display, fontSize: 34, color: ink.deep,
+              letterSpacing: -0.6, lineHeight: 40,
+            }}>
+              {plan.taskCount} {plan.taskCount === 1 ? "task" : "tasks"},
+            </Text>
+            <Text style={{
+              fontFamily: FF.display, fontSize: 34, color: earn.green,
+              letterSpacing: -0.6, lineHeight: 40, marginBottom: 14,
+            }}>
+              {plan.minutesPerDay} minutes a day
+            </Text>
+            <Text style={{
+              fontFamily: FF.body, fontSize: 15, color: ink.mid,
+              lineHeight: 22, marginBottom: 28,
+            }}>
+              That's what your {plan.taskCount === 1 ? "task is" : "tasks are"} worth once
+              you've done {plan.taskCount === 1 ? "it" : "them"}. Everything else on your
+              phone stays locked until you have.
+            </Text>
+
+            <View style={{
+              backgroundColor: paper.card, borderRadius: 20, padding: 20,
+              borderWidth: 1, borderColor: paper.border, gap: 13, marginBottom: 30,
+            }}>
+              {plan.taskTitles.map((title, i) => (
+                <View key={`${title}-${i}`} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <View style={{
+                    width: 22, height: 22, borderRadius: 11,
+                    backgroundColor: earn.sageLo,
+                    alignItems: "center", justifyContent: "center",
+                  }}>
+                    <CheckIcon size={12} color={earn.green} />
+                  </View>
+                  <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: ink.deep, flex: 1 }}>
+                    {title}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              onPress={dismissReveal}
+              activeOpacity={0.85}
+              style={{
+                paddingVertical: 17, borderRadius: 16,
+                backgroundColor: earn.deep,
+                alignItems: "center", justifyContent: "center",
+                flexDirection: "row", gap: 8,
+              }}
+            >
+              <Text style={{ fontFamily: FF.bodyBold, fontSize: 13, color: onDeep, letterSpacing: 1.6 }}>
+                TURN THE LOCK ON
+              </Text>
+              <LockIcon size={14} color={onDeep} />
+            </TouchableOpacity>
+          </Animated.View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // ── Beat two: the offer ───────────────────────────────────────────────────
   return (
     <View style={{ flex: 1, backgroundColor: paper.bg }}>
       <StatusBar barStyle={dark ? "light-content" : "dark-content"} />
@@ -158,7 +355,7 @@ export default function PaywallScreen({
             fontFamily: FF.kicker, fontSize: 10, color: earn.green,
             letterSpacing: 2.6, marginBottom: 10,
           }}>
-            ONE LAST THING
+            {plan ? "ONE STEP LEFT" : "ONE LAST THING"}
           </Text>
           <Text style={{
             fontFamily: FF.display, fontSize: 36, color: ink.deep,
@@ -166,12 +363,17 @@ export default function PaywallScreen({
           }}>
             {isFreeTrial || trial ? `Start with ${trial} free days` : "Unlock Drift"}
           </Text>
+          {/* The plan stays visible on the offer, not just on the reveal. The
+              user is deciding whether to pay for a specific thing they built —
+              taking it off screen at the moment of the ask turns it back into a
+              generic subscription prompt. */}
           <Text style={{
             fontFamily: FF.body, fontSize: 15, color: ink.mid,
             lineHeight: 22, marginBottom: 30,
           }}>
-            Drift only works if the lock is real. That takes a server, an AI
-            reviewing your proof, and someone keeping it running.
+            {plan
+              ? `Your ${plan.taskCount} ${plan.taskCount === 1 ? "task is" : "tasks are"} set up and worth ${plan.minutesPerDay} minutes a day. Drift only works if the lock is real — that takes a server, an AI reviewing your proof, and someone keeping it running.`
+              : "Drift only works if the lock is real. That takes a server, an AI reviewing your proof, and someone keeping it running."}
           </Text>
 
           {/* What you get */}
@@ -240,6 +442,53 @@ export default function PaywallScreen({
             </Text>
           )}
 
+          {/* Billing period. Solo only — family tiers are monthly-only products,
+              so offering a toggle there would advertise something StoreKit
+              cannot sell. */}
+          {kids === 0 && annualOffered && (
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
+              {[
+                { id: "annual",  label: "Yearly",  sub: annual?.product?.priceString || FALLBACK_ANNUAL },
+                { id: "monthly", label: "Monthly", sub: monthly?.product?.priceString || FALLBACK_MONTHLY },
+              ].map(opt => {
+                const on = effBilling === opt.id;
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    onPress={() => setBilling(opt.id)}
+                    activeOpacity={0.85}
+                    style={{
+                      flex: 1, paddingVertical: 14, paddingHorizontal: 14,
+                      borderRadius: 16, borderWidth: 1.6,
+                      borderColor: on ? earn.green : paper.border,
+                      backgroundColor: on ? earn.sageLo : paper.card,
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: on ? earn.green : ink.deep }}>
+                        {opt.label}
+                      </Text>
+                      {/* Only rendered off two REAL prices — never a hardcoded claim. */}
+                      {opt.id === "annual" && annualSavingsPct > 0 && (
+                        <View style={{
+                          paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+                          backgroundColor: earn.deep,
+                        }}>
+                          <Text style={{ fontFamily: FF.bodyBold, fontSize: 9, color: onDeep, letterSpacing: 0.6 }}>
+                            SAVE {annualSavingsPct}%
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 3 }}>
+                      {opt.sub}{opt.id === "annual" ? " a year" : " a month"}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
           {/* The offer. Apple requires the price, the period, the trial length
               and what it converts to, all BEFORE the purchase button. */}
           <View style={{
@@ -253,13 +502,13 @@ export default function PaywallScreen({
               </Text>
               <Text style={{ fontFamily: FF.display, fontSize: 26, color: ink.deep, letterSpacing: -0.4 }}>
                 {price}
-                <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid }}>/month</Text>
+                <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid }}>{perPeriod}</Text>
               </Text>
             </View>
             <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, marginTop: 8, lineHeight: 19 }}>
               {trial
-                ? `Free for ${trial} days, then ${price} per month. Cancel any time before the trial ends and you won't be charged.`
-                : `${price} per month.`}
+                ? `Free for ${trial} days, then ${price} ${perPeriod === "/year" ? "per year" : "per month"}. Cancel any time before the trial ends and you won't be charged.`
+                : `${price} ${perPeriod === "/year" ? "per year" : "per month"}.`}
               {priceIsEstimate ? " Exact price is confirmed by the App Store before you pay." : ""}
             </Text>
           </View>
@@ -292,9 +541,9 @@ export default function PaywallScreen({
             fontFamily: FF.body, fontSize: 11, color: ink.faint,
             textAlign: "center", lineHeight: 17, marginTop: 14,
           }}>
-            Renews automatically at {price}/month until cancelled. Cancel any
-            time in Settings › Apple ID › Subscriptions. Payment is charged to
-            your Apple ID.
+            Renews automatically at {price}{perPeriod} until cancelled. Cancel
+            any time in Settings › Apple ID › Subscriptions. Payment is charged
+            to your Apple ID.
           </Text>
 
           {/* Restore — mandatory. */}

@@ -110,6 +110,22 @@ const earn = {
   green: "#1A8050", greenLo: "#DDF2EA", greenD: "#0E5434",
   blue: "#5AB4D4", blueLo: "#E6F4FB",
 };
+
+/**
+ * The boot splash. Shown while fonts load, while the app hydrates, and — the
+ * one that matters — while entitlement is still undecided. That last case is
+ * why this is a shared component: the paywall gate must be able to show
+ * *something that isn't the app* without triplicating this markup.
+ */
+function BootSplash() {
+  return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: ink.void }}>
+      <StatusBar barStyle="light-content" />
+      <Text style={{ fontFamily: "Georgia", fontSize: 52, color: "#2FAB72" }}>D</Text>
+      <Text style={{ fontFamily: "Georgia", fontSize: 12, color: "#4A8060", letterSpacing: 5, marginTop: 4 }}>DRIFT</Text>
+    </View>
+  );
+}
 // Legacy aliases, remapped onto the organic-editorial system (theme.js FF).
 // Older corners of this file still reference these names; pointing them at the
 // current typefaces migrates every remaining usage without touching each line.
@@ -3597,7 +3613,15 @@ export default function App() {
   // The queue IS the source of truth — the head is whatever's on screen — so a
   // suggestion arriving while another is open can never be dropped.
   const [suggestionQueue,    setSuggestionQueue]    = useState([]);
+  // What this user picked during onboarding, kept so the paywall can reflect it
+  // back at them. A paywall that names the plan someone just built converts far
+  // better than a generic one — the onboarding answers ARE the sales pitch.
+  const [onboardingAnswers, setOnboardingAnswers] = useState(null);
   const [firstTimeBlockedApps, setFirstTimeBlockedApps] = useState(false);
+  // A brand-new personal account that has not yet had its first-run sequence
+  // (pick apps to block, then the tour). Deliberately a QUEUE rather than an
+  // immediate trigger — see the effect that drains it.
+  const [pendingFirstRun,      setPendingFirstRun]      = useState(false);
   const [showTutorial,       setShowTutorial]       = useState(false);
   const [tutorialTargets,    setTutorialTargets]    = useState(null); // measured rects for the coachmark spotlight
   const tourReplayRef = useRef(false); // true when the tour was opened from The Lab, not signup
@@ -3626,7 +3650,7 @@ export default function App() {
 
   // ── Pro access — everything is free for now ────────────────────────────
   // ── Entitlement ──────────────────────────────────────────────
-  // Drift is paid-only: $0.99/month after a 3-day trial, no free tier. This was
+  // Drift is paid-only: $4.99/mo or $29.99/yr after a 7-day trial. This was
   // hardcoded `true` while payments were switched off; it is now the real
   // answer from RevenueCat, OR a manual grant in pro_overrides.
   //
@@ -3637,7 +3661,7 @@ export default function App() {
   // this flag.
   const {
     proAccess: subProAccess,
-    loading: subLoading,
+    resolved: subResolved,
     offerings: subOfferings,
     purchase: subPurchase,
     restore: subRestore,
@@ -3645,7 +3669,10 @@ export default function App() {
   } = useSubscription(userId);
   const proAccess = appMode === "child" || subProAccess;
   const proAccessRef = useRef(false);
-  useEffect(() => { setProStatus(true); }, []);
+  // Tell the native Screen-Time extension what this user actually is. This was
+  // pinned to `true` while the app was free for everyone, which left the shield
+  // behaving as Pro for accounts that had never paid.
+  useEffect(() => { setProStatus(proAccess); }, [proAccess]);
   const [driftInActive,  setDriftInActive]  = useState(false);
   const [darkMode,       setDarkMode]       = useState(false);
 
@@ -4328,6 +4355,36 @@ export default function App() {
     practice:         { title: "Practice a skill",     cat: "learning",    minutes: 20 },
   };
 
+  /**
+   * The plan the user just built, in the paywall's own terms.
+   *
+   * This is the single highest-leverage thing on the paywall. A generic
+   * "unlock the app" screen is asking for money; a screen that says "your four
+   * tasks are worth 51 minutes a day" is delivering something the user spent
+   * the last two minutes assembling. Apps that mirror onboarding answers on the
+   * paywall (Noom, Flo) convert several times better than ones that don't.
+   *
+   * Returns null when there is nothing to reflect — a returning user signing in,
+   * or someone who skipped the task step — and PaywallScreen falls back to its
+   * generic copy rather than inventing a plan they never chose.
+   */
+  const paywallPlan = useMemo(() => {
+    const picked = (onboardingAnswers?.tasks || []).filter(id => ONBOARDING_TASKS[id]);
+    if (!picked.length) return null;
+    const items = picked.map(id => ONBOARDING_TASKS[id]);
+    // The same capReward() the app uses when the task is actually completed, so
+    // the number on the paywall is the number they will really earn.
+    const minutesPerDay = items.reduce(
+      (sum, t) => sum + capReward(Math.max(1, Math.round(t.minutes * 0.6)), t.minutes),
+      0,
+    );
+    return {
+      taskCount: items.length,
+      taskTitles: items.map(t => t.title),
+      minutesPerDay,
+    };
+  }, [onboardingAnswers]);
+
   // Server-authoritative task restore. Mirrors the boot path so an IN-APP
   // sign-in (which does not remount the component) rehydrates tasks + history
   // exactly like a cold launch. Without this, signing out and back in leaves
@@ -4426,6 +4483,7 @@ export default function App() {
 
     setUserId(authUser.id);
     setUserEmail(authUser.email ?? "");
+    if (answers && Object.keys(answers).length) setOnboardingAnswers(answers);
     // Persist the pre-signup onboarding answers for analytics (fire-and-forget).
     saveOnboardingResponses(authUser.id, answers).catch(() => {});
     // Load level/stats immediately so they show on FIRST login. Previously only
@@ -4532,11 +4590,37 @@ export default function App() {
       }
     }
     setScreen("app");
-    if (acctType === "personal" && !hadOnboarded && !signInOnly) {
-      setFirstTimeBlockedApps(true);
-      setShowBlockedApps(true);
-    }
+    // Queue the first-run sequence; do NOT open it here. It has to wait for the
+    // paywall to clear — see the draining effect below.
+    if (acctType === "personal" && !hadOnboarded && !signInOnly) setPendingFirstRun(true);
   }, [signInOnly]);
+
+  /**
+   * First-run sequence: pick the apps to block, then the tour.
+   *
+   * This fires only once the user actually has access, which puts it AFTER the
+   * paywall rather than before it. Two reasons:
+   *
+   *   1. It is premium onboarding, not a preview. The blocked-apps picker asks
+   *      for the Screen Time permission and the tour explains features nobody
+   *      can use yet — spending both on someone who then hits a paywall burns
+   *      the two highest-intent minutes a user will ever give us on content
+   *      they cannot act on.
+   *   2. The first session after purchase is where early churn is decided. A
+   *      new subscriber who never reaches the core action — apps actually
+   *      locked — churns before the first renewal. Landing them straight in
+   *      the picker is the shortest path to that moment.
+   *
+   * Until this fix the ordering was accidental: the modal was opened at signup
+   * and merely happened to be hidden behind the paywall's full-screen render.
+   */
+  useEffect(() => {
+    if (!pendingFirstRun) return;
+    if (!proAccess || screen !== "app" || appMode !== "personal") return;
+    setPendingFirstRun(false);
+    setFirstTimeBlockedApps(true);
+    setShowBlockedApps(true);
+  }, [pendingFirstRun, proAccess, screen, appMode]);
 
   // Supabase email confirmation links open here before a user is signed in.
   // Deep-link friend invites — drift://add-friend/[username]
@@ -5950,6 +6034,10 @@ export default function App() {
     setUserEmail("");
     setUserName("");
     setAppMode("personal"); // next account on this device starts fresh
+    // The previous account's onboarding answers must not personalise the next
+    // account's paywall, and its queued first-run must not fire for them.
+    setOnboardingAnswers(null);
+    setPendingFirstRun(false);
     // Clear ALL user-scoped local state so the next account on this device
     // starts with a clean slate (no preview-toggle bleed, no stale balance, etc.).
     await AsyncStorage.multiRemove([
@@ -6013,13 +6101,7 @@ export default function App() {
 
   // Gate on fonts FIRST so onboarding (welcome / account-type / auth) always
   // renders in the real Drift typefaces, never a system-font fallback flash.
-  if (!fontsLoaded) return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: ink.void }}>
-      <StatusBar barStyle="light-content" />
-      <Text style={{ fontFamily: "Georgia", fontSize: 52, color: "#2FAB72" }}>D</Text>
-      <Text style={{ fontFamily: "Georgia", fontSize: 12, color: "#4A8060", letterSpacing: 5, marginTop: 4 }}>DRIFT</Text>
-    </View>
-  );
+  if (!fontsLoaded) return <BootSplash />;
 
   // Mandatory-update gate — blocks the ENTIRE app (onboarding, personal, parent,
   // child) with no way past it but updating. Placed before every other screen.
@@ -6046,13 +6128,7 @@ export default function App() {
     />
   );
 
-  if (screen === "loading") return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: ink.void }}>
-      <StatusBar barStyle="light-content" />
-      <Text style={{ fontFamily: "Georgia", fontSize: 52, color: "#2FAB72" }}>D</Text>
-      <Text style={{ fontFamily: "Georgia", fontSize: 12, color: "#4A8060", letterSpacing: 5, marginTop: 4 }}>DRIFT</Text>
-    </View>
-  );
+  if (screen === "loading") return <BootSplash />;
 
   // Children are entitled through their parent, so they render before the
   // paywall and never see it.
@@ -6075,12 +6151,26 @@ export default function App() {
   // after the loading screen, so a slow RevenueCat call doesn't flash a paywall
   // at an existing subscriber.
   //
-  // subLoading is respected for the same reason: getCustomerInfo() failing open
-  // to "not entitled" would paywall paying users on a flaky connection.
-  if (userId && !proAccess && !subLoading) {
+  // This gate FAILS CLOSED, and that is the whole point. It used to read
+  // `&& !subLoading` — so any state where entitlement couldn't be determined
+  // rendered the full app. `loading` was only ever cleared inside
+  // checkEntitlement(), which an unguarded ensureConfigured() throw skipped
+  // entirely, so on any build without the RevenueCat native module linked the
+  // flag stayed true forever and NOBODY saw the paywall. On a paid-only app,
+  // "we don't know yet" must never mean "here, have everything".
+  //
+  // The paying-user protection that `subLoading` was reaching for now lives in
+  // useSubscription: a user previously confirmed as Pro is already inside
+  // proAccess via the cached answer, so they never reach this branch and never
+  // see a paywall flash on a flaky connection.
+  if (userId && !proAccess) {
+    // Undecided. Hold on the boot splash — never the app. useSubscription
+    // guarantees this resolves within RESOLVE_TIMEOUT_MS.
+    if (!subResolved) return <BootSplash />;
     return (
       <PaywallScreen
         dark={darkMode}
+        plan={paywallPlan}
         offerings={subOfferings}
         onPurchase={subPurchase}
         onRestore={subRestore}

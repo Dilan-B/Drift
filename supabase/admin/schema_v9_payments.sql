@@ -3,7 +3,8 @@
 --
 -- Paste into the Supabase SQL editor and run top-to-bottom. Safe to re-run.
 --
--- Brings paid Pro back: $0.99/month with a 3-day free trial, no free tier.
+-- Brings paid Pro back: $4.99/month or $29.99/year with a 7-day free trial,
+-- no free tier. Prices live in App Store Connect; nothing here depends on them.
 --
 -- WHY EACH PIECE EXISTS
 -- ---------------------
@@ -54,7 +55,7 @@ alter table public.profiles
 comment on column public.profiles.sub_active is
   'Canonical entitlement flag. Written ONLY by the revenuecat-webhook function under the service role; client writes are rejected by the trigger in STEP 3.';
 comment on column public.profiles.rc_period_type is
-  'RevenueCat period_type for the current entitlement: trial | intro | normal. "trial" means inside the 3-day free trial.';
+  'RevenueCat period_type for the current entitlement: trial | intro | normal. "trial" means inside the 7-day free trial.';
 
 
 -- ---------------------------------------------------------------------------
@@ -240,7 +241,7 @@ revoke all on function public.revoke_pro(text)                   from public, an
 -- ---------------------------------------------------------------------------
 -- STEP 6. Family seats.
 --
--- Children never pay. The PARENT pays $0.99/month per child, and picks how many
+-- Children never pay. The PARENT buys a seat per child, and picks how many
 -- children they are paying for when they set the family up.
 --
 -- `seats` is what they bought. It is set from the purchased product tier by the

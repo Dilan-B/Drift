@@ -268,6 +268,32 @@ ROWS = [
     ("2026-08-24", "2282249", "Bug Fix", "AI Check", "Legacy title lookup could block a task the user had never verified",
      "The compat path resolves a task by title, and same-title duplicates turn out to be the norm rather than an exception - production carries up to 23 unfinished rows under one title, spanning 19 days, because people re-add 'Make Bed' every morning. Newest-first lands on today's instance correctly, but the client marks ITS row done locally rather than whichever row the server stamped, so two same-titled tasks added on one day could diverge and the next honest submission would come back 'already verified'. Selection now prefers a row that is neither done nor already stamped. Replay protection is unaffected: when the replayed row is the only candidate it is still the one picked. A failed lookup now returns 503 rather than 404, which had been telling users to refresh a list that was fine.",
      "Unreleased", "Edge deploy"),
+
+    # ── 2026-08-27 ──────────────────────────────────
+    ("2026-08-27", "—", "Bug Fix", "Payments", "The hard paywall never rendered for anyone - every new user got the full app free",
+     "The gate read `userId && !proAccess && !subLoading`, and `loading` was cleared in exactly one place: the finally of checkEntitlement(). The init effect awaited ensureConfigured() BEFORE that, outside any try/catch, and Purchases.configure() throws synchronously when NativeModules.RNPurchases is absent (purchases.js throwIfNativeModuleNotAvailable). require('react-native-purchases') still succeeds in that case - the JS ships, the pod is what is missing - so the !Purchases guard never caught it. The IIFE rejected, loading stayed true forever, and the paywall was unreachable on any build without the native module linked. Same failure on a hung getCustomerInfo(), which had no timeout. Root cause under the symptom: the gate FAILED OPEN, so 'entitlement unknown' resolved to 'grant everything' on a paid-only app.",
+     "1.1.7", "—"),
+    ("2026-08-27", "—", "Bug Fix", "Payments", "Entitlement now fails closed, without paywalling subscribers on a flaky connection",
+     "useSubscription gained `resolved` (guaranteed to flip within 8s via a timeout) replacing `loading`; undecided now renders the boot splash, never the app. The two sources are tracked separately as answered-vs-unreadable, because 'no entitlement' and 'could not ask' are different facts: only a real answer may overrule a previously-confirmed subscriber. The last definitive Pro answer is cached per user in AsyncStorage, so a payer boots straight in offline while a never-Pro user meets the paywall in every failure mode. A timeout or network error is barred from clearing that cached flag, or one bad request would lock a subscriber out on their next cold start too.",
+     "1.1.7", "—"),
+    ("2026-08-27", "—", "Bug Fix", "Screen Time", "The native shield treated every user as Pro",
+     "setProStatus(true) was hardcoded in an on-mount effect, left over from the free-for-everyone era. The Screen Time extension therefore applied Pro behaviour to accounts that had never paid. Now tracks proAccess.",
+     "1.1.7", "—"),
+    ("2026-08-27", "—", "Feature", "Payments", "Paywall reflects the plan the user just built in onboarding",
+     "The picked tasks and the minutes they are worth (run through the same capReward() the app uses on completion, so the advertised number is the earned number) now open the paywall as a reveal beat, and stay on the offer card. Mirroring onboarding answers is the highest-leverage change available on a paywall - Noom converts >10% of quiz completers against a ~2.7% median - and multi-page onboarding paywalls convert ~37% better than single-page. Reveal shows once per install.",
+     "1.1.7", "—"),
+    ("2026-08-27", "—", "Feature", "Payments", "Yearly/Monthly selector, defaulting to yearly",
+     "Annual subscribers retain ~44% at 12 months against ~17% monthly - roughly a 3x LTV gap at the same price - and for Drift's under-18 users annual clears Apple's Ask to Buy parental approval once instead of putting a recurring charge on a parent's statement. The savings badge is computed from the two live StoreKit prices, never hardcoded. If the annual product is missing from the offering the option disappears entirely rather than rendering a yearly price over a monthly package, which would be a false price on a paid screen.",
+     "1.1.7", "—"),
+    ("2026-08-27", "—", "Feature", "Payments", "Price moved to $4.99/month and $29.99/year, trial to 7 days",
+     "$0.99 sat at roughly one seventh of the category median ($6.68/mo overall, $9.70 Health & Fitness) and one twentieth of Opal. High-priced apps convert downloads about 2x better than low-priced (2.7% vs 1.5% D35) because price pre-filters for intent, and 1-year retention between hard-paywall and freemium apps is statistically identical. Trials under 4 days convert at 25.5% against 42.5% for 17-32 days, with 84% of 3-day cancellations landing by Day 1. Repriced with zero subscribers to grandfather, since the paywall had never rendered.",
+     "1.1.7", "App Store Connect"),
+    ("2026-08-27", "—", "Bug Fix", "Payments", "Client expected product IDs that do not exist in App Store Connect",
+     "PRODUCT_MONTHLY/PRODUCT_ANNUAL were drift_pro_monthly/drift_pro_annual; the real products are com.drift.pro.month and com.drift.pro.annual. Harmless for the solo plans, which resolve through RevenueCat package types rather than raw IDs - which is precisely why it went unnoticed. The family tiers are matched by ID strictly, in pickFamilyPackage and in the webhook's seatsForProduct regex, and those already agreed at drift_family_1..5.",
+     "1.1.7", "—"),
+    ("2026-08-27", "—", "Feature", "Onboarding", "First-run app picker and tour moved to after the paywall",
+     "Both were triggered at signup and merely happened to be hidden behind the paywall's full-screen render - ordering by z-index, not by intent. Now queued and drained on proAccess. They are premium onboarding, not a preview: the picker asks for the Screen Time permission and the tour explains features nobody can use yet, so spending them on someone about to hit a paywall burns the highest-intent minutes a user will ever give us. The first session after purchase is also where early churn is decided.",
+     "1.1.7", "—"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
@@ -336,7 +362,7 @@ for i, a in enumerate(areas, start=8):
 
 s["G6"] = "By release"
 s["G6"].font = Font(name=FONT, bold=True, size=12, color="1F3A2A")
-rels = ["1.1.2", "1.1.3", "1.1.4", "1.1.6", "Unreleased"]
+rels = ["1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "Unreleased"]
 s["G7"], s["H7"] = "Release", "Count"
 for c in ("G7", "H7"):
     s[c].font = HDR_FONT
@@ -423,5 +449,5 @@ assert sum(t.values()) == len(ROWS) and sum(r.values()) == len(ROWS)
 for k in t:
     assert k in ("Feature", "Bug Fix", "UI", "Infra", "Security", "Chore", "Docs"), f"unlisted type {k}"
 for k in r:
-    assert k in ("1.1.2", "1.1.3", "1.1.4", "1.1.6", "Unreleased"), f"unlisted release {k}"
+    assert k in ("1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "Unreleased"), f"unlisted release {k}"
 print("\nAll type/release values are covered by a summary row - no change is uncounted.")

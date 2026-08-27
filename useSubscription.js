@@ -2,8 +2,12 @@
  * useSubscription.js
  * RevenueCat-powered subscription state.
  *
- * Drift is paid-only: $0.99/month after a 3-day free trial, no free tier.
- * Every user completes onboarding, signs up, and then hits the paywall.
+ * Drift is paid-only: $4.99/month or $29.99/year after a 7-day free trial, no
+ * free tier. Every user completes onboarding, signs up, and then hits the
+ * paywall. Prices are never hardcoded into what the user is charged — they come
+ * from StoreKit via the live offering; the figures named here and in
+ * PaywallScreen's FALLBACK_* constants are documentation and pre-load
+ * placeholders, and must be kept in step with App Store Connect.
  *
  * ── Why this file was deleted once, and what changed ─────────────────────────
  * Apple rejected an earlier build because react-native-purchases links
@@ -17,8 +21,16 @@
  * ── Setup this file assumes ──────────────────────────────────────────────────
  * RevenueCat dashboard:
  *   - Apple API key configured (public SDK key below).
- *   - Product `drift_pro_monthly` — $0.99/month, 3-day free trial as an
- *     introductory offer, Approved / Ready to Submit in App Store Connect.
+ *   - Product `com.drift.pro.month`  — $4.99/month.
+ *   - Product `com.drift.pro.annual` — $29.99/year, in the SAME subscription
+ *     group as the monthly so Apple handles switching between them. Optional in
+ *     the sense that the code degrades to monthly-only without it, but the
+ *     paywall defaults to annual and annual carries ~3x the LTV, so treat it as
+ *     required.
+ *   - Products `drift_family_1` … `drift_family_5` — the parent-pays-per-child
+ *     tiers, same subscription group.
+ *   - A 7-day free trial as an introductory offer on BOTH, or the paywall will
+ *     advertise a trial the store does not honour.
  *   - An entitlement the product unlocks (we accept ANY active entitlement).
  *   - A "current" offering containing the monthly package.
  *   - A webhook pointed at the revenuecat-webhook edge function.
@@ -36,6 +48,7 @@
  */
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Platform, AppState } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
 
 // The SDK is required lazily so a JS-only context (Expo Go, a bundler that
@@ -56,11 +69,24 @@ const RC_APPLE_KEY =
   process.env.EXPO_PUBLIC_RC_IOS_KEY || "appl_OetkgVkCSGdSfmrXdrqCElOjgIs";
 
 const ENTITLEMENT_ID  = "Pro";
-const PRODUCT_MONTHLY = "drift_pro_monthly";
-const PRODUCT_ANNUAL  = "drift_pro_annual"; // optional; only used if the offering has one
+// These MUST match App Store Connect exactly. Note the two naming schemes:
+// the solo products are reverse-DNS (com.drift.pro.*) and the family tiers are
+// bare snake_case (drift_family_N). That is how they were created, and product
+// IDs cannot be renamed or reused once they exist, so the code matches the
+// store rather than the other way round.
+//
+// Only the family tiers are matched by ID in anger — pickFamilyPackage() and
+// the webhook's seatsForProduct() both key off `drift_family_N` strictly. The
+// solo IDs below are a LAST-RESORT fallback: pickPackage() prefers RevenueCat's
+// package types (offering.monthly / offering.annual), which is why the solo
+// products kept working while these constants were wrong.
+const PRODUCT_MONTHLY = "com.drift.pro.month";
+const PRODUCT_ANNUAL  = "com.drift.pro.annual";
 
 // Family tiers. Children never pay; a parent buys a tier sized to how many
-// children they have, at $0.99/month each.
+// children they have. Priced as a base seat plus a per-child amount rather
+// than a flat per-child figure — see FAMILY_BASE / FAMILY_PER_KID in
+// PaywallScreen for the pre-load estimate.
 //
 // This is a LIST OF PRODUCTS rather than a quantity because an auto-renewable
 // subscription cannot use StoreKit quantity — that is consumables only. All of
@@ -133,7 +159,7 @@ export function pickPackage(offering, planType) {
 /** Trial length + price, read off the real package so the paywall never lies. */
 export function describeOffer(pkg) {
   const product = pkg?.product;
-  const priceString = product?.priceString || "$0.99";
+  const priceString = product?.priceString || "$4.99";
   // RN SDK shapes differ across versions; check both.
   const intro = product?.introPrice || product?.introductoryPrice || null;
   const trialDays = (() => {
@@ -152,30 +178,90 @@ export function describeOffer(pkg) {
 
 let rcConfigured = false;
 let rcIdentified = null; // last RC appUserID we aligned to
+let rcInitError  = null; // why the SDK is unusable, when it is
 
+/** Why RevenueCat is unavailable, or null when it's fine. For diagnostics. */
+export function rcUnavailableReason() { return rcInitError; }
+
+/**
+ * Configure RevenueCat. Returns whether the SDK is usable. NEVER throws.
+ *
+ * `Purchases.configure()` throws SYNCHRONOUSLY when NativeModules.RNPurchases
+ * is missing — Expo Go, a JS-only bundle, or a binary built before the pod was
+ * installed. `require("react-native-purchases")` still SUCCEEDS in every one of
+ * those cases, so the `!Purchases` check above does not catch it.
+ *
+ * That throw used to escape the init effect below, which meant
+ * checkEntitlement() never ran, `loading` never went false — and because the
+ * paywall gate in Drift.jsx was `!loading`, EVERY new user walked straight past
+ * the paywall into the full app. Swallowing it here isn't hiding the problem:
+ * callers read the return value and fail CLOSED.
+ */
 async function ensureConfigured(userId) {
-  if (Platform.OS !== "ios" || !Purchases) return;
+  if (Platform.OS !== "ios") { rcInitError = "not_ios";     return false; }
+  if (!Purchases)            { rcInitError = "sdk_missing"; return false; }
   if (!rcConfigured) {
-    Purchases.configure({ apiKey: RC_APPLE_KEY, appUserID: userId || undefined });
-    rcConfigured = true;
-    rcIdentified = userId || null;
-    return;
+    try {
+      Purchases.configure({ apiKey: RC_APPLE_KEY, appUserID: userId || undefined });
+      rcConfigured = true;
+      rcIdentified = userId || null;
+      rcInitError  = null;
+    } catch (e) {
+      rcInitError = e?.message || "configure_failed";
+      console.warn("[Drift] RevenueCat unavailable:", rcInitError);
+      return false;
+    }
+    return true;
   }
   // Align RC identity with the Supabase user. Critical if configure() ran
   // anonymously before login: otherwise purchases, restores and promotional
   // grants key off an anonymous id instead of the user's UUID, and the webhook
   // then can't match the payment to an account.
+  //
+  // Best-effort on purpose: a failed logIn leaves the SDK perfectly able to
+  // READ entitlements, so it must not be reported as "SDK broken" and paywall
+  // someone who is paying.
   if (userId && rcIdentified !== userId) {
     try { await Purchases.logIn(userId); rcIdentified = userId; } catch {}
   }
+  return true;
 }
+
+/**
+ * How long we will wait for a definitive entitlement answer before deciding
+ * one. The paywall fails CLOSED, so "still deciding" holds the user on the
+ * loading screen — this ceiling is what stops a hung RevenueCat call from
+ * parking them there forever.
+ */
+const RESOLVE_TIMEOUT_MS = 8000;
+
+/** Where the last DEFINITIVE Pro answer for a user is cached. */
+const lastProKey = (uid) => `drift_pro_seen_${uid}`;
 
 export function useSubscription(userId) {
   const [entitled, setEntitled] = useState(false); // RevenueCat
   const [override, setOverride] = useState(false); // manual grant
-  const [loading,  setLoading]  = useState(true);
+  // Do we have a DEFINITIVE answer about this user yet? The paywall fails
+  // closed on it: until this is true Drift.jsx shows the loading screen, never
+  // the app. Guaranteed to become true within RESOLVE_TIMEOUT_MS.
+  const [resolved, setResolved] = useState(false);
+  // The last definitive Pro answer for this user, read from disk. This is what
+  // keeps the "never paywall a paying customer on a flaky connection" promise
+  // now that unknown means paywall: someone who has verified as Pro before
+  // boots straight into the app while the live check runs behind them. Someone
+  // who never has does not.
+  const [knownPro, setKnownPro] = useState(false);
+  // Did each source actually ANSWER, as opposed to erroring, timing out, or
+  // being unreadable? "No entitlement" and "couldn't ask" are different facts
+  // and must not collapse into each other: only the first may overrule a
+  // previously-confirmed subscriber.
+  const [rcAnswered, setRcAnswered] = useState(false);
+  const [ovAnswered, setOvAnswered] = useState(false);
   const [offerings, setOfferings] = useState(null);
-  const checkedRef = useRef(false);
+  // Keyed by user, not a bare boolean: signing out and back in as a DIFFERENT
+  // account must re-decide from scratch, or one paying account unlocks the next
+  // one on the same device.
+  const checkedForRef = useRef(null);
 
   /**
    * Manual Pro grant. Works on every platform (RevenueCat is iOS-only), which
@@ -187,44 +273,111 @@ export function useSubscription(userId) {
    * would drop them onto a paywall they already paid past.
    */
   const checkOverride = useCallback(async () => {
-    if (!userId) { setOverride(false); return; }
+    if (!userId) { setOverride(false); setOvAnswered(false); return; }
     try {
       const { data, error } = await supabase
         .from("pro_overrides").select("granted, expires_at").eq("user_id", userId).maybeSingle();
-      if (error) return;
+      if (error) { setOvAnswered(false); return; }
       const live = !!data?.granted &&
         (!data.expires_at || new Date(data.expires_at) > new Date());
       setOverride(live);
+      setOvAnswered(true);
     } catch {
       // Network error — keep previous override state.
+      setOvAnswered(false);
     }
   }, [userId]);
 
   const checkEntitlement = useCallback(async () => {
-    if (Platform.OS !== "ios" || !Purchases) { setLoading(false); return; }
+    // No usable SDK. Report it as UNREADABLE, not as "not entitled": a build
+    // with the native module missing tells us nothing about whether this person
+    // pays Apple every month. A never-Pro user still lands on the paywall
+    // (knownPro is false); a subscriber is not punished for our build error.
+    // The old code did `setLoading(false); return;` here, which — once the gate
+    // was `!loading` — silently unlocked the whole app instead.
+    if (!(await ensureConfigured(userId))) {
+      setEntitled(false); setRcAnswered(false); return;
+    }
     try {
-      await ensureConfigured(userId);
       const info = await Purchases.getCustomerInfo();
       setEntitled(hasProEntitlement(info));
+      setRcAnswered(true);
     } catch {
       // RevenueCat unreachable — keep previous state. Do NOT downgrade to
       // false: a paying user on a flaky connection would get paywalled.
-    } finally {
-      setLoading(false);
+      // `knownPro` covers the same case across a cold start.
+      setRcAnswered(false);
     }
   }, [userId]);
 
-  // Initial check + fetch offerings.
+  // A new account starts undecided. Without this, the previous user's answer
+  // survives a sign-out and entitles whoever signs in next on this device.
   useEffect(() => {
-    if (!userId || checkedRef.current) return;
-    checkedRef.current = true;
+    setResolved(false);
+    setEntitled(false);
+    setOverride(false);
+    setKnownPro(false);
+    setRcAnswered(false);
+    setOvAnswered(false);
+    if (!userId) return;
+    let cancelled = false;
+    AsyncStorage.getItem(lastProKey(userId))
+      .then(v => { if (!cancelled) setKnownPro(v === "1"); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  // Persist every definitive answer, so the next cold start knows whether this
+  // user has ever been Pro before the network comes back.
+  useEffect(() => {
+    if (!resolved || !userId) return;
+    const pro = entitled || override;
+    // Writing "0" off a timeout or a network error would paywall a subscriber
+    // on their NEXT cold start too, turning one bad request into a lasting
+    // lockout. Only a source that actually answered may clear the flag.
+    if (!pro && !(rcAnswered && ovAnswered)) return;
+    AsyncStorage.setItem(lastProKey(userId), pro ? "1" : "0").catch(() => {});
+  }, [resolved, entitled, override, rcAnswered, ovAnswered, userId]);
+
+  // Initial check + fetch offerings.
+  //
+  // Everything here is wrapped so that `resolved` ALWAYS flips. The bug this
+  // replaces was exactly one unguarded `await` — ensureConfigured() throwing on
+  // a missing native module rejected this IIFE before the entitlement check
+  // ran, so the flag the paywall gates on never moved and nobody was ever
+  // charged. Do not add an await outside the try.
+  useEffect(() => {
+    if (!userId || checkedForRef.current === userId) return;
+    checkedForRef.current = userId;
+
+    let settled = false;
+    const resolve = () => { if (!settled) { settled = true; setResolved(true); } };
+    // Hard ceiling, so a hung RevenueCat call can't park a user on the loading
+    // screen indefinitely. Timing out lands a non-payer on the paywall.
+    const timer = setTimeout(() => {
+      console.warn("[Drift] entitlement check timed out — treating as undecided");
+      resolve();
+    }, RESOLVE_TIMEOUT_MS);
+
     (async () => {
-      await ensureConfigured(userId);
-      await Promise.all([checkEntitlement(), checkOverride()]);
       try {
-        if (Purchases) setOfferings(await Purchases.getOfferings());
+        await Promise.all([checkEntitlement(), checkOverride()]);
+      } catch {
+        // Both callees already swallow their own errors; this is belt-and-
+        // braces so a future edit can't re-create the never-resolves bug.
+      } finally {
+        clearTimeout(timer);
+        resolve();
+      }
+      // Offerings are for rendering the paywall's prices, not for deciding
+      // access — deliberately fetched AFTER resolution so a slow catalogue
+      // request never delays the gate.
+      try {
+        if (rcConfigured && Purchases) setOfferings(await Purchases.getOfferings());
       } catch {}
     })();
+
+    return () => clearTimeout(timer);
   }, [userId, checkEntitlement, checkOverride]);
 
   // Re-check on foreground. Covers a subscription bought or cancelled in the
@@ -251,7 +404,10 @@ export function useSubscription(userId) {
     if (Platform.OS !== "ios") return { success: false, reason: "ios_only" };
     if (!Purchases) return { success: false, reason: "sdk_missing" };
     try {
-      await ensureConfigured(userId);
+      // Hard-stop rather than pressing on: calling purchasePackage() on an
+      // unconfigured SDK throws UninitializedPurchasesError, which surfaced to
+      // the user as an opaque "Something went wrong".
+      if (!(await ensureConfigured(userId))) return { success: false, reason: "sdk_missing" };
       const off = offerings || await Purchases.getOfferings();
       const offering = resolveOffering(off);
       if (!offering) return { success: false, reason: "no_offering" };
@@ -282,7 +438,11 @@ export function useSubscription(userId) {
     if (Platform.OS !== "ios") return { success: false, reason: "ios_only" };
     if (!Purchases) return { success: false, reason: "sdk_missing" };
     try {
-      await ensureConfigured(userId);
+      if (!(await ensureConfigured(userId))) {
+        // A comped account can still be recovered with no StoreKit at all.
+        await checkOverride();
+        return { success: false, reason: "sdk_missing" };
+      }
       const info = await Purchases.restorePurchases();
       const active = hasProEntitlement(info);
       setEntitled(active);
@@ -308,7 +468,7 @@ export function useSubscription(userId) {
   const redeemAppStoreCode = useCallback(async () => {
     if (Platform.OS !== "ios" || !Purchases) return { success: false, reason: "ios_only" };
     try {
-      await ensureConfigured(userId);
+      if (!(await ensureConfigured(userId))) return { success: false, reason: "sdk_missing" };
       if (Purchases.presentCodeRedemptionSheet) await Purchases.presentCodeRedemptionSheet();
       await checkEntitlement();
       return { success: true };
@@ -318,10 +478,21 @@ export function useSubscription(userId) {
   }, [userId, checkEntitlement]);
 
   return {
-    proAccess: entitled || override,
+    // A user we have PREVIOUSLY confirmed as Pro is let through whenever the
+    // live check could not produce a real answer — still running, timed out,
+    // network down, SDK unusable. Once BOTH sources have actually answered,
+    // they are authoritative and the cached flag is ignored, so a genuinely
+    // lapsed subscriber lands back on the paywall.
+    //
+    // A user we have never seen as Pro has knownPro = false, so every one of
+    // those failure modes leaves them on the paywall. That asymmetry is the
+    // fix: unknown is only generous to people who have already paid.
+    proAccess: entitled || override || (!(rcAnswered && ovAnswered) && knownPro),
+    resolved,
     entitled,
     override,
-    loading,
+    loading: !resolved,
+    sdkError: rcInitError,
     offerings,
     purchase,
     restore,

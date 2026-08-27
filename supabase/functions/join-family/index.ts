@@ -63,7 +63,7 @@ serve(async (req: Request) => {
     // 1. Validate the family code.
     const { data: family, error: famErr } = await admin
       .from("families")
-      // seats: how many children the parent has paid for ($0.99/mo each).
+      // seats: how many children the parent has paid for.
       // Without it in this select the seat check below reads undefined and
       // silently never fires.
       .select("id, parent_id, active, deleted_at, seats")
@@ -131,7 +131,7 @@ serve(async (req: Request) => {
     }
     // Two different caps, and they mean different things:
     //   MAX_CHILDREN_PER_FAMILY is an abuse ceiling on the whole feature.
-    //   families.seats is what the parent has PAID for ($0.99/mo per child).
+    //   families.seats is what the parent has PAID for (one seat per child).
     //
     // The seat check happens here, at join time, rather than letting the child
     // in and having is_pro() quietly deny them later. A child who signs up and
