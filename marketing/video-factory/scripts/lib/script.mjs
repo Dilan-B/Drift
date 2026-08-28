@@ -89,10 +89,14 @@ HARD RULES
 - Each beat is one line, max ${TIMING.maxWordsPerBeat} words. A beat lasts as long as its line
   takes to read, so a longer line is not free — but you have room for five.
 - Every beat changes the visual. No two consecutive beats share the same "src".
-${shots.length ? `- REAL SCREENSHOTS EXIST, so at least TWO beats must use "kind":"phone".
+${shots.length ? `- REAL SCREENSHOTS EXIST, so at least ${shots.length >= 5 ? "TWO beats" : "ONE beat"} must use "kind":"phone".
   A drawn mock is a fallback for when no screenshot fits — it is not a
   substitute for showing the actual product. Reach for "ui" only after the
-  screenshots genuinely have nothing for that beat.` : ""}
+  screenshots genuinely have nothing for that beat.
+- The screenshot must actually SHOW what its line says. Pairing a line about
+  proof photos with a screen that has nothing to do with proof photos is worse
+  than using a mock — the viewer sees the mismatch immediately. Read the
+  descriptions above and match them honestly.` : ""}
 - Every beat makes a NEW point. Do not restate an earlier beat in different
   words — with one line per shot, repetition is obvious and reads as padding.
 - "onscreen" is the ONLY thing the viewer gets. There is NO voiceover and NO
@@ -277,11 +281,15 @@ export function validateScript(script, { captureNames = [], brollClips = [], sho
 
   // Drawn mocks kept winning over real screenshots on preference alone.
   if (shotNames.length) {
+    // Scaled to the library. Demanding two real screens from three shots — one
+    // of which is niche — left no satisfiable script; five attempts failed on
+    // it. More screenshots raise this automatically.
+    const required = shotNames.length >= 5 ? 2 : 1;
     const phoneBeats = beats.filter((b) => b.kind === "phone").length;
-    if (phoneBeats < 2) {
+    if (phoneBeats < required) {
       problems.push(
-        `Only ${phoneBeats} beat(s) use a real screenshot. At least 2 must use "kind":"phone" ` +
-        `— available: ${shotNames.join(", ")}. Replace "ui" beats with them.`
+        `Only ${phoneBeats} beat(s) use a real screenshot. At least ${required} must use "kind":"phone" ` +
+        `— available: ${shotNames.join(", ")}. Replace a "ui" beat with one.`
       );
     }
   }

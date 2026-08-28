@@ -27,7 +27,9 @@ export const LIMITS = {
   // is still worth posting, a broken one never is. Without real screen
   // recordings "native" honestly sits at 3, and the fix for that is footage,
   // not a lower bar.
-  scoreFloors: { legibility: 4, polish: 4, hook: 3, native: 3 },
+  // honesty is a correctness check, not a taste one: a screenshot that does not
+  // show what its line claims is a defect, so it sits with legibility/polish.
+  scoreFloors: { legibility: 4, polish: 4, honesty: 4, hook: 3, native: 3 },
   minOverall: 3.5,
 };
 
@@ -126,13 +128,17 @@ Score each dimension 1-5 (5 = excellent, 3 = mediocre, 1 = unusable):
 - "native": does it look like a real TikTok, or like a corporate advert? Calm,
   centred, serif, lots of white space = an advert = low score.
 - "hook": judge ONLY the first frame. Would a scrolling 16-24 year old stop for it?
+- "honesty": where a frame shows a phone with a real app screenshot in it, does
+  the on-screen line actually describe what that screen shows? A line about
+  proof photos over a screen showing something else is a real defect — score it
+  low and say so in blocking_issues.
 
 Also flag anything factually or reputationally risky you can SEE.
 Facts: the app is ${FACTS.name}, ${FACTS.platform} only, ${FACTS.price} after a
 ${FACTS.trialDays}-day free trial. It is NOT free.
 
 Return ONLY JSON:
-{"scores":{"legibility":n,"polish":n,"native":n,"hook":n},
+{"scores":{"legibility":n,"polish":n,"native":n,"hook":n,"honesty":n},
  "overall":n,
  "blocking_issues":["..."],
  "notes":"one or two sentences"}

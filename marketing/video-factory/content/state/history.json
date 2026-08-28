@@ -274,5 +274,17 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-28T01:39:05.035Z"
+  },
+  {
+    "ideaKey": "302ef8fe9c7b",
+    "hook": "I thought saying no to my phone would be impossible",
+    "format": "problem-agitate",
+    "title": "impossible-to-say-no-to-phone",
+    "file": "out/2026-08-28-problem-agitate-302ef8.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-28T01:40:54.663Z"
   }
 ]
