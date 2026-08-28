@@ -102,6 +102,7 @@ async function attempt({ idea, name, captures, brollClips, shots, feedback, n, f
 
   const props = {
     beats,
+    showCta: !!FORMATS[idea.format]?.pushesStore,
     music: track ? `music/${track}` : null,
     title: script.title,
     postCaption: script.postCaption,

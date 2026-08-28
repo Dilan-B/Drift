@@ -12,35 +12,67 @@ import { chat } from "./openai.mjs";
 // TikTok-native formats. Each maps to a real editing pattern, not a vibe —
 // the script writer and the renderer both branch on `format`.
 export const FORMATS = {
+  // Rebuilt around what actually earns organic distribution in 2026 rather than
+  // around ad structure. The old set was five ways of writing the same
+  // commercial — hook, problem, mechanism, store CTA — which is why TikTok
+  // started asking viewers whether the videos felt promotional.
+  //
+  // `pushesStore` marks the few formats allowed to name the App Store. Most do
+  // not: a video that asks for nothing reads as content, and the bio is where
+  // the link lives.
   "screen-demo": {
     label: "Screen demo",
-    beats: "Show the actual app doing the thing. Narrate what's happening as it happens.",
+    beats: "Show the app doing the thing, narrated in text as it happens. No pitch — just the thing working.",
     needsCapture: true,
+    pushesStore: false,
+  },
+  "how-to": {
+    label: "How-to",
+    beats: "Genuinely useful instructions someone would save. The app can appear as one step, not the point.",
+    needsCapture: false,
+    pushesStore: false,
+  },
+  "contrarian-list": {
+    label: "Contrarian list",
+    beats: "A short numbered list built on a surprising or against-the-grain claim. Saves and shares live here.",
+    needsCapture: false,
+    pushesStore: false,
   },
   "pov": {
     label: "POV",
-    beats: "Second-person scenario the viewer recognises. 'POV: you can't open TikTok until…'",
+    beats: "Second-person scenario the viewer recognises. 'POV: your phone locks at 9pm and you have not started.'",
     needsCapture: true,
+    pushesStore: false,
   },
   "before-after": {
     label: "Before / after",
-    beats: "State the old behaviour, hard cut, state the new one. Numbers land best.",
+    beats: "The old behaviour, a hard cut, the new one. Real numbers land hardest.",
     needsCapture: true,
+    pushesStore: false,
+  },
+  "study-with-me": {
+    label: "Companion",
+    beats: "Calm, unhurried, real time — study/work alongside the viewer. Quiet and aesthetic, not salesy.",
+    needsCapture: true,
+    pushesStore: false,
   },
   "build-in-public": {
     label: "Build in public",
-    beats: "Founder voice. 'I built X because Y.' Teen-founder story is the differentiator.",
+    beats: "Two teenagers building the thing. The story is the founders, the product is incidental.",
     needsCapture: false,
-  },
-  "problem-agitate": {
-    label: "Problem agitate",
-    beats: "Name the feeling precisely, sit in it, then reveal the mechanism as relief.",
-    needsCapture: false,
+    pushesStore: false,
   },
   "myth-bust": {
     label: "Myth bust",
-    beats: "'Screen time apps don't work because…' then the specific reason Drift differs.",
+    beats: "'Screen time apps don't work because…' then the specific reason. Educational, not promotional.",
     needsCapture: false,
+    pushesStore: false,
+  },
+  "the-ask": {
+    label: "Direct",
+    beats: "The one format that names the App Store outright. Use sparingly — roughly one in five.",
+    needsCapture: false,
+    pushesStore: true,
   },
 };
 

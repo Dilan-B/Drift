@@ -393,7 +393,7 @@ const CtaPill = ({ label }) => {
 
 // ── beat ─────────────────────────────────────────────────────
 
-const Beat = ({ beat, index, isLast, audioBase, statementIndex }) => {
+const Beat = ({ beat, index, isLast, audioBase, statementIndex, showCta }) => {
   const frames = beat.frames;
   const isLight = beat.kind === "ui" || beat.kind === "phone";
   // With subtitles gone this line is the ONLY text, so every beat gets one.
@@ -426,13 +426,15 @@ const Beat = ({ beat, index, isLast, audioBase, statementIndex }) => {
           maxLines={isLight || beat.kind === "phone" ? 2 : 3}
         />
       ) : null}
-      {isLast ? <CtaPill label={beat.ctaLabel || `Search "${APP_STORE_SEARCH}"`} /> : null}
+      {/* Only the one format that is allowed to ask gets the pill. A store
+          badge on every video is what made these read as adverts. */}
+      {isLast && showCta ? <CtaPill label={beat.ctaLabel || `Search "${APP_STORE_SEARCH}"`} /> : null}
       {beat.audio ? <Audio src={staticFile(`${audioBase}/${beat.audio}`)} /> : null}
     </AbsoluteFill>
   );
 };
 
-export const Native = ({ beats = [], audioBase = "audio", music = null, musicVolume = 0.12 }) => {
+export const Native = ({ beats = [], audioBase = "audio", music = null, musicVolume = 0.12, showCta = false }) => {
   let at = 0;
   let statementIndex = 0;
   return (
@@ -448,6 +450,7 @@ export const Native = ({ beats = [], audioBase = "audio", music = null, musicVol
               beat={beat}
               index={i}
               isLast={i === beats.length - 1}
+              showCta={showCta}
               audioBase={audioBase}
               statementIndex={si}
             />

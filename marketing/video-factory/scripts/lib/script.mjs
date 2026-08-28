@@ -83,6 +83,9 @@ HARD RULES
 - The FIRST beat is the hook. SEVEN WORDS OR FEWER, readable at a glance, and
   it must work with zero context. Never open with a greeting, "in this video",
   "let me show you", or the product name.
+- WRITE SOMETHING WORTH SAVING. Saves and shares are what earn distribution —
+  more than likes. A viewer should finish this either wanting to send it to
+  someone or wanting to come back to it. A claim about a product is neither.
 - THE HOOK IS THE WHOLE VIDEO. If it does not stop a thumb, nothing after it
   matters. Write it as something a person would actually say out loud about
   their own life — first person, concrete, slightly uncomfortable.
@@ -114,11 +117,15 @@ ${shots.length ? `- REAL SCREENSHOTS EXIST, so at least ${shots.length >= 5 ? "T
   Every line must land on its own and carry that beat's point completely.
   Write them as a sequence someone reads straight through, like a thought
   unfolding — not as captions for narration that is not there.
-- The last beat is the CTA and must use "statement" — never "ui" or "phone".
-  NEVER mention money — no price, no cost, no trial, no subscription, and never
-  the word "free". The CTA tells them exactly what to search: "${FACTS.appStoreSearch}"
-  on the App Store. Searching "Drift" alone does not find it, so use the full
-  name. Nothing about what it costs.
+${fmt?.pushesStore ? `- The last beat names the App Store: search "${FACTS.appStoreSearch}" — the full
+  name, since "Drift" alone does not find it. Use "statement", never "ui" or "phone".`
+: `- DO NOT ASK FOR ANYTHING. No App Store, no "link in bio", no "download",
+  no "check it out". This format earns attention by being worth watching, and a
+  video that asks for nothing does not read as an advert. TikTok has already
+  started asking viewers whether these feel promotional — that is the thing to
+  design out. The last beat is a payoff, a punchline, or the point landing:
+  end where a person would naturally stop talking.`}
+- NEVER mention money — no price, cost, trial, subscription, or the word "free".
 - No emoji in "onscreen" text. No hashtags inside spoken lines.
 - Say NOTHING about money anywhere — not in the beats, not in the postCaption,
   not in the hashtags. No price, cost, trial, subscription, or the word "free".
@@ -200,7 +207,7 @@ export async function writeScript(idea, { captures = [], brollClips = [], shots 
     script.format = idea.format;
     script.idea = { hook: idea.hook, angle: idea.angle, ideaKey: idea.ideaKey };
 
-    const problems = validateScript(script, { captureNames, brollClips, shotNames: shots.map((c) => c.file) });
+    const problems = validateScript(script, { captureNames, brollClips, shotNames: shots.map((c) => c.file), pushesStore: !!FORMATS[idea.format]?.pushesStore });
     if (!problems.length) return { script, attempts: attempt };
 
     feedback = problems.map((p) => `  - ${p}`).join("\n");
@@ -210,7 +217,7 @@ export async function writeScript(idea, { captures = [], brollClips = [], shots 
 }
 
 /** Structural + claim validation. Returns human-readable problems for the model. */
-export function validateScript(script, { captureNames = [], brollClips = [], shotNames = [] } = {}) {
+export function validateScript(script, { captureNames = [], brollClips = [], shotNames = [], pushesStore = false } = {}) {
   const problems = [];
   const beats = script.beats;
 
@@ -329,11 +336,23 @@ export function validateScript(script, { captureNames = [], brollClips = [], sho
   // The last beat carries the big brand line and the CTA pill. Over a UI mock
   // those collide with the mock's own content, so the CTA gets a clean ground.
   const last = beats[beats.length - 1];
-  if (last.kind === "ui" || last.kind === "phone") {
+  if (pushesStore && (last.kind === "ui" || last.kind === "phone")) {
     problems.push(
-      `The final beat is the CTA and carries the App Store pill — it must not use ` +
-      `"${last.kind}", whose visual fills the frame the pill sits in. Use "statement".`
+      `The final beat carries the App Store pill — it must not use "${last.kind}", ` +
+      `whose visual fills the frame the pill sits in. Use "statement".`
     );
+  }
+  // Formats that are not the direct ask must not sneak a CTA in anyway.
+  if (!pushesStore) {
+    const asks = beats.filter((b) =>
+      /app store|link in bio|download|search .?drift|check (it|us) out|get the app/i.test(b.onscreen || "")
+    );
+    for (const b of asks) {
+      problems.push(
+        `"${b.onscreen}" is a call to action, and this format must not ask for anything. ` +
+        `End on the point landing instead.`
+      );
+    }
   }
 
   if (!script.postCaption) problems.push(`Missing "postCaption".`);
