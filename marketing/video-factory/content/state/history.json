@@ -334,5 +334,17 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-28T21:53:14.645Z"
+  },
+  {
+    "ideaKey": "32bb7420c05e",
+    "hook": "3 things no one tells you about phone NOs",
+    "format": "contrarian-list",
+    "title": "3-surprising-things-about-phone-nos",
+    "file": "out/2026-08-28-contrarian-list-32bb74.mp4",
+    "qcOverall": 4,
+    "posted": true,
+    "publishId": "v_inbox_file~v2.7679204207051704350",
+    "privacy": "SELF_ONLY",
+    "at": "2026-08-28T21:56:43.899Z"
   }
 ]
