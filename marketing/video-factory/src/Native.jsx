@@ -10,6 +10,7 @@ import {
   AbsoluteFill,
   Audio,
   Img,
+  Img,
   OffthreadVideo,
   Sequence,
   interpolate,
@@ -63,7 +64,11 @@ const autoFit = (text, designSize, maxLines, withinWidth) => {
       // same thing `withinWidth`; passing that name here leaves the bound
       // undefined and the binary search runs away to a 2000px font.
       maxBoxWidth: withinWidth,
-      maxLines,
+      // Off by one: the binary search tests `currentLine < maxLines` against a
+      // line COUNT, so passing 2 makes a two-line fit unsatisfiable. It returns
+      // its 0.1 floor, the `n > 0` guard rejects that, and the design size
+      // silently stands — a line meant to shrink to two rows renders as three.
+      maxLines: maxLines + 1,
       maxFontSize: designSize, // only ever shrink, never inflate
       fontFamily: anton.fontFamily,
       fontWeight: 400,
@@ -208,19 +213,15 @@ const ShieldMock = ({ delay = 0 }) => {
 // A screenshot shown inside a device body.
 //
 // The phone is deliberately oversized and runs off the bottom of the frame:
-// TikTok's chrome covers the lower ~480px anyway, and what it covers here is
-// just the bottom of the handset, where there is nothing to read. That buys a
-// much larger, legible screen than fitting the whole device inside the safe
-// area would.
+// TikTok's chrome covers the lower ~480px anyway, and here that is just the
+// bottom of the handset, where there is nothing to read. That buys a much
+// larger, legible screen than fitting the whole device into the safe area.
 const PhoneFrame = ({ src, frames }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const rise = spring({ frame, fps, config: { damping: 200 }, durationInFrames: 24 });
   const drift = usePushIn(frames, 1.0, 1.03);
-
-  const W = 620;                      // screen width
-  const H = Math.round(W * (2622 / 1206));  // keep the source aspect exactly
-  const BEZEL = 14;
+  const W = 620, H = Math.round(W * (2622 / 1206)), BEZEL = 14;
 
   return (
     <AbsoluteFill style={{ backgroundColor: C.paper, overflow: "hidden" }}>
@@ -246,11 +247,9 @@ const PhoneFrame = ({ src, frames }) => {
             boxSizing: "border-box",
           }}
         >
-          <div style={{ width: W, height: H, borderRadius: 64, overflow: "hidden", position: "relative", backgroundColor: "#000" }}>
-            {/* Screenshots vary — some include the status bar, some are cropped —
-                so fill the screen and anchor to the top rather than assuming an
-                exact aspect. Any excess is trimmed off the bottom, where the tab
-                bar sits, rather than off the content. */}
+          <div style={{ width: W, height: H, borderRadius: 64, overflow: "hidden", backgroundColor: "#000" }}>
+            {/* Screenshots vary — some keep the status bar, some are cropped — so
+                fill and anchor to the top rather than assume an exact aspect. */}
             <Img
               src={staticFile(`shots/${src}`)}
               style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}

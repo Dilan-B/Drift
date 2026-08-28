@@ -250,5 +250,17 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-28T00:10:11.437Z"
+  },
+  {
+    "ideaKey": "1d46c977a969",
+    "hook": "I built Drift because my phone never said no before.",
+    "format": "build-in-public",
+    "title": "phone-never-said-no-before",
+    "file": "out/2026-08-28-build-in-public-1d46c9.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-28T01:37:16.856Z"
   }
 ]

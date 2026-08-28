@@ -80,7 +80,7 @@ You are writing for the For You page. Judge every line by: would a real person
 keep watching? Marketing cadence kills retention. Write how someone talks.
 
 HARD RULES
-- The FIRST beat is the hook. It must work with zero context and be SIX WORDS
+- The FIRST beat is the hook. It must work with zero context and be SEVEN WORDS
   OR FEWER — it has to be readable at a glance. Never open with a greeting,
   "in this video", "let me show you", or the product name.
 - THIS IS A ${TIMING.targetSeconds}-SECOND SILENT VIDEO — text on screen, no narration, no captions.
@@ -272,7 +272,7 @@ export function validateScript(script, { captureNames = [], brollClips = [], sho
   }
 
   const hookWords = (beats[0].onscreen || "").split(/\s+/).filter(Boolean).length;
-  if (hookWords > 6) problems.push(`The hook's onscreen text is ${hookWords} words — it must be 6 or fewer to read instantly.`);
+  if (hookWords > 7) problems.push(`The hook's onscreen text is ${hookWords} words — it must be 7 or fewer to read instantly.`);
   if (/^(hey|hi|hello|what'?s up|so |in this video|let me)/i.test(beats[0].onscreen || "")) {
     problems.push(`beat[0] opens with a greeting/preamble. Start on the hook itself.`);
   }

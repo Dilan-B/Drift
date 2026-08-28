@@ -52,6 +52,8 @@ export const CLAIM_RULES = [
       const hits = [];
       tokens.forEach((tok, i) => {
         if (tok !== "free") return;
+        // "hands free" describes Siri support, not the price.
+        if (tokens[i - 1] === "hands" || tokens[i + 1] === "hands") return;
         const window = tokens.slice(Math.max(0, i - 4), i + 5);
         const nearTrial = window.includes("trial") || window.includes("trials");
         // Spelled-out counts matter as much as digits — "seven days free" is
@@ -64,7 +66,7 @@ export const CLAIM_RULES = [
       });
       return hits;
     },
-    why: `Drift is $0.99/month, not free. The word "free" is only allowed as part of the 3-day free trial (e.g. "3-day free trial", "free for 3 days").`,
+    why: `Drift costs money. "free" is only allowed as part of the ${FACTS.trialDays}-day free trial.`,
   },
   {
     id: "wrong-price",
@@ -104,7 +106,8 @@ export const CLAIM_RULES = [
         /\bfree\s+trial\b/gi,
         /\btrial\b/gi,
         /\bsubscription\b|\bsubscribe\s+for\b/gi,
-        /\bfree\b/gi,
+        // "hands-free" is a capability (Siri), not a price claim.
+        /(?<!hands[\s-])\bfree\b(?![\s-]?hands)/gi,
         /\bpricing\b|\bcosts?\b|\bpaid\b|\bpay\b/gi,
       ];
       for (const re of patterns) for (const m of text.matchAll(re)) hits.push(m[0].trim());
