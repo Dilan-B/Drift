@@ -80,6 +80,7 @@ import { handleSupabaseAuthCallback } from "./authLinks";
 import SocialScreen from "./SocialScreen";
 import LabScreen from "./LabScreen";
 import SleepGuardModal from "./SleepGuardModal";
+import BedtimeOverlay from "./BedtimeOverlay";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
@@ -3574,6 +3575,9 @@ export default function App() {
   // ── Sleep guard ("phone in another room") ──────────────────
   const [sgTag,       setSgTag]       = useState(null);   // registered tag UID
   const [sgArmed,     setSgArmed]     = useState(null);   // { startedAt, ... }
+  // The bedtime moment. Arming locks every blocked app until morning, which
+  // used to happen invisibly — the NFC sheet closed and a card changed state.
+  const [bedtime,     setBedtime]     = useState(null);   // { rewardMinutes }
   const [sgResult,    setSgResult]    = useState(null);   // last verified night
   const [sgStreak,    setSgStreak]    = useState(0);
   const [sgBusy,      setSgBusy]      = useState(false);
@@ -5476,6 +5480,7 @@ export default function App() {
       if (res.armed) {
         setSgArmed(res.session);
         setSgResult(null);
+        setBedtime({ rewardMinutes: res.session?.rewardMinutes || 0 });
         track("sleepguard_armed");
         return;
       }
@@ -6490,6 +6495,13 @@ export default function App() {
           advanceSuggestion();
         }}
         onDismiss={advanceSuggestion}
+      />
+
+      {/* The moment after the tag is tapped. Auto-dismisses; tap to skip. */}
+      <BedtimeOverlay
+        visible={!!bedtime}
+        rewardMinutes={bedtime?.rewardMinutes || 0}
+        onDone={() => setBedtime(null)}
       />
 
       {/* Sleep guard setup — the only place the tag can be changed or the
