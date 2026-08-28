@@ -1,0 +1,11 @@
+{
+  "nfc-scan.png": {
+    "describes": "NFC scan prompt screen for Drift tag interaction"
+  },
+  "growth.png": {
+    "describes": "Growth progress screen showing user XP and streak in The Grove tab"
+  },
+  "earned-time.png": {
+    "describes": "Today screen showing available time and tasks overview"
+  }
+}

@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
 // Single source of truth for every factual claim a generated video is allowed
 // to make. The QC gate lints scripts against this file, so a wrong price or an
 // invented feature fails the build instead of landing on the brand account.
@@ -14,10 +17,14 @@ export const FACTS = {
   // What a viewer types into App Store search to actually find it. "Drift"
   // alone returns a pile of unrelated apps, so the CTA must say this in full.
   appStoreSearch: "Drift Productivity",
-  price: "$0.99/month",
-  priceNumeric: 0.99,
-  trialDays: 3,
-  familyPricing: "$0.99/month per child",
+  price: "$4.99/month",
+  priceNumeric: 4.99,
+  annualPrice: "$29.99/year",
+  annualPriceNumeric: 29.99,
+  trialDays: 7,
+  // A base seat plus each child; the app labels this an estimate because App
+  // Store price points are not linear, so never state a family total as fact.
+  familyPricing: "$4.99/month plus $3 per child",
   // Things that are TRUE and safe to say on camera.
   truths: [
     "Blocks distracting apps behind an iOS Screen Time shield until you earn time",
@@ -64,16 +71,20 @@ export const CLAIM_RULES = [
     // price-like token and compare the parsed number instead.
     check: (text) => {
       const hits = [];
-      const re = /\$?\s*(\d+(?:\.\d{1,2})?)\s*(?:dollars?\s*)?(?:\/|per\s+|a\s+|\s+)?(mo\b|month|monthly)/gi;
-      for (const m of text.matchAll(re)) {
+      const monthly = /\$?\s*(\d+(?:\.\d{1,2})?)\s*(?:dollars?\s*)?(?:\/|per\s+|a\s+|\s+)?(mo\b|month|monthly)/gi;
+      for (const m of text.matchAll(monthly)) {
         if (Number(m[1]) !== FACTS.priceNumeric) hits.push(m[0].trim());
+      }
+      const annual = /\$?\s*(\d+(?:\.\d{1,2})?)\s*(?:dollars?\s*)?(?:\/|per\s+|a\s+|\s+)?(yr\b|year|annually|annual)/gi;
+      for (const m of text.matchAll(annual)) {
+        if (Number(m[1]) !== FACTS.annualPriceNumeric) hits.push(m[0].trim());
       }
       // Written-out amounts the numeric pass can't see.
       const words = text.match(/\b(one|two|three|four|five|ten|twenty)\s+dollars?\s*(?:\/|per\s+|a\s+)?(?:mo\b|month)/gi);
       if (words) hits.push(...words);
       return hits;
     },
-    why: "The only correct price is $0.99/month.",
+    why: `The only correct prices are ${FACTS.price} and ${FACTS.annualPrice}.`,
   },
   {
     id: "no-pricing",
@@ -96,6 +107,20 @@ export const CLAIM_RULES = [
       return hits;
     },
     why: "Video scripts must never mention price, cost, trials, subscriptions or the word 'free'. End on what the app does and the App Store, nothing about money.",
+  },
+  {
+    id: "wrong-trial-length",
+    check: (text) => {
+      const hits = [];
+      const re = /\b(\d+|one|two|three|five|seven|ten|fourteen)[\s-]*day[s]?\b(?=[^.]{0,24}\b(free|trial))/gi;
+      const words = { one: 1, two: 2, three: 3, five: 5, seven: 7, ten: 10, fourteen: 14 };
+      for (const m of text.matchAll(re)) {
+        const n = words[m[1].toLowerCase()] ?? Number(m[1]);
+        if (n !== FACTS.trialDays) hits.push(m[0].trim());
+      }
+      return hits;
+    },
+    why: `The trial is ${FACTS.trialDays} days.`,
   },
   {
     id: "android",
@@ -215,8 +240,9 @@ export function brandPrompt() {
  * AI-disclosure flag and the chosen voice all at once, and nothing noticed
  * until authorisation failed. Cheap to check, expensive to miss.
  */
-export function preflight(env = process.env) {
+export function preflight(env = process.env, repoRoot = null) {
   const problems = [];
+  if (repoRoot) problems.push(...verifyAgainstApp(repoRoot));
 
   if (!env.OPENAI_API_KEY) problems.push("OPENAI_API_KEY is unset — QC cannot run, so nothing can post.");
 
@@ -242,5 +268,35 @@ export function preflight(env = process.env) {
     problems.push(`TIKTOK_PRIVACY_LEVEL "${privacy}" is not a value TikTok accepts.`);
   }
 
+  return problems;
+}
+
+/**
+ * Cross-check the facts above against the app's own source.
+ *
+ * This file went stale exactly the way it was built to prevent: the app was
+ * repriced on main and nothing here noticed, so the linter began REJECTING the
+ * correct price and ACCEPTING the old one. A source of truth that can silently
+ * disagree with the truth is worse than none, so the run now checks itself.
+ */
+export function verifyAgainstApp(repoRoot) {
+  const path = join(repoRoot, "useSubscription.js");
+  if (!existsSync(path)) return [];
+  const src = readFileSync(path, "utf8");
+
+  const problems = [];
+  const money = [...src.matchAll(/\$(\d+\.\d{2})/g)].map((m) => Number(m[1]));
+  if (money.length) {
+    if (!money.includes(FACTS.priceNumeric)) {
+      problems.push(
+        `FACTS.price says ${FACTS.price}, but useSubscription.js mentions ` +
+        `${[...new Set(money)].map((n) => "$" + n.toFixed(2)).join(", ")}. The app was probably repriced.`
+      );
+    }
+  }
+  const trial = src.match(/(\d+)[\s-]*day free trial/i);
+  if (trial && Number(trial[1]) !== FACTS.trialDays) {
+    problems.push(`FACTS.trialDays says ${FACTS.trialDays}, but useSubscription.js says ${trial[1]}.`);
+  }
   return problems;
 }

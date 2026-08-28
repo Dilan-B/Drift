@@ -20,7 +20,7 @@ import { ROOT, usageReport } from "./lib/openai.mjs";
 import { preflight } from "./lib/brand.mjs";
 import { generateIdeas, recordRun, loadHistory, themeForRun, FORMATS } from "./lib/ideas.mjs";
 import { writeScript, validateScript, beatSeconds } from "./lib/script.mjs";
-import { describeClips } from "./lib/capture.mjs";
+import { describeClips, describeShots } from "./lib/capture.mjs";
 import { renderMusic } from "./lib/music.mjs";
 import { existsSync as fileExists, readdirSync } from "node:fs";
 import { runQC } from "./lib/qc.mjs";
@@ -55,7 +55,7 @@ function renderVideo(propsFile, outFile) {
 }
 
 /** One full attempt: script -> voiceover -> render -> QC. */
-async function attempt({ idea, name, captures, brollClips, feedback, n, fixedScript }) {
+async function attempt({ idea, name, captures, brollClips, shots, feedback, n, fixedScript }) {
   let script;
   if (fixedScript) {
     log(`attempt ${n}: using supplied script ${opts.scriptFile}`);
@@ -65,7 +65,7 @@ async function attempt({ idea, name, captures, brollClips, feedback, n, fixedScr
     // Prior QC failures are passed INTO the writer as constraints. Assigning
     // them to the returned script afterwards (as this did) fed back nothing —
     // the "self-correcting" retry was really just re-rolling.
-    ({ script } = await writeScript(idea, { captures, brollClips, qcFeedback: feedback }));
+    ({ script } = await writeScript(idea, { captures, brollClips, shots, qcFeedback: feedback }));
   }
 
   // No voiceover: each beat lasts as long as its line takes to read.
@@ -129,7 +129,8 @@ async function makeOne(index) {
   const captures = await describeClips("capture");
   const brollDescribed = await describeClips("broll");
   const brollClips = brollDescribed.map((c) => c.file);
-  log(`footage: ${captures.length} capture, ${brollClips.length} b-roll`);
+  const shots = await describeShots();
+  log(`footage: ${captures.length} capture, ${brollClips.length} b-roll, ${shots.length} screenshot`);
 
   let idea;
   let fixedScript = null;
@@ -139,7 +140,7 @@ async function makeOne(index) {
     // scripts. The QC gate still applies in full.
     fixedScript = JSON.parse(readFileSync(opts.scriptFile, "utf8"));
     const problems = validateScript(fixedScript, {
-      captureNames: captures.map((c) => c.file), brollClips,
+      captureNames: captures.map((c) => c.file), brollClips, shotNames: shots.map((c) => c.file),
     });
     if (problems.length) {
       throw new Error(`Supplied script fails validation:\n${problems.map((p) => `  • ${p}`).join("\n")}`);
@@ -199,7 +200,7 @@ async function makeOne(index) {
   let feedback = null;
   for (let n = 1; n <= opts.maxAttempts; n++) {
     const name = n === 1 ? base : `${base}-r${n}`;
-    const result = await attempt({ idea, name, captures, brollClips, feedback, n, fixedScript });
+    const result = await attempt({ idea, name, captures, brollClips, shots, feedback, n, fixedScript });
 
     if (result.qc.ok) {
       log(`QC PASSED (vision overall ${result.qc.vision?.overall ?? "n/a"}/5)`);
@@ -250,7 +251,7 @@ async function post(result) {
 }
 
 // ── main ─────────────────────────────────────────────────────
-const configProblems = preflight();
+const configProblems = preflight(process.env, join(ROOT, "..", ".."));
 if (configProblems.length) {
   rule();
   log("CONFIG PROBLEMS — fix these before trusting a run:");

@@ -13,6 +13,7 @@ import { chat } from "./openai.mjs";
 export const UI_MOCKS = ["tasks", "shield", "earn"];
 
 export const VISUAL_KINDS = {
+  phone: "A real screenshot of the app shown inside a phone. The strongest way to show the product — prefer it over `ui` whenever a screenshot fits the beat.",
   capture: "Full-bleed screen recording of the real app. Use for anything the app actually does.",
   broll: "Full-bleed live-action or AI-generated footage. Use for feelings and real-world moments.",
   statement: "Bold full-screen text on a brand colour. Use for the hook and for hard turns.",
@@ -37,8 +38,15 @@ const TIMING = {
   maxBeats: 6,
 };
 
-function systemPrompt({ format, captures, brollClips }) {
+function systemPrompt({ format, captures, brollClips, shots }) {
   const fmt = FORMATS[format];
+  // Only offer kinds we can actually satisfy. Listing "broll" with an empty
+  // folder just invites the model to invent clip names that then fail
+  // validation — which it did, three attempts running.
+  const available = ["statement", "ui"];
+  if (shots.length) available.unshift("phone");
+  if (captures.length) available.push("capture");
+  if (brollClips.length) available.push("broll");
   const assetLines = [];
   if (captures.length) {
     assetLines.push(
@@ -50,6 +58,12 @@ function systemPrompt({ format, captures, brollClips }) {
     assetLines.push(
       `B-roll clips available (use "kind":"broll", "src" must be one of these EXACT filenames):`,
       ...brollClips.map((c) => `  - ${c}`)
+    );
+  }
+  if (shots.length) {
+    assetLines.push(
+      `Real app screenshots (use "kind":"phone" and set "src" to one of these EXACT filenames):`,
+      ...shots.map((c) => `  - ${c.file} — ${c.describes}`)
     );
   }
   if (!assetLines.length) {
@@ -82,7 +96,7 @@ HARD RULES
   Every line must land on its own and carry that beat's point completely.
   Write them as a sequence someone reads straight through, like a thought
   unfolding — not as captions for narration that is not there.
-- The last beat is the CTA and must use "statement" or footage, never "ui".
+- The last beat is the CTA and must use "statement" — never "ui" or "phone".
   NEVER mention money — no price, no cost, no trial, no subscription, and never
   the word "free". The CTA tells them exactly what to search: "${FACTS.appStoreSearch}"
   on the App Store. Searching "Drift" alone does not find it, so use the full
@@ -92,8 +106,9 @@ HARD RULES
   not in the hashtags. No price, cost, trial, subscription, or the word "free".
   This is the most common reason a draft gets rejected.
 
-VISUAL KINDS
-${Object.entries(VISUAL_KINDS).map(([k, v]) => `  - ${k}: ${v}`).join("\n")}
+VISUAL KINDS — these are the ONLY values allowed for "kind". Any other value,
+or a filename not listed below, is rejected. Do not invent footage.
+${available.map((k) => `  - ${k}: ${VISUAL_KINDS[k]}`).join("\n")}
 
 ${assetLines.join("\n")}
 
@@ -140,8 +155,8 @@ export const WORD_BUDGET = {
  * structural checks fail, the specific complaints are fed back for a rewrite
  * rather than blindly re-rolling.
  */
-export async function writeScript(idea, { captures = [], brollClips = [], attempts = 3, qcFeedback = null } = {}) {
-  const system = systemPrompt({ format: idea.format, captures, brollClips });
+export async function writeScript(idea, { captures = [], brollClips = [], shots = [], attempts = 3, qcFeedback = null } = {}) {
+  const system = systemPrompt({ format: idea.format, captures, brollClips, shots });
   const captureNames = captures.map((c) => c.file);
   let feedback = "";
 
@@ -167,7 +182,7 @@ export async function writeScript(idea, { captures = [], brollClips = [], attemp
     script.format = idea.format;
     script.idea = { hook: idea.hook, angle: idea.angle, ideaKey: idea.ideaKey };
 
-    const problems = validateScript(script, { captureNames, brollClips });
+    const problems = validateScript(script, { captureNames, brollClips, shotNames: shots.map((c) => c.file) });
     if (!problems.length) return { script, attempts: attempt };
 
     feedback = problems.map((p) => `  - ${p}`).join("\n");
@@ -177,7 +192,7 @@ export async function writeScript(idea, { captures = [], brollClips = [], attemp
 }
 
 /** Structural + claim validation. Returns human-readable problems for the model. */
-export function validateScript(script, { captureNames = [], brollClips = [] } = {}) {
+export function validateScript(script, { captureNames = [], brollClips = [], shotNames = [] } = {}) {
   const problems = [];
   const beats = script.beats;
 
@@ -216,6 +231,9 @@ export function validateScript(script, { captureNames = [], brollClips = [] } = 
     }
     if (b.kind === "capture" && !captureNames.includes(b.src)) {
       problems.push(`beat[${i}].src "${b.src}" is not an available screen recording. Use one of: ${captureNames.join(", ") || "(none — switch kind)"}.`);
+    }
+    if (b.kind === "phone" && !shotNames.includes(b.src)) {
+      problems.push(`beat[${i}].src "${b.src}" is not an available screenshot. Use one of: ${shotNames.join(", ") || "(none — switch kind)"}.`);
     }
     if (b.kind === "broll" && !brollClips.includes(b.src)) {
       problems.push(`beat[${i}].src "${b.src}" is not an available b-roll clip. Use one of: ${brollClips.join(", ") || "(none — switch kind)"}.`);
@@ -262,8 +280,11 @@ export function validateScript(script, { captureNames = [], brollClips = [] } = 
   // The last beat carries the big brand line and the CTA pill. Over a UI mock
   // those collide with the mock's own content, so the CTA gets a clean ground.
   const last = beats[beats.length - 1];
-  if (last.kind === "ui") {
-    problems.push(`The final beat is the CTA — it must not use a "ui" mock. Use "statement" (or footage).`);
+  if (last.kind === "ui" || last.kind === "phone") {
+    problems.push(
+      `The final beat is the CTA and carries the App Store pill — it must not use ` +
+      `"${last.kind}", whose visual fills the frame the pill sits in. Use "statement".`
+    );
   }
 
   if (!script.postCaption) problems.push(`Missing "postCaption".`);

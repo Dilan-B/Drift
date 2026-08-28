@@ -226,5 +226,29 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-27T20:58:00.725Z"
+  },
+  {
+    "ideaKey": "31ee80346867",
+    "hook": "Screen time apps don’t stop mindless phone grabs.",
+    "format": "myth-bust",
+    "title": "screen-time-apps-dont-stop-phone-grabs",
+    "file": "out/2026-08-28-myth-bust-31ee80.mp4",
+    "qcOverall": 4,
+    "posted": true,
+    "publishId": "v_inbox_file~v2.7678865660264925214",
+    "privacy": "SELF_ONLY",
+    "at": "2026-08-28T00:01:36.434Z"
+  },
+  {
+    "ideaKey": "2a413dd91d18",
+    "hook": "What if your phone straight-up said NO to you?",
+    "format": "problem-agitate",
+    "title": "phone-says-no-to-distraction",
+    "file": "out/2026-08-28-problem-agitate-2a413d.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-28T00:10:11.437Z"
   }
 ]

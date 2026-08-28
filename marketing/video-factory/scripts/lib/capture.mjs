@@ -6,7 +6,7 @@
 // description cached — drop a file in the folder and the pipeline picks it up
 // with no manifest editing.
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { spawn, execFileSync } from "node:child_process";
 import { ROOT, KEYS } from "./openai.mjs";
@@ -137,4 +137,50 @@ export function recordSimulator(seconds, filename) {
     });
     proc.on("error", reject);
   });
+}
+
+/**
+ * Same idea as describeClips, for still screenshots. Labels each one once and
+ * caches it, so dropping a screenshot in public/shots/ is all it takes for the
+ * script writer to know what that screen shows.
+ */
+export async function describeShots({ subdir = "shots" } = {}) {
+  const dir = join(ROOT, "public", subdir);
+  if (!existsSync(dir)) return [];
+  const files = readdirSync(dir).filter((f) => /\.(png|jpg|jpeg)$/i.test(f));
+  if (!files.length) return [];
+
+  const manifestPath = join(dir, "manifest.json");
+  const manifest = existsSync(manifestPath)
+    ? JSON.parse(readFileSync(manifestPath, "utf8"))
+    : {};
+  let changed = false;
+
+  for (const file of files) {
+    if (manifest[file]?.describes) continue;
+    let describes = file.replace(/\.\w+$/, "");
+    if (KEYS.openai()) {
+      try {
+        describes = await chat({
+          system:
+            "You label screenshots of a mobile app for a marketing script writer. " +
+            "Reply with ONE short phrase (max 12 words) naming the screen and what it shows. " +
+            "No preamble, no trailing punctuation.",
+          user: "What screen is this?",
+          images: [asBase64(join(dir, file))],
+          temperature: 0.2,
+        });
+        describes = String(describes).trim().replace(/^["']|["']$/g, "");
+      } catch (err) {
+        console.log(`[shots] could not describe ${file} (${err.message.slice(0, 70)})`);
+      }
+    }
+    manifest[file] = { describes };
+    changed = true;
+    console.log(`[shots] ${file} -> "${describes}"`);
+  }
+
+  for (const k of Object.keys(manifest)) if (!files.includes(k)) { delete manifest[k]; changed = true; }
+  if (changed) writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+  return files.map((file) => ({ file, ...manifest[file] }));
 }

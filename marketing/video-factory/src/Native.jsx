@@ -9,6 +9,7 @@ import React from "react";
 import {
   AbsoluteFill,
   Audio,
+  Img,
   OffthreadVideo,
   Sequence,
   interpolate,
@@ -16,6 +17,8 @@ import {
   staticFile,
   useCurrentFrame,
   useVideoConfig,
+  delayRender,
+  continueRender,
 } from "remotion";
 import { loadFont as loadAnton } from "@remotion/google-fonts/Anton";
 import { fitTextOnNLines } from "@remotion/layout-utils";
@@ -27,6 +30,16 @@ const APP_STORE_SEARCH = "Drift Productivity";
 import { TasksVisual, EarnVisual, Sprout } from "./Promo.jsx";
 
 const anton = loadAnton();
+
+// Text measurement is only correct once the real font is available. Without
+// this, fitTextOnNLines measures against a fallback face (or throws), autoFit
+// silently keeps the design size, and a line that should have shrunk to fit two
+// rows renders as three — overrunning whatever sits below it.
+const fontHandle = delayRender("Loading Anton");
+anton.waitUntilDone().then(
+  () => continueRender(fontHandle),
+  () => continueRender(fontHandle)
+);
 
 // Bright mint reads on both dark footage and the cream UI mocks. Brand green
 // (#2D7A52) is too dark to use as a highlight over video.
@@ -60,7 +73,7 @@ const autoFit = (text, designSize, maxLines, withinWidth) => {
     const n = Math.floor(fitted?.fontSize);
     if (Number.isFinite(n) && n > 0) size = Math.min(designSize, n);
   } catch {
-    // Font not ready or measurement unavailable: keep the design size.
+    // Measurement unavailable: keep the design size.
   }
   fitCache.set(key, size);
   return size;
@@ -189,6 +202,63 @@ const ShieldMock = ({ delay = 0 }) => {
         );
       })}
     </div>
+  );
+};
+
+// A screenshot shown inside a device body.
+//
+// The phone is deliberately oversized and runs off the bottom of the frame:
+// TikTok's chrome covers the lower ~480px anyway, and what it covers here is
+// just the bottom of the handset, where there is nothing to read. That buys a
+// much larger, legible screen than fitting the whole device inside the safe
+// area would.
+const PhoneFrame = ({ src, frames }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const rise = spring({ frame, fps, config: { damping: 200 }, durationInFrames: 24 });
+  const drift = usePushIn(frames, 1.0, 1.03);
+
+  const W = 620;                      // screen width
+  const H = Math.round(W * (2622 / 1206));  // keep the source aspect exactly
+  const BEZEL = 14;
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: C.paper, overflow: "hidden" }}>
+      <Sprout size={980} opacity={0.06} style={{ right: -260, top: -160 }} />
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: 560,
+          transform: `translateX(-50%) translateY(${(1 - rise) * 90}px) scale(${drift})`,
+          transformOrigin: "center top",
+          opacity: rise,
+        }}
+      >
+        <div
+          style={{
+            width: W + BEZEL * 2,
+            height: H + BEZEL * 2,
+            padding: BEZEL,
+            borderRadius: 78,
+            background: "linear-gradient(160deg, #3A3D42 0%, #17191C 40%, #26292E 100%)",
+            boxShadow: "0 40px 90px rgba(26,40,32,0.34), 0 4px 12px rgba(26,40,32,0.18)",
+            boxSizing: "border-box",
+          }}
+        >
+          <div style={{ width: W, height: H, borderRadius: 64, overflow: "hidden", position: "relative", backgroundColor: "#000" }}>
+            {/* Screenshots vary — some include the status bar, some are cropped —
+                so fill the screen and anchor to the top rather than assuming an
+                exact aspect. Any excess is trimmed off the bottom, where the tab
+                bar sits, rather than off the content. */}
+            <Img
+              src={staticFile(`shots/${src}`)}
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}
+            />
+          </div>
+        </div>
+      </div>
+    </AbsoluteFill>
   );
 };
 
@@ -326,14 +396,18 @@ const CtaPill = ({ label }) => {
 
 const Beat = ({ beat, index, isLast, audioBase, statementIndex }) => {
   const frames = beat.frames;
-  const isLight = beat.kind === "ui";
+  const isLight = beat.kind === "ui" || beat.kind === "phone";
   // With subtitles gone this line is the ONLY text, so every beat gets one.
   // UI mocks occupy roughly y470-1000, so on those beats the line sits below
   // them instead of on top, in the band that used to hold the subtitles.
-  const textTop = isLight ? UI_TEXT_Y : BOX.y0 + 60;
+  // A phone beat fills the frame from y560 down, so its line sits above the
+  // device. The cream UI mocks instead leave the lower band free, so their
+  // line goes underneath them.
+  const textTop = beat.kind === "phone" ? BOX.y0 + 20 : isLight ? UI_TEXT_Y : BOX.y0 + 60;
 
   let bg;
-  if (beat.kind === "capture" || beat.kind === "broll") bg = <VideoBg src={beat.src} frames={frames} />;
+  if (beat.kind === "phone") bg = <PhoneFrame src={beat.src} frames={frames} />;
+  else if (beat.kind === "capture" || beat.kind === "broll") bg = <VideoBg src={beat.src} frames={frames} />;
   else if (beat.kind === "ui") bg = <UiBg ui={beat.ui} frames={frames} />;
   else bg = <StatementBg index={statementIndex} frames={frames} />;
 
@@ -350,7 +424,7 @@ const Beat = ({ beat, index, isLast, audioBase, statementIndex }) => {
           onLight={isLight}
           // A ui beat's text sits low, so a third line would run under
           // TikTok's chrome. Top-placed text has the room for three.
-          maxLines={isLight ? 2 : 3}
+          maxLines={isLight || beat.kind === "phone" ? 2 : 3}
         />
       ) : null}
       {isLast ? <CtaPill label={beat.ctaLabel || `Search "${APP_STORE_SEARCH}"`} /> : null}
