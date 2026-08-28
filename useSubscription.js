@@ -65,8 +65,14 @@ try {
 // RevenueCat's iOS *public* SDK key. Public by design — it identifies the app
 // to RevenueCat and can only read/purchase on behalf of the signed-in user. The
 // secret key never leaves the dashboard and is not used by the client.
+// 2026-08-28: the fallback below was a key for an app that no longer matches
+// this project — the dashboard's key for com.sanghani.drift is the one now
+// hardcoded. .env sets no EXPO_PUBLIC_RC_IOS_KEY, so the stale fallback was
+// what every build actually shipped, and configure() was identifying us as the
+// wrong app. That is why getOfferings() reported "none of the products
+// registered could be fetched" regardless of how the catalogue was set up.
 const RC_APPLE_KEY =
-  process.env.EXPO_PUBLIC_RC_IOS_KEY || "appl_OetkgVkCSGdSfmrXdrqCElOjgIs";
+  process.env.EXPO_PUBLIC_RC_IOS_KEY || "appl_kjgnLRndYGRvEpkIetTELaBUTVZ";
 
 const ENTITLEMENT_ID  = "Pro";
 // These MUST match App Store Connect exactly. Note the two naming schemes:
