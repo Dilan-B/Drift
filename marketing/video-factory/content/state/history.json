@@ -262,5 +262,17 @@
     "publishId": null,
     "privacy": null,
     "at": "2026-08-28T01:37:16.856Z"
+  },
+  {
+    "ideaKey": "6ea133618747",
+    "hook": "Screen blockers don’t work? Wait until your phone says no first.",
+    "format": "myth-bust",
+    "title": "screen-blockers-dont-work-try-this",
+    "file": "out/2026-08-28-myth-bust-6ea133.mp4",
+    "qcOverall": 4,
+    "posted": false,
+    "publishId": null,
+    "privacy": null,
+    "at": "2026-08-28T01:39:05.035Z"
   }
 ]

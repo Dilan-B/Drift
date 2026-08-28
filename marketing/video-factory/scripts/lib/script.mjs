@@ -89,6 +89,10 @@ HARD RULES
 - Each beat is one line, max ${TIMING.maxWordsPerBeat} words. A beat lasts as long as its line
   takes to read, so a longer line is not free — but you have room for five.
 - Every beat changes the visual. No two consecutive beats share the same "src".
+${shots.length ? `- REAL SCREENSHOTS EXIST, so at least TWO beats must use "kind":"phone".
+  A drawn mock is a fallback for when no screenshot fits — it is not a
+  substitute for showing the actual product. Reach for "ui" only after the
+  screenshots genuinely have nothing for that beat.` : ""}
 - Every beat makes a NEW point. Do not restate an earlier beat in different
   words — with one line per shot, repetition is obvious and reads as padding.
 - "onscreen" is the ONLY thing the viewer gets. There is NO voiceover and NO
@@ -155,7 +159,7 @@ export const WORD_BUDGET = {
  * structural checks fail, the specific complaints are fed back for a rewrite
  * rather than blindly re-rolling.
  */
-export async function writeScript(idea, { captures = [], brollClips = [], shots = [], attempts = 3, qcFeedback = null } = {}) {
+export async function writeScript(idea, { captures = [], brollClips = [], shots = [], attempts = 5, qcFeedback = null } = {}) {
   const system = systemPrompt({ format: idea.format, captures, brollClips, shots });
   const captureNames = captures.map((c) => c.file);
   let feedback = "";
@@ -268,6 +272,17 @@ export function validateScript(script, { captureNames = [], brollClips = [], sho
           `Each beat must make a NEW point — merge them or cut one.`
         );
       }
+    }
+  }
+
+  // Drawn mocks kept winning over real screenshots on preference alone.
+  if (shotNames.length) {
+    const phoneBeats = beats.filter((b) => b.kind === "phone").length;
+    if (phoneBeats < 2) {
+      problems.push(
+        `Only ${phoneBeats} beat(s) use a real screenshot. At least 2 must use "kind":"phone" ` +
+        `— available: ${shotNames.join(", ")}. Replace "ui" beats with them.`
+      );
     }
   }
 
