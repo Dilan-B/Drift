@@ -13,7 +13,7 @@
 // shipping something mediocre.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync, appendFileSync, rmSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { ROOT, usageReport } from "./lib/openai.mjs";
@@ -76,19 +76,23 @@ async function attempt({ idea, name, captures, brollClips, shots, feedback, n, f
 
   const totalSeconds = beats.reduce((a, b) => a + b.frames, 0) / FPS;
 
-  // A hand-supplied track in public/music/ wins; otherwise generate one sized
-  // to this video. Generating avoids any licensing question and lets the bed
-  // vary per run, so the account does not sound identical every day.
+  // Silent by default. A baked-in bed forfeits TikTok's single strongest
+  // distribution signal — trending audio — and since these are finished in the
+  // TikTok editor anyway, picking a trending sound there costs five seconds and
+  // buys reach a generated track never will. VF_MUSIC=on restores the bed.
   const musicDir = join(ROOT, "public", "music");
   const supplied = fileExists(musicDir)
     ? readdirSync(musicDir).find((f) => /\.(mp3|m4a)$/i.test(f))
     : null;
 
-  let track;
-  if (supplied) {
+  let track = null;
+  const wantMusic = process.env.VF_MUSIC === "on";
+  if (!wantMusic && !supplied) {
+    log("music: none — add a trending sound in the TikTok editor (VF_MUSIC=on to bake one in)");
+  } else if (supplied) {
     track = supplied;
     log(`music: ${supplied} (supplied)`);
-  } else {
+  } else if (wantMusic) {
     const seed = loadHistory(ROOT).length + n;
     const file = `bed-${name}.wav`;
     const m = renderMusic(totalSeconds + 0.3, join(musicDir, file), { seed });
@@ -98,7 +102,7 @@ async function attempt({ idea, name, captures, brollClips, shots, feedback, n, f
 
   const props = {
     beats,
-    music: `music/${track}`,
+    music: track ? `music/${track}` : null,
     title: script.title,
     postCaption: script.postCaption,
     hashtags: script.hashtags,
@@ -115,7 +119,7 @@ async function attempt({ idea, name, captures, brollClips, shots, feedback, n, f
     videoPath: outFile,
     script,
     beats,
-    silent: false,
+    silent: !track,
     scratchDir: join(ROOT, "content", "state", "qc", name),
   });
 
@@ -243,7 +247,16 @@ async function post(result) {
   const status = await tiktok.waitForPublish(pub.publishId);
   log(`TikTok status: ${status.status}${status.timedOut ? " (still processing)" : ""}`);
   if (pub.mode === "inbox") {
-    log("In your TikTok drafts — open the app's inbox notification to post it.");
+    log("In your TikTok inbox — open the notification there to finish the post.");
+    // The inbox path does not carry the caption across, so it has to be pasted
+    // in the TikTok editor. Keep a running list rather than making someone dig
+    // through the log for it three times a day.
+    const pendingPath = join(ROOT, "PENDING-CAPTIONS.md");
+    const entry =
+      `\n## ${new Date().toISOString().slice(0, 16).replace("T", " ")} — ${result.props.title}\n\n` +
+      "```\n" + caption + "\n```\n";
+    appendFileSync(pendingPath, existsSync(pendingPath) ? entry : `# Captions to paste when posting from the TikTok inbox\n${entry}`);
+    log("caption appended to PENDING-CAPTIONS.md");
   } else if (pub.privacyLevel === "SELF_ONLY") {
     log("Posted PRIVATE — the unaudited-client restriction, not a bug.");
   }

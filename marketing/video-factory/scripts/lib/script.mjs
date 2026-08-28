@@ -30,12 +30,12 @@ const READ_WORDS_PER_SECOND = 3.0;   // large bold text, glanced at, not studied
 const BEAT_DWELL_SECONDS = 0.8;      // floor, so a short line does not flash past
 
 const TIMING = {
-  targetSeconds: 15,
-  minSeconds: 10,
-  maxSeconds: 21,
+  targetSeconds: 12,
+  minSeconds: 8,
+  maxSeconds: 16,
   maxWordsPerBeat: 8,   // 6 beats x 8 words is ~21s, the ceiling
-  minBeats: 4,
-  maxBeats: 6,
+  minBeats: 3,
+  maxBeats: 5,
 };
 
 function systemPrompt({ format, captures, brollClips, shots }) {
@@ -80,12 +80,22 @@ You are writing for the For You page. Judge every line by: would a real person
 keep watching? Marketing cadence kills retention. Write how someone talks.
 
 HARD RULES
-- The FIRST beat is the hook. It must work with zero context and be SEVEN WORDS
-  OR FEWER — it has to be readable at a glance. Never open with a greeting,
-  "in this video", "let me show you", or the product name.
+- The FIRST beat is the hook. SEVEN WORDS OR FEWER, readable at a glance, and
+  it must work with zero context. Never open with a greeting, "in this video",
+  "let me show you", or the product name.
+- THE HOOK IS THE WHOLE VIDEO. If it does not stop a thumb, nothing after it
+  matters. Write it as something a person would actually say out loud about
+  their own life — first person, concrete, slightly uncomfortable.
+    good: "I made my phone say NO"
+    good: "I checked my screen time and lied"
+    bad:  "blockers can't prove effort"      (jargon, abstract, nobody talks like this)
+    bad:  "Boost your productivity today"    (advert voice)
+  Use "I", "my", "you" or "your", or a specific number. Abstract nouns like
+  effort, productivity, solution, wellness belong nowhere near it.
 - THIS IS A ${TIMING.targetSeconds}-SECOND SILENT VIDEO — text on screen, no narration, no captions.
-- ${TIMING.minBeats}-${TIMING.maxBeats} beats. Reading is quick, so FIVE is the shape to aim for:
-  hook, the problem, the mechanism, the payoff, the CTA.
+- ${TIMING.minBeats}-${TIMING.maxBeats} beats — FOUR is the shape to aim for: hook, the problem,
+  the mechanism, the CTA. Shorter videos get watched to the end, and completion
+  is what gets them shown to more people.
 - Each beat is one line, max ${TIMING.maxWordsPerBeat} words. A beat lasts as long as its line
   takes to read, so a longer line is not free — but you have room for five.
 - Every beat changes the visual. No two consecutive beats share the same "src".
@@ -128,7 +138,7 @@ Return ONLY JSON:
      "src": "filename if kind is capture/broll, else omit",
      "ui": "one of ${UI_MOCKS.join('|')} if kind is ui, else omit"}
   ],
-  "postCaption": "TikTok caption, under 150 chars, conversational, no hashtags here",
+  "postCaption": "TikTok caption, under 150 chars, conversational, no hashtags here. END WITH A QUESTION someone would actually answer — comments are a ranking signal and a caption that just restates the video earns none.",
   "hashtags": ["#screentime", "..."]
 }
 - 4-6 hashtags, lowercase, relevant, no banned or spammy tags.`;
@@ -292,6 +302,22 @@ export function validateScript(script, { captureNames = [], brollClips = [], sho
         `— available: ${shotNames.join(", ")}. Replace a "ui" beat with one.`
       );
     }
+  }
+
+  // The hook is the only line most people will ever see, so it gets a harder
+  // test than the rest: it has to be personal or specific, not abstract.
+  const hook = String(beats[0].onscreen || "");
+  const personal = /\b(i|my|me|you|your|we|our)\b/i.test(hook);
+  const numeric = /\d/.test(hook);
+  if (!personal && !numeric) {
+    problems.push(
+      `The hook "${hook}" is impersonal. It must use I/my/you/your or a specific ` +
+      `number — abstract statements do not stop a scroll.`
+    );
+  }
+  const jargon = hook.match(/\b(effort|productivity|solution|wellness|optimi[sz]e|leverage|engagement|habits?)\b/i);
+  if (jargon) {
+    problems.push(`The hook uses "${jargon[0]}" — advert vocabulary. Say it the way a person would.`);
   }
 
   const hookWords = (beats[0].onscreen || "").split(/\s+/).filter(Boolean).length;

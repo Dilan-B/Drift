@@ -17,8 +17,10 @@ export const LIMITS = {
   // Target is a 15s video. These are the outer bounds the render must land in;
   // the script's word budget aims at the middle. TikTok allows far more, but
   // short retains better and that is the whole point of the format.
-  minSeconds: 10,
-  maxSeconds: 21,
+  // Target is 12s. Completion rate is what gets a video shown to more people,
+  // and a shorter video completes more often.
+  minSeconds: 7,
+  maxSeconds: 17,
   maxSilenceRatio: 0.3, // >30% dead air means the voiceover probably failed.
   maxBytes: 250 * 1024 * 1024,
   // Split by what the dimension measures. legibility/polish are DEFECT checks —
