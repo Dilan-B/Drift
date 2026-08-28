@@ -48,7 +48,7 @@ You're not fighting willpower. You're channeling it.
 
 Not because I'm more disciplined. The system just makes productivity the easier path.
 
-7/ $0.99 a month after a 3-day free trial. No ads. No data selling.
+7/ $4.99 a month, or $29.99 a year, after a 7-day free trial. No ads. No data selling.
 
 We built it for ourselves and figured other people might want it too.
 

@@ -15,7 +15,7 @@
 - "When time runs out, everything blocks again"
 - Show apps blocking
 
-**CTA:** "Three days free, then a dollar a month. I'm one of the two teens who built it. Link in bio."
+**CTA:** "Seven days free, then five bucks a month. I'm one of the two teens who built it. Link in bio."
 
 **Sound:** Use trending sound with beat drop at the reveal
 
@@ -49,7 +49,7 @@
 - Show family mode
 - "We're two teens who were tired of our own doom-scrolling"
 - "So we built the solution"
-- "It's called Drift. Three days free, then $0.99 a month."
+- "It's called Drift. Seven days free, then $4.99 a month."
 
 **Sound:** "Build" by Nao or similar upbeat track
 
@@ -65,7 +65,7 @@
 - "Now I average 2"
 - "The difference? I earn my screen time instead of wasting it"
 - Quick demo of the earn flow
-- "Link in bio — 3 days free, then $0.99 a month"
+- "Link in bio — 7 days free, then $4.99 a month"
 
 **Sound:** Trending transformation sound
 
@@ -77,4 +77,4 @@
 - Engage with comments within first hour
 - Duet/stitch screen time complaint videos with your solution
 - Pin your best-performing video
-- Bio: "I built an app that blocks TikTok until you do homework 🌿 | 3-day free trial: link below"
+- Bio: "I built an app that blocks TikTok until you do homework 🌿 | 7-day free trial: link below"

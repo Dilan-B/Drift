@@ -54,8 +54,10 @@ export const CLAIM_RULES = [
         if (tok !== "free") return;
         const window = tokens.slice(Math.max(0, i - 4), i + 5);
         const nearTrial = window.includes("trial") || window.includes("trials");
+        // Spelled-out counts matter as much as digits — "seven days free" is
+        // the natural phrasing and was tripping the rule for want of the word.
         const nearDays = window.some((w) => /^(day|days)$/.test(w)) &&
-          window.some((w) => /^(1|2|3|4|5|6|7|one|two|three|few)$/.test(w));
+          window.some((w) => /^(\d{1,2}|one|two|three|four|five|six|seven|ten|fourteen|few)$/.test(w));
         if (!nearTrial && !nearDays) {
           hits.push(tokens.slice(Math.max(0, i - 2), i + 3).join(" "));
         }
@@ -75,9 +77,11 @@ export const CLAIM_RULES = [
       for (const m of text.matchAll(monthly)) {
         if (Number(m[1]) !== FACTS.priceNumeric) hits.push(m[0].trim());
       }
-      const annual = /\$?\s*(\d+(?:\.\d{1,2})?)\s*(?:dollars?\s*)?(?:\/|per\s+|a\s+|\s+)?(yr\b|year|annually|annual)/gi;
+      // Require a currency marker, or "in 1 year" reads as a price.
+      const annual = /(?:\$\s*(\d+(?:\.\d{1,2})?)|\b(\d+(?:\.\d{1,2})?)\s*dollars?)\s*(?:\/|per\s+|a\s+|\s+)?(?:yr\b|year|annually|annual)/gi;
       for (const m of text.matchAll(annual)) {
-        if (Number(m[1]) !== FACTS.annualPriceNumeric) hits.push(m[0].trim());
+        const n = Number(m[1] ?? m[2]);
+        if (n !== FACTS.annualPriceNumeric) hits.push(m[0].trim());
       }
       // Written-out amounts the numeric pass can't see.
       const words = text.match(/\b(one|two|three|four|five|ten|twenty)\s+dollars?\s*(?:\/|per\s+|a\s+)?(?:mo\b|month)/gi);

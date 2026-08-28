@@ -30,7 +30,7 @@ Built by two high school students (Riaan and Dilan) who were tired of their own 
 - OpenAI (task verification)
 - Apple FamilyControls / ManagedSettings
 
-$0.99/month on the App Store, after a 3-day free trial. No ads, no catch.
+$4.99/month or $29.99/year on the App Store, after a 7-day free trial. No ads, no catch.
 
 ## First Comment (post this as maker)
 Hey PH! I'm Riaan, one of the two teens who built Drift.
@@ -39,7 +39,7 @@ My co-founder Dilan and I spent the last year building this because we couldn't 
 
 So we built something where you EARN your screen time by doing real tasks. Homework = 30 min of TikTok. A run = 20 min of Instagram. The AI checks your proof so you can't fake it.
 
-We use Drift ourselves every day. It's $0.99 a month, no ads, no upsells. We just want to help our generation (and honestly, any generation) have a healthier relationship with their phones.
+We use Drift ourselves every day. It's $4.99 a month, no ads, no upsells. We just want to help our generation (and honestly, any generation) have a healthier relationship with their phones.
 
 Would love your feedback — what features would make this more useful for you?
 
