@@ -5480,7 +5480,11 @@ export default function App() {
         return;
       }
       if (res.reason === "wrong_tag") {
-        Alert.alert("Different tag", "That isn't the tag you set up. Tap the one in your sleep room.");
+        // The NFC sheet already said so in red. A second alert saying the same
+        // thing just makes them dismiss two things.
+        if (!res.shownOnSheet) {
+          Alert.alert("Different tag", "That isn't the tag you set up. Tap the one in your sleep room.");
+        }
       } else if (res.reason === "motion_denied") {
         Alert.alert("Motion access needed", "Turn on Motion & Fitness for Drift in Settings to use this.");
       } else if (res.reason === "no_tag") {

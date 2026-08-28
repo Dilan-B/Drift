@@ -68,10 +68,22 @@ export async function requestMotionAuth() {
  * Present the NFC sheet. Resolves { id } or throws.
  * Throws code "cancelled" when the user dismisses the sheet — callers should
  * treat that as a no-op, not an error worth showing.
+ *
+ * iOS renders that sheet itself and exposes exactly two strings plus an error
+ * line. Everything else — the title, the icon, the Cancel button — is fixed.
+ * So `prompt` and `success` are the whole surface for saying what this
+ * particular tap is for, and they are worth setting per flow.
+ *
+ * `expect` is a tag UID to require. Pass one and a mismatched tag fails ON the
+ * sheet with code "wrong_tag"; pass nothing and any tag is accepted.
  */
-export async function scanTag() {
+export async function scanTag({ prompt, success, expect } = {}) {
   if (!isAvailable()) throw new Error("unavailable");
-  return await Native.scanTag();
+  return await Native.scanTag(
+    prompt  || "Hold the top of your phone against your tag.",
+    success || "Tag read.",
+    expect  || "",
+  );
 }
 
 // ── Tag registration ─────────────────────────────────────────
@@ -81,7 +93,12 @@ export async function getRegisteredTag() {
 
 /** Scan a tag and remember it as THE tag for this user's bedroom setup. */
 export async function registerTag() {
-  const { id } = await scanTag();
+  // Deliberately not "the Drift tag" — nothing has been shipped to them, they
+  // are designating a blank sticker. The old copy read like a missing package.
+  const { id } = await scanTag({
+    prompt:  "Hold the top of your phone against the tag you want to use.",
+    success: "Tag saved.",
+  });
   await AsyncStorage.setItem(KEY_TAG, id);
   return id;
 }
@@ -131,8 +148,19 @@ export async function armForNight({ rewardMinutes } = {}) {
   const registered = await getRegisteredTag();
   if (!registered) return { armed: false, reason: "no_tag" };
 
-  const { id } = await scanTag();
-  if (id !== registered) return { armed: false, reason: "wrong_tag" };
+  try {
+    await scanTag({
+      prompt:  "Hold the top of your phone against your tag to start the night.",
+      success: "Night started. Your apps are locked until morning.",
+      expect:  registered,
+    });
+  } catch (e) {
+    // Native already showed "That isn't your Drift tag." on the sheet, so the
+    // caller should not repeat it in an alert.
+    if (e?.code === "wrong_tag") return { armed: false, reason: "wrong_tag", shownOnSheet: true };
+    throw e;
+  }
+  const id = registered;
 
   const motion = await motionAuthStatus();
   if (motion !== "authorized") return { armed: false, reason: "motion_denied", motion };

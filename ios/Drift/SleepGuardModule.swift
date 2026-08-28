@@ -48,6 +48,16 @@ class SleepGuardModule: NSObject {
   private var scanResolve: RCTPromiseResolveBlock?
   private var scanReject: RCTPromiseRejectBlock?
 
+  // iOS owns everything about the NFC sheet except three strings, so these are
+  // the only place we can say what a tap MEANS. Registering a tag and starting
+  // a night are very different moments and used to share one prompt.
+  private var scanSuccessMessage = "Tag read."
+
+  // When non-empty, a tag whose UID doesn't match is refused on the sheet
+  // itself (red X) instead of after it closes. Showing a green check and then
+  // contradicting it with an alert is worse than one honest failure.
+  private var scanExpectedId = ""
+
   // ── NFC ─────────────────────────────────────────────────────
   @objc(isNfcAvailable:rejecter:)
   func isNfcAvailable(_ resolve: RCTPromiseResolveBlock,
@@ -67,8 +77,11 @@ class SleepGuardModule: NSObject {
   /// writing, works with a blank tag straight out of the pack, and cannot be
   /// changed by the user with a phone. (UID-cloneable tags exist, but this is
   /// a self-imposed accountability feature, not an access-control system.)
-  @objc(scanTag:rejecter:)
-  func scanTag(_ resolve: @escaping RCTPromiseResolveBlock,
+  @objc(scanTag:success:expect:resolver:rejecter:)
+  func scanTag(_ prompt: String,
+               success: String,
+               expect: String,
+               resolver resolve: @escaping RCTPromiseResolveBlock,
                rejecter reject: @escaping RCTPromiseRejectBlock) {
     #if canImport(CoreNFC)
     if #available(iOS 13.0, *) {
@@ -84,9 +97,12 @@ class SleepGuardModule: NSObject {
       }
       scanResolve = resolve
       scanReject = reject
+      scanSuccessMessage = success.isEmpty ? "Tag read." : success
+      scanExpectedId = expect
+      let sheetPrompt = prompt.isEmpty ? "Hold your phone against your tag." : prompt
       DispatchQueue.main.async {
         let session = NFCTagReaderSession(pollingOption: [.iso14443], delegate: self, queue: nil)
-        session?.alertMessage = "Hold your phone near the Drift tag."
+        session?.alertMessage = sheetPrompt
         self.tagSession = session
         session?.begin()
       }
@@ -100,6 +116,8 @@ class SleepGuardModule: NSObject {
     let res = scanResolve, rej = scanReject
     scanResolve = nil
     scanReject = nil
+    scanSuccessMessage = "Tag read."
+    scanExpectedId = ""
     #if canImport(CoreNFC)
     tagSession = nil
     #endif
@@ -247,6 +265,9 @@ extension SleepGuardModule: NFCTagReaderSessionDelegate {
   }
 
   func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
+    // Snapshot before the connect callback, which runs on Core NFC's own queue.
+    let expected = scanExpectedId
+    let successMessage = scanSuccessMessage
     guard let first = tags.first else {
       session.invalidate(errorMessage: "No tag found.")
       return
@@ -270,7 +291,18 @@ extension SleepGuardModule: NFCTagReaderSessionDelegate {
         return
       }
       let hex = id.map { String(format: "%02x", $0) }.joined()
-      session.alertMessage = "Tag read."
+
+      // Wrong tag: fail on the sheet, where they're already looking.
+      if !expected.isEmpty && hex != expected {
+        session.invalidate(errorMessage: "That isn't your Drift tag.")
+        DispatchQueue.main.async {
+          self.finishScan(id: nil, errorCode: "wrong_tag",
+                          errorMessage: "That isn't your Drift tag.")
+        }
+        return
+      }
+
+      session.alertMessage = successMessage
       session.invalidate()
       DispatchQueue.main.async {
         self.finishScan(id: hex, errorCode: nil, errorMessage: nil)
