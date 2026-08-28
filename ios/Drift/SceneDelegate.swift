@@ -18,6 +18,25 @@
 // confirmation links back into the app, and friend invites use drift://. If
 // these forwards are removed, auth silently breaks with no build error.
 //
+// AND THE COLD LAUNCH IS A SECOND, QUIETER TRAP. Forwarding the URL here the
+// moment the scene connects is not enough, because BOTH ways JS could hear it
+// are shut at that instant:
+//
+//   * Linking.getInitialURL() reads only bridge.launchOptions[...URLKey]
+//     (RCTLinkingManager.mm), and UIKit never puts the URL in launch options
+//     under the scene lifecycle — it arrives in connectionOptions instead.
+//   * RCTLinkingManager.application(_:open:) merely posts RCTOpenURLNotification,
+//     and at willConnectTo the JS bundle has not run, so nothing is listening.
+//
+// Both miss, and the URL is silently lost. A warm launch works fine, which is
+// what makes this so easy to miss: tap a verification link seconds after
+// signing up and Drift is still in memory; come back an hour later and the same
+// link does nothing at all.
+//
+// So a cold-launch URL is HELD and replayed once React has actually mounted.
+// The JS handlers in Drift.jsx dedupe by URL, so a duplicate delivery is inert —
+// which is what lets the fallback timer below be unconditional.
+//
 // When Expo ships official scene support, delete this file and revert
 // AppDelegate rather than trying to merge the two.
 //
@@ -27,6 +46,69 @@ import Expo
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   var window: UIWindow?
+
+  /// A launch URL that arrived before JS could listen for it.
+  private var pendingURL: URL?
+  /// A universal-link activity in the same position.
+  private var pendingActivity: NSUserActivity?
+  private var contentObserver: NSObjectProtocol?
+  /// Guards against the notification and the fallback timer both firing.
+  private var replayed = false
+
+  // Posted by the Fabric root view once React has mounted content. Spelled out
+  // rather than imported: the constant lives in RCTRootView.h, which is not
+  // reliably visible from Swift across Expo's header layouts.
+  private static let contentDidAppear = Notification.Name("RCTContentDidAppearNotification")
+
+  deinit {
+    if let o = contentObserver { NotificationCenter.default.removeObserver(o) }
+  }
+
+  /// Hand the held URL to React. Safe to call more than once — the first call
+  /// consumes the URL, and the JS side dedupes regardless.
+  private func replayPendingLink(reason: String) {
+    guard !replayed else { return }
+    guard pendingURL != nil || pendingActivity != nil else { return }
+    replayed = true
+
+    if let url = pendingURL {
+      NSLog("[Drift.Scene] replaying cold-launch URL (%@)", reason)
+      RCTLinkingManager.application(UIApplication.shared, open: url, options: [:])
+      pendingURL = nil
+    }
+    if let activity = pendingActivity {
+      NSLog("[Drift.Scene] replaying cold-launch activity (%@)", reason)
+      RCTLinkingManager.application(
+        UIApplication.shared, continue: activity, restorationHandler: { _ in })
+      pendingActivity = nil
+    }
+    if let o = contentObserver {
+      NotificationCenter.default.removeObserver(o)
+      contentObserver = nil
+    }
+  }
+
+  /// Wait for React to mount, then replay. RCTContentDidAppearNotification is
+  /// the earliest honest signal; the short delay after it covers the gap
+  /// between the mount commit and Drift.jsx's useEffect registering its
+  /// Linking listener. The timer is a backstop for the case where content
+  /// appeared before this scene finished connecting, which would mean the
+  /// notification has already gone by and will never fire again.
+  private func scheduleReplay() {
+    guard pendingURL != nil || pendingActivity != nil else { return }
+
+    contentObserver = NotificationCenter.default.addObserver(
+      forName: Self.contentDidAppear, object: nil, queue: .main
+    ) { [weak self] _ in
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+        self?.replayPendingLink(reason: "content appeared")
+      }
+    }
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) { [weak self] in
+      self?.replayPendingLink(reason: "fallback timer")
+    }
+  }
 
   func scene(
     _ scene: UIScene,
@@ -64,15 +146,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
           String(describing: window.rootViewController), window.isKeyWindow ? 1 : 0)
 
     // A cold launch FROM a deep link delivers the URL here rather than through
-    // the openURLContexts callback below.
-    if let url = connectionOptions.urlContexts.first?.url {
-      RCTLinkingManager.application(UIApplication.shared, open: url, options: [:])
+    // the openURLContexts callback below. Do NOT forward it now — see the note
+    // at the top of this file. Hold it until React can hear it.
+    pendingURL = connectionOptions.urlContexts.first?.url
+    pendingActivity = connectionOptions.userActivities.first {
+      $0.activityType == NSUserActivityTypeBrowsingWeb
     }
-    for activity in connectionOptions.userActivities where activity.activityType == NSUserActivityTypeBrowsingWeb {
-      RCTLinkingManager.application(
-        UIApplication.shared,
-        continue: activity,
-        restorationHandler: { _ in })
+    if pendingURL != nil || pendingActivity != nil {
+      NSLog("[Drift.Scene] cold launch carried a link — holding it until React mounts")
+      scheduleReplay()
     }
   }
 

@@ -3688,6 +3688,10 @@ export default function App() {
   const levelIdxRef     = useRef(null);
   const appActiveRef    = useRef(true);   // true while app is foregrounded
   const processedAuthUrlRef = useRef("");
+  // Same job for drift://add-friend links. Without it a redelivered URL sends
+  // a second friend request — and SceneDelegate now deliberately replays
+  // cold-launch links, so redelivery is expected rather than exotic.
+  const processedInviteUrlRef = useRef("");
   useEffect(() => { tabRef.current = tab; }, [tab]);
   useEffect(() => { driftInActRef.current = driftInActive; }, [driftInActive]);
 
@@ -4650,6 +4654,12 @@ export default function App() {
       if (!url || !userId) return;
       const m = url.match(/add-friend\/([A-Za-z0-9_]+)/);
       if (!m) return;
+      // Claim the URL before any await. Two deliveries can land in the same
+      // tick, and marking it after the network round-trip would let both
+      // through — which is a duplicate friend request, visible to the
+      // recipient.
+      if (processedInviteUrlRef.current === url) return;
+      processedInviteUrlRef.current = url;
       const username = m[1].toLowerCase();
       try {
         const { data: profile } = await rateLimited(`friend_lookup_${userId}`, { limit: 30, windowMs: 60_000 }, () =>
