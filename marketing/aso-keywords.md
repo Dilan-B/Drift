@@ -39,7 +39,7 @@ Drift was built by two teens who were tired of their own doom-scrolling habits. 
 **Privacy first:**
 Your data stays on your device. Task photos are analyzed by AI and never stored. Contact matching uses encrypted hashes — emails never leave your phone.
 
-Free to use. No ads. No hidden fees.
+$4.99/month or $29.99/year after a 7-day free trial. No ads. No hidden fees.
 
 Terms of Use (EULA): https://driftproductivity.com/terms/
 Privacy Policy: https://driftproductivity.com/privacy/
