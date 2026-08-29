@@ -81,6 +81,8 @@ import SocialScreen from "./SocialScreen";
 import LabScreen from "./LabScreen";
 import SleepGuardModal from "./SleepGuardModal";
 import BedtimeOverlay from "./BedtimeOverlay";
+import ActionPlanModal from "./ActionPlanModal";
+import * as ActionPlan from "./actionPlan";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
@@ -3578,6 +3580,8 @@ export default function App() {
   // The bedtime moment. Arming locks every blocked app until morning, which
   // used to happen invisibly — the NFC sheet closed and a card changed state.
   const [bedtime,     setBedtime]     = useState(null);   // { rewardMinutes }
+  const [showActionPlan, setShowActionPlan] = useState(false);
+  const [actionPlan,     setActionPlan]     = useState(null);
   const [sgResult,    setSgResult]    = useState(null);   // last verified night
   const [sgStreak,    setSgStreak]    = useState(0);
   const [sgBusy,      setSgBusy]      = useState(false);
@@ -4203,6 +4207,13 @@ export default function App() {
     const id = setInterval(refreshVisibleTasksForDay, 60_000);
     return () => clearInterval(id);
   }, [screen, userId, tasks]);
+
+  // The plan drives the Lab row's subtitle, so it loads with the rest of the
+  // per-user state rather than waiting for the sheet to be opened.
+  useEffect(() => {
+    if (!userId) { setActionPlan(null); return; }
+    ActionPlan.getPlan(userId).then(setActionPlan).catch(() => {});
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -5514,6 +5525,36 @@ export default function App() {
     }
   }, [sgSetup]);
 
+  /**
+   * Commit a plan: remember it, install the blocked hours it implies, and move
+   * the bedtime reminder to the phone-down time the user chose.
+   *
+   * Rules are MERGED, never replaced — someone may have windows of their own
+   * that have nothing to do with this plan, and silently dropping them would be
+   * the app overruling a decision the user made deliberately. Re-applying
+   * replaces only the rules this plan created, which are matched by id.
+   */
+  const applyActionPlan = useCallback(async (saved, rules) => {
+    setActionPlan(saved);
+    if (!saved || !rules) return;
+
+    const merged = ActionPlan.mergeRules(blockedHours, rules);
+    setBlockedHours(merged);
+    if (userId) {
+      AsyncStorage.setItem(`drift_blocked_hours_${userId}`, JSON.stringify(merged)).catch(() => {});
+    }
+
+    // Keep the nightly nudge honest: a plan that says "phone down by 10:30"
+    // and a reminder that still fires at 9:45 are two different promises.
+    await SleepGuard.setPrefs({
+      reminderHour: saved.phoneDownHour,
+      reminderMinute: saved.phoneDownMinute,
+    }).catch(() => {});
+    refreshSleepGuard().catch(() => {});
+
+    track("action_plan_applied");
+  }, [blockedHours, userId, refreshSleepGuard]);
+
   const sgCancel = useCallback(async () => {
     await SleepGuard.cancelNight();
     setSgArmed(null);
@@ -6417,6 +6458,8 @@ export default function App() {
               onOpenBlockedHours={() => setShowBlockedHours(true)}
               onOpenRecurringTasks={() => setShowRecurringTasks(true)}
               onOpenSleepGuard={() => setShowSleepGuard(true)}
+              onOpenActionPlan={() => setShowActionPlan(true)}
+              actionPlanSummary={ActionPlan.planSummary(actionPlan)}
               // The tour spotlights elements on Today, so jump there before
               // opening it — measuring the hero while it's scrolled off to the
               // side would put the highlight off-screen. The delay lets the tab
@@ -6512,6 +6555,16 @@ export default function App() {
         visible={!!bedtime}
         rewardMinutes={bedtime?.rewardMinutes || 0}
         onDone={() => setBedtime(null)}
+      />
+
+      {/* Screen-time goal, and the blocked hours that back it up. */}
+      <ActionPlanModal
+        visible={showActionPlan}
+        dark={darkMode}
+        userId={userId}
+        todaySpentMinutes={spentToday}
+        onClose={() => setShowActionPlan(false)}
+        onApply={applyActionPlan}
       />
 
       {/* Sleep guard setup — the only place the tag can be changed or the

@@ -17,7 +17,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Switch, Platform } from "react-native";
 import { FF, getTheme } from "./theme";
 import { LeafGlyph } from "./SproutArt";
-import { PhoneIcon, LockIcon, ClipboardIcon, SparkleIcon } from "./Icons";
+import { PhoneIcon, LockIcon, ClipboardIcon, SparkleIcon, TargetIcon } from "./Icons";
 import { getBlockedSelectionCount } from "./blockedApps";
 import {
   calendarAvailable, isCalendarSyncEnabled, setCalendarSyncEnabled,
@@ -97,6 +97,8 @@ export default function LabScreen({
   onOpenBlockedHours,
   onOpenRecurringTasks,
   onOpenSleepGuard,
+  onOpenActionPlan,
+  actionPlanSummary,
   onReplayTour,
 }) {
   const theme = getTheme(dark);
@@ -245,6 +247,13 @@ export default function LabScreen({
             title="Sleep guard"
             sub="Tap an NFC tag in another room at bedtime. Apps stay locked until morning."
             onPress={onOpenSleepGuard}
+          />
+          <LinkRow
+            theme={theme}
+            Icon={TargetIcon}
+            title="Action plan"
+            sub={actionPlanSummary || "Set a screen-time goal and get a concrete plan for it."}
+            onPress={onOpenActionPlan}
             last
           />
         </View>
