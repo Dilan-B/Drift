@@ -74,7 +74,7 @@ import {
   endDriftInLiveActivity, consumePendingHealthEarn, setProStatus, setAppearance,
   consumePendingSiriTask,
 } from "./screenTime";
-import { supabase, syncScreenTime, getFriendsWithScreenTime, safeGetSession, saveOnboardingResponses, getAppConfig, isVersionOutdated, fetchAppStoreLatest } from "./supabase";
+import { supabase, syncScreenTime, getFriendsWithScreenTime, safeGetSession, saveOnboardingResponses, getAppConfig, isVersionOutdated, fetchAppStoreLatest, markSignOutRequested } from "./supabase";
 import ForceUpdateModal from "./ForceUpdateModal";
 import { handleSupabaseAuthCallback } from "./authLinks";
 import SocialScreen from "./SocialScreen";
@@ -4494,6 +4494,7 @@ export default function App() {
     // check all three so neither method is wrongly treated as unverified.
     const isVerified = !!(authUser.email_confirmed_at || authUser.phone_confirmed_at || authUser.confirmed_at);
     if (!isVerified) {
+      markSignOutRequested();
       await supabase.auth.signOut().catch(() => {});
       Alert.alert("Verify your account", "Confirm your email or phone number before continuing.");
       await backToSignIn();
@@ -5022,6 +5023,7 @@ export default function App() {
               }
             } catch {}
             if (serverUnverified) {
+              markSignOutRequested();
               await supabase.auth.signOut().catch(() => {});
               setUserId(null);
               setUserEmail("");
@@ -6085,6 +6087,7 @@ export default function App() {
 
   const signOut = async () => {
     setShowAccount(false);
+    markSignOutRequested();
     try { await supabase.auth.signOut(); } catch {}
     try { await stopBalanceMonitoring(); } catch {}
     try { await clearBlocking(); } catch {}
