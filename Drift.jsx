@@ -6,6 +6,7 @@ import {
   ActivityIndicator, Linking, Dimensions, Pressable, Share,
 } from "react-native";
 import Constants from "expo-constants";
+import * as Application from "expo-application";
 import * as Crypto from "expo-crypto";
 import { getTheme } from "./theme";
 import * as SleepGuard from "./sleepGuard";
@@ -4979,6 +4980,39 @@ export default function App() {
         //    minimum (e.g. an emergency hotfix) even beyond the App Store check.
         const cfg = await getAppConfig();
         if (cfg.min_ios_version && isVersionOutdated(current, cfg.min_ios_version)) {
+          setUpdateStoreUrl(cfg.ios_store_url || null);
+          setForceUpdate(true);
+          return;
+        }
+
+        // 3) MANUAL, BY BUILD — the only gate that can catch a same-version
+        //    build. Checks 1 and 2 compare MARKETING versions only, and every
+        //    submission under one release shares one (builds 118-123 are all
+        //    "1.1.7"), so `isVersionOutdated("1.1.7", "1.1.7")` is false and
+        //    nobody on an older build of the CURRENT release is ever caught.
+        //    Apple's lookup API cannot close this: it returns `version` and has
+        //    no build-number field, so check 1 is structurally incapable of it.
+        //
+        //    The build number is NOT in app.json — it lives only in Xcode's
+        //    CURRENT_PROJECT_VERSION — so it has to be read off the native
+        //    binary. expo-constants dropped nativeBuildVersion in SDK 54+;
+        //    expo-application is the supported reader.
+        //
+        //    SCOPED ON PURPOSE. min_ios_build applies only while the installed
+        //    marketing version equals min_ios_build_version. Without that pin, a
+        //    stale `min_ios_build = 124` would brick the whole 1.1.8 line the
+        //    moment its build numbering started below 124 — the same class of
+        //    lockout as the app.json-behind-App-Store incident, and this modal
+        //    still has no dismiss. Fails open on a missing, unpinned or
+        //    unparseable value.
+        const minBuild = parseInt(cfg.min_ios_build, 10);
+        const installedBuild = parseInt(Application.nativeBuildVersion, 10);
+        if (
+          Platform.OS === "ios" && !__DEV__ && !isExpoGo &&
+          Number.isFinite(minBuild) && Number.isFinite(installedBuild) &&
+          cfg.min_ios_build_version && cfg.min_ios_build_version === current &&
+          installedBuild < minBuild
+        ) {
           setUpdateStoreUrl(cfg.ios_store_url || null);
           setForceUpdate(true);
         }
