@@ -25,6 +25,8 @@
 		DR70010000000000000000A5 /* DriftAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B5 /* DriftAppIntents.swift */; };
 		DR70010000000000000000A6 /* SleepGuardModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B6 /* SleepGuardModule.swift */; };
 		DR70030000000000000000E1 /* LockboxModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70030000000000000000F1 /* LockboxModule.swift */; };
+		DR70040000000000000000A1 /* LockboxARView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70040000000000000000B1 /* LockboxARView.swift */; };
+		DR70040000000000000000A2 /* LockboxARViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70040000000000000000B2 /* LockboxARViewManager.m */; };
 		DR70030000000000000000E2 /* LockboxModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70030000000000000000F2 /* LockboxModule.m */; };
 		DR70010000000000000000A7 /* SleepGuardModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B7 /* SleepGuardModule.m */; };
 		DR70010000000000000000A8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B8 /* SceneDelegate.swift */; };
@@ -99,6 +101,8 @@
 		DR70020000000000000000B5 /* DriftAppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DriftAppIntents.swift; path = Drift/DriftAppIntents.swift; sourceTree = "<group>"; };
 		DR70020000000000000000B6 /* SleepGuardModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SleepGuardModule.swift; path = Drift/SleepGuardModule.swift; sourceTree = "<group>"; };
 		DR70030000000000000000F1 /* LockboxModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LockboxModule.swift; path = Drift/LockboxModule.swift; sourceTree = "<group>"; };
+		DR70040000000000000000B1 /* LockboxARView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LockboxARView.swift; path = Drift/LockboxARView.swift; sourceTree = "<group>"; };
+		DR70040000000000000000B2 /* LockboxARViewManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = LockboxARViewManager.m; path = Drift/LockboxARViewManager.m; sourceTree = "<group>"; };
 		DR70030000000000000000F2 /* LockboxModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = LockboxModule.m; path = Drift/LockboxModule.m; sourceTree = "<group>"; };
 		DR70020000000000000000B7 /* SleepGuardModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = SleepGuardModule.m; path = Drift/SleepGuardModule.m; sourceTree = "<group>"; };
 		DR70020000000000000000B8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SceneDelegate.swift; path = Drift/SceneDelegate.swift; sourceTree = "<group>"; };
@@ -227,6 +231,8 @@
 				DR70020000000000000000B6 /* SleepGuardModule.swift */,
 				DR70030000000000000000F2 /* LockboxModule.m */,
 				DR70030000000000000000F1 /* LockboxModule.swift */,
+				DR70040000000000000000B2 /* LockboxARViewManager.m */,
+				DR70040000000000000000B1 /* LockboxARView.swift */,
 				DR70020000000000000000B2 /* ScreenTimeModule.m */,
 				DRP2020000000000000000B1 /* DriftPhase2Shared.swift */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
@@ -639,6 +645,8 @@
 				DR70010000000000000000A6 /* SleepGuardModule.swift in Sources */,
 				DR70030000000000000000E2 /* LockboxModule.m in Sources */,
 				DR70030000000000000000E1 /* LockboxModule.swift in Sources */,
+				DR70040000000000000000A2 /* LockboxARViewManager.m in Sources */,
+				DR70040000000000000000A1 /* LockboxARView.swift in Sources */,
 				DR70010000000000000000A2 /* ScreenTimeModule.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
