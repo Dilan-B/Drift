@@ -24,7 +24,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, Alert, Platform,
   AppState, BackHandler, StatusBar, ActivityIndicator, findNodeHandle,
-  requireNativeComponent, UIManager, TextInput,
+  requireNativeComponent, UIManager, TextInput, Animated, Easing,
+  AccessibilityInfo,
 } from "react-native";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import Slider from "@react-native-community/slider";
@@ -110,7 +111,7 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
 
   // Screen stays awake from the moment enforcement starts.
   useEffect(() => {
-    const needsAwake = ["waiting", "settle", "active", "breach"].includes(phase);
+    const needsAwake = ["waiting", "settle", "locking", "active", "breach"].includes(phase);
     if (needsAwake) activateKeepAwakeAsync().catch(() => {});
     else deactivateKeepAwake();
     return () => deactivateKeepAwake();
@@ -130,7 +131,7 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
   // Android hardware back — refuse to drop out of a live session by accident.
   useEffect(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (["active", "breach", "settle", "waiting"].includes(phaseRef.current)) return true;
+      if (["active", "breach", "settle", "waiting", "locking"].includes(phaseRef.current)) return true;
       return false;
     });
     return () => sub.remove();
@@ -180,9 +181,8 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
     try {
       const sess = await Lockbox.startSession({ minutes, task });
       setSession(sess);
-      setPhase("active");
+      setPhase("locking");          // the seal plays, then hands off to active
       onStarted?.(sess);
-      notify(true);
       await startMonitoring();
     } catch (e) {
       Alert.alert("Couldn't start", e?.message || "Try again.");
@@ -201,7 +201,9 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
   }, []);
 
   const markDisturbed = useCallback(async () => {
-    if (phaseRef.current === "settle") return;      // still being put down
+    // Letting go of the phone jostles it. Neither the settle wait nor the
+    // locking animation should be able to register that as a breach.
+    if (["settle", "locking"].includes(phaseRef.current)) return;
     if (sessionRef.current?.disturbedAt) return;    // already counting
     const next = await Lockbox.updateSession({
       disturbedAt: Date.now(),
@@ -404,6 +406,10 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
         </View>
       </View>
     );
+  }
+
+  if (phase === "locking") {
+    return <LockSeal onDone={() => setPhase("active")} />;
   }
 
   if (phase === "waiting") {
@@ -651,6 +657,127 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
         </Text>
       )}
     </View>
+  );
+}
+
+/**
+ * The moment the box seals.
+ *
+ * Arch drops into the body, one dull haptic on the contact, a ring pushes
+ * outward from it. Deliberately closer to a latch than a fanfare — this is a
+ * phone being put away, and a celebration would be the wrong register for the
+ * next hour of not touching it.
+ *
+ * Everything is transform and opacity so it all runs on the native driver;
+ * nothing here should contend with the JS thread while the shield is applied.
+ */
+function LockSeal({ onDone }) {
+  const body    = useRef(new Animated.Value(0)).current;  // scale/fade in
+  const shackle = useRef(new Animated.Value(0)).current;  // drops closed
+  const ring    = useRef(new Animated.Value(0)).current;  // outward pulse
+  const label   = useRef(new Animated.Value(0)).current;
+  const wash    = useRef(new Animated.Value(0)).current;
+  const [reduce, setReduce] = useState(false);
+  const done = useRef(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduce).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const finish = () => { if (!done.current) { done.current = true; onDone?.(); } };
+
+    if (reduce) {
+      Animated.timing(wash, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+      [body, shackle, label].forEach(v => v.setValue(1));
+      notify(true);
+      const t = setTimeout(finish, 900);
+      return () => clearTimeout(t);
+    }
+
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(wash, { toValue: 1, duration: 260, useNativeDriver: true }),
+        Animated.spring(body, { toValue: 1, friction: 7, tension: 70, useNativeDriver: true }),
+      ]),
+      // The shackle falling is the beat everything else hangs off.
+      Animated.timing(shackle, {
+        toValue: 1, duration: 320,
+        easing: Easing.bezier(0.5, 0, 0.75, 0),   // accelerates into the body
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      notify(true);                                // the clunk, on contact
+      Animated.parallel([
+        Animated.timing(ring, {
+          toValue: 1, duration: 620, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+        }),
+        Animated.timing(label, {
+          toValue: 1, delay: 90, duration: 340,
+          easing: Easing.out(Easing.cubic), useNativeDriver: true,
+        }),
+      ]).start(() => setTimeout(finish, 620));
+    });
+  }, [reduce, body, shackle, ring, label, wash, onDone]);
+
+  return (
+    <Animated.View style={[s.night, { backgroundColor: "#0B1A11", opacity: wash }]}>
+      <StatusBar barStyle="light-content" />
+
+      <View style={{ width: 150, height: 150, alignItems: "center", justifyContent: "center" }}>
+        {/* Ring pushed outward by the latch closing */}
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: "absolute", width: 108, height: 108, borderRadius: 54,
+            borderWidth: 2, borderColor: "#4DFF99",
+            opacity: ring.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 0.55, 0] }),
+            transform: [{ scale: ring.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1.9] }) }],
+          }}
+        />
+
+        <Animated.View style={{
+          alignItems: "center",
+          opacity: body,
+          transform: [{ scale: body.interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] }) }],
+        }}>
+          {/* Shackle — an arch that drops into the body */}
+          <Animated.View style={{
+            width: 42, height: 34,
+            borderWidth: 5, borderBottomWidth: 0,
+            borderColor: "#4DFF99",
+            borderTopLeftRadius: 21, borderTopRightRadius: 21,
+            transform: [{
+              translateY: shackle.interpolate({ inputRange: [0, 1], outputRange: [-13, 6] }),
+            }],
+          }} />
+          {/* Body */}
+          <View style={{
+            width: 68, height: 54, borderRadius: 13,
+            backgroundColor: "#4DFF99",
+            alignItems: "center", justifyContent: "center",
+          }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#0B1A11" }} />
+            <View style={{ width: 4, height: 11, backgroundColor: "#0B1A11", marginTop: -1 }} />
+          </View>
+        </Animated.View>
+      </View>
+
+      <Animated.Text style={{
+        fontFamily: FF.display, fontSize: 30, color: "#F7F7F4",
+        letterSpacing: -0.3, marginTop: 22,
+        opacity: label,
+        transform: [{ translateY: label.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
+      }}>
+        Locked
+      </Animated.Text>
+      <Animated.Text style={{
+        fontFamily: FF.body, fontSize: 13.5, color: "rgba(247,247,244,0.6)",
+        marginTop: 8, opacity: label,
+      }}>
+        Leave it where it is.
+      </Animated.Text>
+    </Animated.View>
   );
 }
 
