@@ -164,64 +164,99 @@ class LockboxARView: UIView, ARSCNViewDelegate {
   /// is visibly going *into* something.
   /// `preview` is the un-committed ghost: fainter, and gently breathing so it
   /// reads as "this is where it would go" rather than "this is placed".
+  /// An open-topped container built as a lit cage: translucent panels for mass,
+  /// bright beams along every edge for structure.
+  ///
+  /// The edges are what make it read as a solid object rather than a decal.
+  /// Flat panels alone give the eye nothing to parallax against, so the box
+  /// looked painted onto the floor; corner posts and rails move against the
+  /// background as you walk around it, which is the whole cue for depth.
+  ///
+  /// Two lighting models on purpose. Panels are .blinn so they actually shade
+  /// — that shading IS the three-dimensionality — with enough emission that
+  /// they never wash out in daylight. Beams are .constant and fully emissive,
+  /// so the silhouette survives any lighting at all.
   private func makeBoxNode(side: CGFloat, preview: Bool) -> SCNNode {
     let root = SCNNode()
-    let wallH = side * 0.45
-    let t: CGFloat = 0.004   // wall thickness
-    let a: CGFloat = preview ? 0.45 : 1.0   // alpha multiplier
+    let wallH = side * 0.5
+    let t: CGFloat = 0.004        // panel thickness
+    let e: CGFloat = 0.007        // edge beam thickness
+    let a: CGFloat = preview ? 0.45 : 1.0
+    let half = side / 2
 
-    // Emission, not diffuse, is what carries in daylight: a diffuse-only
-    // material just reflects the room, so outdoors or under a window the box
-    // washed out to nothing. These emit their own light and stay readable.
-    let glass = SCNMaterial()
-    glass.diffuse.contents = UIColor(red: 0.30, green: 0.88, blue: 0.48, alpha: 0.45 * a)
-    glass.emission.contents = UIColor(red: 0.22, green: 0.85, blue: 0.44, alpha: 0.55 * a)
-    glass.isDoubleSided = true
-    glass.lightingModel = .constant   // ignore scene lighting entirely
+    let bright = UIColor(red: 0.42, green: 1.00, blue: 0.60, alpha: 1.0 * a)
+    let mid    = UIColor(red: 0.28, green: 0.86, blue: 0.50, alpha: 1.0)
+
+    // Panels — shaded, so the four walls catch light differently and the box
+    // has interior volume.
+    let panel = SCNMaterial()
+    panel.lightingModel = .blinn
+    panel.diffuse.contents = mid.withAlphaComponent(0.20 * a)
+    panel.emission.contents = UIColor(red: 0.16, green: 0.62, blue: 0.34, alpha: 0.30 * a)
+    panel.specular.contents = UIColor.white.withAlphaComponent(0.5)
+    panel.shininess = 0.55
+    panel.isDoubleSided = true
+    panel.blendMode = .add        // glass stacking rather than flat overlay
 
     let floorMat = SCNMaterial()
-    floorMat.diffuse.contents = UIColor(red: 0.26, green: 0.80, blue: 0.44, alpha: 0.32 * a)
-    floorMat.emission.contents = UIColor(red: 0.20, green: 0.78, blue: 0.40, alpha: 0.34 * a)
-    floorMat.lightingModel = .constant
+    floorMat.lightingModel = .blinn
+    floorMat.diffuse.contents = mid.withAlphaComponent(0.26 * a)
+    floorMat.emission.contents = UIColor(red: 0.14, green: 0.58, blue: 0.32, alpha: 0.34 * a)
     floorMat.isDoubleSided = true
 
-    let floor = SCNBox(width: side, height: t, length: side, chamferRadius: 0.002)
-    floor.materials = [floorMat]
-    let floorNode = SCNNode(geometry: floor)
-    floorNode.position = SCNVector3(0, Float(t / 2), 0)
-    root.addChildNode(floorNode)
+    // Beams — unlit and fully emissive, so the cage is legible in any light.
+    let beamMat = SCNMaterial()
+    beamMat.lightingModel = .constant
+    beamMat.diffuse.contents = bright
+    beamMat.emission.contents = bright
 
-    // Walls, placed by rotating the same panel around the floor.
-    let offsets: [(CGFloat, CGFloat)] = [(0, side / 2), (0, -side / 2), (side / 2, 0), (-side / 2, 0)]
-    for (i, off) in offsets.enumerated() {
-      let horizontal = i < 2
-      let wall = SCNBox(width: horizontal ? side : t,
-                        height: wallH,
-                        length: horizontal ? t : side,
-                        chamferRadius: 0.001)
-      wall.materials = [glass]
-      let n = SCNNode(geometry: wall)
-      n.position = SCNVector3(Float(off.0), Float(wallH / 2), Float(off.1))
+    func add(_ geo: SCNGeometry, _ mat: SCNMaterial, _ x: CGFloat, _ y: CGFloat, _ z: CGFloat) {
+      geo.materials = [mat]
+      let n = SCNNode(geometry: geo)
+      n.position = SCNVector3(Float(x), Float(y), Float(z))
       root.addChildNode(n)
     }
 
-    // A brighter rim so the opening reads clearly against a busy carpet or desk.
-    let rim = SCNBox(width: side, height: 0.005, length: side, chamferRadius: 0.001)
-    let rimMat = SCNMaterial()
-    // The rim is the outline you actually track with your eye, so it is the
-    // brightest thing here and fully emissive.
-    rimMat.diffuse.contents = UIColor(red: 0.45, green: 1.00, blue: 0.60, alpha: 1.0 * a)
-    rimMat.emission.contents = UIColor(red: 0.45, green: 1.00, blue: 0.60, alpha: 1.0 * a)
-    rimMat.lightingModel = .constant
-    rim.materials = [rimMat]
-    let rimNode = SCNNode(geometry: rim)
-    rimNode.position = SCNVector3(0, Float(wallH), 0)
-    root.addChildNode(rimNode)
+    // Floor
+    add(SCNBox(width: side, height: t, length: side, chamferRadius: 0.002),
+        floorMat, 0, t / 2, 0)
+
+    // Four walls
+    add(SCNBox(width: side, height: wallH, length: t, chamferRadius: 0.001), panel, 0, wallH / 2,  half)
+    add(SCNBox(width: side, height: wallH, length: t, chamferRadius: 0.001), panel, 0, wallH / 2, -half)
+    add(SCNBox(width: t, height: wallH, length: side, chamferRadius: 0.001), panel,  half, wallH / 2, 0)
+    add(SCNBox(width: t, height: wallH, length: side, chamferRadius: 0.001), panel, -half, wallH / 2, 0)
+
+    // Bottom rails and top rails
+    for y in [CGFloat(0), wallH] {
+      add(SCNBox(width: side + e, height: e, length: e, chamferRadius: e / 2), beamMat, 0, y,  half)
+      add(SCNBox(width: side + e, height: e, length: e, chamferRadius: e / 2), beamMat, 0, y, -half)
+      add(SCNBox(width: e, height: e, length: side + e, chamferRadius: e / 2), beamMat,  half, y, 0)
+      add(SCNBox(width: e, height: e, length: side + e, chamferRadius: e / 2), beamMat, -half, y, 0)
+    }
+
+    // Corner posts — the strongest depth cue, since these are the edges that
+    // swing most as the viewer moves.
+    for (cx, cz) in [(half, half), (half, -half), (-half, half), (-half, -half)] {
+      add(SCNBox(width: e, height: wallH, length: e, chamferRadius: e / 2),
+          beamMat, cx, wallH / 2, cz)
+    }
+
+    // A soft pool on the surface under the box, so it sits in the scene rather
+    // than hovering above it.
+    let pool = SCNPlane(width: side * 1.5, height: side * 1.5)
+    let poolMat = SCNMaterial()
+    poolMat.lightingModel = .constant
+    poolMat.diffuse.contents = UIColor(red: 0.30, green: 0.95, blue: 0.55, alpha: 0.13 * a)
+    poolMat.blendMode = .add
+    poolMat.writesToDepthBuffer = false
+    pool.materials = [poolMat]
+    let poolNode = SCNNode(geometry: pool)
+    poolNode.eulerAngles.x = -.pi / 2
+    poolNode.position = SCNVector3(0, 0.0012, 0)
+    root.addChildNode(poolNode)
 
     if preview {
-      // No fade-in: the ghost is repositioned every frame, so an entrance
-      // animation would retrigger constantly. A slow pulse instead, which also
-      // makes it legible against a busy carpet.
       root.opacity = 1
       root.runAction(.repeatForever(.sequence([
         .fadeOpacity(to: 0.55, duration: 0.9),

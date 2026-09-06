@@ -415,26 +415,13 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
   if (phase === "waiting") {
     const flat  = !!live?.flat;
     const still = !!live?.settled;
-    const mag      = typeof live?.magnitude === "number" ? live.magnitude : null;
-    const row = (ok, label, detail) => (
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 7 }}>
-        <View style={{
-          width: 18, height: 18, borderRadius: 9,
-          backgroundColor: ok ? "#4DFF99" : "rgba(247,247,244,0.14)",
-          alignItems: "center", justifyContent: "center",
-        }}>
-          {ok && <CheckIcon size={11} color="#0B1A11" />}
-        </View>
-        <Text style={{ fontFamily: FF.body, fontSize: 14, color: ok ? "#F7F7F4" : onNight }}>
-          {label}
-        </Text>
-        {!!detail && (
-          <Text style={{ fontFamily: FF.body, fontSize: 11.5, color: "rgba(247,247,244,0.38)" }}>
-            {detail}
-          </Text>
-        )}
-      </View>
-    );
+    // One quiet line rather than a checklist. It still says which half is
+    // outstanding — a screen that reacts to nothing is indistinguishable from
+    // a broken one — but as a sentence, not an instrument panel.
+    const status = !live ? "Waiting for your phone…"
+                 : flat && still ? "Got it — starting…"
+                 : flat ? "Nearly — let it settle."
+                 : "Waiting for your phone…";
 
     return (
       <View style={[s.night, { backgroundColor: night }]}>
@@ -445,12 +432,14 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
           need to tap anything.
         </Text>
 
-        {/* Both conditions, live. If it isn't starting, this says which half is
-            missing rather than leaving the user staring at a still screen. */}
-        <View style={{ marginTop: 30, alignSelf: "stretch", paddingHorizontal: 6 }}>
-          {row(flat, live?.faceUp ? "Lying flat, screen up" : "Lying flat",
-               live ? `gravity ${live.gravityZ?.toFixed?.(2) ?? "—"}` : "")}
-          {row(still, "Holding still", mag != null ? `${mag.toFixed(3)}G` : "")}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 9, marginTop: 30 }}>
+          <View style={{
+            width: 7, height: 7, borderRadius: 4,
+            backgroundColor: flat && still ? "#4DFF99" : "rgba(247,247,244,0.28)",
+          }} />
+          <Text style={{ fontFamily: FF.body, fontSize: 13.5, color: "rgba(247,247,244,0.62)" }}>
+            {status}
+          </Text>
         </View>
 
         <TouchableOpacity
