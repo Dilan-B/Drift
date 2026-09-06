@@ -77,6 +77,7 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
   const [result,  setResult]  = useState(null);
   const [surface, setSurface] = useState(false);   // ghost is on a surface right now
   const [placed,  setPlaced]  = useState(false);
+  const [sensed,  setSensed]  = useState(false);   // face down AND still
   const [busy,    setBusy]    = useState(false);
 
   const arRef      = useRef(null);
@@ -133,6 +134,42 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
     });
     return () => sub.remove();
   }, []);
+
+  /**
+   * Between placing the box and the session starting, the sensors already know
+   * when the phone has gone in: face down and completely still. Asking the user
+   * to confirm that by tapping a button is asking them to tell us something we
+   * can see — and it means the last thing they do before "putting the phone
+   * away" is pick it up again.
+   */
+  const watchForEntry = useCallback(async () => {
+    unsubRef.current?.();
+    unsubRef.current = Lockbox.onStateChange(({ state, faceDown }) => {
+      const inBox = state === "settled" && !!faceDown;
+      setSensed(inBox);
+      if (inBox && phaseRef.current === "place") autoStart();
+    });
+    try { await Lockbox.startMonitoring(); } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** The phone is in. Tear down AR and begin for real. */
+  const autoStart = useCallback(async () => {
+    callAR(arRef.current, "pauseSession");
+    unsubRef.current?.();
+    setBusy(true);
+    try {
+      const sess = await Lockbox.startSession({ minutes, task });
+      setSession(sess);
+      setPhase("active");
+      onStarted?.(sess);
+      notify(true);
+      await startMonitoring();
+    } catch (e) {
+      Alert.alert("Couldn't start", e?.message || "Try again.");
+    } finally { setBusy(false); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minutes, task]);
 
   const startMonitoring = useCallback(async () => {
     unsubRef.current?.();
@@ -229,11 +266,6 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
     } finally { setBusy(false); }
   };
 
-  const confirmPlaced = async () => {
-    callAR(arRef.current, "pauseSession");   // stop the camera before the long part
-    await beginSettle();
-  };
-
   const cancel = () => {
     Alert.alert(
       "End this session?",
@@ -258,7 +290,7 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
           style={StyleSheet.absoluteFill}
           boxSize={0.22}
           onSurfaceFound={({ nativeEvent }) => setSurface(!!nativeEvent?.found)}
-          onPlaced={() => { notify(true); setPlaced(true); }}
+          onPlaced={() => { notify(true); setPlaced(true); watchForEntry(); }}
           onARError={({ nativeEvent }) => {
             // Do NOT start a session here. Saying "I can't see the room" and
             // then dropping the user into a Lockbox session implies a box was
@@ -283,7 +315,9 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
             textAlign: "center", marginBottom: 16,
           }}>
             {placed
-              ? "Now set your phone inside it, face down."
+              ? (sensed
+                  ? "Got it — starting…"
+                  : "Now set your phone inside, face down. It starts on its own.")
               : surface
                 ? "Move it where you want, then drop it."
                 : "Move your phone slowly to find a flat surface."}
@@ -312,15 +346,20 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
             </>
           ) : (
             <>
+              {/* Fallback only. The sensors normally start this themselves;
+                  this exists for a phone that will not sit flat, or a user who
+                  would rather not wait for the settle to latch. */}
               <TouchableOpacity
-                onPress={confirmPlaced}
+                onPress={autoStart}
+                disabled={busy}
                 style={{
                   backgroundColor: earn.green, borderRadius: 14,
                   paddingVertical: 15, alignItems: "center", marginBottom: 10,
+                  opacity: busy ? 0.5 : 1,
                 }}
               >
                 <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: "#fff" }}>
-                  My phone's in — start
+                  {busy ? "Starting…" : "Start now"}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity

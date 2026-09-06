@@ -170,14 +170,19 @@ class LockboxARView: UIView, ARSCNViewDelegate {
     let t: CGFloat = 0.004   // wall thickness
     let a: CGFloat = preview ? 0.45 : 1.0   // alpha multiplier
 
+    // Emission, not diffuse, is what carries in daylight: a diffuse-only
+    // material just reflects the room, so outdoors or under a window the box
+    // washed out to nothing. These emit their own light and stay readable.
     let glass = SCNMaterial()
-    glass.diffuse.contents = UIColor(red: 0.24, green: 0.42, blue: 0.31, alpha: 0.35 * a)
-    glass.emission.contents = UIColor(red: 0.18, green: 0.42, blue: 0.29, alpha: 0.12 * a)
+    glass.diffuse.contents = UIColor(red: 0.30, green: 0.88, blue: 0.48, alpha: 0.45 * a)
+    glass.emission.contents = UIColor(red: 0.22, green: 0.85, blue: 0.44, alpha: 0.55 * a)
     glass.isDoubleSided = true
-    glass.lightingModel = .physicallyBased
+    glass.lightingModel = .constant   // ignore scene lighting entirely
 
     let floorMat = SCNMaterial()
-    floorMat.diffuse.contents = UIColor(red: 0.24, green: 0.42, blue: 0.31, alpha: 0.22 * a)
+    floorMat.diffuse.contents = UIColor(red: 0.26, green: 0.80, blue: 0.44, alpha: 0.32 * a)
+    floorMat.emission.contents = UIColor(red: 0.20, green: 0.78, blue: 0.40, alpha: 0.34 * a)
+    floorMat.lightingModel = .constant
     floorMat.isDoubleSided = true
 
     let floor = SCNBox(width: side, height: t, length: side, chamferRadius: 0.002)
@@ -201,10 +206,13 @@ class LockboxARView: UIView, ARSCNViewDelegate {
     }
 
     // A brighter rim so the opening reads clearly against a busy carpet or desk.
-    let rim = SCNBox(width: side, height: 0.0025, length: side, chamferRadius: 0.001)
+    let rim = SCNBox(width: side, height: 0.005, length: side, chamferRadius: 0.001)
     let rimMat = SCNMaterial()
-    rimMat.diffuse.contents = UIColor(red: 0.42, green: 0.72, blue: 0.53, alpha: 0.9 * a)
-    rimMat.emission.contents = UIColor(red: 0.42, green: 0.72, blue: 0.53, alpha: 0.35 * a)
+    // The rim is the outline you actually track with your eye, so it is the
+    // brightest thing here and fully emissive.
+    rimMat.diffuse.contents = UIColor(red: 0.45, green: 1.00, blue: 0.60, alpha: 1.0 * a)
+    rimMat.emission.contents = UIColor(red: 0.45, green: 1.00, blue: 0.60, alpha: 1.0 * a)
+    rimMat.lightingModel = .constant
     rim.materials = [rimMat]
     let rimNode = SCNNode(geometry: rim)
     rimNode.position = SCNVector3(0, Float(wallH), 0)

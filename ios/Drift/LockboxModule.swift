@@ -43,9 +43,16 @@ class LockboxModule: RCTEventEmitter {
   private let disturbSamples = 3
   private let settleSamples  = 20
 
+  /// Gravity's z component above which the phone is lying screen-down. The
+  /// device z-axis points out of the screen, so gravity reads about +1 when the
+  /// phone is face down and about -1 face up. 0.8 allows for a box floor that
+  /// isn't perfectly level without ever confusing the two.
+  private let faceDownThreshold: Double = 0.8
+
   private var disturbStreak = 0
   private var settleStreak  = 0
   private var isDisturbed   = false
+  private var isFaceDown    = false
   private var monitoring    = false
   private var hasListeners  = false
 
@@ -85,6 +92,7 @@ class LockboxModule: RCTEventEmitter {
 
     disturbStreak = 0
     settleStreak  = 0
+    isFaceDown = false
     // Assume the phone is NOT yet settled. The first second of stillness has to
     // be earned, so "in the box" is something the sensors confirmed rather than
     // something we assumed because the user tapped a button.
@@ -137,6 +145,16 @@ class LockboxModule: RCTEventEmitter {
   private func handle(sample: CMDeviceMotion) {
     let mag = magnitude(of: sample.userAcceleration)
 
+    // Orientation is what tells us the phone is IN the box rather than merely
+    // sitting still next to it — a phone face up on the desk is also perfectly
+    // still. Emitted on transition so JS can start a session without the user
+    // having to confirm what the sensors already know.
+    let faceDownNow = sample.gravity.z > faceDownThreshold
+    if faceDownNow != isFaceDown {
+      isFaceDown = faceDownNow
+      emit(state: isDisturbed ? "disturbed" : "settled", magnitude: mag)
+    }
+
     if mag > threshold {
       disturbStreak += 1
       settleStreak = 0
@@ -156,11 +174,13 @@ class LockboxModule: RCTEventEmitter {
 
   private func emit(state: String, magnitude: Double) {
     guard hasListeners else { return }
+    let faceDown = isFaceDown
     // The bridge is not thread-safe from an arbitrary OperationQueue.
     DispatchQueue.main.async {
       self.sendEvent(withName: "LockboxState", body: [
         "state": state,
         "magnitude": magnitude,
+        "faceDown": faceDown,
         "at": Date().timeIntervalSince1970 * 1000,
       ])
     }
