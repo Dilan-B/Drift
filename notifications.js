@@ -176,6 +176,65 @@ export async function notifySleepGuardResult({ status, rewardMinutes, firstMovem
   }
 }
 
+/**
+ * The user left Drift while a Lockbox session was running.
+ *
+ * iOS gives an app no way to prevent the home swipe — Guided Access is the only
+ * mechanism that does, and only a person can turn it on, never an app. So this
+ * is the honest substitute: leaving is caught the instant it happens, and the
+ * countdown follows them out of the app instead of being invisible on a screen
+ * they walked away from.
+ */
+export async function notifyLockboxBreach(graceSeconds) {
+  await fireImmediate(
+    "drift-lockbox-breach",
+    "Put your phone back in the box",
+    `You have about ${Math.max(1, Math.round(graceSeconds))} seconds before this session is lost.`,
+  );
+}
+
+export async function notifyLockboxLost() {
+  await fireImmediate(
+    "drift-lockbox-lost",
+    "Lockbox session lost",
+    "Your phone left the box for too long, so this one earned nothing.",
+  );
+}
+
+/**
+ * Arm the deadline so it lands on time even if Drift is suspended.
+ *
+ * A breach that happens because the user swiped out is exactly the case where
+ * the app cannot tick a countdown — iOS has frozen it. Scheduling the loss up
+ * front means the moment passes when it actually passes, rather than whenever
+ * they next happen to open Drift. Cancelled if they put the phone back.
+ */
+export async function scheduleLockboxLoss(seconds) {
+  if (!(await ensureGranted())) return;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: "drift-lockbox-lost",
+      content: {
+        title: "Lockbox session lost",
+        body: "Your phone left the box for too long, so this one earned nothing.",
+      },
+      trigger: { seconds: Math.max(1, Math.round(seconds)), repeats: false },
+    });
+  } catch {}
+}
+
+export async function cancelLockboxLoss() {
+  try { await Notifications.cancelScheduledNotificationAsync("drift-lockbox-lost"); } catch {}
+}
+
+export async function notifyLockboxDone(rewardMinutes) {
+  await fireImmediate(
+    "drift-lockbox-done",
+    "Session complete",
+    `Your phone stayed in the box. +${Math.max(1, Math.round(rewardMinutes || 0))} minutes earned.`,
+  );
+}
+
 export async function resetTimeNotices() {
   outLatched = false;
   lowLatched = false;

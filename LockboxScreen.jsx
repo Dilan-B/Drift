@@ -33,6 +33,10 @@ import { FF, getTheme } from "./theme";
 import { CloseIcon, CheckIcon, LockIcon } from "./Icons";
 import { selectionTick, notify } from "./haptics";
 import * as Lockbox from "./lockbox";
+import {
+  notifyLockboxBreach, notifyLockboxLost, notifyLockboxDone,
+  scheduleLockboxLoss, cancelLockboxLoss,
+} from "./notifications";
 
 const DURATIONS = [15, 25, 45, 60, 90];
 
@@ -122,7 +126,15 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
   useEffect(() => {
     if (!["active", "breach"].includes(phase)) return;
     const sub = AppState.addEventListener("change", (st) => {
-      if (st !== "active" && phaseRef.current === "active") markDisturbed();
+      if (st === "active") return;
+      // iOS will not let an app block the home swipe, so the next best thing is
+      // that leaving costs exactly what taking the phone out costs — caught the
+      // moment it happens, with the countdown following them out of the app
+      // rather than ticking away on a screen they can no longer see.
+      if (["active", "locking"].includes(phaseRef.current)) {
+        markDisturbed();
+        notifyLockboxBreach(Lockbox.GRACE_SECONDS).catch(() => {});
+      }
     });
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -213,6 +225,9 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
     setSession(next);
     setPhase("breach");
     notify(false);
+    // Armed up front: if this breach is "they swiped out", iOS has frozen us
+    // and no timer of ours will fire. The deadline has to be the system's.
+    scheduleLockboxLoss(Lockbox.GRACE_SECONDS).catch(() => {});
   }, []);
 
   const markSettled = useCallback(async () => {
@@ -228,6 +243,7 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
     setGrace(null);
     setPhase("active");
     notify(true);
+    cancelLockboxLoss().catch(() => {});
   }, []);
 
   // One ticker drives the session countdown, the grace countdown, and both
@@ -262,6 +278,18 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
     setPhase("done");
     setGrace(null);
     notify(status === "completed");
+    // Both outcomes can now land while Drift is in the background, so the
+    // result has to reach the user somewhere other than this screen.
+    if (status === "completed") {
+      cancelLockboxLoss().catch(() => {});
+      notifyLockboxDone(rec?.rewardMinutes).catch(() => {});
+    } else if (status === "forfeited") {
+      // The scheduled one may already have fired; same identifier, so this
+      // replaces rather than duplicates.
+      notifyLockboxLost().catch(() => {});
+    } else {
+      cancelLockboxLoss().catch(() => {});
+    }
     onEnded?.(rec);
     if (status === "completed") onCompleted?.(rec);
     // eslint-disable-next-line react-hooks/exhaustive-deps
