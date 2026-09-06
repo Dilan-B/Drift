@@ -75,7 +75,8 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
   const [left,    setLeft]    = useState(0);
   const [grace,   setGrace]   = useState(null);
   const [result,  setResult]  = useState(null);
-  const [surface, setSurface] = useState(false);
+  const [surface, setSurface] = useState(false);   // ghost is on a surface right now
+  const [placed,  setPlaced]  = useState(false);
   const [busy,    setBusy]    = useState(false);
 
   const arRef      = useRef(null);
@@ -256,11 +257,24 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
           ref={arRef}
           style={StyleSheet.absoluteFill}
           boxSize={0.22}
-          onSurfaceFound={() => setSurface(true)}
-          onPlaced={() => { notify(true); setSurface(true); }}
-          onARError={async ({ nativeEvent }) => {
-            Alert.alert("Camera couldn't map the room", nativeEvent?.message || "Setting the phone down works too.");
-            await beginSettle();
+          onSurfaceFound={({ nativeEvent }) => setSurface(!!nativeEvent?.found)}
+          onPlaced={() => { notify(true); setPlaced(true); }}
+          onARError={({ nativeEvent }) => {
+            // Do NOT start a session here. Saying "I can't see the room" and
+            // then dropping the user into a Lockbox session implies a box was
+            // placed when none was — the one thing this screen must not lie
+            // about. Offer the two honest options and let them choose.
+            setSurface(false);
+            setPlaced(false);
+            Alert.alert(
+              "Couldn't map the room",
+              `${nativeEvent?.message || "The camera couldn't find a surface."}\n\nYou can try again, or run the session without the box — it works the same either way.`,
+              [
+                { text: "Try again", onPress: () => callAR(arRef.current, "reset") },
+                { text: "Without the box", onPress: () => { beginSettle(); } },
+                { text: "Back", style: "cancel", onPress: () => setPhase("setup") },
+              ],
+            );
           }}
         />
         <View style={{ position: "absolute", left: 0, right: 0, bottom: 44, paddingHorizontal: 28 }}>
@@ -268,24 +282,57 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
             fontFamily: FF.body, fontSize: 14, color: "rgba(255,255,255,0.9)",
             textAlign: "center", marginBottom: 16,
           }}>
-            {surface
-              ? "Aim at the spot you want, then place the box."
-              : "Move your phone slowly to find a flat surface."}
+            {placed
+              ? "Now set your phone inside it, face down."
+              : surface
+                ? "Move it where you want, then drop it."
+                : "Move your phone slowly to find a flat surface."}
           </Text>
-          <TouchableOpacity
-            onPress={() => callAR(arRef.current, "place")}
-            style={{
-              backgroundColor: earn.green, borderRadius: 14,
-              paddingVertical: 15, alignItems: "center", marginBottom: 10,
-            }}
-          >
-            <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: "#fff" }}>Place the box</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={confirmPlaced} style={{ paddingVertical: 12, alignItems: "center" }}>
-            <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: "rgba(255,255,255,0.75)" }}>
-              Done — my phone's going in
-            </Text>
-          </TouchableOpacity>
+
+          {!placed ? (
+            <>
+              <TouchableOpacity
+                onPress={() => { selectionTick(); callAR(arRef.current, "place"); }}
+                disabled={!surface}
+                style={{
+                  backgroundColor: earn.green, borderRadius: 14,
+                  paddingVertical: 15, alignItems: "center", marginBottom: 10,
+                  opacity: surface ? 1 : 0.4,
+                }}
+              >
+                <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: "#fff" }}>
+                  Drop the box here
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={beginSettle} style={{ paddingVertical: 12, alignItems: "center" }}>
+                <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: "rgba(255,255,255,0.6)" }}>
+                  Skip the box
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity
+                onPress={confirmPlaced}
+                style={{
+                  backgroundColor: earn.green, borderRadius: 14,
+                  paddingVertical: 15, alignItems: "center", marginBottom: 10,
+                }}
+              >
+                <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: "#fff" }}>
+                  My phone's in — start
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { setPlaced(false); setSurface(false); callAR(arRef.current, "reset"); }}
+                style={{ paddingVertical: 12, alignItems: "center" }}
+              >
+                <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: "rgba(255,255,255,0.6)" }}>
+                  Move it somewhere else
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     );
