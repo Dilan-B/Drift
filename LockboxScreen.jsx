@@ -78,6 +78,7 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
   const [surface, setSurface] = useState(false);   // ghost is on a surface right now
   const [placed,  setPlaced]  = useState(false);
   const [sensed,  setSensed]  = useState(false);   // face down AND still
+  const [live,    setLive]    = useState(null);    // raw sensor read, for the waiting screen
   const [busy,    setBusy]    = useState(false);
 
   const arRef      = useRef(null);
@@ -109,8 +110,8 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
 
   // Screen stays awake from the moment enforcement starts.
   useEffect(() => {
-    const live = ["settle", "active", "breach"].includes(phase);
-    if (live) activateKeepAwakeAsync().catch(() => {});
+    const needsAwake = ["waiting", "settle", "active", "breach"].includes(phase);
+    if (needsAwake) activateKeepAwakeAsync().catch(() => {});
     else deactivateKeepAwake();
     return () => deactivateKeepAwake();
   }, [phase]);
@@ -129,7 +130,7 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
   // Android hardware back — refuse to drop out of a live session by accident.
   useEffect(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (["active", "breach", "settle"].includes(phaseRef.current)) return true;
+      if (["active", "breach", "settle", "waiting"].includes(phaseRef.current)) return true;
       return false;
     });
     return () => sub.remove();
@@ -147,11 +148,26 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
     unsubRef.current = Lockbox.onStateChange(({ state, faceDown }) => {
       const inBox = state === "settled" && !!faceDown;
       setSensed(inBox);
-      if (inBox && phaseRef.current === "place") autoStart();
+      if (inBox && ["place", "waiting"].includes(phaseRef.current)) autoStart();
     });
     try { await Lockbox.startMonitoring(); } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // While waiting for the phone to go in, poll the raw sensor state. The
+  // events alone are transition-only, so a screen driven by them shows nothing
+  // at all until something changes — which is indistinguishable from broken.
+  useEffect(() => {
+    if (phase !== "waiting") return;
+    let alive = true;
+    const poll = async () => {
+      const r = await Lockbox.currentMagnitude();
+      if (alive) setLive(r);
+    };
+    poll();
+    const id = setInterval(poll, 300);
+    return () => { alive = false; clearInterval(id); };
+  }, [phase]);
 
   /** The phone is in. Tear down AR and begin for real. */
   const autoStart = useCallback(async () => {
@@ -290,7 +306,17 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
           style={StyleSheet.absoluteFill}
           boxSize={0.22}
           onSurfaceFound={({ nativeEvent }) => setSurface(!!nativeEvent?.found)}
-          onPlaced={() => { notify(true); setPlaced(true); watchForEntry(); }}
+          onPlaced={() => {
+            notify(true);
+            setPlaced(true);
+            // Stop ARKit NOW. The box is anchored and nothing further needs the
+            // camera — leaving it running only means it loses tracking against
+            // the inside of a box and Apple's coaching overlay slides back over
+            // the screen, which reads as "it isn't working".
+            callAR(arRef.current, "pauseSession");
+            setPhase("waiting");
+            watchForEntry();
+          }}
           onARError={({ nativeEvent }) => {
             // Do NOT start a session here. Saying "I can't see the room" and
             // then dropping the user into a Lockbox session implies a box was
@@ -373,6 +399,65 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
             </>
           )}
         </View>
+      </View>
+    );
+  }
+
+  if (phase === "waiting") {
+    const faceDown = !!live?.faceDown;
+    const still    = !!live?.settled;
+    const mag      = typeof live?.magnitude === "number" ? live.magnitude : null;
+    const row = (ok, label, detail) => (
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 7 }}>
+        <View style={{
+          width: 18, height: 18, borderRadius: 9,
+          backgroundColor: ok ? "#4DFF99" : "rgba(247,247,244,0.14)",
+          alignItems: "center", justifyContent: "center",
+        }}>
+          {ok && <CheckIcon size={11} color="#0B1A11" />}
+        </View>
+        <Text style={{ fontFamily: FF.body, fontSize: 14, color: ok ? "#F7F7F4" : onNight }}>
+          {label}
+        </Text>
+        {!!detail && (
+          <Text style={{ fontFamily: FF.body, fontSize: 11.5, color: "rgba(247,247,244,0.38)" }}>
+            {detail}
+          </Text>
+        )}
+      </View>
+    );
+
+    return (
+      <View style={[s.night, { backgroundColor: night }]}>
+        <StatusBar barStyle="light-content" />
+        <Text style={[s.bigSerif, { color: "#F7F7F4" }]}>Put your phone{"\n"}in the box</Text>
+        <Text style={[s.sub, { color: onNight }]}>
+          Face down. It starts on its own — no need to tap anything.
+        </Text>
+
+        {/* Both conditions, live. If it isn't starting, this says which half is
+            missing rather than leaving the user staring at a still screen. */}
+        <View style={{ marginTop: 30, alignSelf: "stretch", paddingHorizontal: 6 }}>
+          {row(faceDown, "Face down", live ? `gravity ${live.gravityZ?.toFixed?.(2) ?? "—"}` : "")}
+          {row(still, "Holding still", mag != null ? `${mag.toFixed(3)}G` : "")}
+        </View>
+
+        <TouchableOpacity
+          onPress={autoStart}
+          disabled={busy}
+          style={{
+            marginTop: 30, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 26,
+            borderWidth: 1, borderColor: "rgba(247,247,244,0.22)", opacity: busy ? 0.5 : 1,
+          }}
+        >
+          <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: "rgba(247,247,244,0.85)" }}>
+            {busy ? "Starting…" : "Start anyway"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => { unsubRef.current?.(); Lockbox.stopMonitoring(); setPhase("setup"); }} style={{ marginTop: 16 }}>
+          <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: "rgba(247,247,244,0.45)" }}>Cancel</Text>
+        </TouchableOpacity>
       </View>
     );
   }

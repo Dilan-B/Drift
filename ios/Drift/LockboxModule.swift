@@ -127,14 +127,29 @@ class LockboxModule: RCTEventEmitter {
 
   /// Current reading without subscribing — used to render a live "hold still"
   /// meter during placement.
+  /// Everything the waiting screen needs to show the user WHY it is or isn't
+  /// starting. Debounced state (`settled`, `faceDown`) comes from the streak
+  /// logic; the raw numbers are there so a failure is diagnosable instead of
+  /// just "it didn't work".
   @objc(currentMagnitude:rejecter:)
   func currentMagnitude(_ resolve: RCTPromiseResolveBlock,
                         rejecter reject: RCTPromiseRejectBlock) {
     guard let d = motion.deviceMotion else {
-      resolve(["magnitude": NSNull(), "monitoring": monitoring])
+      resolve([
+        "magnitude": NSNull(), "gravityZ": NSNull(),
+        "faceDown": false, "settled": false,
+        "monitoring": monitoring, "threshold": threshold,
+      ])
       return
     }
-    resolve(["magnitude": magnitude(of: d.userAcceleration), "monitoring": monitoring])
+    resolve([
+      "magnitude": magnitude(of: d.userAcceleration),
+      "gravityZ": d.gravity.z,
+      "faceDown": isFaceDown,
+      "settled": !isDisturbed,
+      "monitoring": monitoring,
+      "threshold": threshold,
+    ])
   }
 
   // ── Sample handling ─────────────────────────────────────────
