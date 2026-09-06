@@ -16,13 +16,18 @@
  *   enforcement. Anyone reading this expecting the camera to be watching should
  *   stop here.
  *
- * WHY THE SCREEN STAYS ON
+ * WHY THE SCREEN STAYS ON, AND WHY THE PHONE GOES IN SCREEN UP
  *   Live detection needs the app running, and iOS freezes Drift the moment the
  *   screen locks — neither background mode the app declares (fetch, processing)
  *   permits continuous accelerometer updates. So the session screen holds
  *   expo-keep-awake for its whole duration, exactly as Drift In does. The cost
  *   is battery; the benefit is that the countdown appears the instant the phone
  *   moves rather than whenever the user next happens to open Drift.
+ *
+ *   Since the screen is on regardless, the phone lies FACE UP in the box and
+ *   the countdown is readable without touching it. Which is also why entry is
+ *   detected as "flat" rather than "face down" — orientation is there to tell
+ *   lying-on-something from held-in-a-hand, not to demand a posture.
  *
  * WHAT IT DOESN'T CLAIM
  *   Nothing here can physically stop someone walking off with their phone. iOS

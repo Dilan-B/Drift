@@ -43,16 +43,22 @@ class LockboxModule: RCTEventEmitter {
   private let disturbSamples = 3
   private let settleSamples  = 20
 
-  /// Gravity's z component above which the phone is lying screen-down. The
-  /// device z-axis points out of the screen, so gravity reads about +1 when the
-  /// phone is face down and about -1 face up. 0.8 allows for a box floor that
-  /// isn't perfectly level without ever confusing the two.
-  private let faceDownThreshold: Double = 0.8
+  /// |gravity.z| above which the phone is lying FLAT on a surface. The device
+  /// z-axis points out of the screen, so gravity reads about -1 screen-up and
+  /// about +1 screen-down; either way the magnitude is near 1, while a phone
+  /// held or pocketed is not. 0.8 allows for a box floor that isn't level.
+  ///
+  /// Flat rather than face-down specifically: the phone goes in screen UP so
+  /// the countdown is readable, which is the whole reason the screen is kept
+  /// awake. Orientation is here to tell "lying on something" from "in a hand",
+  /// not to insist on a posture.
+  private let flatThreshold: Double = 0.8
 
   private var disturbStreak = 0
   private var settleStreak  = 0
   private var isDisturbed   = false
-  private var isFaceDown    = false
+  private var isFlat        = false
+  private var isFaceUp      = false
   private var monitoring    = false
   private var hasListeners  = false
 
@@ -92,7 +98,8 @@ class LockboxModule: RCTEventEmitter {
 
     disturbStreak = 0
     settleStreak  = 0
-    isFaceDown = false
+    isFlat = false
+    isFaceUp = false
     // Assume the phone is NOT yet settled. The first second of stillness has to
     // be earned, so "in the box" is something the sensors confirmed rather than
     // something we assumed because the user tapped a button.
@@ -128,7 +135,7 @@ class LockboxModule: RCTEventEmitter {
   /// Current reading without subscribing — used to render a live "hold still"
   /// meter during placement.
   /// Everything the waiting screen needs to show the user WHY it is or isn't
-  /// starting. Debounced state (`settled`, `faceDown`) comes from the streak
+  /// starting. Debounced state (`settled`, `flat`) comes from the streak
   /// logic; the raw numbers are there so a failure is diagnosable instead of
   /// just "it didn't work".
   @objc(currentMagnitude:rejecter:)
@@ -137,7 +144,7 @@ class LockboxModule: RCTEventEmitter {
     guard let d = motion.deviceMotion else {
       resolve([
         "magnitude": NSNull(), "gravityZ": NSNull(),
-        "faceDown": false, "settled": false,
+        "flat": false, "faceUp": false, "settled": false,
         "monitoring": monitoring, "threshold": threshold,
       ])
       return
@@ -145,7 +152,8 @@ class LockboxModule: RCTEventEmitter {
     resolve([
       "magnitude": magnitude(of: d.userAcceleration),
       "gravityZ": d.gravity.z,
-      "faceDown": isFaceDown,
+      "flat": isFlat,
+      "faceUp": isFaceUp,
       "settled": !isDisturbed,
       "monitoring": monitoring,
       "threshold": threshold,
@@ -164,9 +172,11 @@ class LockboxModule: RCTEventEmitter {
     // sitting still next to it — a phone face up on the desk is also perfectly
     // still. Emitted on transition so JS can start a session without the user
     // having to confirm what the sensors already know.
-    let faceDownNow = sample.gravity.z > faceDownThreshold
-    if faceDownNow != isFaceDown {
-      isFaceDown = faceDownNow
+    let flatNow = abs(sample.gravity.z) > flatThreshold
+    let faceUpNow = sample.gravity.z < -flatThreshold
+    if flatNow != isFlat || faceUpNow != isFaceUp {
+      isFlat = flatNow
+      isFaceUp = faceUpNow
       emit(state: isDisturbed ? "disturbed" : "settled", magnitude: mag)
     }
 
@@ -189,13 +199,14 @@ class LockboxModule: RCTEventEmitter {
 
   private func emit(state: String, magnitude: Double) {
     guard hasListeners else { return }
-    let faceDown = isFaceDown
+    let flat = isFlat, faceUp = isFaceUp
     // The bridge is not thread-safe from an arbitrary OperationQueue.
     DispatchQueue.main.async {
       self.sendEvent(withName: "LockboxState", body: [
         "state": state,
         "magnitude": magnitude,
-        "faceDown": faceDown,
+        "flat": flat,
+        "faceUp": faceUp,
         "at": Date().timeIntervalSince1970 * 1000,
       ])
     }

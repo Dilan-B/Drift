@@ -138,15 +138,18 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
 
   /**
    * Between placing the box and the session starting, the sensors already know
-   * when the phone has gone in: face down and completely still. Asking the user
-   * to confirm that by tapping a button is asking them to tell us something we
-   * can see — and it means the last thing they do before "putting the phone
-   * away" is pick it up again.
+   * when the phone has gone in: lying flat and completely still. Asking the
+   * user to confirm that by tapping a button is asking them to tell us
+   * something we can see — and it means the last thing they do before "putting
+   * the phone away" is pick it up again.
+   *
+   * Flat, not face down: the phone goes in screen UP so the countdown is
+   * readable from the box, which is the point of keeping the screen awake.
    */
   const watchForEntry = useCallback(async () => {
     unsubRef.current?.();
-    unsubRef.current = Lockbox.onStateChange(({ state, faceDown }) => {
-      const inBox = state === "settled" && !!faceDown;
+    unsubRef.current = Lockbox.onStateChange(({ state, flat }) => {
+      const inBox = state === "settled" && !!flat;
       setSensed(inBox);
       if (inBox && ["place", "waiting"].includes(phaseRef.current)) autoStart();
     });
@@ -343,7 +346,7 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
             {placed
               ? (sensed
                   ? "Got it — starting…"
-                  : "Now set your phone inside, face down. It starts on its own.")
+                  : "Now set your phone inside, screen up. It starts on its own.")
               : surface
                 ? "Move it where you want, then drop it."
                 : "Move your phone slowly to find a flat surface."}
@@ -404,8 +407,8 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
   }
 
   if (phase === "waiting") {
-    const faceDown = !!live?.faceDown;
-    const still    = !!live?.settled;
+    const flat  = !!live?.flat;
+    const still = !!live?.settled;
     const mag      = typeof live?.magnitude === "number" ? live.magnitude : null;
     const row = (ok, label, detail) => (
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 7 }}>
@@ -432,13 +435,15 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
         <StatusBar barStyle="light-content" />
         <Text style={[s.bigSerif, { color: "#F7F7F4" }]}>Put your phone{"\n"}in the box</Text>
         <Text style={[s.sub, { color: onNight }]}>
-          Face down. It starts on its own — no need to tap anything.
+          Screen up, so you can see the time left. It starts on its own — no
+          need to tap anything.
         </Text>
 
         {/* Both conditions, live. If it isn't starting, this says which half is
             missing rather than leaving the user staring at a still screen. */}
         <View style={{ marginTop: 30, alignSelf: "stretch", paddingHorizontal: 6 }}>
-          {row(faceDown, "Face down", live ? `gravity ${live.gravityZ?.toFixed?.(2) ?? "—"}` : "")}
+          {row(flat, live?.faceUp ? "Lying flat, screen up" : "Lying flat",
+               live ? `gravity ${live.gravityZ?.toFixed?.(2) ?? "—"}` : "")}
           {row(still, "Holding still", mag != null ? `${mag.toFixed(3)}G` : "")}
         </View>
 
@@ -466,9 +471,9 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
     return (
       <View style={[s.night, { backgroundColor: night }]}>
         <StatusBar barStyle="light-content" />
-        <Text style={[s.bigSerif, { color: "#F7F7F4" }]}>Set your phone{"\n"}in the box</Text>
+        <Text style={[s.bigSerif, { color: "#F7F7F4" }]}>Set your phone{"\n"}down</Text>
         <Text style={[s.sub, { color: onNight }]}>
-          Face down. The session starts once it's completely still.
+          Screen up. The session starts once it's completely still.
         </Text>
         <ActivityIndicator color="#7FB58F" style={{ marginTop: 30 }} />
         <TouchableOpacity onPress={() => settle("cancelled")} style={{ marginTop: 44 }}>
