@@ -44,8 +44,19 @@ const KEY_SESSION = "drift_lockbox_session";
 const KEY_HISTORY = "drift_lockbox_history";
 const KEY_PREFS   = "drift_lockbox_prefs";
 
-/** Seconds the phone may be out of the box before the session is forfeited. */
-export const GRACE_SECONDS = 20;
+/**
+ * Seconds the phone may be out of the box before the session is forfeited.
+ *
+ * Long enough to put back something you picked up by reflex, short enough that
+ * it is not a usable window for "just checking one thing". Every display and
+ * both notifications read from this, so it is the only place to change it.
+ *
+ * At five seconds this is genuinely only a reflex window — worth knowing that
+ * a scheduled local notification is not precise to the second, so the "session
+ * lost" alert can land a beat after the countdown hits zero. The forfeit itself
+ * is wall-clock exact either way.
+ */
+export const GRACE_SECONDS = 5;
 
 /** Shortest session worth running. Below this the ceremony costs more than the focus. */
 export const MIN_MINUTES = 5;
