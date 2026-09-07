@@ -164,7 +164,11 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
     unsubRef.current = Lockbox.onStateChange(({ state, flat }) => {
       const inBox = state === "settled" && !!flat;
       setSensed(inBox);
-      if (inBox && ["place", "waiting"].includes(phaseRef.current)) autoStart();
+      // Through the ref, never the captured value. This listener is installed
+      // once, so calling autoStart directly would pin it to the render that
+      // installed it — which is why every session ran for the initial 25
+      // minutes no matter what the user picked.
+      if (inBox && ["place", "waiting"].includes(phaseRef.current)) autoStartRef.current?.();
     });
     try { await Lockbox.startMonitoring(); } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -185,7 +189,14 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
     return () => { alive = false; clearInterval(id); };
   }, [phase]);
 
-  /** The phone is in. Tear down AR and begin for real. */
+  /**
+   * The phone is in. Tear down AR and begin for real.
+   *
+   * Latched into a ref below, because the sensor listener that fires this is
+   * installed once and would otherwise hold the version of this function from
+   * the render that installed it — along with the duration selected at that
+   * moment, which was always the default.
+   */
   const autoStart = useCallback(async () => {
     callAR(arRef.current, "pauseSession");
     unsubRef.current?.();
@@ -201,6 +212,9 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
     } finally { setBusy(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [minutes, task]);
+
+  const autoStartRef = useRef(null);
+  useEffect(() => { autoStartRef.current = autoStart; }, [autoStart]);
 
   const startMonitoring = useCallback(async () => {
     unsubRef.current?.();
