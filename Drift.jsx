@@ -87,6 +87,7 @@ import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
 import ProfileScreen from "./ProfileScreen";
 import PaywallScreen from "./PaywallScreen";
+import RedeemCodeModal from "./RedeemCodeModal";
 import { useSubscription } from "./useSubscription";
 import ReviewPromptScreen from "./ReviewPromptScreen";
 import TutorialOverlay from "./TutorialOverlay";
@@ -3676,6 +3677,10 @@ export default function App() {
     refresh: subRefresh,
   } = useSubscription(userId);
   const proAccess = appMode === "child" || subProAccess;
+  // Owned here rather than inside ProfileScreen because the paywall branch
+  // below returns before ProfileScreen ever mounts, and the paywall is the
+  // only surface a cohort participant can reach.
+  const [redeemOnPaywall, setRedeemOnPaywall] = useState(false);
   const proAccessRef = useRef(false);
   // Tell the native Screen-Time extension what this user actually is. This was
   // pinned to `true` while the app was free for everyone, which left the shield
@@ -6228,17 +6233,30 @@ export default function App() {
     // guarantees this resolves within RESOLVE_TIMEOUT_MS.
     if (!subResolved) return <BootSplash />;
     return (
-      <PaywallScreen
-        dark={darkMode}
-        plan={paywallPlan}
-        // Parents open on Family, personal accounts on Pro. Children never get
-        // here — they render in ChildShell above, entitled through their parent.
-        accountType={appMode}
-        offerings={subOfferings}
-        onPurchase={subPurchase}
-        onRestore={subRestore}
-        onSignOut={signOut}
-      />
+      <>
+        <PaywallScreen
+          dark={darkMode}
+          plan={paywallPlan}
+          // Parents open on Family, personal accounts on Pro. Children never get
+          // here — they render in ChildShell above, entitled through their parent.
+          accountType={appMode}
+          offerings={subOfferings}
+          onPurchase={subPurchase}
+          onRestore={subRestore}
+          onSignOut={signOut}
+          onRedeemCode={() => setRedeemOnPaywall(true)}
+        />
+        <RedeemCodeModal
+          visible={redeemOnPaywall}
+          dark={darkMode}
+          onClose={() => setRedeemOnPaywall(false)}
+          // subRefresh re-reads both Pro sources. Without it the grant lands in
+          // the database and the user stays staring at the paywall, because
+          // proAccess is what decides this branch and nothing has told it to
+          // look again.
+          onRedeemed={subRefresh}
+        />
+      </>
     );
   }
 
@@ -6383,7 +6401,7 @@ export default function App() {
           onUpgrade={() => {}}
           onSignOut={signOut}
           onDeleteAccount={deleteAccount}
-          onProRedeemed={() => {}}
+          onProRedeemed={subRefresh}
         />
       ) : (
       <>

@@ -71,14 +71,23 @@ serve(async (req: Request) => {
 
       if (isPro === null) {
         // RPC missing or errored: read the columns directly rather than denying.
-        // A broken helper must never lock out paying users. Children aren't
-        // covered on this path, which is why it is only a fallback.
-        const profile = await supabase
-          .from("profiles").select("sub_active, sub_expires, beta_unlocked_at")
-          .eq("id", user.id).maybeSingle().then(r => r.data).catch(() => null);
+        // A broken helper must never lock out paying or granted users. Children
+        // aren't covered on this path, which is why it is only a fallback.
+        const [profile, override] = await Promise.all([
+          supabase.from("profiles").select("sub_active, sub_expires, beta_unlocked_at")
+            .eq("id", user.id).maybeSingle().then(r => r.data).catch(() => null),
+          // pro_overrides is where cohort and manual grants live (schema_v16).
+          // Reading only profiles here meant a JHU study participant failed
+          // CLOSED whenever is_pro() hiccuped — they have no subscription and
+          // no beta flag, so every column this path checks says "not paid".
+          supabase.from("pro_overrides").select("granted, expires_at")
+            .eq("user_id", user.id).maybeSingle().then(r => r.data).catch(() => null),
+        ]);
         const subOk = !!profile?.sub_active &&
           (!profile.sub_expires || new Date(profile.sub_expires) > new Date());
-        subActive = isDev || subOk || !!profile?.beta_unlocked_at;
+        const grantOk = !!override?.granted &&
+          (!override.expires_at || new Date(override.expires_at) > new Date());
+        subActive = isDev || subOk || grantOk || !!profile?.beta_unlocked_at;
       } else {
         subActive = isDev || isPro;
       }

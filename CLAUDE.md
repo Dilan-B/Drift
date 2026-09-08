@@ -5,7 +5,16 @@ Expo / React Native productivity app. You earn screen-time by completing tasks; 
 ## Stack
 - Expo SDK + React Native (JS/JSX, not TS). Entry: `App.js` → `Drift.jsx` (main shell, ~4k lines).
 - Supabase: auth, Postgres (RLS), Edge Functions (Deno/TS) in `supabase/functions/*`, admin SQL in `supabase/admin/*`.
-- Stripe subscriptions via edge functions. OpenAI calls are server-only (never in the client bundle).
+- Subscriptions are **RevenueCat / Apple IAP**, not Stripe. Stripe was removed in
+  `9c50526` (2026-06-18); only a vestigial `profiles.stripe_customer_id` remains.
+  The `revenuecat-webhook` edge function is the sole writer of
+  `profiles.sub_active` / `sub_expires`, which a trigger protects from everyone else.
+- Entitlement has ONE definition: `public.is_pro(uuid)` → `has_own_entitlement(uuid)`
+  (`supabase/admin/schema_v9_payments.sql`). It ORs a live subscription, a
+  `pro_overrides` grant (manual or redeemed cohort code), a beta unlock, and a
+  child's seat under a paying parent. Add new entitlement sources there, never by
+  hand-rolling the OR in an edge function — that is how they drifted apart before.
+- OpenAI calls are server-only (never in the client bundle).
 - iOS Screen Time (Family Controls / ManagedSettings) via native `screenTime.js` bridge — only works in a dev/standalone build, not Expo Go.
 
 ## Conventions

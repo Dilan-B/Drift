@@ -1,9 +1,13 @@
 /**
  * RedeemCodeModal.jsx
- * Enter a custom Pro code (handed out by the team) to unlock Pro for free.
- * Validation + granting happen server-side (redeem-code edge function); this
- * just collects the code, shows the result, and asks the parent to refresh the
- * Pro state on success.
+ * Enter a Pro or cohort code to unlock Drift for free. Cohort codes are issued
+ * to partner programmes (a research study, a school) and can grant permanent
+ * access; personal codes usually run for a fixed number of days.
+ *
+ * Validation and granting happen server-side (redeem-code edge function →
+ * public.redeem_cohort_code). This collects the code, reports what was granted,
+ * and asks the parent to refresh Pro state — that refresh is what dismisses the
+ * paywall, so it is not optional.
  */
 import React, { useState } from "react";
 import {
@@ -19,8 +23,20 @@ const REASON_MSG = {
   inactive: "That code is no longer active.",
   expired: "That code has expired.",
   used_up: "That code has been fully redeemed.",
+  rate_limit: "Too many attempts. Try again in a little while.",
+  email_not_verified: "Verify your email address first, then redeem.",
   failed: "Couldn't redeem right now. Try again.",
 };
+
+/** "permanent" or "until 6 Mar 2027" — what they actually got. */
+function grantedFor(expiresAt) {
+  if (!expiresAt) return "Your access doesn't expire.";
+  const d = new Date(expiresAt);
+  if (isNaN(d)) return "Your code unlocked Drift Pro.";
+  return `Unlocked until ${d.toLocaleDateString(undefined, {
+    day: "numeric", month: "short", year: "numeric",
+  })}.`;
+}
 
 export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = false }) {
   const { ink, paper, earn, fx } = getTheme(dark);
@@ -28,8 +44,12 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  const [granted, setGranted] = useState(null);   // { cohort, expiresAt }
 
-  const close = () => { setCode(""); setError(""); setDone(false); setBusy(false); onClose?.(); };
+  const close = () => {
+    setCode(""); setError(""); setDone(false); setBusy(false); setGranted(null);
+    onClose?.();
+  };
 
   const submit = async () => {
     const clean = code.trim().toUpperCase();
@@ -38,9 +58,12 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
     const res = await redeemProCode(clean);
     setBusy(false);
     if (res.success) {
+      setGranted({ cohort: res.cohort, expiresAt: res.expiresAt });
       setDone(true);
       onRedeemed?.();
-      setTimeout(close, 1300);
+      // Long enough to read what they were granted. The parent's refresh has
+      // already fired, so the paywall is coming down behind this either way.
+      setTimeout(close, 1900);
     } else {
       setError(REASON_MSG[res.reason] || REASON_MSG.failed);
     }
@@ -63,8 +86,16 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
                 You're Pro 🎉
               </Text>
               <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, textAlign: "center" }}>
-                Your code unlocked Drift Pro.
+                {grantedFor(granted?.expiresAt)}
               </Text>
+              {!!granted?.cohort && (
+                <Text style={{
+                  fontFamily: FF.kicker, fontSize: 9.5, color: earn.sage,
+                  letterSpacing: 2, marginTop: 14, textAlign: "center",
+                }}>
+                  {String(granted.cohort).toUpperCase()}
+                </Text>
+              )}
             </View>
           ) : (
             <View style={{ flex: 1 }}>
@@ -72,10 +103,11 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
                 HAVE A CODE?
               </Text>
               <Text style={{ fontFamily: FF.display, fontSize: 28, color: ink.deep, marginBottom: 8 }}>
-                Redeem free Pro
+                Redeem a code
               </Text>
               <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, marginBottom: 28, lineHeight: 20 }}>
-                Enter the code you were given to unlock Drift Pro.
+                Enter the code you were given by your programme or by the Drift
+                team to unlock Drift Pro.
               </Text>
 
               <TextInput

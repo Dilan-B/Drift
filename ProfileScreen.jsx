@@ -407,15 +407,19 @@ export default function ProfileScreen({
               onPress={onUpgrade}
             />
           )}
-          {!subActive && (
-            <Row
-              id="redeemCode"
-              title="Redeem a code"
-              sub="Have a Pro code? Unlock it here"
-              icon={(c) => <SparkleIcon size={20} color={c} />}
-              onPress={() => setRedeemOpen(true)}
-            />
-          )}
+          {/* Shown regardless of subActive. Gating it on !subActive made it
+              doubly unreachable: a non-Pro user never renders this screen at
+              all (Drift.jsx returns the paywall first), and a Pro user was
+              filtered out here — so nobody could ever see it. Someone on a
+              dated cohort grant has a real reason to come back and enter a
+              second code. */}
+          <Row
+            id="redeemCode"
+            title="Redeem a code"
+            sub="Have a Pro or cohort code? Unlock it here"
+            icon={(c) => <SparkleIcon size={20} color={c} />}
+            onPress={() => setRedeemOpen(true)}
+          />
           <Row
             id="shareInvite"
             title="Share & Invite"

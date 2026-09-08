@@ -86,7 +86,7 @@ const FEATURES = [
 ];
 
 export default function PaywallScreen({
-  onPurchase, onRestore, onSignOut, offerings, plan = null,
+  onPurchase, onRestore, onSignOut, onRedeemCode, offerings, plan = null,
   accountType = "personal", dark = false,
 }) {
   const [purchasing, setPurchasing] = useState(false);
@@ -566,6 +566,23 @@ export default function PaywallScreen({
                   Restore purchase
                 </Text>}
           </TouchableOpacity>
+
+          {/* Cohort codes. Deliberately quiet — this is for people arriving
+              from a partner programme who were given a code, not a discount to
+              go hunting for. It has to live here regardless: this screen is the
+              only thing a non-subscriber ever sees, so a study participant has
+              no other route to the place they redeem. */}
+          {!!onRedeemCode && (
+            <TouchableOpacity
+              onPress={onRedeemCode}
+              disabled={busy}
+              style={{ paddingVertical: 10, alignItems: "center", marginBottom: 6 }}
+            >
+              <Text style={{ fontFamily: FF.body, fontSize: 12.5, color: ink.faint }}>
+                Have a cohort code?
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Legal links — mandatory. */}
           <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6 }}>

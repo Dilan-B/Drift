@@ -350,10 +350,17 @@ export async function fetchAppStoreLatest(bundleId) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Helper: redeem a custom Pro code. Validated + granted server-side by the
-// `redeem-code` edge function (which writes pro_overrides with the service
-// role). Codes, limits and expiry live in the redeem_codes table — see
-// schema_v10_redeem_codes.sql. Returns { success, reason }.
+// Helper: redeem a Pro or cohort code. Validated + granted server-side by the
+// `redeem-code` edge function, which delegates the whole decision to
+// public.redeem_cohort_code() under a row lock. Codes, limits, expiry, cohort
+// and grant duration live in redeem_codes — see schema_v16_cohort_codes.sql.
+//
+// Returns { success, reason, cohort, expiresAt }. `expiresAt` is null for a
+// permanent grant, which is what study cohorts get.
+//
+// The rateLimited() wrapper here is UX only — it stops a user hammering the
+// button. The real limit is per-user and per-IP inside the edge function,
+// because anything client-side is one curl away from being skipped.
 // ─────────────────────────────────────────────────────────────
 export async function redeemProCode(code) {
   const clean = String(code || "").trim().toUpperCase();
@@ -364,7 +371,12 @@ export async function redeemProCode(code) {
     );
     if (error) return { success: false, reason: error.message || "failed" };
     if (data?.error) return { success: false, reason: data.error };
-    return { success: !!data?.success, reason: data?.reason || (data?.success ? "granted" : "failed") };
+    return {
+      success:   !!data?.success,
+      reason:    data?.reason || (data?.success ? "granted" : "failed"),
+      cohort:    data?.cohort ?? null,
+      expiresAt: data?.expiresAt ?? null,
+    };
   } catch (e) {
     return { success: false, reason: e?.message || "failed" };
   }

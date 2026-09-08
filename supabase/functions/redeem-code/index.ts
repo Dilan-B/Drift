@@ -1,12 +1,30 @@
-// Drift — Redeem Pro Code
-// Validates a custom redemption code and grants the caller free Pro by writing
-// to pro_overrides with the service role. Codes/limits/expiry live in
-// redeem_codes (service-role only). Each user can redeem a given code once.
+// Drift — Redeem Pro / Cohort Code
+// Validates a redemption code and grants the caller free Pro. Codes, limits,
+// expiry, cohort and grant duration live in redeem_codes (service-role only).
+// Each user can redeem a given code once.
 //
-// POST { code: string }  →  { success: true, reason: "granted" | "already_redeemed" }
-//                        →  { success: false, reason: "invalid" | "expired" | "used_up" | "inactive" }
+// POST { code: string }
+//   → { success: true,  reason: "granted" | "already_redeemed",
+//       cohort?: string, expiresAt?: string | null }
+//   → { success: false, reason: "invalid" | "expired" | "used_up" | "inactive" }
+//
+// SECURITY
+//  - The decision is made by public.redeem_cohort_code() (schema_v16), not
+//    here. That function takes a row lock, so two people racing for the last
+//    seat of a capped code cannot both win — which the previous TypeScript
+//    read-modify-write on `uses` allowed.
+//  - Email verification required. Without it a throwaway account can burn a
+//    cohort seat, and a 250-seat study code is worth burning.
+//  - Per-user and per-IP attempt limits. supabase.js wraps this call in
+//    rateLimited(), but that is client-side and trivially skipped.
+//  - redeem_cohort_code is revoked from anon/authenticated: it takes the uid
+//    as a parameter, so only the service role may call it, and only with a
+//    uid taken from a verified JWT.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const MAX_PER_USER_PER_HOUR = 10;
+const MAX_PER_IP_PER_HOUR   = 20;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +32,36 @@ const cors = {
 };
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
+
+function isEmailVerified(
+  user: { email_confirmed_at?: string | null; confirmed_at?: string | null } | null,
+): boolean {
+  return !!(user?.email_confirmed_at || user?.confirmed_at);
+}
+
+async function hashIp(ip: string): Promise<string> {
+  const salt = Deno.env.get("IP_HASH_SALT") || "drift-default-salt-change-me";
+  const data = new TextEncoder().encode(`${salt}::${ip.trim().toLowerCase()}`);
+  const buf  = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function extractIp(req: Request): string {
+  return (req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+          req.headers.get("x-real-ip")?.trim() || "0.0.0.0");
+}
+
+// The SQL function speaks in precise reasons; the client's copy map is keyed on
+// the older, coarser set. Translate here so RedeemCodeModal keeps working and
+// we do not leak "which of these four checks failed" to a code-guesser.
+const REASON: Record<string, string> = {
+  invalid_code:        "invalid",
+  code_inactive:       "inactive",
+  code_expired:        "expired",
+  code_exhausted:      "used_up",
+  code_grants_nothing: "inactive",
+  no_user:             "invalid",
+};
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -29,6 +77,7 @@ serve(async (req: Request) => {
     );
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) return json({ error: "Unauthorized" }, 401);
+    if (!isEmailVerified(user)) return json({ error: "email_not_verified" }, 403);
 
     let body: { code?: unknown };
     try { body = await req.json(); } catch { return json({ error: "Invalid body" }, 400); }
@@ -41,73 +90,64 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Look up the code.
-    const { data: row, error: codeErr } = await admin
-      .from("redeem_codes")
-      .select("code, grants_pro, max_uses, uses, expires_at, active")
-      .eq("code", code)
-      .maybeSingle();
-    if (codeErr) {
-      console.error("redeem-code lookup:", codeErr.message);
-      return json({ error: "lookup_failed" }, 500);
-    }
-    if (!row) return json({ success: false, reason: "invalid" });
-    if (!row.active) return json({ success: false, reason: "inactive" });
-    if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) {
-      return json({ success: false, reason: "expired" });
+    // ── Rate limit ──────────────────────────────────────────
+    const hourAgo = new Date(Date.now() - 3_600_000).toISOString();
+    const ipHash  = await hashIp(extractIp(req));
+
+    const [{ count: userTries }, { count: ipTries }] = await Promise.all([
+      admin.from("redeem_code_attempts")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id).gte("created_at", hourAgo),
+      admin.from("redeem_code_attempts")
+        .select("*", { count: "exact", head: true })
+        .eq("ip_hash", ipHash).gte("created_at", hourAgo),
+    ]);
+    if ((userTries ?? 0) >= MAX_PER_USER_PER_HOUR || (ipTries ?? 0) >= MAX_PER_IP_PER_HOUR) {
+      return json({ error: "rate_limit", message: "Too many attempts. Try again later." }, 429);
     }
 
-    // Already redeemed by this user? Treat as success (idempotent).
-    const { data: priorUse } = await admin
-      .from("redeem_code_uses")
-      .select("code")
-      .eq("code", code).eq("user_id", user.id)
-      .maybeSingle();
-    if (priorUse) {
-      // Make sure their Pro override is still in place, then return success.
-      await admin.from("pro_overrides").upsert(
-        { user_id: user.id, granted: true, note: `code:${code}` },
-        { onConflict: "user_id" },
-      );
-      return json({ success: true, reason: "already_redeemed" });
-    }
+    // ── Redeem ──────────────────────────────────────────────
+    // One call. Validation, the usage cap, the per-user lock, the counter and
+    // the grant all happen inside one transaction holding a row lock on the
+    // code. See schema_v16_cohort_codes.sql.
+    const { data: result, error: rpcErr } = await admin.rpc("redeem_cohort_code", {
+      p_uid:  user.id,
+      p_code: code,
+    });
 
-    // Enforce the usage cap (null = unlimited).
-    if (row.max_uses != null && row.uses >= row.max_uses) {
-      return json({ success: false, reason: "used_up" });
-    }
-
-    // Record this redemption first — the unique (code,user_id) PK prevents a
-    // double-grant on a racing retry.
-    const { error: useErr } = await admin
-      .from("redeem_code_uses")
-      .insert({ code, user_id: user.id });
-    if (useErr) {
-      // Unique violation → another request already redeemed for this user.
-      if (/duplicate|unique/i.test(useErr.message || "")) {
-        return json({ success: true, reason: "already_redeemed" });
-      }
-      console.error("redeem-code use insert:", useErr.message);
+    if (rpcErr) {
+      console.error("redeem-code rpc:", rpcErr.message);
+      // Not logged as an attempt: this is our failure, not theirs, and it
+      // should not eat into their hourly allowance.
       return json({ error: "redeem_failed" }, 500);
     }
 
-    // Increment the counter and grant Pro.
-    await admin.from("redeem_codes")
-      .update({ uses: (row.uses ?? 0) + 1 })
-      .eq("code", code);
+    const ok      = result?.ok === true;
+    const rawWhy  = String(result?.error ?? "");
+    // Redeeming twice is a success from the user's point of view — they hold
+    // the grant either way, and telling them "already redeemed" after a flaky
+    // network retry reads as a failure that isn't one.
+    const already = rawWhy === "already_redeemed";
 
-    if (row.grants_pro !== false) {
-      const { error: grantErr } = await admin.from("pro_overrides").upsert(
-        { user_id: user.id, granted: true, note: `code:${code}` },
-        { onConflict: "user_id" },
-      );
-      if (grantErr) {
-        console.error("redeem-code grant:", grantErr.message);
-        return json({ error: "grant_failed" }, 500);
-      }
+    await admin.from("redeem_code_attempts").insert({
+      user_id: user.id,
+      code,
+      success: ok || already,
+      ip_hash: ipHash,
+    });
+
+    if (already) return json({ success: true, reason: "already_redeemed" });
+
+    if (!ok) {
+      return json({ success: false, reason: REASON[rawWhy] || "invalid" });
     }
 
-    return json({ success: true, reason: "granted" });
+    return json({
+      success:   true,
+      reason:    "granted",
+      cohort:    result?.cohort ?? null,
+      expiresAt: result?.expires_at ?? null,
+    });
   } catch (err: any) {
     console.error("redeem-code:", err?.message || err);
     return json({ error: "Internal error" }, 500);
