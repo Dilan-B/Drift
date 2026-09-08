@@ -16,8 +16,9 @@
 --
 -- expires_at and grant_days answer different questions and are deliberately
 -- separate: expires_at is when the CODE stops being redeemable, grant_days is
--- how long the ACCESS it hands out lasts. A study code is typically open for a
--- recruitment window and grants forever.
+-- how long the ACCESS it hands out lasts, counted from each redemption. A study
+-- code is typically open for a recruitment window and grants a fixed span, so a
+-- participant joining on the last day still gets their full run.
 alter table public.redeem_codes
   add column if not exists cohort     text,
   add column if not exists grant_days int,          -- null = permanent grant

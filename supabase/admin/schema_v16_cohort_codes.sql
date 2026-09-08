@@ -3,8 +3,8 @@
 --
 -- Extends v10's redeem_codes so a code can belong to a NAMED COHORT (a research
 -- programme, a school, a partner) and grant access for a per-code duration —
--- including "never expires", which is what the Johns Hopkins digital-wellbeing
--- study needs for its teen participants.
+-- 50 days for the Johns Hopkins digital-wellbeing study, or null for a cohort
+-- whose access should never expire.
 --
 -- Three things v10 could not do:
 --   1. Say which cohort a redemption belongs to, so we can report participation
@@ -30,8 +30,9 @@
 --
 -- expires_at and grant_days answer different questions and are deliberately
 -- separate: expires_at is when the CODE stops being redeemable, grant_days is
--- how long the ACCESS it hands out lasts. A study code is typically open for a
--- recruitment window and grants forever.
+-- how long the ACCESS it hands out lasts, counted from each redemption. A study
+-- code is typically open for a recruitment window and grants a fixed span, so a
+-- participant joining on the last day still gets their full run.
 alter table public.redeem_codes
   add column if not exists cohort     text,
   add column if not exists grant_days int,          -- null = permanent grant
@@ -255,18 +256,29 @@ from public.redeem_codes;
 -- brute-forcing, and the edge function's rate limit is the only other thing in
 -- the way.
 --
--- The JHU study — 250 seats, permanent access, open for the recruitment window:
+-- The JHU study — 250 seats, 50 days of access from the moment each
+-- participant redeems, code open for the recruitment window:
 --   insert into public.redeem_codes (code, cohort, max_uses, grant_days, expires_at, note)
---   values ('JHU-7K2M-QX41', 'jhu-wellbeing-2026', 250, null,
---           now() + interval '120 days', 'JHU teen study — permanent access')
+--   values ('<generate one>', 'jhu-wellbeing-2026', 250, 50,
+--           now() + interval '120 days', 'JHU teen study — 50 days')
 --   on conflict (code) do update
 --     set cohort = excluded.cohort, max_uses = excluded.max_uses,
 --         grant_days = excluded.grant_days, expires_at = excluded.expires_at,
 --         active = true;
 --
--- A partner cohort with 90 days of access rather than permanent:
---   insert into public.redeem_codes (code, cohort, max_uses, grant_days, note)
---   values ('PARTNER-4B8N', 'acme-pilot-2026', 40, 90, 'Acme pilot');
+-- grant_days counts from REDEMPTION, not from when the code was created, so a
+-- participant who joins late still gets their full 50 days. Access lapses on
+-- its own — has_own_entitlement() checks pro_overrides.expires_at, so there is
+-- no cleanup job to run and nothing to remember to switch off.
+--
+-- A cohort with permanent access instead (grant_days left null):
+--   insert into public.redeem_codes (code, cohort, max_uses, note)
+--   values ('<generate one>', 'acme-pilot-2026', 40, 'Acme pilot — permanent');
+--
+-- Extend a cohort that has already redeemed, if the study runs long. This
+-- moves everyone on that code, including people already past their 50 days:
+--   update public.pro_overrides set expires_at = expires_at + interval '30 days'
+--   where granted_by = 'redeem:<the code>';
 --
 -- How many redeemed, for the research team:
 --   select * from public.cohort_report('jhu-wellbeing-2026');
