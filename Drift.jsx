@@ -3675,6 +3675,7 @@ export default function App() {
     purchase: subPurchase,
     restore: subRestore,
     refresh: subRefresh,
+    introEligible: subIntroEligible,
   } = useSubscription(userId);
   const proAccess = appMode === "child" || subProAccess;
   // Owned here rather than inside ProfileScreen because the paywall branch
@@ -6245,6 +6246,10 @@ export default function App() {
           onRestore={subRestore}
           onSignOut={signOut}
           onRedeemCode={() => setRedeemOnPaywall(true)}
+          // Apple grants one trial per subscription group per Apple ID. Without
+          // this the screen promised a trial to people who had already used
+          // theirs and would be charged on the spot.
+          introEligible={subIntroEligible}
         />
         <RedeemCodeModal
           visible={redeemOnPaywall}

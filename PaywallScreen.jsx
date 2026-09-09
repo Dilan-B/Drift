@@ -65,7 +65,10 @@ const REVEAL_SEEN_KEY = "drift_paywall_reveal_seen";
 // Store Connect, reprice here in the same change.
 const FALLBACK_MONTHLY    = "$4.99";
 const FALLBACK_ANNUAL     = "$29.99";
-const FALLBACK_TRIAL_DAYS = 7;
+// There is deliberately no FALLBACK_TRIAL_DAYS. A price fallback stands in for
+// a number we are about to confirm; a trial fallback stood in for a PROMISE,
+// and it fired whenever the real trial length was 0 — including when the user
+// was not eligible for one at all.
 
 // Per-seat estimate for a family tier before its real price loads. A base seat
 // for the parent plus each child. Labelled as an estimate wherever it is shown,
@@ -86,8 +89,8 @@ const FEATURES = [
 ];
 
 export default function PaywallScreen({
-  onPurchase, onRestore, onSignOut, onRedeemCode, offerings, plan = null,
-  accountType = "personal", dark = false,
+  onPurchase, onRestore, onSignOut, onRedeemCode, offerings, introEligible = null,
+  plan = null, accountType = "personal", dark = false,
 }) {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring,  setRestoring]  = useState(false);
@@ -156,7 +159,10 @@ export default function PaywallScreen({
   const effBilling = (kids === 0 && billing === "annual" && annualOffered) ? "annual" : "monthly";
   const soloPkg  = effBilling === "annual" ? annual : monthly;
   const activePkg = kids > 0 ? familyPkg : soloPkg;
-  const { trialDays, isFreeTrial } = describeOffer(activePkg || monthly);
+  // isFreeTrial is deliberately not destructured: it describes the product, and
+  // reading it here is what produced "Start with 0 free days". Eligibility is
+  // the only thing that decides whether a trial is advertised.
+  const { trialDays } = describeOffer(activePkg || monthly);
 
   // Real savings, computed from the two live StoreKit prices — never a
   // hardcoded "SAVE 50%". If the products are ever repriced independently, a
@@ -181,7 +187,23 @@ export default function PaywallScreen({
     :                        FALLBACK_MONTHLY
   );
   const priceIsEstimate = !loadedPrice && kids > 0;
-  const trial = trialDays || FALLBACK_TRIAL_DAYS;
+  // The trial is advertised ONLY when Apple says this user can actually have
+  // it. `trialDays` describes the PRODUCT; introEligible describes the PERSON,
+  // and someone who trialled and cancelled sees identical product metadata
+  // while being charged immediately.
+  //
+  // The old `trialDays || FALLBACK_TRIAL_DAYS` fired whenever trialDays was 0 —
+  // including when the product genuinely has no intro offer — so the screen
+  // promised seven free days that did not exist. That constant is gone.
+  //
+  // While the catalogue is still loading this reads 0, so the screen offers a
+  // plain subscription and upgrades to the trial once eligibility is known.
+  // Flipping toward the more generous message is safe; the reverse is not.
+  //
+  // null (not yet checked) counts as ineligible. Wrong in the generous
+  // direction costs a little conversion; wrong the other way is a false claim
+  // on a payment screen, and App Store review reads that copy.
+  const trial = (introEligible === true && trialDays > 0) ? trialDays : 0;
   // Annual is billed once a year; every other product on this screen is monthly.
   const perPeriod = effBilling === "annual" ? "/year" : "/month";
 
@@ -369,7 +391,10 @@ export default function PaywallScreen({
             fontFamily: FF.display, fontSize: 36, color: ink.deep,
             letterSpacing: -0.6, lineHeight: 42, marginBottom: 10,
           }}>
-            {isFreeTrial || trial ? `Start with ${trial} free days` : "Unlock Drift"}
+            {/* `trial` alone, not `isFreeTrial || trial`. isFreeTrial describes
+                the product, so an ineligible user satisfied the condition with
+                trial === 0 and got "Start with 0 free days". */}
+            {trial ? `Start with ${trial} free days` : "Unlock Drift"}
           </Text>
           {/* The plan stays visible on the offer, not just on the reveal. The
               user is deciding whether to pay for a specific thing they built —

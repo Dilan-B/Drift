@@ -264,6 +264,9 @@ export function useSubscription(userId) {
   const [rcAnswered, setRcAnswered] = useState(false);
   const [ovAnswered, setOvAnswered] = useState(false);
   const [offerings, setOfferings] = useState(null);
+  // Per-user intro-offer eligibility. null = not yet known, and null must be
+  // treated as "no trial" everywhere it is consumed — see checkIntroEligibility.
+  const [introEligible, setIntroEligible] = useState(null);
   // Keyed by user, not a bare boolean: signing out and back in as a DIFFERENT
   // account must re-decide from scratch, or one paying account unlocks the next
   // one on the same device.
@@ -278,6 +281,48 @@ export function useSubscription(userId) {
    * than clearing it — revoking someone's access because Postgres blipped
    * would drop them onto a paywall they already paid past.
    */
+  /**
+   * Is THIS user eligible for the free trial?
+   *
+   * Apple grants one introductory offer per subscription group per Apple ID.
+   * A product carrying a 7-day trial says nothing about whether the person
+   * looking at the paywall can still have it — someone who trialled and
+   * cancelled sees identical product metadata and is charged immediately.
+   *
+   * Fails closed, per RevenueCat's own guidance: only INTRO_ELIGIBILITY_STATUS_
+   * ELIGIBLE (2) counts. UNKNOWN (0), INELIGIBLE (1) and NO_INTRO_OFFER_EXISTS
+   * (3) all resolve to false, because showing plain pricing to someone who
+   * turns out to be eligible costs a little conversion, while promising a trial
+   * Apple will not honour is a false claim on a payment screen.
+   *
+   * Android always returns UNKNOWN, so it always shows plain pricing. Drift is
+   * effectively iOS-only (Screen Time), so that is a acceptable rather than a
+   * regression to design around.
+   */
+  const checkIntroEligibility = useCallback(async (off) => {
+    if (Platform.OS !== "ios" || !Purchases?.checkTrialOrIntroductoryPriceEligibility) {
+      setIntroEligible(false);
+      return;
+    }
+    try {
+      const offering = resolveOffering(off);
+      const ids = (offering?.availablePackages || [])
+        .map(pk => pk?.product?.identifier)
+        .filter(Boolean);
+      if (!ids.length) { setIntroEligible(false); return; }
+
+      const map = await Purchases.checkTrialOrIntroductoryPriceEligibility(ids);
+      // Eligible for ANY product in the offering is enough: the offering shares
+      // one subscription group, so Apple's answer is the same across it, and
+      // requiring all of them would fail whenever one product lacks an offer.
+      const eligible = Object.values(map || {}).some(e => Number(e?.status) === 2);
+      setIntroEligible(eligible);
+    } catch {
+      // A failed check is not evidence of eligibility.
+      setIntroEligible(false);
+    }
+  }, []);
+
   const checkOverride = useCallback(async () => {
     if (!userId) { setOverride(false); setOvAnswered(false); return; }
     try {
@@ -379,12 +424,16 @@ export function useSubscription(userId) {
       // access — deliberately fetched AFTER resolution so a slow catalogue
       // request never delays the gate.
       try {
-        if (rcConfigured && Purchases) setOfferings(await Purchases.getOfferings());
+        if (rcConfigured && Purchases) {
+          const off = await Purchases.getOfferings();
+          setOfferings(off);
+          await checkIntroEligibility(off);
+        }
       } catch {}
     })();
 
     return () => clearTimeout(timer);
-  }, [userId, checkEntitlement, checkOverride]);
+  }, [userId, checkEntitlement, checkOverride, checkIntroEligibility]);
 
   // Re-check on foreground. Covers a subscription bought or cancelled in the
   // App Store app while Drift was backgrounded.
@@ -500,6 +549,7 @@ export function useSubscription(userId) {
     loading: !resolved,
     sdkError: rcInitError,
     offerings,
+    introEligible,
     purchase,
     restore,
     checkEntitlement,
