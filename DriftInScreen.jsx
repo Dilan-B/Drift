@@ -22,6 +22,7 @@ import Slider from "@react-native-community/slider";
 import { selectionTick } from "./haptics";
 import { CheckIcon } from "./Icons";
 import Sprout, { LeafGlyph } from "./SproutArt";
+import LockboxScreen from "./LockboxScreen";
 
 // Persisted in-progress session so the countdown survives backgrounding and even
 // an app kill — the timer is wall-clock based (an end timestamp), not a ticking
@@ -185,6 +186,10 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
   const theme = getTheme(dark);
   // Setup-phase colors follow the app theme; active/done always use dark forest
   const [phase,   setPhase]   = useState("setup"); // setup | active | done
+  // Which kind of session this tab is offering. Lockbox is a sibling of the
+  // timer, not a variant of it: it owns its own phases, its own enforcement
+  // and its own screen, so it takes the tab over entirely once chosen.
+  const [mode,    setMode]    = useState("timer");  // timer | lockbox
   const [task,    setTask]    = useState("");
   const [showInfo, setShowInfo] = useState(false);
   const [dur,     setDur]     = useState(25);
@@ -355,6 +360,28 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
   // ──────────────────────────────────────────────────────────
   const { ink, paper, earn, fx } = theme;
 
+  // Lockbox runs its own state machine. Only reachable from setup, so a live
+  // timer session can never be swapped out from under the user.
+  if (mode === "lockbox") {
+    return (
+      <LockboxScreen
+        dark={dark}
+        onClose={() => setMode("timer")}
+        onStarted={() => onSessionStart?.({ task: "Lockbox", durationSeconds: 0 })}
+        onEnded={() => onSessionEnd?.()}
+        onCompleted={(rec) => {
+          // Reuse the Drift In payout path so credits, XP and the balance
+          // arming all behave identically to a finished focus session.
+          onSessionComplete?.({
+            credits: rec?.rewardMinutes || 0,
+            xp: Math.max(5, Math.round((rec?.rewardMinutes || 0) * 0.6 + 8)),
+            task: rec?.task || "Lockbox",
+          });
+        }}
+      />
+    );
+  }
+
   if (phase === "setup") {
     const ready = !!task.trim();
     const durLabel = dur >= 60
@@ -382,6 +409,38 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Mode picker. Two ways to commit: a timer you promise to honour, or
+              a box you physically put the phone into. Same tab, same payout. */}
+          <View style={{
+            flexDirection: "row", gap: 6, padding: 4, borderRadius: 13,
+            backgroundColor: dark ? "rgba(232,245,236,0.06)" : paper.sand,
+            marginBottom: 22,
+          }}>
+            {[
+              { key: "timer",   label: "Timer" },
+              { key: "lockbox", label: "Lockbox" },
+            ].map(opt => {
+              const on = mode === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  onPress={() => { selectionTick(); setMode(opt.key); }}
+                  style={{
+                    flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: "center",
+                    backgroundColor: on ? paper.card : "transparent",
+                  }}
+                >
+                  <Text style={{
+                    fontFamily: on ? FF.bodyMed : FF.body, fontSize: 13.5,
+                    color: on ? ink.deep : ink.mid,
+                  }}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
           {/* Header — editorial */}
           <View style={{ marginBottom: 26 }}>
             <Text style={{
