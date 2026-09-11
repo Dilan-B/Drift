@@ -31,6 +31,83 @@ const LOW_TIME_ID    = "drift-low-time";
 const DAILY_ID       = "drift-daily-reminder";
 const SLEEP_TAG_ID   = "drift-sleepguard-bedtime";
 
+// ── Android notification channels ────────────────────────────
+// Android 8+ posts NOTHING without a channel. expo-notifications will invent a
+// "Miscellaneous" one rather than drop the notification, but everything then
+// lands in a single bucket the user can only turn off wholesale — so muting the
+// daily streak nudge also mutes "your lockbox session is about to be lost".
+// Declaring them separately is what makes those independently mutable, and the
+// importance is what decides whether a notification can interrupt at all:
+// anything below HIGH cannot heads-up, and the user can lower it but we can
+// never raise it later. A channel's importance is FIXED at creation — changing
+// these values does nothing on a device that already ran an older build, so
+// pick them correctly the first time rather than planning to tune them.
+//
+// iOS ignores all of this; the channelId simply rides along unused.
+const CH_TIME      = "time";
+const CH_SESSIONS  = "sessions";
+const CH_REMINDERS = "reminders";
+const CH_SOCIAL    = "social";
+
+const CHANNELS = [
+  // Interruptive by design: the shield just went up or is about to.
+  { id: CH_TIME, name: "Screen time",
+    description: "When your earned time runs low or runs out." },
+  // The lockbox breach warning is a ~5 second window. If it cannot heads-up it
+  // is useless, so this is the one channel that genuinely needs MAX.
+  { id: CH_SESSIONS, name: "Focus sessions",
+    description: "Lockbox and sleep guard sessions in progress." },
+  { id: CH_REMINDERS, name: "Reminders",
+    description: "Daily streak nudge and bedtime reminder." },
+  { id: CH_SOCIAL, name: "Friends & family",
+    description: "Friend requests, challenges, and task approvals." },
+];
+
+let channelsReady = false;
+
+/**
+ * Create the channels. Idempotent and cheap, but it MUST have completed before
+ * the first notification is posted to a channel or Android silently drops it.
+ */
+async function ensureChannels() {
+  if (channelsReady || Platform.OS !== "android" || !Notifications) return;
+  const I = Notifications.AndroidImportance || {};
+  const importanceFor = id =>
+    id === CH_SESSIONS ? (I.MAX ?? 7)
+    : id === CH_TIME   ? (I.HIGH ?? 6)
+    : (I.DEFAULT ?? 5);
+  try {
+    await Promise.all(CHANNELS.map(c =>
+      Notifications.setNotificationChannelAsync(c.id, {
+        name: c.name,
+        description: c.description,
+        importance: importanceFor(c.id),
+        // The app is about focus. A notification that makes noise to tell you
+        // to stop looking at your phone is working against itself.
+        sound: null,
+        vibrationPattern: [0, 200],
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility?.PUBLIC,
+      })
+    ));
+    channelsReady = true;
+  } catch {
+    // Leave channelsReady false so the next call retries.
+  }
+}
+
+/**
+ * Trigger meaning "deliver now, on this channel".
+ *
+ * `null` is the documented immediate trigger but carries no channel, so on
+ * Android it lands in the fallback bucket. `{ channelId }` is the immediate
+ * trigger that keeps the routing.
+ */
+const now = channelId => (Platform.OS === "android" ? { channelId } : null);
+
+/** Add the channel to a scheduled (non-immediate) trigger on Android. */
+const on = (channelId, trigger) =>
+  Platform.OS === "android" ? { ...trigger, channelId } : trigger;
+
 // ── "Time's up" / "running low" latches ──────────────────────
 // Running out of time is ONE event, but several code paths notice it (the
 // drain tick, the native-monitor reconcile on every foreground). Without a
@@ -97,16 +174,17 @@ export async function requestNotificationPermission() {
 async function ensureGranted() {
   if (!Notifications) return false;
   if (permissionGranted === null) await requestNotificationPermission();
+  if (permissionGranted === true) await ensureChannels();
   return permissionGranted === true;
 }
 
-async function fireImmediate(identifier, title, body) {
+async function fireImmediate(identifier, title, body, channel = CH_TIME) {
   if (!(await ensureGranted())) return;
   try {
     await Notifications.scheduleNotificationAsync({
       identifier,
       content: { title, body },
-      trigger: null, // null = deliver immediately
+      trigger: now(channel), // immediate; carries the Android channel
     });
   } catch {}
 }
@@ -161,6 +239,7 @@ export async function notifySleepGuardResult({ status, rewardMinutes, firstMovem
       "drift-sleepguard-result",
       "Your phone stayed put",
       `A full night in the other room. +${Math.max(1, Math.round(rewardMinutes || 0))} minutes earned.`,
+      CH_SESSIONS,
     );
     return;
   }
@@ -172,6 +251,7 @@ export async function notifySleepGuardResult({ status, rewardMinutes, firstMovem
       "drift-sleepguard-result",
       "Your phone moved last night",
       when ? `It was picked up around ${when}. No bonus this time.` : "No bonus this time.",
+      CH_SESSIONS,
     );
   }
 }
@@ -190,6 +270,7 @@ export async function notifyLockboxBreach(graceSeconds) {
     "drift-lockbox-breach",
     "Put your phone back in the box",
     `You have about ${Math.max(1, Math.round(graceSeconds))} seconds before this session is lost.`,
+    CH_SESSIONS,
   );
 }
 
@@ -198,6 +279,7 @@ export async function notifyLockboxLost() {
     "drift-lockbox-lost",
     "Lockbox session lost",
     "Your phone left the box for too long, so this one earned nothing.",
+    CH_SESSIONS,
   );
 }
 
@@ -218,7 +300,7 @@ export async function scheduleLockboxLoss(seconds) {
         title: "Lockbox session lost",
         body: "Your phone left the box for too long, so this one earned nothing.",
       },
-      trigger: { seconds: Math.max(1, Math.round(seconds)), repeats: false },
+      trigger: on(CH_SESSIONS, { seconds: Math.max(1, Math.round(seconds)), repeats: false }),
     });
   } catch {}
 }
@@ -232,6 +314,7 @@ export async function notifyLockboxDone(rewardMinutes) {
     "drift-lockbox-done",
     "Session complete",
     `Your phone stayed in the box. +${Math.max(1, Math.round(rewardMinutes || 0))} minutes earned.`,
+    CH_SESSIONS,
   );
 }
 
@@ -252,9 +335,9 @@ export async function scheduleDailyReminder(hour = 10, minute = 0) {
   if (!(await ensureGranted())) return;
   try {
     await Notifications.cancelScheduledNotificationAsync(DAILY_ID).catch(() => {});
-    const trigger = Notifications.SchedulableTriggerInputTypes
+    const trigger = on(CH_REMINDERS, Notifications.SchedulableTriggerInputTypes
       ? { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute }
-      : { hour, minute, repeats: true }; // fallback for older versions
+      : { hour, minute, repeats: true }); // fallback for older versions
     await Notifications.scheduleNotificationAsync({
       identifier: DAILY_ID,
       content: {
@@ -279,9 +362,9 @@ export async function scheduleSleepGuardReminder(hour = 21, minute = 45) {
   if (!(await ensureGranted())) return;
   try {
     await Notifications.cancelScheduledNotificationAsync(SLEEP_TAG_ID).catch(() => {});
-    const trigger = Notifications.SchedulableTriggerInputTypes
+    const trigger = on(CH_REMINDERS, Notifications.SchedulableTriggerInputTypes
       ? { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute }
-      : { hour, minute, repeats: true }; // fallback for older versions
+      : { hour, minute, repeats: true }); // fallback for older versions
     await Notifications.scheduleNotificationAsync({
       identifier: SLEEP_TAG_ID,
       content: {
@@ -306,7 +389,7 @@ export async function notifyFriendRequest(fromUsername) {
         title: "New friend request",
         body: fromUsername ? `@${fromUsername} wants to grow with you on Drift.` : "Someone wants to add you on Drift.",
       },
-      trigger: null,
+      trigger: now(CH_SOCIAL),
     });
   } catch {}
 }
@@ -324,7 +407,7 @@ export async function notifyChildSubmittedTask(taskTitle) {
         body: taskTitle ? `Your kid finished "${taskTitle}". Approve it to grant screen time.`
                         : "Your kid finished a task. Approve it to grant screen time.",
       },
-      trigger: null,
+      trigger: now(CH_SOCIAL),
     });
   } catch {}
 }
@@ -332,7 +415,8 @@ export async function notifyChildSubmittedTask(taskTitle) {
 /** A parent approved the child's task — the child earned time. */
 export async function notifyTaskApproved(minutes) {
   const m = Math.max(1, Math.round(minutes || 0));
-  await fireImmediate("drift-task-approved", "Task approved", `You earned ${m} more minutes of screen time.`);
+  await fireImmediate("drift-task-approved", "Task approved",
+    `You earned ${m} more minutes of screen time.`, CH_SOCIAL);
 }
 
 /**
@@ -354,7 +438,7 @@ export async function notifyChallengeReceived(fromUsername, title, challengeId) 
         body: title ? `"${title}" — open Drift to accept or decline.` : "Open Drift to accept or decline.",
         data: { type: "challenge_received", challengeId },
       },
-      trigger: null,
+      trigger: now(CH_SOCIAL),
     });
   } catch {}
 }
@@ -409,7 +493,7 @@ export async function notifyLosingOnLeaderboard({ aheadCount, total, leaderName,
     await Notifications.scheduleNotificationAsync({
       identifier: `drift-leaderboard-${today}`,
       content: { title: "You're slipping down the grove", body, data: { type: "leaderboard_nudge" } },
-      trigger: null,
+      trigger: now(CH_SOCIAL),
     });
     return true;
   } catch {

@@ -74,6 +74,22 @@ try {
 const RC_APPLE_KEY =
   process.env.EXPO_PUBLIC_RC_IOS_KEY || "appl_kjgnLRndYGRvEpkIetTELaBUTVZ";
 
+// The Google Play equivalent. RevenueCat issues ONE PUBLIC KEY PER STORE and
+// they are not interchangeable — configuring with the Apple key on Android
+// authenticates against the iOS app, so every getOfferings() comes back empty
+// and every purchase fails, which is exactly the failure the 2026-08-28 note
+// above describes.
+//
+// DELIBERATELY NO HARDCODED FALLBACK. That note is the whole argument: a
+// hardcoded key outlived the app it belonged to and shipped silently in every
+// build, because a wrong key fails the same way a missing one does — except a
+// missing one says so. Android stays unconfigured until this env var is set.
+const RC_GOOGLE_KEY = process.env.EXPO_PUBLIC_RC_ANDROID_KEY || "";
+
+const RC_KEY = Platform.OS === "ios" ? RC_APPLE_KEY
+             : Platform.OS === "android" ? RC_GOOGLE_KEY
+             : "";
+
 const ENTITLEMENT_ID  = "Pro";
 // These MUST match App Store Connect exactly. Note the two naming schemes:
 // the solo products are reverse-DNS (com.drift.pro.*) and the family tiers are
@@ -204,11 +220,14 @@ export function rcUnavailableReason() { return rcInitError; }
  * callers read the return value and fail CLOSED.
  */
 async function ensureConfigured(userId) {
-  if (Platform.OS !== "ios") { rcInitError = "not_ios";     return false; }
-  if (!Purchases)            { rcInitError = "sdk_missing"; return false; }
+  // No key for this platform means the store was never wired up. Returning
+  // false here paywalls the user, which is the correct failure: better a
+  // paywall that cannot be bought through than silently handing out Pro.
+  if (!RC_KEY)    { rcInitError = `no_key_${Platform.OS}`; return false; }
+  if (!Purchases) { rcInitError = "sdk_missing";           return false; }
   if (!rcConfigured) {
     try {
-      Purchases.configure({ apiKey: RC_APPLE_KEY, appUserID: userId || undefined });
+      Purchases.configure({ apiKey: RC_KEY, appUserID: userId || undefined });
       rcConfigured = true;
       rcIdentified = userId || null;
       rcInitError  = null;
@@ -397,7 +416,7 @@ export function useSubscription(userId) {
 
   // Live entitlement updates (restore, renewal, cancellation).
   useEffect(() => {
-    if (Platform.OS !== "ios" || !Purchases) return;
+    if (!RC_KEY || !Purchases) return;
     const listener = info => setEntitled(hasProEntitlement(info));
     Purchases.addCustomerInfoUpdateListener(listener);
     return () => Purchases.removeCustomerInfoUpdateListener(listener);
@@ -407,7 +426,7 @@ export function useSubscription(userId) {
    * @param planType "monthly" | "annual" | { kids: N } for a family tier.
    */
   const purchase = useCallback(async (planType = "monthly") => {
-    if (Platform.OS !== "ios") return { success: false, reason: "ios_only" };
+    if (!RC_KEY) return { success: false, reason: "store_unavailable" };
     if (!Purchases) return { success: false, reason: "sdk_missing" };
     try {
       // Hard-stop rather than pressing on: calling purchasePackage() on an
@@ -441,7 +460,7 @@ export function useSubscription(userId) {
    * twice, and its absence is a guideline 3.1.1 rejection on its own.
    */
   const restore = useCallback(async () => {
-    if (Platform.OS !== "ios") return { success: false, reason: "ios_only" };
+    if (!RC_KEY) return { success: false, reason: "store_unavailable" };
     if (!Purchases) return { success: false, reason: "sdk_missing" };
     try {
       if (!(await ensureConfigured(userId))) {
@@ -472,6 +491,9 @@ export function useSubscription(userId) {
    * For our own codes use redeemProCode() in supabase.js.
    */
   const redeemAppStoreCode = useCallback(async () => {
+    // Genuinely Apple-only: this is App Store Connect's offer-code sheet, and
+    // RevenueCat only implements presentCodeRedemptionSheet on iOS. Play's
+    // promo codes are redeemed in the Play Store app, not in-app.
     if (Platform.OS !== "ios" || !Purchases) return { success: false, reason: "ios_only" };
     try {
       if (!(await ensureConfigured(userId))) return { success: false, reason: "sdk_missing" };
