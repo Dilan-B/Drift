@@ -4947,14 +4947,31 @@ export default function App() {
   };
 
   // Mandatory-update gate: compare the installed version to the remote minimum
-  // (app_config.min_ios_version). If older, block the app behind ForceUpdateModal.
-  // Re-checks on foreground so a user who updates the requirement mid-session is
-  // caught. Fails open (never blocks) if the config can't be read.
+  // and, if older, block the app behind ForceUpdateModal. Re-checks on
+  // foreground so a user who updates the requirement mid-session is caught.
+  // Fails open (never blocks) if the config can't be read.
+  //
+  // EVERY KEY IS PER-STORE. The two platforms ship on independent release
+  // cadences, so one shared minimum cannot describe both: the version that is
+  // live on the App Store is routinely not the version live on Google Play.
+  // Worse, `ios_store_url` would send Android users to a page they cannot
+  // install from, behind a modal with no dismiss — the same class of lockout
+  // that shipped once already (see the 2026-07-29 changelog rows), but arriving
+  // from a config row instead of a stale app.json.
+  //
+  // Android keys are absent from app_config until someone sets them, and every
+  // check below no-ops on a missing key, so Android is inert by default.
   useEffect(() => {
     const check = async () => {
       if (updateOverrideRef.current) return;
       try {
         const current = Constants.expoConfig?.version || Constants.manifest?.version;
+        const isIOS = Platform.OS === "ios";
+        const KEY = isIOS
+          ? { min: "min_ios_version",     url: "ios_store_url",
+              build: "min_ios_build",     buildVer: "min_ios_build_version" }
+          : { min: "min_android_version", url: "android_store_url",
+              build: "min_android_build", buildVer: "min_android_build_version" };
 
         // 1) AUTOMATIC: any newer version live on the App Store is mandatory —
         //    the moment we ship an update, older installs get blocked until they
@@ -4976,11 +4993,14 @@ export default function App() {
           }
         }
 
-        // 2) MANUAL override via app_config.min_ios_version — force a specific
-        //    minimum (e.g. an emergency hotfix) even beyond the App Store check.
+        // 2) MANUAL override via app_config — force a specific minimum (e.g. an
+        //    emergency hotfix) even beyond the store check. This is the ONLY
+        //    gate Android has: check 1 has no Play equivalent (Google exposes no
+        //    public "latest version" lookup), and check 3 needs a build number
+        //    the Play listing never surfaces either.
         const cfg = await getAppConfig();
-        if (cfg.min_ios_version && isVersionOutdated(current, cfg.min_ios_version)) {
-          setUpdateStoreUrl(cfg.ios_store_url || null);
+        if (cfg[KEY.min] && isVersionOutdated(current, cfg[KEY.min])) {
+          setUpdateStoreUrl(cfg[KEY.url] || null);
           setForceUpdate(true);
           return;
         }
@@ -4993,27 +5013,30 @@ export default function App() {
         //    Apple's lookup API cannot close this: it returns `version` and has
         //    no build-number field, so check 1 is structurally incapable of it.
         //
-        //    The build number is NOT in app.json — it lives only in Xcode's
-        //    CURRENT_PROJECT_VERSION — so it has to be read off the native
-        //    binary. expo-constants dropped nativeBuildVersion in SDK 54+;
-        //    expo-application is the supported reader.
+        //    The build number is NOT in app.json — on iOS it lives only in
+        //    Xcode's CURRENT_PROJECT_VERSION — so it has to be read off the
+        //    native binary. expo-constants dropped nativeBuildVersion in SDK
+        //    54+; expo-application is the supported reader. On Android the same
+        //    reader returns versionCode, so this gate works there unchanged —
+        //    note versionCode DOES live in app.json, which makes the Android
+        //    keys easier to get wrong, not harder. Set them with the same care.
         //
-        //    SCOPED ON PURPOSE. min_ios_build applies only while the installed
-        //    marketing version equals min_ios_build_version. Without that pin, a
+        //    SCOPED ON PURPOSE. min_*_build applies only while the installed
+        //    marketing version equals min_*_build_version. Without that pin, a
         //    stale `min_ios_build = 124` would brick the whole 1.1.8 line the
         //    moment its build numbering started below 124 — the same class of
         //    lockout as the app.json-behind-App-Store incident, and this modal
         //    still has no dismiss. Fails open on a missing, unpinned or
         //    unparseable value.
-        const minBuild = parseInt(cfg.min_ios_build, 10);
+        const minBuild = parseInt(cfg[KEY.build], 10);
         const installedBuild = parseInt(Application.nativeBuildVersion, 10);
         if (
-          Platform.OS === "ios" && !__DEV__ && !isExpoGo &&
+          !__DEV__ && !isExpoGo &&
           Number.isFinite(minBuild) && Number.isFinite(installedBuild) &&
-          cfg.min_ios_build_version && cfg.min_ios_build_version === current &&
+          cfg[KEY.buildVer] && cfg[KEY.buildVer] === current &&
           installedBuild < minBuild
         ) {
-          setUpdateStoreUrl(cfg.ios_store_url || null);
+          setUpdateStoreUrl(cfg[KEY.url] || null);
           setForceUpdate(true);
         }
       } catch {}

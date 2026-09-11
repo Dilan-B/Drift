@@ -1,8 +1,8 @@
 /**
  * ForceUpdateModal.jsx
  * Blocking "update required" screen shown when the installed app version is
- * older than the minimum set remotely (app_config.min_ios_version). The only
- * normal action is to open the App Store.
+ * older than the minimum set remotely (app_config.min_<platform>_version). The
+ * only normal action is to open the store the app was installed from.
  *
  * DEV ESCAPE HATCH
  * A version mismatch between app.json and the native build once locked the
@@ -17,7 +17,7 @@
  * just shows, since there is nothing to protect there.
  */
 import React, { useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Modal, Linking } from "react-native";
+import { View, Text, TouchableOpacity, Modal, Linking, Platform } from "react-native";
 import { getTheme, FF } from "./theme";
 import Sprout from "./SproutArt";
 
@@ -30,8 +30,20 @@ export default function ForceUpdateModal({ visible, storeUrl, dark = false, onOv
   const taps = useRef(0);
   const lastTap = useRef(0);
 
+  // The fallback matters more than it looks. This modal has no dismiss, so if
+  // `storeUrl` is unset the link is the user's only way out — and sending an
+  // Android user to apps.apple.com is a dead end they cannot install from.
   const open = () => {
-    Linking.openURL(storeUrl || "https://apps.apple.com").catch(() => {});
+    const fallback = Platform.OS === "ios"
+      ? "https://apps.apple.com"
+      : "market://details?id=com.drift.app";
+    Linking.openURL(storeUrl || fallback).catch(() => {
+      // No Play Store app (emulator, sideload) — market:// has no handler.
+      if (Platform.OS === "android") {
+        Linking.openURL("https://play.google.com/store/apps/details?id=com.drift.app")
+          .catch(() => {});
+      }
+    });
   };
 
   const onSproutTap = () => {
