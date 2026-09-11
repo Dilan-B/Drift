@@ -212,7 +212,11 @@ export default function PaywallScreen({
     no_package:   "The subscription isn't available right now. Please try again shortly.",
     tier_unavailable: "That family size isn't set up yet. Try a different number, or contact support.",
     not_entitled: "That didn't unlock Drift. If you were charged, tap Restore.",
-    ios_only:     "Purchases are only available on iOS right now.",
+    // Only reachable from redeemAppStoreCode now - it is Apple's offer-code
+    // sheet, which has no Android counterpart (Play codes are redeemed in the
+    // Play Store app). Buying itself is no longer iOS-only.
+    ios_only:     "App Store codes can only be redeemed on iPhone.",
+    store_unavailable: "Purchases aren't set up on this platform yet.",
     sdk_missing:  "Purchases aren't available in this build.",
   };
 
