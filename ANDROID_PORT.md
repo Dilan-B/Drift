@@ -213,6 +213,35 @@ questions:
 
 ---
 
+## Full-app pass, 2026-09-11
+
+Every surface was walked on an API 36 emulator against the real backend.
+Working: onboarding, sign-in, Today, add-task with AI valuation
+(`evaluate-task`), the AI Check time gate, proof submission (`verify-task` —
+correctly rejected text-only proof), the Android photo picker, Drift In,
+Lockbox, The Grove (both tabs), the native share sheet, The Lab, blocked apps,
+blocked hours with the native Android clock picker, and Profile.
+
+Four bugs came out of it. Three are fixed and verified; one is written and
+waiting on you.
+
+1. **Lockbox paid out without checking the phone.** `startMonitoring()` threw
+   and every caller swallowed it, `onStateChange()` was a no-op, so
+   `markDisturbed()` — the only route to forfeiting — could never fire. Every
+   session completed and paid in full. Fixed by porting iOS's motion sensing
+   (`DriftMotionModule`); verified by injecting accelerometer values and
+   watching a session go to "Session lost".
+2. **Blocking `WRITE_CALENDAR` broke calendar sync.** expo-calendar gates on
+   `hasGrantedPermissions(READ, WRITE)` — both — so the toggle silently
+   reverted. Unblocked; `WRITE_CONTACTS` stays blocked because expo-contacts
+   checks the manifest first and asks for READ alone.
+3. **`screen_time.updated_at` never existed**, so every sync after the first of
+   each day failed on BOTH platforms. schema_v7 declared it inside a
+   `create table if not exists` on a table that already existed. Migration
+   written, **not applied** — see SUBMISSION_ANDROID.md §7.
+4. **Push registration fails** — no Firebase/FCM configured. Caught and logged
+   rather than crashing. See SUBMISSION_ANDROID.md §2.2.
+
 ## Known gaps
 
 - **Never run on a physical device or an OEM skin.** Emulator only. Battery
@@ -220,6 +249,13 @@ questions:
   prompt is probably needed and is not implemented.
 - **The accessibility service is written but was never switched on and tested.**
   The polling path is what has actually been exercised.
+- **Live rep detection (vision-camera + pose) was never exercised.** It is only
+  reachable through a rep challenge from a friend. `poseCameraAvailable()`
+  degrades to the AI photo check when the native module fails to load, so the
+  failure mode is safe, but whether live tracking actually runs on Android is
+  unknown.
+- **The paywall was never exercised**, because RevenueCat Android is not
+  configured. It fails closed.
 - **Status bar styling is inert on Android.** Edge-to-edge is forced by SDK 54,
   and the legacy `StatusBarModule` is ignored under it, so all 20
   `<StatusBar barStyle>` calls do nothing and the bar will not follow the in-app
