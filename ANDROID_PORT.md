@@ -167,7 +167,13 @@ read external storage, vibrate, plus the four the blocker needs.
 
 Blocked (`tools:node="remove"`, verified in the merged manifest):
 `ACCESS_BACKGROUND_LOCATION` (separate Google review, common rejection),
-`WRITE_EXTERNAL_STORAGE`, `RECORD_AUDIO`, `WRITE_CALENDAR`, `WRITE_CONTACTS`.
+`WRITE_EXTERNAL_STORAGE`, `RECORD_AUDIO`, `WRITE_CONTACTS`.
+
+`WRITE_CALENDAR` was blocked too, until that turned out to break calendar sync
+outright — expo-calendar gates on `hasGrantedPermissions(READ, WRITE)` and will
+not accept READ alone. Drift still never writes to a calendar; it just has to
+hold the permission. `WRITE_CONTACTS` stays blocked because expo-contacts
+checks the manifest first and asks for READ alone when WRITE is absent.
 
 `READ_EXTERNAL_STORAGE` is kept — `AICheckModal` and `ProfileScreen` both call
 `requestMediaLibraryPermissionsAsync()`.
