@@ -1,244 +1,242 @@
 # Android port — status and what's left
 
-Branch: `feat/android-port`. Nothing here touches the iOS app: `ios/` is
-byte-identical to `main` (verified by tree hash before and after prebuild), and
-every `app.json` addition is scoped under the `android` key.
+Branch: `feat/android-port`. **iOS is untouched**: `git diff main...HEAD -- ios`
+is empty, verified by tree hash before and after every prebuild, and every
+`app.json` addition is scoped under the `android` key.
 
-This is **Phase 0** — get Drift building, installing and running on Android, and
-find out what actually breaks. It is not a shippable Android release; see
-"Before you can ship" below.
+Drift builds, installs, runs, signs in, and **blocks apps** on Android.
 
 ---
 
-## The decision this port does NOT make
+## What was actually verified on a device
 
-**Android has no Family Controls.** There is no API that lets a third-party app
-tell the OS to shield other apps. That is Drift's core mechanic, so "port Drift
-to Android" is a product question before it is an engineering one.
+On an API 36 emulator, against the real Supabase backend:
 
-What competitors actually do on Android is a foreground service polling
-`UsageStatsManager` (or an `AccessibilityService` for faster detection) plus
-`SYSTEM_ALERT_WINDOW` to throw a full-screen overlay over the blocked app. That
-is a real Kotlin project, and it is weaker than the iOS shield — the user can
-kill the service, and OEM battery managers (Xiaomi, Samsung, Oppo) will do it
-for them. The AccessibilityService route is more reliable and is also the single
-biggest Play Store rejection risk there is: Google restricts accessibility APIs
-to accessibility purposes and has removed blocker apps over it.
+- Onboarding, sign-in, and the full app shell (tabs, balance, tasks, profile)
+- **App blocking, end to end:**
+  - picked Chrome from the in-app picker → opening Chrome showed the shield
+  - **back from the shield went to the launcher, not Chrome** — the block is not
+    one tap of theatre
+  - re-opening Chrome re-blocked
+  - unchecking Chrome stopped the service and Chrome opened normally
+  - **after a genuine device reboot, with Drift never opened, Chrome was still
+    blocked**
+- The permission walk, with both permissions revoked, and its deep link landing
+  on `Settings$AppUsageAccessSettingsActivity`
+- Release build: compiles, and the merged release manifest carries all four
+  blocker permissions and all four components
 
-Three coherent answers:
-
-- **A. Full parity.** Build the UsageStats + overlay blocker. ~4–8 weeks of
-  native Kotlin, with policy risk on the main feature.
-- **B. Ship without the shield.** Tasks, Drift In, Lockbox, streaks and social
-  all work; blocking becomes an honour-mode nudge. Weaker product, no policy
-  risk, and it tells you whether Android demand is real before you spend two
-  months on the hard part.
-- **C. Don't.** Stay iOS-only.
-
-**This branch is built for B, structured so A drops in later.** No screen needed
-changing to make that true — see "The seam" below.
+Not verified: a physical device, any OEM skin, the optional accessibility
+service, and the paywall (RevenueCat Android is not configured yet).
 
 ---
 
-## Two real bugs found on the way
+## Blocking on Android
 
-Both were latent in `main`; neither is Android-specific.
+Android has no Family Controls. Nothing lets a third-party app ask the OS to
+shield another app, so Drift does it itself, in `modules/drift-blocker`.
 
-### 1. `expo-constants` was four SDKs ahead of the project
+### How it works
 
-`package.json` pinned `expo-constants@^57.0.8` against Expo SDK 54, which
-expects `~18.0.14`. It happened to work on iOS. On Android it fails Kotlin
-compilation outright — `expo-constants` 57 calls
-`expo.modules.kotlin.services.ServiceInterface`, which does not exist in SDK
-54's `expo-modules-core`.
+**Detect** which app is in front, then **cover** it.
 
-Fixed to `~18.0.14`. All four APIs the app uses (`expoConfig`, `manifest`,
-`appOwnership`, `statusBarHeight`) exist in both, so this is API-safe.
+| Piece | Role |
+|---|---|
+| `BlockerService` | Foreground service polling `UsageStatsManager` at 1Hz. The always-available path |
+| `DriftAccessibilityService` | Optional. Fires on window-change events, so the shield lands with the app instead of up to a second later |
+| `BlockerEngine` | The only place blocking decisions and balance accounting live, so the two detectors cannot disagree |
+| `ShieldActivity` | A full activity, not a floating overlay — so the blocked app is actually paused by the OS rather than left playing underneath |
+| `BootReceiver` | Restarts the watcher after reboot or app update |
+| `BlockerPrefs` | SharedPreferences. The service is killable, so nothing may live only in memory |
+
+It is built as a **local Expo module**, not as hand-written code inside
+`android/`. That matters: `expo prebuild --clean` wipes `android/` entirely, and
+this survives it. Verified by running exactly that.
+
+### The interface is iOS's
+
+`DriftBlockerModule` deliberately mirrors `ScreenTimeModule` — `applyShield`,
+`clearShield`, `startBalanceMonitoring`, `consumeUsedSeconds`,
+`consumeDepletedFlag`, `setAppearance`. `screenTime.js` branches on Android
+first and leaves the iOS path textually untouched beneath it.
+
+The result is that **no screen needed rewriting**. Drift In, blocked hours,
+sleep guard and the balance reconcile all drive the Android blocker through the
+same calls they already made.
+
+Two things do not map:
+
+- **`presentAppPicker`** — Apple ships a system sheet and hides the chosen
+  bundle IDs. Android has no picker at all, so `AndroidBlockerModal` renders one
+  from `PackageManager`, listing only apps with a launcher activity.
+- **`applyShieldCategories`** — Android has no app categories. It collapses onto
+  the ordinary shield, which means a free-tier user with nothing selected gets
+  nothing blocked, where iOS would shield whole categories. Worth a product
+  decision.
+
+### The honest limits
+
+This is weaker than the iOS shield and always will be:
+
+- The user can force-stop Drift, or revoke either permission, and blocking stops
+- OEM battery managers (Xiaomi, Samsung, Oppo) kill background services on their
+  own initiative
+- Detection without accessibility lags up to a second
+- Two permissions must be granted by hand in Settings, which is real onboarding
+  drop-off
+
+The in-app copy says so rather than overselling it: *"Drift can't block apps as
+firmly as an iPhone can — Android lets you stop it from Settings at any time.
+It's here to make drifting cost something, not to make it impossible."*
+
+---
+
+## Three real bugs found on the way
+
+All three were latent in `main` or would have shipped silently.
+
+### 1. `expo-constants` was four SDKs ahead
+
+Pinned `^57.0.8` against SDK 54, which expects `~18.0.14` — the only `expo-*`
+dependency using a caret. iOS tolerated it; Android does not compile, because
+that version calls `expo.modules.kotlin.services.ServiceInterface`, absent from
+SDK 54's `expo-modules-core`. All four APIs the app uses exist in both versions.
 
 ### 2. The force-update gate would have bricked every Android install
 
 `Drift.jsx` check 2 read `app_config.min_ios_version` with **no platform
-guard** — only checks 1 and 3 were iOS-gated. The moment anyone set
-`min_ios_version` for an iOS hotfix, every Android install would compare
-against it too and lock behind `ForceUpdateModal`, which has no dismiss,
-pointed at an App Store URL it cannot install from.
+guard**. Setting it for an iOS hotfix would have locked every Android install
+behind `ForceUpdateModal` — which has no dismiss — pointed at an App Store URL
+they cannot install from. Same class of lockout as 2026-07-29, arriving from a
+config row.
 
-That is the same class of lockout as the 2026-07-29 incident, arriving from a
-config row rather than a stale `app.json`.
+Every key is now per-store (`min_android_version`, `android_store_url`,
+`min_android_build`, `min_android_build_version`). iOS behaviour is unchanged,
+and the Android keys do not exist yet, so Android is inert by default.
 
-Every key is now per-store, selected by platform:
+### 3. Blocking would have worked in dev and died in production
 
-| iOS | Android |
-|---|---|
-| `min_ios_version` | `min_android_version` |
-| `ios_store_url` | `android_store_url` |
-| `min_ios_build` | `min_android_build` |
-| `min_ios_build_version` | `min_android_build_version` |
+`SYSTEM_ALERT_WINDOW` was in `blockedPermissions` from when it looked unused.
+React Native's **debug** manifest declares it independently for the dev overlay,
+so the permission was present in every debug build and **stripped from
+release** — `canDrawOverlays()` would have returned false forever, the shield
+would never have launched, and the permission would not even have appeared in
+Settings for the user to grant.
 
-iOS behaviour is unchanged — same keys, same order, same fail-open. The Android
-keys do not exist in `app_config` yet, and every check no-ops on a missing key,
-so **Android is inert by default**. `ForceUpdateModal` also no longer falls back
-to `apps.apple.com` on Android.
-
-Check 1 (the live App Store lookup) stays iOS-only: Google exposes no public
-"latest version" endpoint, so `min_android_version` is Android's only gate.
+Caught by diffing the merged debug and release manifests, which is now worth
+doing before any submission.
 
 ---
 
-## What changed
-
-### Native project
-- `android/` generated via `expo prebuild --platform android`. Committed, matching
-  how `ios/` is handled.
-- Builds clean. Debug APK installs and runs on an API 36 emulator.
+## Other changes
 
 ### Icons — `tools/build-android-icons.js`
-Android needs four icons iOS does not. All four are **derived from the single
-iOS app icon** so there is one source of truth; re-run the script after changing
-it, never hand-edit the PNGs.
 
-The iOS icon is a bright glow on a flat dark squircle, which is what makes this
-derivable: the black exterior floods away cleanly, and luminance doubles as an
-alpha mask.
+Android needs four icons iOS does not, all derived from the one iOS app icon so
+there is a single source of truth. Re-run after changing it; never hand-edit the
+PNGs.
 
-| Output | Why |
-|---|---|
-| `icon.png` | Legacy launcher icon + Play listing source |
-| `adaptive-icon.png` | Foreground layer, inset to the 66% safe zone so launcher masking never clips the artwork |
-| `notification-icon.png` | Android **discards colour and keeps only alpha** — a coloured icon here renders as a white blob |
-| `monochrome-icon.png` | Android 13+ themed icons |
+`notification-icon.png` is a white silhouette because **Android discards colour
+and keeps only the alpha channel** — a coloured icon there renders as a white
+blob. `adaptive-icon.png` is inset to the 66% safe zone so launcher masking
+cannot clip the artwork.
+
+### Notification channels
+
+Android 8+ posts nothing without a channel, and `expo-notifications` would have
+invented a single "Miscellaneous" bucket — so muting the daily streak nudge
+would also mute "your lockbox session is about to be lost". Four channels now,
+importance matched to urgency; the lockbox breach warning is a ~5 second window
+and needs MAX or it cannot heads-up. All silent.
+
+**Channel importance is fixed at creation** and cannot be tuned later on a
+device that already ran an older build.
+
+### Subscriptions
+
+RevenueCat issues one public key per store. Every non-iOS caller previously got
+`not_ios` and failed closed, so Android users would have hit an unbuyable
+paywall. Now platform-selected via `EXPO_PUBLIC_RC_ANDROID_KEY`, with
+deliberately no hardcoded fallback — a wrong key fails identically to a missing
+one, except a missing one says so.
 
 ### Permissions
+
 Declared: camera, internet, coarse/fine location, read calendar, read contacts,
-read external storage, vibrate.
+read external storage, vibrate, plus the four the blocker needs.
 
-Explicitly blocked (`tools:node="remove"`, verified in the generated manifest):
+Blocked (`tools:node="remove"`, verified in the merged manifest):
+`ACCESS_BACKGROUND_LOCATION` (separate Google review, common rejection),
+`WRITE_EXTERNAL_STORAGE`, `RECORD_AUDIO`, `WRITE_CALENDAR`, `WRITE_CONTACTS`.
 
-| Blocked | Why |
-|---|---|
-| `ACCESS_BACKGROUND_LOCATION` | Needs a separate Google review with a demo video and is a common rejection. Places degrades to foreground-only. |
-| `SYSTEM_ALERT_WINDOW` | "Display over other apps" — sensitive, and unused in plan B. **Phase A needs this back.** |
-| `WRITE_EXTERNAL_STORAGE` | Pulled in by `expo-file-system`; nothing writes to shared storage |
-| `RECORD_AUDIO` | Pulled in by vision-camera; Drift never records audio |
-| `WRITE_CALENDAR` / `WRITE_CONTACTS` | Read-only by design, and the iOS permission copy promises exactly that |
-
-`READ_EXTERNAL_STORAGE` is deliberately kept — `AICheckModal` and
-`ProfileScreen` both call `requestMediaLibraryPermissionsAsync()`, which needs
-it on API ≤ 32.
-
-### Notification channels — `notifications.js`
-Android 8+ posts nothing without a channel. `expo-notifications` would have
-invented a single "Miscellaneous" bucket, which means muting the daily streak
-nudge also mutes "your lockbox session is about to be lost".
-
-Four channels, importance matched to urgency:
-
-| Channel | Importance | Carries |
-|---|---|---|
-| `sessions` | MAX | Lockbox breach/lost/done, sleep guard. The breach warning is a ~5 second window — below MAX it cannot heads-up and is useless |
-| `time` | HIGH | Out of time, running low |
-| `reminders` | DEFAULT | Daily streak, bedtime |
-| `social` | DEFAULT | Friend requests, challenges, approvals, leaderboard |
-
-All silent (`sound: null`) — an app about focus should not make noise telling
-you to stop looking at your phone.
-
-**A channel's importance is fixed at creation.** Changing these values does
-nothing on a device that already ran an older build.
-
-### Subscriptions — `useSubscription.js`
-RevenueCat issues one public key per store and they are not interchangeable.
-Previously every non-iOS caller got `not_ios` and failed closed, so every
-Android user would have hit a paywall they could not buy through.
-
-Now platform-selected, reading `EXPO_PUBLIC_RC_ANDROID_KEY`. **Deliberately no
-hardcoded Android fallback** — the comment at the top of that file records a
-stale hardcoded key outliving its app and shipping silently in every build,
-because a wrong key fails identically to a missing one except a missing one says
-so. Until that env var is set, Android reports `no_key_android` and fails
-closed, which is correct: better an unbuyable paywall than free Pro.
-
-`redeemAppStoreCode` stays iOS-only — it is Apple's offer-code sheet, and Play
-promo codes are redeemed in the Play Store app.
-
----
-
-## The seam for Phase A
-
-No screens need changing. `screenTime.js` already resolves every call to a safe
-no-op off iOS, and the UI already degrades: `BlockedAppsModal` computes
-`canBlock = isNativeBlockingAvailable()` and **skips the onboarding gate when
-blocking is unavailable** rather than trapping the user. That Expo Go path is
-the Android path.
-
-To add the blocker later: implement the native module, make `isAvailable()`
-true on Android, restore `SYSTEM_ALERT_WINDOW`, and the existing call sites
-light up unchanged.
+`READ_EXTERNAL_STORAGE` is kept — `AICheckModal` and `ProfileScreen` both call
+`requestMediaLibraryPermissionsAsync()`.
 
 ---
 
 ## Before you can ship
 
-Console work I cannot do — all of it needs your accounts:
+### Play Console declarations the blocker forces
+
+These are new, and they are the part of the submission most likely to draw
+questions:
+
+1. **`AccessibilityService`.** Google restricts it to accessibility purposes,
+   with a carve-out that digital-wellbeing apps ship under. Needs a prominent
+   in-app disclosure before the user is sent to Settings, plus a Play Console
+   declaration. **Verify current policy yourself — this has changed more than
+   once.** It is optional in the code, so a rejection costs latency, not the
+   feature; dropping the service entirely is a one-file change.
+2. **`SYSTEM_ALERT_WINDOW`** — expect to justify "Display over other apps".
+3. **Foreground service `specialUse`** — the subtype string in the manifest is
+   shown to reviewers.
+4. **`PACKAGE_USAGE_STATS`** — declare the digital-wellbeing purpose.
+
+### Everything else
 
 1. **Confirm the package name.** `com.drift.app` is permanent once published.
-   Note iOS drifted to `com.sanghani.drift`; decide deliberately whether Android
-   matches or keeps `com.drift.app`.
-2. **Google Play Console** — $25 one-time. Data Safety form (you collect
-   location, contacts, camera), privacy policy URL (`PRIVACY_POLICY.md` is
-   already served via GitHub Pages). If this is a *personal* rather than
-   organisation account, Google requires a closed-testing run with a minimum
-   number of testers for 14 continuous days before production unlocks — verify
-   current terms, they have changed twice.
-3. **RevenueCat Android** — Play merchant account, products mirrored
-   (`com.drift.pro.month`, `com.drift.pro.annual`, `drift_family_1..5`), 7-day
-   trial on both solo products, Android API key into
-   `EXPO_PUBLIC_RC_ANDROID_KEY`. The `revenuecat-webhook` edge function already
-   handles both stores.
-4. **Push** — upload an FCM V1 service-account JSON to EAS. Without it Android
-   push is silently dead.
-5. **Google sign-in** — create an Android OAuth client and register the SHA-1 of
-   **both** the debug key and Play App Signing. `oauthSignIn.js` already reads
-   `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`.
+   iOS drifted to `com.sanghani.drift`; decide deliberately.
+2. **A real upload keystore.** The release build is currently signed with the
+   **debug** keystore — the Expo template default, which says `Caution!` in the
+   generated `build.gradle`. Let EAS manage credentials, or generate one and
+   never commit it (this repo is public).
+3. **Play Console** — $25, Data Safety form (location, contacts, camera),
+   privacy policy URL. A *personal* account also faces a closed-testing run with
+   a minimum tester count for 14 continuous days before production unlocks.
+4. **RevenueCat Android** — merchant account, products mirrored, 7-day trial,
+   key into `EXPO_PUBLIC_RC_ANDROID_KEY`. The `revenuecat-webhook` edge function
+   already handles both stores.
+5. **Push** — upload an FCM V1 service-account JSON to EAS, or Android push is
+   silently dead.
+6. **Google sign-in** — Android OAuth client, SHA-1 of both the debug key and
+   Play App Signing.
 
 ---
 
 ## Known gaps
 
-- **Dependency drift still outstanding** (`npx expo install --check`):
-  `expo`, `expo-file-system` (trivial patch drift), `react-native-webview`
-  (ahead by a minor), and `react-native-get-random-values@2.0.0` where SDK 54
-  expects `~1.11.0`. That last one is a **major** mismatch in the crypto
-  polyfill Supabase auth relies on — the most likely next thing to break. Left
-  alone deliberately: each of these also moves iOS, so they should be changed
-  one at a time against a real device.
-- `userInterfaceStyle: "light"` is ignored on Android without `expo-system-ui`.
-  Not installed, to avoid adding a pod to the iOS dependency graph. The app's
+- **Never run on a physical device or an OEM skin.** Emulator only. Battery
+  managers are the biggest unknown; a Doze / battery-optimisation exemption
+  prompt is probably needed and is not implemented.
+- **The accessibility service is written but was never switched on and tested.**
+  The polling path is what has actually been exercised.
+- **Status bar styling is inert on Android.** Edge-to-edge is forced by SDK 54,
+  and the legacy `StatusBarModule` is ignored under it, so all 20
+  `<StatusBar barStyle>` calls do nothing and the bar will not follow the in-app
+  dark-mode toggle. `expo-status-bar` does **not** fix this — it is built on the
+  same RN component. The real fix is `SystemBars` from `react-native-edge-to-edge`,
+  which is not installed and would add a native dependency to the iOS pod graph.
+  Latent rather than visible: Android 15 appears to apply automatic contrast.
+- **Dependency drift**: `expo`, `expo-file-system` (patch), `react-native-webview`
+  (a minor ahead). `react-native-get-random-values@2.0.0` is flagged by
+  `expo install --check` but was **verified working on device** — a runtime probe
+  showed `crypto.getRandomValues` returning real entropy, and the one
+  `randomUUID` call in `Drift.jsx` uses `expo-crypto`, not the global. No
+  downgrade needed.
+- `userInterfaceStyle: "light"` is ignored without `expo-system-ui`; the app's
   own theming is JS-driven, so this is cosmetic.
-- **Status bar styling is inert on Android.** Edge-to-edge is forced by SDK 54 /
-  Android 15, and under it the legacy `StatusBarModule` is ignored — Android
-  logs `StatusBarModule: Ignored status bar change, current activity is
-  edge-to-edge` once per render. So all 20 `<StatusBar barStyle>` calls in the
-  app do nothing on Android, and the bar will not follow the in-app dark-mode
-  toggle.
-
-  In practice the emulator still showed correct contrast on both light and dark
-  screens, so this is latent rather than currently visible — Android 15 appears
-  to be applying automatic contrast.
-
-  **`expo-status-bar` does not fix this** — it is documented as "built on top of
-  the StatusBar component exported from React Native", so on Android it routes
-  into the same ignored module. I tried a wrapper around it and reverted it,
-  because it changed 30 lines and fixed nothing. The real fix is `SystemBars`
-  from `react-native-edge-to-edge`, which is **not** currently installed (only
-  the `react-native-is-edge-to-edge` detection helper is). Adding it means adding
-  a native dependency that also lands in the iOS pod graph, which is why it is
-  left for a decision rather than done here.
-- Layout uses `StatusBar.currentHeight` for top inset and needs a real look on a
-  device with a notch/punch-hole.
-- Lockbox AR, sleep guard NFC, widgets/Live Activities and Siri intents are
-  iOS-only and no-op cleanly. Android equivalents exist (ARCore, Android NFC,
-  Glance) but are not built.
+- Lockbox AR, sleep guard NFC, widgets/Live Activities and Siri intents remain
+  iOS-only and no-op cleanly.
 
 ## Building locally
 
@@ -256,4 +254,14 @@ For emulator iteration, restrict ABIs — it roughly quarters native build time:
 
 ```bash
 cd android && ./gradlew assembleDebug -PreactNativeArchitectures=x86_64
+```
+
+Grant the blocker permissions without hand-driving Settings:
+
+```bash
+adb shell appops set com.drift.app android:get_usage_stats allow
+```
+
+```bash
+adb shell appops set com.drift.app android:system_alert_window allow
 ```
