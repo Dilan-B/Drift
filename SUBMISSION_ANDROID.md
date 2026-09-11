@@ -3,9 +3,9 @@
 Branch: `feat/android-port`. Companion to `ANDROID_PORT.md`, which covers how
 the port works; this covers getting it onto the store.
 
-**Status: not submittable yet.** One hard stop — the signing key (§2.1) — plus
-two things you would otherwise ship without (§2.2, §2.3). Everything that could
-be done without your accounts is done.
+**Status: a signed production AAB exists and is ready to upload.** The signing
+key is done (§2.1). What remains is Play Console work, plus two things you can
+ship without (§2.2, §2.3).
 
 ---
 
@@ -31,23 +31,33 @@ screen rather than re-set in a lookalike font.
 
 ## 2. What needs your accounts
 
-### 2.1 A real upload keystore
+### 2.1 Upload keystore — DONE
 
-The release build is currently signed with the **debug** keystore — Expo's
-template default, which says `Caution!` right there in the generated
-`android/app/build.gradle`. Play will reject it.
+Generated on EAS on 2026-09-11 (`Build Credentials Yw5V2CBQIw`) and used to
+sign a production AAB. Verified from the artifact itself: the certificate is
+valid 2026-09-11 → 2054-01-27 and its DN is NOT
+`CN=Android Debug, O=Android, C=US`, so it is genuinely the upload key rather
+than the debug key the local Gradle build still uses. Google requires validity
+past 2033; this clears it by two decades.
 
-Use EAS-managed credentials rather than a local file. **This repo is public**;
-a committed keystore would be a total compromise, and losing the key means
-never being able to update the app again.
+**Back it up.** Losing this key means never updating the app again:
 
 ```bash
-eas build --platform android --profile production
+npx eas-cli credentials --platform android
 ```
 
-The first run offers to generate and store a keystore for you. Say yes, then
-back it up (`eas credentials`). `eas.json` is already configured: production
-builds an `app-bundle` with `autoIncrement: "versionCode"`.
+→ `production` → `Keystore` → Download, then store it somewhere durable. It is
+held on EAS servers, not in this repo — and it must never be committed, since
+this repo is public.
+
+**Rebuild any time with:**
+
+```bash
+npx eas-cli build --platform android --profile production
+```
+
+`eas.json` is configured for an `app-bundle` with
+`autoIncrement: "versionCode"`, so each build bumps the number for you.
 
 ### 2.2 Firebase / FCM — re-engagement pushes only
 
@@ -89,6 +99,46 @@ mirrored (`com.drift.pro.month`, `com.drift.pro.annual`,
 `drift_family_1..5`), a 7-day trial on both solo products, and the Android key
 into the env. The `revenuecat-webhook` edge function already handles both
 stores.
+
+---
+
+## 2.5 Two things that bit on the first build
+
+**EAS does not see your `.env`.** It is gitignored and not uploaded, so the
+first build had every `EXPO_PUBLIC_*` undefined. `GOOGLE_WEB_CLIENT_ID` and
+`GOOGLE_IOS_CLIENT_ID` are now set as plaintext EAS variables on production,
+preview and development. Anything else the client needs at build time has to be
+added the same way:
+
+```bash
+npx eas-cli env:create production --name NAME --value VALUE --visibility plaintext
+```
+
+**The upload archive was 1.0 GB** because `android/app/build` is 2.5 GB of
+local Gradle output. `.easignore` now excludes it and the archive is 18.5 MB.
+Note that `.easignore` REPLACES `.gitignore` for uploads rather than extending
+it, which is why it repeats entries that look redundant.
+
+---
+
+## 2.6 Google sign-in on Android — order matters
+
+Android needs its own OAuth client keyed to a SHA-1 fingerprint, and the
+fingerprint that matters is **Play's, not yours**: Play App Signing re-signs
+the app, so the upload key's fingerprint is not what Google validates against.
+It does not exist until the first AAB has been uploaded.
+
+1. Upload the AAB to internal testing
+2. Play Console → **Setup → App integrity** → copy the **app signing key** SHA-1
+3. Google Cloud Console → Credentials → **Create OAuth client ID → Android**,
+   package `com.drift.app`, paste that SHA-1
+4. Add the **upload key** SHA-1 to the same client too, so EAS
+   internal-distribution APKs (which Play never re-signs) also work
+5. `npx eas-cli env:create production --name EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID --value <id> --visibility plaintext`
+6. Rebuild
+
+Until then Google sign-in fails on Android and email/password works. Worth
+knowing before you test the first build and assume it is broken.
 
 ---
 
