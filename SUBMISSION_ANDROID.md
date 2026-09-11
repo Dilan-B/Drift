@@ -48,7 +48,26 @@ The first run offers to generate and store a keystore for you. Say yes, then
 back it up (`eas credentials`). `eas.json` is already configured: production
 builds an `app-bundle` with `autoIncrement: "versionCode"`.
 
-### 2.2 Firebase / FCM — push is currently dead
+### 2.2 Firebase / FCM — re-engagement pushes only
+
+**Not a blocker, and not a migration.** FCM is the only transport that can wake
+an Android device — Google's equivalent of APNs — so Supabase cannot deliver a
+push on its own and neither can anyone else. You create a Firebase project
+purely to obtain a credential, and use none of Firebase's products: no Auth, no
+Firestore, no Storage, no Analytics. Supabase remains the entire backend.
+
+What actually depends on it is narrow. Drift sends exactly three things
+remotely, all from the `send-scheduled-pushes` cron: `streak_reminder`,
+`inactivity_nudge`, `daily_motivation`. Every time-critical notification — out
+of time, running low, lockbox breach and loss, sleep guard, task approved,
+friend requests, challenges — is a LOCAL notification and already works on
+Android today. Shipping the first release without FCM costs retention, not
+function.
+
+**Do not add `googleServicesFile` to app.json until the file exists** —
+prebuild hard-fails on a missing one (tested). It goes in at the same moment
+the file does.
+
 
 Verified failing on device:
 

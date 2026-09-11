@@ -246,7 +246,13 @@ waiting on you.
    `create table if not exists` on a table that already existed. Migration
    written, **not applied** — see SUBMISSION_ANDROID.md §7.
 4. **Push registration fails** — no Firebase/FCM configured. Caught and logged
-   rather than crashing. See SUBMISSION_ANDROID.md §2.2.
+   rather than crashing, and narrower than it sounds: FCM is the only transport
+   that can wake an Android device, but Drift only sends three things remotely
+   (streak reminder, inactivity nudge, daily motivation, all from the
+   `send-scheduled-pushes` cron). Every time-critical notification — out of
+   time, lockbox breach, task approved, friend requests — is LOCAL and already
+   works. Missing FCM costs re-engagement, not function. See
+   SUBMISSION_ANDROID.md §2.2.
 
 ## Known gaps
 
@@ -255,11 +261,13 @@ waiting on you.
   prompt is probably needed and is not implemented.
 - **The accessibility service is written but was never switched on and tested.**
   The polling path is what has actually been exercised.
-- **Live rep detection (vision-camera + pose) was never exercised.** It is only
-  reachable through a rep challenge from a friend. `poseCameraAvailable()`
-  degrades to the AI photo check when the native module fails to load, so the
-  failure mode is safe, but whether live tracking actually runs on Android is
-  unknown.
+- **Live rep detection is off on every platform, and always was** — not an
+  Android gap. `PoseCamera.jsx` hardcodes `const Live = null` because
+  `react-native-fast-tflite` was removed from the project, so
+  `poseCameraAvailable()` returns false on iOS too and every caller already
+  falls back to the AI photo check. `PoseCameraLive.jsx` is currently dead
+  code importing a package that is not installed. (An earlier draft of this
+  file called this an untested Android risk. It is neither.)
 - **The paywall was never exercised**, because RevenueCat Android is not
   configured. It fails closed.
 - **Status bar styling is inert on Android.** Edge-to-edge is forced by SDK 54,
