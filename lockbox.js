@@ -40,6 +40,26 @@ import { NativeModules, NativeEventEmitter, Platform } from "react-native";
 
 const Native = NativeModules.LockboxModule;
 
+/**
+ * Android motion sensing. Same algorithm, same constants — see
+ * modules/drift-blocker/.../DriftMotionModule.kt.
+ *
+ * WITHOUT THIS, LOCKBOX PAID OUT FOR NOTHING ON ANDROID. startMonitoring()
+ * threw "unavailable" and every caller swallowed it, and onStateChange()
+ * returned a no-op, so markDisturbed() — the only path to forfeiting — could
+ * never fire. Every session reached settle("completed") and awarded the full
+ * reward whether or not the phone ever went in the box.
+ */
+let AndroidMotion = null;
+if (Platform.OS === "android") {
+  try {
+    const { requireNativeModule } = require("expo-modules-core");
+    AndroidMotion = requireNativeModule("DriftMotion");
+  } catch {}
+}
+const IS_ANDROID = Platform.OS === "android";
+let androidEmitter = null;
+
 const KEY_SESSION = "drift_lockbox_session";
 const KEY_HISTORY = "drift_lockbox_history";
 const KEY_PREFS   = "drift_lockbox_prefs";
@@ -77,8 +97,12 @@ export const DEFAULT_PREFS = {
   lastDurationMinutes: 25,
 };
 
-export const isAvailable = () =>
-  Platform.OS === "ios" && !!Native && typeof Native.startMonitoring === "function";
+export const isAvailable = () => {
+  if (IS_ANDROID) {
+    try { return !!AndroidMotion && AndroidMotion.isAvailable(); } catch { return false; }
+  }
+  return Platform.OS === "ios" && !!Native && typeof Native.startMonitoring === "function";
+};
 
 let emitter = null;
 /**
@@ -88,6 +112,13 @@ let emitter = null;
  * fires a handful of times per session rather than 20 times a second.
  */
 export function onStateChange(handler) {
+  if (IS_ANDROID) {
+    if (!AndroidMotion) return () => {};
+    // Expo modules are their own event emitters, so unlike the iOS path this
+    // does not go through NativeEventEmitter.
+    const sub = AndroidMotion.addListener("LockboxState", handler);
+    return () => { try { sub.remove(); } catch {} };
+  }
   if (!isAvailable()) return () => {};
   if (!emitter) emitter = new NativeEventEmitter(Native);
   const sub = emitter.addListener("LockboxState", handler);
@@ -95,23 +126,36 @@ export function onStateChange(handler) {
 }
 
 export async function motionAvailable() {
+  if (IS_ANDROID) return isAvailable();
   if (!isAvailable()) return false;
   try { return !!(await Native.isAvailable()); } catch { return false; }
 }
 
 export async function startMonitoring(sensitivity) {
+  if (IS_ANDROID) {
+    if (!AndroidMotion) throw new Error("unavailable");
+    const s = sensitivity ?? (await getPrefs()).sensitivity;
+    return await AndroidMotion.startMonitoring(s);
+  }
   if (!isAvailable()) throw new Error("unavailable");
   const s = sensitivity ?? (await getPrefs()).sensitivity;
   return await Native.startMonitoring(s);
 }
 
 export async function stopMonitoring() {
+  if (IS_ANDROID) {
+    try { await AndroidMotion?.stopMonitoring(); } catch {}
+    return;
+  }
   if (!isAvailable()) return;
   try { await Native.stopMonitoring(); } catch {}
 }
 
 /** Instantaneous reading, for a "hold still" meter during placement. */
 export async function currentMagnitude() {
+  if (IS_ANDROID) {
+    try { return await AndroidMotion?.currentMagnitude(); } catch { return null; }
+  }
   if (!isAvailable()) return null;
   try { return await Native.currentMagnitude(); } catch { return null; }
 }

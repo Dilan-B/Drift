@@ -1,6 +1,9 @@
 {
   "platforms": ["android"],
   "android": {
-    "modules": ["com.drift.blocker.DriftBlockerModule"]
+    "modules": [
+      "com.drift.blocker.DriftBlockerModule",
+      "com.drift.blocker.DriftMotionModule"
+    ]
   }
 }
