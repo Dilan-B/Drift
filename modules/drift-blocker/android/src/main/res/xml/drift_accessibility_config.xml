@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Scoped as narrowly as the API allows, which is both the right thing to do and
+  the argument to make to a Play reviewer:
+
+    accessibilityEventTypes  only window-state changes, not text, clicks,
+                             scrolls, or content changes
+    canRetrieveWindowContent false - Drift never reads what is on screen, only
+                             which app opened
+    packageNames             deliberately omitted: the blocked list is chosen
+                             by the user at runtime and changes, so it cannot
+                             be pinned here
+
+  notificationTimeout is 100ms rather than 0 to coalesce the burst of events an
+  app launch produces into roughly one callback.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault"
+    android:canRetrieveWindowContent="false"
+    android:notificationTimeout="100"
+    android:description="@string/drift_accessibility_description" />

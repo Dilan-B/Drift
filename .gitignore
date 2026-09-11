@@ -29,3 +29,9 @@ supabase/admin/diagnose_recurring_duplicates.sql
 # Supabase CLI version-check cache — rewritten on every CLI invocation.
 # project-ref stays tracked so a clone knows which project this is.
 supabase/.temp/cli-latest
+
+# Local Expo module build output. Gradle writes here the same way it does in
+# android/, and the transform cache contains paths long enough that Windows
+# git refuses to index them outright.
+modules/*/android/build/
+modules/*/android/.cxx/

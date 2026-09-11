@@ -389,8 +389,10 @@ export default function ProfileScreen({
           {screenTimeStatus !== "approved" && screenTimeStatus !== "unavailable" && (
             <Row
               id="screenTime"
-              title="Screen Time access"
-              sub={screenTimeStatus === "denied" ? "Denied - tap to enable" : "Not enabled - tap to grant"}
+              title={Platform.OS === "android" ? "App blocking is off" : "Screen Time access"}
+              sub={Platform.OS === "android"
+                ? "Tap to finish setting up blocking"
+                : (screenTimeStatus === "denied" ? "Denied - tap to enable" : "Not enabled - tap to grant")}
               accent={earn.terra}
               icon={(c) => <PhoneIcon size={20} color={c} />}
               onPress={onRequestScreenTime}

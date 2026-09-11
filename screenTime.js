@@ -11,19 +11,63 @@
  * don't need platform branching.
  */
 import { NativeModules, Platform } from "react-native";
+import * as AndroidBlocker from "./modules/drift-blocker";
 
 const Native = NativeModules.ScreenTimeModule;
 
-export const isAvailable = () =>
+/**
+ * Android routes to a completely different mechanism — see
+ * modules/drift-blocker. The two share nothing but this interface: iOS asks the
+ * OS to shield apps and the OS enforces it; Android watches the foreground and
+ * covers blocked apps with our own screen.
+ *
+ * Every function below branches on Android FIRST and leaves the iOS path
+ * untouched underneath, so nothing here can change iOS behaviour.
+ *
+ * The one thing that does not map is presentAppPicker: Apple ships a system
+ * sheet and hides the chosen bundle IDs, Android has no picker at all, so the
+ * app has to render its own list. It returns false on Android and the UI layer
+ * opens AndroidBlockerModal instead.
+ */
+const IS_ANDROID = Platform.OS === "android";
+
+/**
+ * True when the iOS native module is actually present.
+ *
+ * Distinct from isAvailable() and load-bearing. isAvailable() now answers "can
+ * Drift block apps on this device", which is true on Android — so the features
+ * that exist ONLY on iOS (widgets, Live Activities, Health, Siri) must NOT gate
+ * on it. Reaching `Native.foo` on Android after an isAvailable() check would
+ * dereference an undefined module and throw a TypeError, not no-op.
+ */
+const hasIOSNative = () =>
   Platform.OS === "ios" && !!Native && typeof Native.applyShield === "function";
 
+export const isAvailable = () =>
+  hasIOSNative() || (IS_ANDROID && AndroidBlocker.isAvailable());
+
+/** Android-only: the full permission + enforcement picture. */
+export const getAndroidStatus = () => AndroidBlocker.getStatus();
+export const androidBlocker = AndroidBlocker;
+
 export async function requestAuthorization() {
+  if (IS_ANDROID) {
+    // Nothing to request: both Android permissions are granted in Settings
+    // screens, not dialogs. Report what is currently true and let the caller
+    // send the user to AndroidBlockerModal if it is not enough.
+    const st = await AndroidBlocker.getStatus();
+    return st.ready ? "approved" : "denied";
+  }
   if (!isAvailable()) return "unavailable";
   try { return await Native.requestAuthorization(); }
   catch (e) { return `error:${e?.message || "unknown"}`; }
 }
 
 export async function getAuthorizationStatus() {
+  if (IS_ANDROID) {
+    const st = await AndroidBlocker.getStatus();
+    return st.ready ? "approved" : "denied";
+  }
   if (!isAvailable()) return "unavailable";
   try { return await Native.getAuthorizationStatus(); }
   catch { return "unknown"; }
@@ -35,6 +79,8 @@ export async function getAuthorizationStatus() {
  * we never see the bundle IDs (Apple intentionally hides them).
  */
 export async function presentAppPicker() {
+  // No system picker exists on Android; the caller shows AndroidBlockerModal.
+  if (IS_ANDROID) return false;
   if (!isAvailable()) return false;
   try { await Native.presentFamilyActivityPicker(); return true; }
   catch { return false; }
@@ -42,6 +88,9 @@ export async function presentAppPicker() {
 
 /** Shield all app categories (free tier — blocks social, entertainment, etc.). */
 export async function applyShieldCategories() {
+  // Android has no notion of app CATEGORIES - the user picks apps by name -
+  // so the category shield collapses onto the ordinary one.
+  if (IS_ANDROID) return AndroidBlocker.applyShield();
   if (!isAvailable() || typeof Native.applyShieldCategories !== "function") return false;
   try { await Native.applyShieldCategories(); return true; }
   catch { return false; }
@@ -49,6 +98,7 @@ export async function applyShieldCategories() {
 
 /** Shield the user's previously picked apps. Safe to call repeatedly. */
 export async function applyShield() {
+  if (IS_ANDROID) return AndroidBlocker.applyShield();
   if (!isAvailable()) return false;
   try { await Native.applyShield(); return true; }
   catch { return false; }
@@ -56,6 +106,7 @@ export async function applyShield() {
 
 /** Remove the shield. Safe to call when no shield is active. */
 export async function clearShield() {
+  if (IS_ANDROID) { await AndroidBlocker.clearShield(); return; }
   if (!isAvailable()) return;
   try { await Native.clearShield(); } catch {}
 }
@@ -69,6 +120,7 @@ export async function clearShield() {
  * Pass the exact remaining seconds so iOS fires at the right moment.
  */
 export async function startBalanceMonitoring(seconds) {
+  if (IS_ANDROID) return AndroidBlocker.startBalanceMonitoring(seconds);
   if (!isAvailable()) return { started: false, reason: "unavailable" };
   try {
     await Native.startBalanceMonitoring(Math.max(5, Math.floor(seconds)));
@@ -80,6 +132,7 @@ export async function startBalanceMonitoring(seconds) {
 
 /** Cancel any pending DeviceActivity monitor. */
 export async function stopBalanceMonitoring() {
+  if (IS_ANDROID) { await AndroidBlocker.stopBalanceMonitoring(); return; }
   if (!isAvailable()) return;
   try { await Native.stopBalanceMonitoring(); } catch {}
 }
@@ -88,6 +141,7 @@ export async function stopBalanceMonitoring() {
  * Returns seconds of blocked-app usage iOS counted since last read. Resets counter.
  */
 export async function consumeUsedSeconds() {
+  if (IS_ANDROID) return AndroidBlocker.consumeUsedSeconds();
   if (!isAvailable()) return 0;
   try { return (await Native.consumeUsedSeconds()) || 0; }
   catch { return 0; }
@@ -98,6 +152,7 @@ export async function consumeUsedSeconds() {
  * (the DriftMonitor extension fired). Reading also clears the flag.
  */
 export async function consumeDepletedFlag() {
+  if (IS_ANDROID) return AndroidBlocker.consumeDepletedFlag();
   if (!isAvailable()) return false;
   try { return !!(await Native.consumeDepletedFlag()); }
   catch { return false; }
@@ -105,7 +160,7 @@ export async function consumeDepletedFlag() {
 
 /** Persist the current earned balance to App Group storage for widgets. */
 export async function updateSharedBalance(seconds) {
-  if (!isAvailable() || typeof Native.updateSharedBalance !== "function") return false;
+  if (!hasIOSNative() || typeof Native.updateSharedBalance !== "function") return false;
   try {
     await Native.updateSharedBalance(Math.max(0, Math.floor(Number(seconds) || 0)));
     return true;
@@ -115,13 +170,13 @@ export async function updateSharedBalance(seconds) {
 }
 
 export async function consumePendingHealthEarn() {
-  if (!isAvailable() || typeof Native.consumePendingHealthEarn !== "function") return 0;
+  if (!hasIOSNative() || typeof Native.consumePendingHealthEarn !== "function") return 0;
   try { return Math.max(0, Number(await Native.consumePendingHealthEarn()) || 0); }
   catch { return 0; }
 }
 
 export async function startDriftInLiveActivity(title, seconds) {
-  if (!isAvailable() || typeof Native.startDriftInLiveActivity !== "function") {
+  if (!hasIOSNative() || typeof Native.startDriftInLiveActivity !== "function") {
     return { started: false, reason: "unavailable" };
   }
   try {
@@ -135,7 +190,7 @@ export async function startDriftInLiveActivity(title, seconds) {
 }
 
 export async function updateDriftInLiveActivity(seconds) {
-  if (!isAvailable() || typeof Native.updateDriftInLiveActivity !== "function") return false;
+  if (!hasIOSNative() || typeof Native.updateDriftInLiveActivity !== "function") return false;
   try {
     await Native.updateDriftInLiveActivity(Math.max(0, Math.floor(Number(seconds) || 0)));
     return true;
@@ -145,7 +200,7 @@ export async function updateDriftInLiveActivity(seconds) {
 }
 
 export async function endDriftInLiveActivity() {
-  if (!isAvailable() || typeof Native.endDriftInLiveActivity !== "function") return false;
+  if (!hasIOSNative() || typeof Native.endDriftInLiveActivity !== "function") return false;
   try {
     await Native.endDriftInLiveActivity();
     return true;
@@ -155,7 +210,7 @@ export async function endDriftInLiveActivity() {
 }
 
 export async function setProStatus(isPro) {
-  if (!isAvailable() || typeof Native.setProStatus !== "function") return;
+  if (!hasIOSNative() || typeof Native.setProStatus !== "function") return;
   try { await Native.setProStatus(!!isPro); } catch {}
 }
 
@@ -164,6 +219,7 @@ export async function setProStatus(isPro) {
  * (block screen) renders in the same light/dark theme as the app.
  */
 export async function setAppearance(isDark) {
+  if (IS_ANDROID) { await AndroidBlocker.setAppearance(isDark); return; }
   if (!isAvailable() || typeof Native.setAppearance !== "function") return;
   try { await Native.setAppearance(!!isDark); } catch {}
 }
@@ -173,13 +229,14 @@ export async function setAppearance(isDark) {
  * Returns { taskName?: string, driftInMinutes?: number } and clears the flags.
  */
 export async function consumePendingSiriTask() {
-  if (!isAvailable() || typeof Native.consumePendingSiriTask !== "function") return {};
+  if (!hasIOSNative() || typeof Native.consumePendingSiriTask !== "function") return {};
   try { return (await Native.consumePendingSiriTask()) || {}; }
   catch { return {}; }
 }
 
 /** Return a diagnostics dump for debugging the DeviceActivity pipeline. */
 export async function getDiagnostics() {
+  if (IS_ANDROID) return AndroidBlocker.getDiagnostics();
   if (!isAvailable()) return { available: false };
   try { return await Native.getDiagnostics(); }
   catch (e) { return { error: e?.message }; }

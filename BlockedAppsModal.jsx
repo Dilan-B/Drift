@@ -17,6 +17,7 @@ import {
   getScreenTimeAuthStatus, pickBlockedAppsNative, getBlockedSelectionCount,
 } from "./blockedApps";
 import { FF, getTheme } from "./theme";
+import AndroidBlockerModal from "./AndroidBlockerModal";
 
 // Remapped onto the organic-editorial system — see theme.js FF.
 const FO  = FF.bodyBold;
@@ -27,6 +28,22 @@ const FB  = FF.body;
 // `isPro` / `onUpgrade` are still accepted so existing call sites keep working,
 // but app selection is no longer gated on a subscription.
 export default function BlockedAppsModal({ visible, onClose, dark = false, firstTime = false, isPro = false, onUpgrade }) {
+  // Android blocks apps by an entirely different mechanism, and the copy below
+  // is written for Apple's picker — it names Screen Time, promises the OS
+  // enforces it while Drift is closed, and its primary button opens a sheet
+  // that does not exist off iOS. Hand the whole screen over rather than
+  // threading platform conditionals through every string.
+  if (Platform.OS === "android") {
+    return (
+      <AndroidBlockerModal
+        visible={visible}
+        onClose={onClose}
+        dark={dark}
+        firstTime={firstTime}
+      />
+    );
+  }
+
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
 

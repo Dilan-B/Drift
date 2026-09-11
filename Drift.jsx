@@ -73,7 +73,7 @@ import {
   startBalanceMonitoring, stopBalanceMonitoring, consumeDepletedFlag, consumeUsedSeconds,
   getDiagnostics, updateSharedBalance, startDriftInLiveActivity, updateDriftInLiveActivity,
   endDriftInLiveActivity, consumePendingHealthEarn, setProStatus, setAppearance,
-  consumePendingSiriTask,
+  consumePendingSiriTask, androidBlocker,
 } from "./screenTime";
 import { supabase, syncScreenTime, getFriendsWithScreenTime, safeGetSession, saveOnboardingResponses, getAppConfig, isVersionOutdated, fetchAppStoreLatest, markSignOutRequested } from "./supabase";
 import ForceUpdateModal from "./ForceUpdateModal";
@@ -4053,12 +4053,27 @@ export default function App() {
       // Only prompt on a KNOWN non-approved state — never on an unknown/failed read.
       if (!authPromptShownRef.current && authStatus !== "unknown") {
         authPromptShownRef.current = true;
+        // Android revokes differently and is fixed somewhere else entirely:
+        // there is no Screen Time, and Linking.openSettings() lands on Drift's
+        // app-info page, which does not contain either toggle. Name the real
+        // screen and deep-link straight to it.
+        const isAndroid = Platform.OS === "android";
         Alert.alert(
-          "Screen Time access needed",
-          "Drift can't block apps until you re-enable Screen Time access in Settings → Screen Time.",
+          isAndroid ? "Blocking is switched off" : "Screen Time access needed",
+          isAndroid
+            ? "Drift can't hold your apps until Usage access is switched back on for Drift, under Settings → Apps → Special app access."
+            : "Drift can't block apps until you re-enable Screen Time access in Settings → Screen Time.",
           [
             { text: "Later", style: "cancel" },
-            { text: "Open Settings", onPress: () => { try { Linking.openSettings?.(); } catch {} } },
+            {
+              text: "Open Settings",
+              onPress: () => {
+                try {
+                  if (isAndroid) androidBlocker.openUsageAccessSettings();
+                  else Linking.openSettings?.();
+                } catch {}
+              },
+            },
           ],
         );
       }
@@ -5835,6 +5850,12 @@ export default function App() {
   // upgrade. Lifted out of ProfileScreen when these rows moved to The Lab.
   const openBlockedAppsPicker = useCallback(async () => {
     setFirstTimeBlockedApps(false);
+    // Android has no system picker to hand off to. The in-app modal IS the
+    // picker, and it carries the permission walk too, so it is the only route
+    // — for free and Pro alike. Without this branch presentAppPicker() returns
+    // false, openNativeAppPicker reports "picker_failed", and the handling
+    // below matches neither case: the button silently does nothing.
+    if (Platform.OS === "android") { setShowBlockedApps(true); return; }
     if (!proAccess) { setShowBlockedApps(true); return; }
     const { opened, reason } = await openNativeAppPicker();
     if (opened) return;
@@ -6434,6 +6455,15 @@ export default function App() {
             }
           }}
           onRequestScreenTime={async () => {
+            // Android cannot be granted from inside the app at all - both
+            // toggles live in Settings - so send the user to the setup screen
+            // that walks them through it rather than reporting a status they
+            // have no way to act on.
+            if (Platform.OS === "android") {
+              setFirstTimeBlockedApps(false);
+              setShowBlockedApps(true);
+              return;
+            }
             const next = await requestScreenTimeAuth();
             setScreenTimeStatus(next);
             if (next !== "approved") {

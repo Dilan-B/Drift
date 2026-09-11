@@ -1,0 +1,106 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      PACKAGE_USAGE_STATS cannot be requested with a runtime dialog. Declaring
+      it only makes Drift appear in Settings > Special app access > Usage
+      access, where the user toggles it by hand.
+    -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!--
+      "Display over other apps". Required not for drawing a floating window but
+      for STARTING the shield at all: since Android 10, launching an activity
+      from the background is silently dropped unless the app holds this.
+    -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!--
+      Package visibility. Since Android 11 an app sees almost nothing of what
+      else is installed; this narrow query asks only for apps with a launcher
+      icon, which is the set the picker shows. The broad alternative,
+      QUERY_ALL_PACKAGES, is treated as sensitive and needs a Play Console
+      justification — this needs none.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application>
+
+        <service
+            android:name="com.drift.blocker.BlockerService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <!--
+              Android 14 requires every foreground service to declare a type,
+              and none of the predefined ones describe app blocking. specialUse
+              is the documented escape hatch; the subtype string below is shown
+              to Play reviewers and must explain the use honestly.
+            -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Enforces the user's own app-blocking schedule for digital wellbeing" />
+        </service>
+
+        <!--
+          Optional accelerator, not required for the feature to work. See the
+          Play policy note in DriftAccessibilityService.kt before shipping.
+        -->
+        <service
+            android:name="com.drift.blocker.DriftAccessibilityService"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/drift_accessibility_config" />
+        </service>
+
+        <!--
+          Restores the watcher after a reboot or an app update. Without it the
+          service dies with the device and nothing brings it back until the
+          user next opens Drift.
+        -->
+        <receiver
+            android:name="com.drift.blocker.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+          excludeFromRecents + noHistory: the shield must not become an entry
+          the user can swipe back into, and must not linger in the back stack
+          after it has served its purpose.
+          singleTask so repeated triggers reuse the one instance instead of
+          stacking a screen per detection tick.
+        -->
+        <activity
+            android:name="com.drift.blocker.ShieldActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="com.drift.blocker.shield"
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
+
+    </application>
+</manifest>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Shown by the system on the accessibility settings screen, directly under
+      the Drift entry. It is the last thing a user reads before granting, so it
+      states plainly what is read and what is not.
+    -->
+    <string name="drift_accessibility_description">Lets Drift notice the moment you open an app you have chosen to block, so it can hold it until you have earned screen time. Drift only reads which app comes to the front — never what is on the screen, what you type, or what you tap. This is optional; blocking still works without it, just a little slower.</string>
+</resources>
