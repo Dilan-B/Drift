@@ -1,0 +1,43 @@
+# Files excluded from the archive uploaded to EAS Build.
+#
+# WHY THIS EXISTS: without it the archive was 1.0 GB, because android/app/build
+# alone is 2.5 GB of local Gradle output — the debug APK, the release AAB, the
+# CMake object tree and the native symbol files. EAS builds from source and
+# regenerates all of it, so every byte of that upload was wasted on a slow
+# transfer and quota.
+#
+# .easignore REPLACES .gitignore for build uploads rather than extending it, so
+# anything that should not be uploaded has to be listed here even if git
+# already ignores it.
+
+# ── Local build output ───────────────────────────────────────
+android/build/
+android/app/build/
+android/.gradle/
+android/.cxx/
+android/app/.cxx/
+modules/*/android/build/
+modules/*/android/.cxx/
+ios/build/
+ios/Pods/
+ios/DerivedData/
+*.apk
+*.aab
+*.ipa
+
+# ── Caches and local state ───────────────────────────────────
+.expo/
+dist/
+web-build/
+node_modules/
+.gradle/
+
+# ── Not needed by a build ────────────────────────────────────
+# The public marketing site, the Play Store assets, and the changelog are
+# deliverables rather than build inputs.
+docs/
+store/
+Drift-changelog.xlsx
+
+# ── VCS ──────────────────────────────────────────────────────
+.git/

@@ -35,7 +35,7 @@
     },
     "android": {
       "package": "com.drift.app",
-      "versionCode": 1,
+      "versionCode": 3,
       "icon": "./assets/icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
