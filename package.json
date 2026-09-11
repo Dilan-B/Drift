@@ -22,13 +22,13 @@
     "aes-js": "^3.1.2",
     "expo": "~54.0.0",
     "expo-apple-authentication": "~8.0.8",
+    "expo-application": "~7.0.8",
     "expo-asset": "~12.0.13",
     "expo-auth-session": "~7.0.11",
     "expo-background-task": "~1.0.10",
     "expo-calendar": "~15.0.8",
     "expo-clipboard": "~8.0.8",
-    "expo-application": "~7.0.8",
-    "expo-constants": "^57.0.8",
+    "expo-constants": "~18.0.14",
     "expo-contacts": "~15.0.11",
     "expo-crypto": "~15.0.9",
     "expo-dev-client": "~6.0.21",
@@ -52,7 +52,7 @@
     "react-native-get-random-values": "^2.0.0",
     "react-native-purchases": "^10.7.2",
     "react-native-reanimated": "~4.1.1",
-    "react-native-svg": "~15.8.0",
+    "react-native-svg": "15.12.1",
     "react-native-vision-camera": "^4.6.4",
     "react-native-web": "~0.21.0",
     "react-native-webview": "^13.16.1",
@@ -63,6 +63,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.0",
     "@types/react": "~19.1.10",
+    "jimp-compact": "^0.16.1",
     "supabase": "^2.115.0",
     "typescript": "~5.9.2"
   }
