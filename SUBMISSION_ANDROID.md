@@ -3,8 +3,9 @@
 Branch: `feat/android-port`. Companion to `ANDROID_PORT.md`, which covers how
 the port works; this covers getting it onto the store.
 
-**Status: not submittable yet.** Three things need your accounts (§2). Everything
-that could be done without them is done.
+**Status: not submittable yet.** One hard stop — the signing key (§2.1) — plus
+two things you would otherwise ship without (§2.2, §2.3). Everything that could
+be done without your accounts is done.
 
 ---
 
@@ -28,7 +29,7 @@ screen rather than re-set in a lookalike font.
 
 ---
 
-## 2. The three hard blockers
+## 2. What needs your accounts
 
 ### 2.1 A real upload keystore
 
@@ -54,7 +55,14 @@ builds an `app-bundle` with `autoIncrement: "versionCode"`.
 an Android device — Google's equivalent of APNs — so Supabase cannot deliver a
 push on its own and neither can anyone else. You create a Firebase project
 purely to obtain a credential, and use none of Firebase's products: no Auth, no
-Firestore, no Storage, no Analytics. Supabase remains the entire backend.
+Firestore, no Storage, no Analytics. Supabase remains the entire backend, and
+it is free.
+
+Verified failing on device, on every launch:
+
+```
+registerForPushNotifications failed: Default FirebaseApp is not initialized
+```
 
 What actually depends on it is narrow. Drift sends exactly three things
 remotely, all from the `send-scheduled-pushes` cron: `streak_reminder`,
@@ -62,23 +70,15 @@ remotely, all from the `send-scheduled-pushes` cron: `streak_reminder`,
 of time, running low, lockbox breach and loss, sleep guard, task approved,
 friend requests, challenges — is a LOCAL notification and already works on
 Android today. Shipping the first release without FCM costs retention, not
-function.
+function, so this should not hold up a submission.
 
-**Do not add `googleServicesFile` to app.json until the file exists** —
-prebuild hard-fails on a missing one (tested). It goes in at the same moment
-the file does.
+To do it (~15 minutes): Firebase console → new project → add an Android app
+with package `com.drift.app` → download `google-services.json` to the repo
+root → upload the **FCM V1 service-account JSON** to EAS (`eas credentials` →
+Android → FCM V1) → rebuild.
 
-
-Verified failing on device:
-
-```
-registerForPushNotifications failed: Default FirebaseApp is not initialized
-```
-
-Create a Firebase project, add an Android app with package `com.drift.app`,
-download `google-services.json` into the repo root, and upload the **FCM V1
-service-account JSON** to EAS (`eas credentials` → Android → FCM V1). Without
-this every push notification silently fails — local notifications are fine.
+**Add `googleServicesFile: "./google-services.json"` to `app.json` only at that
+same moment** — prebuild hard-fails on a missing file. Tested.
 
 ### 2.3 RevenueCat Android — the paywall cannot be bought through
 
@@ -104,9 +104,26 @@ Budget time for them.
 | `FOREGROUND_SERVICE_SPECIAL_USE` | The subtype string is already in the manifest: "Enforces the user's own app-blocking schedule for digital wellbeing". |
 | **`AccessibilityService`** | **The risky one.** Google restricts it to accessibility purposes, with a carve-out digital-wellbeing apps ship under. Needs a prominent in-app disclosure *before* sending the user to Settings, and a Play Console declaration. **Verify current policy yourself — it has changed more than once and my knowledge has a cutoff.** |
 
-The accessibility service is **optional in the code**. If review pushes back,
-deleting the service from `modules/drift-blocker/.../AndroidManifest.xml`
-costs blocking latency (up to ~1s instead of instant) and nothing else.
+**Evidence for the accessibility declaration.** The service was enabled on a
+device and Android reports it bound with exactly the scope it asks for:
+
+```
+Service[label=Drift, feedbackType[FEEDBACK_GENERIC], capabilities=0,
+        eventTypes=TYPE_WINDOW_STATE_CHANGED, notificationTimeout=100]
+```
+
+`capabilities=0` means it requests **no** special capabilities — it cannot
+retrieve window content, perform gestures, or observe input — and
+`TYPE_WINDOW_STATE_CHANGED` is the only event type it receives. It reads one
+field, the package name of the window that just opened. That is the narrowest
+form the API allows, and it is worth quoting verbatim in the declaration.
+
+The service is also **optional in the code**. If review pushes back, deleting
+it from `modules/drift-blocker/.../AndroidManifest.xml` costs blocking latency
+(up to ~1s instead of instant) and nothing else.
+
+Not yet measured: the end-to-end latency improvement. Binding and scope are
+verified; the instant-block path itself needs a logged-in session to exercise.
 
 ---
 
@@ -191,11 +208,10 @@ beyond usernames.
 
 ## 7. Also outstanding
 
-- **`supabase/migrations/20260911000001_screen_time_updated_at.sql` is written
-  but NOT applied.** It fixes a live bug where every screen-time sync after the
-  first of each day fails on both platforms. Apply with
-  `supabase db push --linked` (absolute path per CLAUDE.md) and verify against
-  the live schema afterwards rather than trusting the output.
+- ~~`screen_time_updated_at` migration~~ — **applied 2026-09-11 and verified**:
+  the PostgREST probe returns 200 where it returned 42703, the migration is
+  recorded remotely, and the `syncScreenTime` warning is gone from the device
+  logs. Screen-time sync works again on both platforms.
 - Bump `versionName` if 1.1.7 is not what you want Android to launch as. iOS
   and Android version numbers do not have to match, and arguably should not.
 - `Drift-changelog.xlsx` should get a row for the Android launch, per CLAUDE.md.
