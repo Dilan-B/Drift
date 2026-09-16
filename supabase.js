@@ -142,6 +142,59 @@ const encryptedAuthStorage = {
   },
 };
 
+// ── The other random-logout bug: a transient 429/500 is treated as definitive ──
+//
+// auth-js only ever retries a refresh whose failure it classifies as a NETWORK
+// error. lib/fetch.js:32 is the entire list:
+//
+//   [502, 503, 504, 520, 521, 522, 523, 524, 530]   (plus status 0 = no response)
+//
+// Anything else becomes an AuthApiError, and _callRefreshToken then does:
+//
+//   if (!isAuthRetryableFetchError(error)) await this._removeSession();
+//
+// — storage wiped, SIGNED_OUT emitted, the refresh token gone for good.
+// _recoverAndRefresh has the same branch. So a 429 from GoTrue's rate limiter,
+// or a 500 while it is under load, logs the user out permanently and looks
+// exactly like a revoked token. Nothing in OUR code runs; the note below about
+// only invalid_grant being definitive was wrong about that.
+//
+// Neither status says the token is bad. Both are "ask again shortly", which is
+// what 503 already means to auth-js — so the refresh response is relabelled and
+// auth-js does the right thing with it: exponential-backoff retry, and no
+// session destruction if the retries run out. The refresh token on disk is
+// untouched and still valid, because a request that 429s never rotated it.
+//
+// Scope is deliberately narrow. ONLY the token-refresh endpoint, and ONLY 429
+// and 500 — a real invalid_grant is a 400/401 and must keep signing the user
+// out, or a genuinely dead session would hang around forever retrying.
+const REFRESH_PATH = "/token";
+const MASK_AS_RETRYABLE = new Set([429, 500]);
+
+async function authRetryFetch(input, init) {
+  const res = await fetch(input, init);
+  try {
+    const url = typeof input === "string" ? input : input?.url || "";
+    if (
+      url.includes(REFRESH_PATH) &&
+      url.includes("grant_type=refresh_token") &&
+      MASK_AS_RETRYABLE.has(res.status)
+    ) {
+      console.warn(`[auth] refresh got ${res.status}; treating as retryable, not a dead session`);
+      // Body is preserved so the eventual error message still reads true; only
+      // the status auth-js switches on is changed.
+      return new Response(await res.clone().text().catch(() => ""), {
+        status: 503,
+        statusText: "Service Unavailable",
+        headers: res.headers,
+      });
+    }
+  } catch {
+    // Never let the shim itself break a request — fall through to the original.
+  }
+  return res;
+}
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
     storage: encryptedAuthStorage,
@@ -149,15 +202,35 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
     persistSession: true,
     detectSessionInUrl: false,
   },
+  global: { fetch: authRetryFetch },
 });
 
 // NOTE: We deliberately do NOT auto-signOut on `TOKEN_REFRESHED && !session`.
 // A failed refresh is usually transient (the app cold-starts before the network
 // is ready, a brief 5xx, etc.); nuking the session there is exactly what logs
-// users out on force-close. Supabase already clears the session itself on a
-// *definitive* invalid_grant (emitting SIGNED_OUT), so transient failures should
-// simply be retried by autoRefreshToken — not destroyed by us.
-supabase.auth.onAuthStateChange(() => {});
+// users out on force-close. Supabase clears the session itself when it judges a
+// failure definitive — but see authRetryFetch above: its idea of "definitive"
+// included a plain 429, which is why that judgement is now corrected upstream of
+// this listener rather than second-guessed inside it.
+//
+// Set by the app immediately before a deliberate signOut() so the listener below
+// can tell an intentional sign-out from one auth-js raised on its own.
+let signOutRequested = false;
+export function markSignOutRequested() { signOutRequested = true; }
+
+// Logged, not acted on. Every sign-out report this app has had was diagnosed
+// from a user saying "it happened again" with nothing to go on, because a
+// SIGNED_OUT raised inside auth-js leaves no trace anywhere. This records whether
+// the app ASKED for it (sign-out button, unverified-email path) or whether it
+// arrived on its own — the single fact that separates a real logout from a bug.
+// No tokens, no user id, no email.
+supabase.auth.onAuthStateChange((event) => {
+  if (event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
+    console.warn(`[auth] ${event}${event === "SIGNED_OUT" && !signOutRequested ? " (not requested by the app)" : ""}`);
+  }
+  if (event === "SIGNED_IN") signOutRequested = false;
+});
+
 
 // Wrap getSession so a refresh failure during boot doesn't propagate as an
 // unhandled error.
