@@ -26,6 +26,26 @@
 // and sends them as an ordered bundle. Motion across frames is evidence a
 // single still cannot provide, so a video can satisfy count-based tasks
 // ("10 push-ups") that a photo is explicitly not allowed to.
+//
+// ── What the judge is NOT asked to decide ────────────────────────────────────
+//
+// AUTHORSHIP. A photograph cannot establish who held the pen, and a judge told
+// to be "hard to fool" will treat that gap as a reason to refuse — because the
+// answer to "could this be someone else's work?" is always yes, for every
+// submission ever made. It is an unfalsifiable test, so it fails everyone who
+// takes it, and the honest user is the only one who ever notices.
+//
+// The question is therefore whether the WORK IS THERE and meets the standard
+// the task describes. If it is, that is a pass. This is a deliberate product
+// decision: Drift cannot detect a user photographing a friend's notebook, and
+// pretending otherwise bought no security while rejecting real work.
+//
+// The clauses that used to encode the test — "detail only someone who did it
+// would know", "a question only someone who actually did this could answer",
+// and a counterfactual asking what the scene would look like had the user not
+// done it — have been rewritten to ask what the evidence SHOWS instead. Keep
+// them that way; each one reads as reasonable rigour in isolation, which is how
+// they got there.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -767,16 +787,47 @@ serve(async (req: Request) => {
         `created it, so no elapsed time vouches for them and the evidence has to carry the claim on its ` +
         `own. Hold it to a HIGHER standard than usual: require evidence that is specific and clearly tied ` +
         `to this task, not merely compatible with it. Accept a video, a clear artefact of the finished ` +
-        `work, or a written account containing concrete detail only someone who did it would know. ` +
-        `Reject a generic photo that could have been taken at any time.\n`
+        `work, or a written account describing the work in concrete detail. Reject a generic photo that ` +
+        `shows no work at all. This is about how much the evidence SHOWS, never about who produced it — ` +
+        `see AUTHORSHIP below, which is not relaxed here.\n`
       : "";
 
-    const rubric = uncapturable
+    // The uncapturable branch used to say "judged on the written account alone"
+    // unconditionally — INCLUDING when the user had submitted a photo. The
+    // client lets you submit media with no text at all ("Write what you did, OR
+    // capture a photo"), so an uncapturable-classified task plus a photo and no
+    // note handed the judge "(none given)" as the only thing it was permitted to
+    // weigh, with a perfect transcript sitting unused directly above it. That is
+    // a guaranteed rejection however good the photo is, and because
+    // isUncapturable() runs at temperature 0 the same title takes the same
+    // branch every time — so the failure is total, not intermittent.
+    //
+    // "Learn integrals" was rejected three times on a photographed page of
+    // handwritten working that the transcription pass had read down to the
+    // verbatim symbols. Note also that neither the task row nor ai_check_usage
+    // records which branch ran (proof_kind collapses to "photo" either way), so
+    // nothing in telemetry could distinguish this from a judge being harsh —
+    // hence the verdict log further down.
+    //
+    // The three cases are now distinct: no trace AND no media (written account
+    // carries it), no trace BUT media anyway (evidence leads, note corroborates),
+    // and a physical trace (unchanged).
+    const rubric = uncapturable && !transcript
       ? `This task leaves no physical trace a camera could record, so it is judged on the written account alone.\n` +
-        `Require a SPECIFIC, first-person account with concrete detail only someone who did it would produce — ` +
-        `who, where, what was said or thought, what changed, roughly when. Two or more concrete specifics.\n` +
+        `Require a SPECIFIC account describing the work in concrete detail — who, where, what was said or ` +
+        `thought, what changed, roughly when. Two or more concrete specifics. Ask whether the account ` +
+        `describes real work, NOT whether it proves this user is the one who did it.\n` +
         `REJECT: restatements of the title ("did it", "finished my meditation"), generic filler, anything ` +
         `that could be written without doing the task, and anything under about eight words.`
+      : uncapturable
+      ? `This task was expected to leave little physical trace, so a written account would normally have to ` +
+        `carry it — but the user has ALSO submitted visual evidence, which is more than was required of them, ` +
+        `not less. Judge the EVIDENCE first and the written note second.\n` +
+        `If the described evidence plainly corresponds to this task, that is sufficient on its own: verify it, ` +
+        `and do NOT hold a short or entirely absent written note against them — the app does not require one ` +
+        `when a photo is attached.\n` +
+        `Fall back to demanding a specific first-person account only when the described evidence does not ` +
+        `connect to the task on its own.`
       : `This task leaves a physical trace, so a bare written claim is NOT sufficient — the user could have ` +
         `typed it from the sofa. Written proof only supports evidence; it cannot replace it.\n` +
         (answering || images.length
@@ -802,7 +853,9 @@ If NO photo or video was submitted, reject and say what to capture.`);
         `You are the verification step of a productivity app called Drift, where users earn screen time by ` +
         `completing tasks. Screen time is the payout, so a false pass is not a kindness — it hands out the ` +
         `reward for nothing and makes every honest user's effort worth less. Your job is to be fair and hard ` +
-        `to fool, not encouraging.\n\n` +
+        `to fool, not encouraging.\n` +
+        `Being hard to fool means asking whether the WORK IS THERE. It does not mean asking who did it — ` +
+        `that is unknowable from a photograph and is not yours to judge. See AUTHORSHIP below.\n\n` +
 
         `You are judging a TEXT DESCRIPTION of the submitted evidence, written by a separate reviewer who was ` +
         `not told what the task was. You cannot see the image. Treat the description as the complete record: ` +
@@ -844,8 +897,22 @@ If NO photo or video was submitted, reject and say what to capture.`);
         `${countRule}\n\n` +
         `CORRESPONDENCE. The described scene must connect to THIS task specifically. A tidy desk does not ` +
         `prove studying; a gym does not prove a workout happened; a book does not prove it was read. Ask ` +
-        `what the evidence would look like if the user had NOT done the task — if it would look the same, ` +
-        `it proves nothing and you must reject.\n\n` +
+        `whether the evidence shows the WORK ITSELF, or only the setting the work would happen in — a ` +
+        `setting alone proves nothing and you must reject.\n\n` +
+
+        `AUTHORSHIP IS OUT OF SCOPE. You cannot tell from a photograph who held the pen, and you must not ` +
+        `try. Do not ask yourself whether this particular user did the work, whether they might be showing ` +
+        `someone else's book, page, meal or screen, or whether they could have had help. Nothing in the ` +
+        `evidence can settle that and reaching for it is how honest submissions get refused. Judge one ` +
+        `thing: does the evidence show the task's work, done to the standard the task describes? If it ` +
+        `does, that is enough — verify it. Never write a rejection whose reason is that the work might not ` +
+        `be theirs.\n\n` +
+        `COMPLETION, NOT QUALITY. You are judging whether the task was DONE, not how well. Never reject ` +
+        `because work shown is wrong, incomplete, messy, or amateurish. Mistakes are evidence FOR the user, ` +
+        `not against: a page of integrals with errors in it is proof a person sat and worked through them, ` +
+        `which is exactly what "learn" or "practise" or "study" asks for. Never mark your own answer to the ` +
+        `task and compare — a wrong answer still took the time the task was worth. Reject only for evidence ` +
+        `that is absent, unrelated, or generic.\n\n` +
         `TIME. The user waited ${Math.floor(elapsedMs / 60_000)} minutes against a ${durationMins}-minute task. ` +
         `That gate has already been enforced and passed — do not re-judge it, and do not reject for taking ` +
         `too long. Use it only as weak corroboration: an elapsed time far shorter than the task's duration ` +
@@ -868,9 +935,11 @@ If NO photo or video was submitted, reject and say what to capture.`);
           ? ""
           : `\nIF YOU ARE MINDED TO REJECT BUT THE EVIDENCE IS MERELY AMBIGUOUS RATHER THAN ABSENT OR ` +
             `CONTRADICTORY — it plausibly shows the task but doesn't settle it — do NOT reject. Instead set ` +
-            `"question" to ONE short, specific question that only someone who actually did this task could ` +
-            `answer, drawn from the task itself ("what page did you stop on?", "what was the last thing you ` +
-            `put away?", "how many sets did you finish?"). Leave "question" empty when the evidence is ` +
+            `"question" to ONE short, specific question about the WORK that would fill the gap in what the ` +
+            `evidence shows, drawn from the task itself ("what page did you stop on?", "what was the last ` +
+            `thing you put away?", "how many sets did you finish?"). Ask it to learn what the photo could ` +
+            `not show you — never as a test of whether they are the one who did it. Leave "question" empty ` +
+            `when the evidence is ` +
             `unrelated, clearly contradictory, or so vague that no answer would rescue it — a question is ` +
             `for resolving doubt, not for giving an obviously false claim a second try.\n`) +
         `\nReply ONLY with valid JSON, no markdown:\n` +
@@ -925,6 +994,27 @@ If NO photo or video was submitted, reject and say what to capture.`);
     const asking = !result.verified && !answering && !legacyClient && !!result.question;
 
     // ── 8. Record the outcome ─────────────────────────────────
+    // A settled verdict used to leave no trace in the logs at all — only
+    // rejections at the door were logged, so a run that reached the judge and
+    // came back "no" was indistinguishable from a run that came back "yes".
+    // That is what made the uncapturable-rubric bug above invisible for as long
+    // as it was: proof_kind is "photo" on both branches, so neither the task row
+    // nor ai_check_usage could say which rubric the judge had been handed.
+    //
+    // Shape only — no title, proof text, transcript, user id or model output.
+    // Which branch ran, what channel it came in on, and what came back.
+    console.log(JSON.stringify({
+      at: "verdict",
+      rubric: uncapturable ? (transcript ? "uncapturable_with_media" : "uncapturable") : "capturable",
+      evidence: evidenceKind,
+      hasNote: !!sanitizedProof,
+      retroactive,
+      attempt: attempts + 1,
+      verified: result.verified,
+      confidence: result.confidence,
+      asking,
+    }));
+
     logUsage(asking ? `${proofKind}_question` : proofKind, asking ? null : result.verified);
 
     // The attempt counter and (on a pass) verified_at go through the service

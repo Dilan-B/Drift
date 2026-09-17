@@ -10,7 +10,7 @@ import {
   ScrollView, Animated, StatusBar, TextInput, KeyboardAvoidingView,
   Platform, ActivityIndicator, Alert, Linking, Keyboard, PanResponder,
 } from "react-native";
-import { supabase } from "./supabase";
+import { supabase, markSignOutRequested } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
 import { AppleSignInButton } from "./appleSignIn";
 import { joinFamily, normalizeFamilyCode } from "./family";
@@ -941,6 +941,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
         }
 
         if (!isEmailVerified(data.user)) {
+          markSignOutRequested();
           await supabase.auth.signOut().catch(() => {});
           setVerificationEmail(cleanEmail);
           setError("");
@@ -960,6 +961,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
         );
         if (err) throw err;
         if (!isEmailVerified(data.user)) {
+          markSignOutRequested();
           await supabase.auth.signOut().catch(() => {});
           setVerificationEmail(cleanEmail);
           setError("");
