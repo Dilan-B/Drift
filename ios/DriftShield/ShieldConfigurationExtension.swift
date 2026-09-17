@@ -154,8 +154,22 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     let voices = balanceSec > 0 ? focusVoices(name) : earnVoices(name)
     let voice = voices[Int.random(in: 0..<voices.count)]
 
+    // `nil` here draws an opaque colour. That looks correct while the shield is
+    // on screen, but in the app switcher the blocked app's own window showed as
+    // a white border around the card — that snapshot is of THEIR window, not
+    // ours, and every blocked app did it regardless of Drift's theme.
+    //
+    // A material makes iOS composite the shield across the whole snapshot, so
+    // the white goes. The obvious risk is translucency: a blur could let the
+    // blocked app show through the shield during normal use, which is the
+    // screen that actually matters. It does not, because backgroundColor is
+    // drawn over the material and our grounds are fully opaque.
+    //
+    // Verified on device 2026-09-17, dark mode: solid in use, no white in the
+    // switcher. Match the style to the theme — a dark material under the light
+    // ground would darken the edges of the cream shield.
     return ShieldConfiguration(
-      backgroundBlurStyle: nil,
+      backgroundBlurStyle: isDark ? .systemUltraThinMaterialDark : .systemUltraThinMaterialLight,
       backgroundColor: p.ground,
       icon: makeIcon(p),
       title: ShieldConfiguration.Label(text: voice.title, color: p.title),
