@@ -91,10 +91,35 @@ import {
   presentAppPicker as nativePresentPicker,
   getDiagnostics as nativeGetDiagnostics,
 } from "./screenTime";
+import { track } from "./analytics";
 
 export const isNativeBlockingAvailable = nativeIsAvailable;
-export const requestScreenTimeAuth     = nativeRequestAuth;
 export const getScreenTimeAuthStatus   = nativeAuthStatus;
+
+/**
+ * Asks for Screen Time access and logs how the user answered.
+ *
+ * Apple's permission sheet is where most new users fall out: nothing works
+ * without it, and a teen who taps Don't Allow usually never comes back. Until
+ * now the answer was used and thrown away, so a signup that never blocked an
+ * app was indistinguishable from one that refused permission. The Johns
+ * Hopkins pilot reports redeemed → authorized → activated per participant,
+ * and the middle step only exists if it is recorded here.
+ *
+ * Wrapped at this layer, not at the call sites, so every path that asks
+ * (the blocked-apps modal, Profile's Screen Time row) is covered and a future
+ * one cannot forget. Native errors carry a message; only a short tail is
+ * kept, since the status bucket is what anyone queries on.
+ */
+export async function requestScreenTimeAuth() {
+  const status = await nativeRequestAuth();
+  const raw = String(status ?? "");
+  const isError = raw.startsWith("error:");
+  track("screen_time_authorized", isError
+    ? { status: "error", detail: raw.slice(6, 86) }
+    : { status: raw });
+  return status;
+}
 export const pickBlockedAppsNative     = nativePresentPicker;
 
 /**
