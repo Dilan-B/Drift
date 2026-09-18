@@ -1,7 +1,7 @@
 PODS:
   - EXApplication (7.0.8):
     - ExpoModulesCore
-  - EXConstants (57.0.8):
+  - EXConstants (18.0.14):
     - ExpoModulesCore
   - EXImageLoader (6.0.0):
     - ExpoModulesCore
@@ -2155,7 +2155,7 @@ PODS:
     - ReactNativeDependencies
     - RNWorklets
     - Yoga
-  - RNSVG (15.8.0):
+  - RNSVG (15.12.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2176,9 +2176,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNSVG/common (= 15.8.0)
+    - RNSVG/common (= 15.12.1)
     - Yoga
-  - RNSVG/common (15.8.0):
+  - RNSVG/common (15.12.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2668,7 +2668,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   EXApplication: 1e98d4b1dccdf30627f92917f4b2c5a53c330e5f
-  EXConstants: 5efe6122eecac2d970aa50a2a502ecc6ce4b7564
+  EXConstants: 18ac927605517285307ea8f7ffe6fe7ca538eb5d
   EXImageLoader: 189e3476581efe3ad4d1d3fb4735b7179eb26f05
   EXJSONUtils: 1d3e4590438c3ee593684186007028a14b3686cd
   EXManifests: 378c7742de02a8605093b1c82b5774d8f9875cec
@@ -2777,7 +2777,7 @@ SPEC CHECKSUMS:
   RNDateTimePicker: be0e44bcb9ed0607c7c5f47dbedd88cf091f6791
   RNPurchases: 98d91fe229002947b0e3cb9413641a1cf87447bc
   RNReanimated: 41f496c18437fd0aa841234917af84e98fd5b9a2
-  RNSVG: 9b5d475f2c83235563f0be57d865415c721050b4
+  RNSVG: 31d6639663c249b7d5abc9728dde2041eb2a3c34
   RNWorklets: 76fce72926e28e304afb44f0da23b2d24f2c1fa0
   SDWebImage: 1bb6a1b84b6fe87b972a102bdc77dd589df33477
   SDWebImageWebPCoder: 0e06e365080397465cc73a7a9b472d8a3bd0f377
@@ -2788,4 +2788,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: 095399646273e735f321fcfb2223b7c2348cb1e5
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.17.0

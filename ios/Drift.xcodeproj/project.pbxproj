@@ -24,15 +24,15 @@
 		DR70010000000000000000A2 /* ScreenTimeModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B2 /* ScreenTimeModule.m */; };
 		DR70010000000000000000A5 /* DriftAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B5 /* DriftAppIntents.swift */; };
 		DR70010000000000000000A6 /* SleepGuardModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B6 /* SleepGuardModule.swift */; };
-		DR70030000000000000000E1 /* LockboxModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70030000000000000000F1 /* LockboxModule.swift */; };
-		DR70040000000000000000A1 /* LockboxARView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70040000000000000000B1 /* LockboxARView.swift */; };
-		DR70040000000000000000A2 /* LockboxARViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70040000000000000000B2 /* LockboxARViewManager.m */; };
-		DR70030000000000000000E2 /* LockboxModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70030000000000000000F2 /* LockboxModule.m */; };
 		DR70010000000000000000A7 /* SleepGuardModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B7 /* SleepGuardModule.m */; };
 		DR70010000000000000000A8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000B8 /* SceneDelegate.swift */; };
 		DR70010000000000000000C1 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000D1 /* FamilyControls.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		DR70010000000000000000C2 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000D2 /* ManagedSettings.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		DR70010000000000000000C3 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DR70020000000000000000D3 /* DeviceActivity.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		DR70030000000000000000E1 /* LockboxModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70030000000000000000F1 /* LockboxModule.swift */; };
+		DR70030000000000000000E2 /* LockboxModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70030000000000000000F2 /* LockboxModule.m */; };
+		DR70040000000000000000A1 /* LockboxARView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR70040000000000000000B1 /* LockboxARView.swift */; };
+		DR70040000000000000000A2 /* LockboxARViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = DR70040000000000000000B2 /* LockboxARViewManager.m */; };
 		DRP2010000000000000000A1 /* DriftPhase2Shared.swift in Sources */ = {isa = PBXBuildFile; fileRef = DRP2020000000000000000B1 /* DriftPhase2Shared.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 		FBA1E886FB45F17C24325FEB /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 203C3D870890A8D16E8CA475 /* PrivacyInfo.xcprivacy */; };
@@ -100,15 +100,15 @@
 		DR70020000000000000000B2 /* ScreenTimeModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ScreenTimeModule.m; path = Drift/ScreenTimeModule.m; sourceTree = "<group>"; };
 		DR70020000000000000000B5 /* DriftAppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DriftAppIntents.swift; path = Drift/DriftAppIntents.swift; sourceTree = "<group>"; };
 		DR70020000000000000000B6 /* SleepGuardModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SleepGuardModule.swift; path = Drift/SleepGuardModule.swift; sourceTree = "<group>"; };
-		DR70030000000000000000F1 /* LockboxModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LockboxModule.swift; path = Drift/LockboxModule.swift; sourceTree = "<group>"; };
-		DR70040000000000000000B1 /* LockboxARView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LockboxARView.swift; path = Drift/LockboxARView.swift; sourceTree = "<group>"; };
-		DR70040000000000000000B2 /* LockboxARViewManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = LockboxARViewManager.m; path = Drift/LockboxARViewManager.m; sourceTree = "<group>"; };
-		DR70030000000000000000F2 /* LockboxModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = LockboxModule.m; path = Drift/LockboxModule.m; sourceTree = "<group>"; };
 		DR70020000000000000000B7 /* SleepGuardModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = SleepGuardModule.m; path = Drift/SleepGuardModule.m; sourceTree = "<group>"; };
 		DR70020000000000000000B8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SceneDelegate.swift; path = Drift/SceneDelegate.swift; sourceTree = "<group>"; };
 		DR70020000000000000000D1 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 		DR70020000000000000000D2 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
 		DR70020000000000000000D3 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		DR70030000000000000000F1 /* LockboxModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LockboxModule.swift; path = Drift/LockboxModule.swift; sourceTree = "<group>"; };
+		DR70030000000000000000F2 /* LockboxModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = LockboxModule.m; path = Drift/LockboxModule.m; sourceTree = "<group>"; };
+		DR70040000000000000000B1 /* LockboxARView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LockboxARView.swift; path = Drift/LockboxARView.swift; sourceTree = "<group>"; };
+		DR70040000000000000000B2 /* LockboxARViewManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = LockboxARViewManager.m; path = Drift/LockboxARViewManager.m; sourceTree = "<group>"; };
 		DRP2020000000000000000B1 /* DriftPhase2Shared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DriftPhase2Shared.swift; path = DriftPhase2/Shared/DriftPhase2Shared.swift; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Drift/AppDelegate.swift; sourceTree = "<group>"; };
@@ -575,6 +575,7 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/PurchasesHybridCommon/PurchasesHybridCommon.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RNCAsyncStorage/RNCAsyncStorage_resources.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/RNSVG/RNSVGFilters.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/React-Core_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-cxxreact/React-cxxreact_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RevenueCat/RevenueCat.bundle",
@@ -592,6 +593,7 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoFileSystem_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/PurchasesHybridCommon.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNCAsyncStorage_resources.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNSVGFilters.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-Core_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-cxxreact_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RevenueCat.bundle",

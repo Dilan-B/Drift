@@ -24,13 +24,42 @@ Expo / React Native productivity app. You earn screen-time by completing tasks; 
 - SQL changes live in two places. `supabase/admin/schema_v*.sql` is the annotated
   reference (safe to re-run, explains *why*); `supabase/migrations/*.sql` is the
   applied artifact, minus the trailing verification SELECTs. Apply with
-  `supabase db push --linked`. The CLI works as of 2026-08-20 — but invoke it by
-  absolute path (`C:\Users\dilan\AppData\Roaming\npm\supabase.cmd`): a bare
-  `supabase` resolves to the repo-root `supabase.js` via PATHEXT and gets executed
-  by Windows Script Host.
+  `supabase db push --linked`. On the Mac, install the CLI with
+  `brew install supabase/tap/supabase` and call it as plain `supabase` (run
+  `supabase link` once per machine). On the old Windows box, invoke it by absolute
+  path (`C:\Users\dilan\AppData\Roaming\npm\supabase.cmd`): a bare `supabase`
+  there resolves to the repo-root `supabase.js` via PATHEXT and gets executed by
+  Windows Script Host.
 - Verify a migration against the live schema afterwards rather than trusting the
   push output. schema_v7 was reported as run and had not applied; a PostgREST
   probe (`?select=<col>&limit=0`, 42703 = missing column) is what caught it.
+
+## Local dev (Mac)
+Primary dev machine is a Mac (Apple Silicon) as of 2026-09-17. Toolchain: Xcode 27
+(iOS 27 simulators), Homebrew at `/opt/homebrew`, Node + CocoaPods + Watchman from
+brew. Setup from a fresh clone: `npm install --legacy-peer-deps`, then
+`cd ios && pod install`, and copy `.env.example` → `.env`.
+
+**`npx expo run:ios` does not work with Xcode 27.** It fails with "Can't
+determine id of Simulator app" because Xcode 27 ships no `Simulator.app` and
+Expo CLI looks it up by name. Build with xcodebuild instead:
+
+```
+npx expo start --dev-client          # Metro; don't set CI=1 or live reload is off
+cd ios && xcodebuild -workspace Drift.xcworkspace -scheme Drift \
+  -configuration Debug -destination 'id=<simulator udid>' \
+  -derivedDataPath build/dd build   # build/ is gitignored
+```
+
+Install `ios/build/dd/Build/Products/Debug-iphonesimulator/Drift ScreenTime.app`
+(`xcrun simctl install booted <path>`), launch it, and tap the `localhost:8081`
+server in the dev-client launcher. `xcrun simctl list devices available` gives
+the UDIDs. Rebuild natively only after native code / pod changes; JS changes
+hot-reload.
+
+The simulator cannot exercise Screen Time: shields, the FamilyActivityPicker and
+the DriftMonitor extension need a real iPhone (open `ios/Drift.xcworkspace`, not
+the `.xcodeproj`). See `RIAAN_XCODE_TESTING.md` for the on-device test plan.
 
 ## AI model / cost
 OpenAI calls live in two edge functions only: `evaluate-task` (text) and
