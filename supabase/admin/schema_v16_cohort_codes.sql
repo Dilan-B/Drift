@@ -65,7 +65,7 @@ end $$;
 -- ── 3. ATTEMPT LOG (brute-force limit) ──────────────────────
 --
 -- redeem-code had no server-side rate limit at all. supabase.js wraps the call
--- in rateLimited(), but that is client-side and a code worth 250 permanent
+-- in rateLimited(), but that is client-side and a code worth dozens of
 -- grants is worth scripting against directly. Mirrors beta_redeem_attempts
 -- (schema_v5), which exists for exactly this reason on the beta path.
 create table if not exists public.redeem_code_attempts (
@@ -252,14 +252,14 @@ from public.redeem_codes;
 -- CREATE / MANAGE COHORT CODES  (run as needed in the SQL editor)
 -- ────────────────────────────────────────────────────────────
 -- Use real entropy in cohort codes. A guessable one like 'DILANFRIEND' is fine
--- for friends; a code that grants permanent free access to 250 people is worth
+-- for friends; a code that grants free access to dozens of people is worth
 -- brute-forcing, and the edge function's rate limit is the only other thing in
 -- the way.
 --
--- The JHU study — 250 seats, 50 days of access from the moment each
+-- The JHU study — 45 teens plus 5 spare (50 seats), 50 days of access from the moment each
 -- participant redeems, code open for the recruitment window:
 --   insert into public.redeem_codes (code, cohort, max_uses, grant_days, expires_at, note)
---   values ('<generate one>', 'jhu-wellbeing-2026', 250, 50,
+--   values ('<generate one>', 'jhu-wellbeing-2026', 50, 50,
 --           now() + interval '120 days', 'JHU teen study — 50 days')
 --   on conflict (code) do update
 --     set cohort = excluded.cohort, max_uses = excluded.max_uses,

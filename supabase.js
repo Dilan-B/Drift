@@ -435,12 +435,13 @@ export async function fetchAppStoreLatest(bundleId) {
 // button. The real limit is per-user and per-IP inside the edge function,
 // because anything client-side is one curl away from being skipped.
 // ─────────────────────────────────────────────────────────────
-export async function redeemProCode(code) {
+export async function redeemProCode(code, participantId = null) {
   const clean = String(code || "").trim().toUpperCase();
   if (!clean) return { success: false, reason: "empty" };
+  const pid = participantId ? String(participantId).trim() : null;
   try {
     const { data, error } = await rateLimited(`redeem_code`, { limit: 8, windowMs: 10 * 60_000 }, () =>
-      supabase.functions.invoke("redeem-code", { body: { code: clean } })
+      supabase.functions.invoke("redeem-code", { body: pid ? { code: clean, participantId: pid } : { code: clean } })
     );
     if (error) return { success: false, reason: error.message || "failed" };
     if (data?.error) return { success: false, reason: data.error };

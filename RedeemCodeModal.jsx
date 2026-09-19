@@ -5,7 +5,9 @@
  * access; personal codes usually run for a fixed number of days.
  *
  * Validation and granting happen server-side (redeem-code edge function →
- * public.redeem_cohort_code). This collects the code, reports what was granted,
+ * public.redeem_cohort_code). Research cohort codes can require a study
+ * participant ID: the server answers participant_id_required, and this sheet
+ * then asks for the ID and resubmits both. Nothing is spent until it's valid. This collects the code, reports what was granted,
  * and asks the parent to refresh Pro state — that refresh is what dismisses the
  * paywall, so it is not optional.
  */
@@ -26,6 +28,8 @@ const REASON_MSG = {
   rate_limit: "Too many attempts. Try again in a little while.",
   email_not_verified: "Verify your email address first, then redeem.",
   failed: "Couldn't redeem right now. Try again.",
+  participant_id_invalid: "That participant ID doesn't look right. Check it with your study team.",
+  participant_id_taken: "That participant ID has already been used. Check it with your study team.",
 };
 
 /** "permanent" or "until 6 Mar 2027" — what they actually got. */
@@ -41,6 +45,9 @@ function grantedFor(expiresAt) {
 export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = false }) {
   const { ink, paper, earn, fx } = getTheme(dark);
   const [code, setCode] = useState("");
+  // Shown only once the server says this code belongs to a study.
+  const [needsId, setNeedsId] = useState(false);
+  const [participantId, setParticipantId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
@@ -67,6 +74,7 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
   // openings, so without it the next open would still show the last success.
   const reset = () => {
     setCode(""); setError(""); setDone(false); setBusy(false); setGranted(null);
+    setNeedsId(false); setParticipantId("");
     notified.current = false;
   };
 
@@ -81,8 +89,10 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
   const submit = async () => {
     const clean = code.trim().toUpperCase();
     if (!clean) { setError(REASON_MSG.empty); return; }
+    const pid = participantId.trim();
+    if (needsId && !pid) { setError("Enter your participant ID."); return; }
     setBusy(true); setError("");
-    const res = await redeemProCode(clean);
+    const res = await redeemProCode(clean, needsId ? pid : null);
     setBusy(false);
     if (res.success) {
       setGranted({ cohort: res.cohort, expiresAt: res.expiresAt, already: res.reason === "already_redeemed" });
@@ -93,6 +103,8 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
       // Not setTimeout(close): that would capture close from THIS render, where
       // done is still false, so it would skip the notify and strand the user.
       setTimeout(() => { notifyOnce(); reset(); onClose?.(); }, 2200);
+    } else if (res.reason === "participant_id_required") {
+      setNeedsId(true);
     } else {
       setError(REASON_MSG[res.reason] || REASON_MSG.failed);
     }
@@ -141,18 +153,24 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
                 Redeem a code
               </Text>
               <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, marginBottom: 28, lineHeight: 20 }}>
-                Enter the code you were given by your programme or by the Drift
-                team to unlock Drift Pro.
+                {needsId
+                  ? "This code is for a research study. Enter the participant ID your study team gave you."
+                  : "Enter the code you were given by your programme or by the Drift team to unlock Drift Pro."}
               </Text>
 
               <TextInput
                 value={code}
-                onChangeText={(t) => setCode(t.replace(/\s/g, "").toUpperCase().slice(0, 64))}
+                onChangeText={(t) => {
+                  setCode(t.replace(/\s/g, "").toUpperCase().slice(0, 64));
+                  // A different code may not be a study code.
+                  if (needsId) { setNeedsId(false); setParticipantId(""); }
+                }}
                 placeholder="ENTER CODE"
                 placeholderTextColor={ink.faint}
                 autoCapitalize="characters"
                 autoCorrect={false}
-                autoFocus
+                autoFocus={!needsId}
+                editable={!busy}
                 returnKeyType="done"
                 onSubmitEditing={submit}
                 style={{
@@ -162,6 +180,26 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
                   fontSize: 18, letterSpacing: 2, color: ink.deep, textAlign: "center",
                 }}
               />
+              {needsId && (
+                <TextInput
+                  value={participantId}
+                  onChangeText={(t) => setParticipantId(t.replace(/\s/g, "").slice(0, 32))}
+                  placeholder="PARTICIPANT ID"
+                  placeholderTextColor={ink.faint}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={submit}
+                  style={{
+                    marginTop: 12,
+                    backgroundColor: paper.card,
+                    borderWidth: 1.5, borderColor: error ? "#B5564B" : ink.border,
+                    borderRadius: 12, paddingVertical: 16, paddingHorizontal: 16,
+                    fontSize: 18, letterSpacing: 2, color: ink.deep, textAlign: "center",
+                  }}
+                />
+              )}
               {!!error && (
                 <Text style={{ color: "#B5564B", fontSize: 13, marginTop: 10, textAlign: "center" }}>{error}</Text>
               )}

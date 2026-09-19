@@ -3,10 +3,16 @@
 // expiry, cohort and grant duration live in redeem_codes (service-role only).
 // Each user can redeem a given code once.
 //
-// POST { code: string }
+// POST { code: string, participantId?: string }
 //   → { success: true,  reason: "granted" | "already_redeemed",
 //       cohort?: string, expiresAt?: string | null }
-//   → { success: false, reason: "invalid" | "expired" | "used_up" | "inactive" }
+//   → { success: false, reason: "invalid" | "expired" | "used_up" | "inactive"
+//       | "participant_id_required" | "participant_id_invalid"
+//       | "participant_id_taken" }
+//
+// participantId is only read for codes whose redeem_codes.participant_id_format
+// is set (research cohorts). The client learns a code needs one from the
+// participant_id_required reply, then resubmits with it.
 //
 // SECURITY
 //  - The decision is made by public.redeem_cohort_code() (schema_v16), not
@@ -61,7 +67,14 @@ const REASON: Record<string, string> = {
   code_exhausted:      "used_up",
   code_grants_nothing: "inactive",
   no_user:             "invalid",
+  participant_id_required: "participant_id_required",
+  participant_id_invalid:  "participant_id_invalid",
+  participant_id_taken:    "participant_id_taken",
 };
+
+// Asking for an ID is a step in the flow, not a failed guess, so it does not
+// count against the hourly attempt limit.
+const NOT_AN_ATTEMPT = new Set(["participant_id_required"]);
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -79,11 +92,16 @@ serve(async (req: Request) => {
     if (authErr || !user) return json({ error: "Unauthorized" }, 401);
     if (!isEmailVerified(user)) return json({ error: "email_not_verified" }, 403);
 
-    let body: { code?: unknown };
+    let body: { code?: unknown; participantId?: unknown };
     try { body = await req.json(); } catch { return json({ error: "Invalid body" }, 400); }
 
     const code = String(body.code ?? "").trim().toUpperCase();
     if (!code || code.length > 64) return json({ success: false, reason: "invalid" });
+
+    const participantId = body.participantId == null ? null : String(body.participantId).trim();
+    if (participantId && participantId.length > 64) {
+      return json({ success: false, reason: "participant_id_invalid" });
+    }
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -111,8 +129,9 @@ serve(async (req: Request) => {
     // the grant all happen inside one transaction holding a row lock on the
     // code. See schema_v16_cohort_codes.sql.
     const { data: result, error: rpcErr } = await admin.rpc("redeem_cohort_code", {
-      p_uid:  user.id,
-      p_code: code,
+      p_uid:            user.id,
+      p_code:           code,
+      p_participant_id: participantId || null,
     });
 
     if (rpcErr) {
@@ -129,7 +148,7 @@ serve(async (req: Request) => {
     // network retry reads as a failure that isn't one.
     const already = rawWhy === "already_redeemed";
 
-    await admin.from("redeem_code_attempts").insert({
+    if (!NOT_AN_ATTEMPT.has(rawWhy)) await admin.from("redeem_code_attempts").insert({
       user_id: user.id,
       code,
       success: ok || already,
