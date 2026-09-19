@@ -106,8 +106,12 @@ Escape hatch if it happens again: seven taps on the sprout in the update
 screen reveals a dev override (visible outright under `__DEV__`). The grant is
 keyed to the version it was issued for, so it self-clears on the next update.
 
-Build number (`CURRENT_PROJECT_VERSION`) increments per submission; the
-marketing version only on a real release.
+The marketing version moves only on a real release. The **build number is
+assigned by Xcode Cloud**, which overrides `CURRENT_PROJECT_VERSION` at archive
+time: 1.1.7 shipped as build 172 while the project still said 124. The value in
+the project only matters for a local archive, so don't treat it as the number
+that ships — check TestFlight for which build contains which commit, and pick
+the build to submit there.
 
 **Do not hardcode versions in `ios/Drift/Info.plist`.** It must keep
 `CFBundleShortVersionString = $(MARKETING_VERSION)` and
