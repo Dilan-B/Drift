@@ -120,7 +120,31 @@ export async function requestScreenTimeAuth() {
     : { status: raw });
   return status;
 }
-export const pickBlockedAppsNative     = nativePresentPicker;
+/**
+ * Presents Apple's picker and logs how many things are selected afterwards.
+ *
+ * The selection itself never leaves the device (Apple hands us opaque tokens,
+ * and the blocked_apps table is not written by this path), so without this
+ * event the server cannot tell a user who blocked apps from one who never
+ * did. That is the "activated" step in the Johns Hopkins pilot funnel. Only
+ * counts are sent, never names or tokens.
+ */
+export async function pickBlockedAppsNative() {
+  const ok = await nativePresentPicker();
+  if (ok) await trackBlockedSelection();
+  return ok;
+}
+
+async function trackBlockedSelection() {
+  try {
+    const d = await nativeGetDiagnostics();
+    track("blocked_apps_selected", {
+      apps: d?.pickedAppCount || 0,
+      categories: d?.pickedCategoryCount || 0,
+      web: d?.pickedWebCount || 0,
+    });
+  } catch {}
+}
 
 /**
  * Ensure Screen Time access, then present Apple's picker directly.
@@ -135,7 +159,7 @@ export async function openNativeAppPicker() {
     status = await nativeRequestAuth();
     if (status !== "approved") return { opened: false, reason: "denied", status };
   }
-  const ok = await nativePresentPicker();
+  const ok = await pickBlockedAppsNative();
   return ok ? { opened: true, status } : { opened: false, reason: "picker_failed", status };
 }
 
