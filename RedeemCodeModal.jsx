@@ -9,7 +9,7 @@
  * and asks the parent to refresh Pro state — that refresh is what dismisses the
  * paywall, so it is not optional.
  */
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, Modal, ActivityIndicator,
   KeyboardAvoidingView, Platform,
@@ -45,9 +45,36 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [granted, setGranted] = useState(null);   // { cohort, expiresAt }
+  // Whether the parent has been told about a successful redemption yet.
+  const notified = useRef(false);
+
+  /**
+   * Tell the parent the grant landed — AFTER the confirmation has been seen.
+   *
+   * On the paywall, onRedeemed refreshes Pro state, which flips proAccess,
+   * which stops Drift.jsx rendering the paywall branch — and this sheet is
+   * mounted inside that branch. Calling it the moment the server said yes
+   * tore the sheet down before "Unlocked until…" could paint: the app simply
+   * appeared, with no sign of what had been granted or for how long.
+   */
+  const notifyOnce = () => {
+    if (notified.current) return;
+    notified.current = true;
+    onRedeemed?.();
+  };
+
+  // Back to a blank form. ProfileScreen keeps this sheet mounted between
+  // openings, so without it the next open would still show the last success.
+  const reset = () => {
+    setCode(""); setError(""); setDone(false); setBusy(false); setGranted(null);
+    notified.current = false;
+  };
 
   const close = () => {
-    setCode(""); setError(""); setDone(false); setBusy(false); setGranted(null);
+    // Closing early with × must still hand the grant over, or the user is
+    // left on a paywall they have already redeemed their way past.
+    if (done) notifyOnce();
+    reset();
     onClose?.();
   };
 
@@ -58,12 +85,14 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
     const res = await redeemProCode(clean);
     setBusy(false);
     if (res.success) {
-      setGranted({ cohort: res.cohort, expiresAt: res.expiresAt });
+      setGranted({ cohort: res.cohort, expiresAt: res.expiresAt, already: res.reason === "already_redeemed" });
       setDone(true);
-      onRedeemed?.();
-      // Long enough to read what they were granted. The parent's refresh has
-      // already fired, so the paywall is coming down behind this either way.
-      setTimeout(close, 1900);
+      // Show the confirmation first, then refresh. The refresh is what takes
+      // the paywall down, and on the paywall it takes this sheet with it.
+      //
+      // Not setTimeout(close): that would capture close from THIS render, where
+      // done is still false, so it would skip the notify and strand the user.
+      setTimeout(() => { notifyOnce(); reset(); onClose?.(); }, 2200);
     } else {
       setError(REASON_MSG[res.reason] || REASON_MSG.failed);
     }
@@ -86,7 +115,13 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
                 You're Pro 🎉
               </Text>
               <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, textAlign: "center" }}>
-                {grantedFor(granted?.expiresAt)}
+                {/* already_redeemed carries no expiry — the server only knows
+                    this user holds the code, not the grant's current date — and
+                    grantedFor(null) means PERMANENT. Saying "doesn't expire" to
+                    someone on a 50-day study grant would be false. */}
+                {granted?.already
+                  ? "You've already redeemed this code — your access is unchanged."
+                  : grantedFor(granted?.expiresAt)}
               </Text>
               {!!granted?.cohort && (
                 <Text style={{
