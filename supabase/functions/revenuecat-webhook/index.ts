@@ -71,6 +71,41 @@ function seatsForProduct(productId: string | null): number {
   return 0; // com.drift.pro.month / .annual and anything else: solo
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The Drift profile an event belongs to, or null.
+ *
+ * Candidates in order of preference: the id the event was for, the customer's
+ * original id, then every alias. Only UUIDs are considered — anonymous ids can
+ * never be a profile — and only ones that exist in profiles.
+ *
+ * If more than one Drift account appears among a customer's aliases (a device
+ * shared across accounts under RevenueCat's legacy aliasing), exactly one is
+ * chosen, by that preference order, and the ambiguity is logged. Granting to
+ * all of them would hand one purchase to several people.
+ */
+async function resolveProfileId(admin: any, event: any): Promise<string | null> {
+  const raw = [
+    event?.app_user_id,
+    event?.original_app_user_id,
+    ...(Array.isArray(event?.aliases) ? event.aliases : []),
+  ].map((x) => String(x ?? ""));
+  const candidates = [...new Set(raw.filter((x) => UUID_RE.test(x)))];
+  if (!candidates.length) return null;
+
+  const { data, error } = await admin.from("profiles").select("id").in("id", candidates);
+  if (error) throw error;   // let the caller 500 so RevenueCat retries
+  const found = new Set((data || []).map((r: any) => r.id));
+  const matches = candidates.filter((id) => found.has(id));
+  if (matches.length > 1) {
+    console.warn("webhook: several Drift accounts on one RevenueCat customer; using the first", {
+      chosen: matches[0], others: matches.length - 1,
+    });
+  }
+  return matches[0] ?? null;
+}
+
 serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
@@ -106,12 +141,22 @@ serve(async (req: Request) => {
   const expiresAtMs = typeof event.expiration_at_ms === "number" ? event.expiration_at_ms : null;
   const expiresAt   = expiresAtMs ? new Date(expiresAtMs).toISOString() : null;
 
-  // 2. Anonymous ids can't be mapped to an account. This means the app called
-  // configure() before logIn() — worth logging loudly, because it silently
-  // means somebody paid and got nothing.
-  if (appUserId.startsWith("$RCAnonymousID")) {
-    console.error("webhook: anonymous app_user_id — Purchases.logIn() did not run before purchase");
-    return json({ ok: true, skipped: "anonymous app_user_id" });
+  // 2. Which Drift user is this? app_user_id alone is not enough.
+  //
+  // RevenueCat documents app_user_id as the subscriber's LAST-SEEN id, and a
+  // customer who first opened Drift signed out is an $RCAnonymousID with their
+  // Supabase id attached only as an alias. Such a customer's events arrive
+  // anonymous, and this handler used to drop every one of them — returning 200,
+  // so RevenueCat never retried. Somebody paid and the server never knew; with
+  // app_config.enforce_pro_gating on, AI Check then refused them.
+  //
+  // Every event also carries original_app_user_id and aliases. Look the
+  // account up across all of them, preferring the id the event was for.
+  const profileId = await resolveProfileId(admin, event);
+  if (!profileId) {
+    console.error("webhook: no Drift account among app_user_id / original_app_user_id / aliases",
+      { type, app_user_id: appUserId, aliases: Array.isArray(event.aliases) ? event.aliases.length : 0 });
+    return json({ ok: true, skipped: "no matching account" });
   }
 
   // 3. Idempotency. RevenueCat retries on any non-2xx and can redeliver out of
@@ -133,7 +178,7 @@ serve(async (req: Request) => {
   const notExpired = !expiresAtMs || expiresAtMs > Date.now();
   const active = !HARD_REVOKE.has(type) && notExpired;
 
-  const { error: updErr } = await admin.from("profiles")
+  const { data: updated, error: updErr } = await admin.from("profiles")
     .update({
       sub_active: active,
       sub_expires: expiresAt,
@@ -143,13 +188,21 @@ serve(async (req: Request) => {
       rc_expires_at: expiresAt,
       rc_last_event_at: new Date().toISOString(),
     })
-    .eq("id", appUserId);
+    .eq("id", profileId)
+    .select("id");
 
   if (updErr) {
     // 500 so RevenueCat retries. An entitlement that fails to land is somebody
     // who paid and can't get in, which is worth the retry storm.
     console.error("profiles entitlement update failed:", updErr.code || updErr.message);
     return json({ error: "update_failed" }, 500);
+  }
+  // An update matching no row is not an error to PostgREST, so this used to
+  // report { ok, active: true } having granted nothing. resolveProfileId just
+  // found the row, so this only fires on a race with an account deletion.
+  if (!updated?.length) {
+    console.error("webhook: entitlement update matched no profile", { profileId, type });
+    return json({ ok: true, skipped: "profile vanished" });
   }
 
   // 5. Family seats. Only meaningful for a parent who bought a family tier.
@@ -159,12 +212,12 @@ serve(async (req: Request) => {
   if (seats > 0 || HARD_REVOKE.has(type)) {
     const { error: famErr } = await admin.from("families")
       .update({ seats })
-      .eq("parent_id", appUserId)
+      .eq("parent_id", profileId)
       .is("deleted_at", null);
     // Not fatal: a solo subscriber has no family row, and .update() matching
     // nothing is not an error. Only a real failure is worth logging.
     if (famErr) console.warn("families seats update:", famErr.code || famErr.message);
   }
 
-  return json({ ok: true, active, type, seats });
+  return json({ ok: true, active, type, seats, via: profileId === appUserId ? "app_user_id" : "alias" });
 });
