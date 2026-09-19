@@ -116,6 +116,34 @@ function setCachedSub(uid: string, active: boolean) {
   subCache.set(uid, { active, ts: Date.now() });
 }
 
+// ── Paid-gating switch ───────────────────────────────────────
+// app_config.enforce_pro_gating ('true' / anything else). Gating shipped
+// commented out while Apple IAP was pending; it is a database switch now so it
+// can be turned on — and back off — without a deploy or an app release.
+//
+// Read only when the caller is NOT entitled, so paying users never pay for it,
+// and cached per instance for the same 60s as the subscription answer.
+//
+// A failed read keeps the last value this instance saw, and falls back to OFF
+// only if it has never seen one. Off is exactly today's behaviour, so a broken
+// read can never lock out a user who was getting in before — but once the
+// switch is on, a transient blip does not quietly hand the feature back out.
+const FLAG_TTL_MS = 60_000;
+let gatingFlag: { on: boolean; ts: number } | null = null;
+async function proGatingEnforced(client: any): Promise<boolean> {
+  if (gatingFlag && Date.now() - gatingFlag.ts < FLAG_TTL_MS) return gatingFlag.on;
+  try {
+    const { data, error } = await client
+      .from("app_config").select("value").eq("key", "enforce_pro_gating").maybeSingle();
+    if (error) throw error;
+    const on = String(data?.value ?? "").trim().toLowerCase() === "true";
+    gatingFlag = { on, ts: Date.now() };
+    return on;
+  } catch {
+    return gatingFlag?.on ?? false;
+  }
+}
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -264,11 +292,17 @@ serve(async (req: Request) => {
       }
       setCachedSub(user.id, subActive);
     }
-    // TEMPORARY: Pro is free for everyone until Apple IAP is re-enabled
-    // post-approval. To restore paid gating, uncomment the block below.
-    // if (!subActive) {
-    //   return json({ error: "subscription_required", message: "AI Check requires Pro. Tap profile → Upgrade." }, 402);
-    // }
+    // Enforced only when app_config.enforce_pro_gating = 'true'. See
+    // proGatingEnforced above; flip it in the SQL editor, no deploy needed.
+    if (!subActive && await proGatingEnforced(supabase)) {
+      return json({
+        error: "subscription_required",
+        // Not "Tap profile → Upgrade": that row does nothing (onUpgrade is a
+        // no-op in Drift.jsx), and a non-subscriber is normally stopped at the
+        // paywall long before they could get here.
+        message: "AI Check needs Drift Pro. Subscribe or redeem a cohort code to use it.",
+      }, 402);
+    }
 
     // ── 2. Rate limiting ─────────────────────────────────────
     const now      = new Date();
