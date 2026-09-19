@@ -94,7 +94,7 @@ import ReviewPromptScreen from "./ReviewPromptScreen";
 import { claimReviewPrompt } from "./reviewPrompt";
 import TutorialOverlay from "./TutorialOverlay";
 import ParentShell from "./ParentShell";
-import { identify, track, startAnalytics, stopAnalytics } from "./analytics";
+import { identify, track, trackScreen, startAnalytics, stopAnalytics } from "./analytics";
 import ChildShell from "./ChildShell";
 import { cached, rateLimited } from "./apiGuards";
 import {
@@ -3710,6 +3710,11 @@ export default function App() {
   // cold-launch links, so redelivery is expected rather than exotic.
   const processedInviteUrlRef = useRef("");
   useEffect(() => { tabRef.current = tab; }, [tab]);
+  // Which tabs people actually visit. trackScreen has existed since analytics
+  // landed but nothing called it, so "which features do participants use"
+  // (asked for by the Johns Hopkins pilot) had no answer. The launch visit to
+  // Today fires before identify() and is dropped; app_opened covers it.
+  useEffect(() => { trackScreen(tab); }, [tab]);
   useEffect(() => { driftInActRef.current = driftInActive; }, [driftInActive]);
 
   // Mirror the latest persisted-state values into refs so any async closure
