@@ -1,6 +1,7 @@
 /**
  * ReviewPromptScreen.jsx
- * Post-signup "leave a review" page. Per product spec:
+ * The "leave a review" page. When it may appear is decided by reviewPrompt.js
+ * (up to three times a year, 90+ days apart, after a success). Per product spec:
  *   1. The page mounts and all elements animate in — but NO continue button yet,
  *      so the user actually reads it.
  *   2. After ~2.5s, we auto-trigger Apple's native in-app review prompt
@@ -110,7 +111,10 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
         </View>
 
         <Text style={[s.body, { color: ink.mid }]}>
-          Built by a tiny team. A 5-star review takes ten seconds and genuinely helps.
+          {/* Never ask for a particular rating. Apple's guidelines allow asking
+              for a review, not for five stars, and this app has already been
+              rejected once over how it prompts (5.6.3). */}
+          Built by a tiny team. A review takes ten seconds and genuinely helps.
         </Text>
       </Animated.View>
 

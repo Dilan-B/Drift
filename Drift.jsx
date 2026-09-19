@@ -91,6 +91,7 @@ import PaywallScreen from "./PaywallScreen";
 import RedeemCodeModal from "./RedeemCodeModal";
 import { useSubscription } from "./useSubscription";
 import ReviewPromptScreen from "./ReviewPromptScreen";
+import { claimReviewPrompt } from "./reviewPrompt";
 import TutorialOverlay from "./TutorialOverlay";
 import ParentShell from "./ParentShell";
 import { identify, track, startAnalytics, stopAnalytics } from "./analytics";
@@ -3640,7 +3641,12 @@ export default function App() {
   const todayScrollRef = useRef(null); // so the tour can reset Today to the top
   const tutTabBarRef = useRef(null);
   const [showReviewPrompt,   setShowReviewPrompt]   = useState(false);
-  const reviewPromptShownRef = useRef(false); // in-memory guard against double-triggering within a session
+  // Asks for a review if one is due. reviewPrompt.js owns the spacing (up to
+  // three a year, 90+ days apart) and records the ask, so any number of
+  // triggers can call this without double-showing the screen.
+  const askForReviewIfDue = useCallback(() => {
+    claimReviewPrompt().then(ok => { if (ok) setShowReviewPrompt(true); }).catch(() => {});
+  }, []);
   const [showUsernameSetup,  setShowUsernameSetup]  = useState(false);
   const [showReduceTime,     setShowReduceTime]     = useState(false);
   const [userEmail,          setUserEmail]          = useState("");
@@ -5455,17 +5461,9 @@ export default function App() {
     track("task_completed", { credits: task.credits, xp: task.xp });
 
     // Ask for a review only after real engagement (Apple 5.6.3 rejected
-    // prompting during onboarding). Fires once ever, after the 3rd completed
-    // task, gated on a persisted flag so it survives app restarts.
-    if (!reviewPromptShownRef.current && nh.length >= 3) {
-      reviewPromptShownRef.current = true;
-      AsyncStorage.getItem("drift_review_prompt_shown").then(flag => {
-        if (flag !== "1") {
-          AsyncStorage.setItem("drift_review_prompt_shown", "1").catch(() => {});
-          setShowReviewPrompt(true);
-        }
-      }).catch(() => {});
-    }
+    // prompting during onboarding) — never before the third completed task.
+    // Whether an ask is actually due is reviewPrompt.js's call.
+    if (nh.length >= 3) askForReviewIfDue();
 
     // ── Server-of-truth writes ──
     if (userId) {
@@ -6037,6 +6035,10 @@ export default function App() {
     setCredits(nc); setTotalXp(nx);
     setPopup({ credits: earned, xp });
     setTimeout(() => setPopup(null), 2500);
+    // A finished focus or Lockbox session — an hour with the phone put away —
+    // is the strongest moment in the app to ask. Wait for the credits popup to
+    // clear so the prompt lands on the Today tab instead of over the reward.
+    setTimeout(askForReviewIfDue, 3000);
     startTick(newSec);
     unlockAndArmBalance(newSec);
     persist({ credits: nc, totalXp: nx });
