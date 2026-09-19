@@ -764,7 +764,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
     if (canOpen) {
       await Linking.openURL(url).catch(() => {});
     } else {
-      Alert.alert("Open your email", "Open your email app and find your 6-digit Drift code.");
+      Alert.alert("Open your email", "Open your email app and find your 8-digit Drift code.");
     }
   }
 
@@ -1028,6 +1028,10 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
             <TouchableOpacity onPress={handleOpenMail} style={{ alignSelf: "center", marginTop: 2, padding: 6 }}>
               <Text style={styles.linkText}>Open my email app</Text>
             </TouchableOpacity>
+            {/* Auth mail still goes out from Supabase's shared sender, which
+                lands in spam often enough that people stall here waiting for
+                a code that already arrived. Remove once custom SMTP is set up. */}
+            <Text style={[styles.legal, { marginTop: 2 }]}>No email yet? Check Spam!</Text>
           </View>
         </View>
 

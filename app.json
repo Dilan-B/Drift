@@ -14,7 +14,7 @@
       "bundleIdentifier": "com.sanghani.drift",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Drift needs your camera to count reps automatically using pose detection.",
+        "NSCameraUsageDescription": "Drift uses your camera to take proof photos for your tasks, to set your profile picture, and to place the Lockbox on a real surface using augmented reality.",
         "NSMotionUsageDescription": "Drift uses motion data to detect exercise movement.",
         "NSLocationWhenInUseUsageDescription": "Drift uses your location to save the places you choose, so it can suggest a task when you arrive. Your location stays on your device.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Drift checks when you arrive at places you've saved so it can suggest a task. This needs Always access to work in the background. Your location stays on your device and is never uploaded.",
@@ -44,7 +44,7 @@
       [
         "react-native-vision-camera",
         {
-          "cameraPermissionText": "Drift needs your camera to count reps automatically using pose detection."
+          "cameraPermissionText": "Drift uses your camera to take proof photos for your tasks, to set your profile picture, and to place the Lockbox on a real surface using augmented reality."
         }
       ],
       [

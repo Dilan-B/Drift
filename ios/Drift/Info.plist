@@ -1,140 +1,135 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-  <dict>
-    <key>CADisableMinimumFrameDurationOnPhone</key>
-    <true/>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>$(DEVELOPMENT_LANGUAGE)</string>
-    <key>CFBundleDisplayName</key>
-    <string>Drift</string>
-    <key>CFBundleExecutable</key>
-    <string>$(EXECUTABLE_NAME)</string>
-    <key>CFBundleIdentifier</key>
-    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>$(PRODUCT_NAME)</string>
-    <key>CFBundlePackageType</key>
-    <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
-    <key>CFBundleShortVersionString</key>
-    <string>$(MARKETING_VERSION)</string>
-    <key>CFBundleSignature</key>
-    <string>????</string>
-    <key>CFBundleURLTypes</key>
-    <array>
-      <dict>
-        <key>CFBundleURLSchemes</key>
-        <array>
-          <string>com.drift.app</string>
-        </array>
-      </dict>
-      <dict>
-        <key>CFBundleURLSchemes</key>
-        <array>
-          <string>exp+drift</string>
-        </array>
-      </dict>
-      <dict>
-        <key>CFBundleURLSchemes</key>
-        <array>
-          <string>drift</string>
-        </array>
-      </dict>
-    </array>
-    <key>CFBundleVersion</key>
-    <string>$(CURRENT_PROJECT_VERSION)</string>
-    <!-- Export compliance. Declaring exempt: Drift's only cryptography is
-         HTTPS/TLS to Supabase and standard AES (aes-js) used to encrypt the
-         auth session at rest on-device. No proprietary or non-standard
-         algorithms. Without this key App Store Connect flags every new build
-         "Missing Compliance" and blocks submission until answered by hand. -->
-    <key>NFCReaderUsageDescription</key>
-    <string>Drift reads an NFC tag you place in another room, so you can prove your phone is there before you sleep. Drift only reads the tag's ID and never writes to it.</string>
-    <key>ITSAppUsesNonExemptEncryption</key>
-    <false/>
-    <key>LSMinimumSystemVersion</key>
-    <string>12.0</string>
-    <key>LSRequiresIPhoneOS</key>
-    <true/>
-    <key>NSAppTransportSecurity</key>
-    <dict>
-      <key>NSAllowsArbitraryLoads</key>
-      <false/>
-      <key>NSAllowsLocalNetworking</key>
-      <true/>
-    </dict>
-    <key>NSCalendarsUsageDescription</key>
-    <string>Drift can read your calendar to offer today's events as tasks. It never changes your calendar and nothing is uploaded.</string>
-    <key>NSCalendarsFullAccessUsageDescription</key>
-    <string>Drift can read your calendar to offer today's events as tasks. It never changes your calendar and nothing is uploaded.</string>
-    <key>NSRemindersFullAccessUsageDescription</key>
-    <string>Drift can read your reminders to offer them as tasks. It never changes your reminders and nothing is uploaded.</string>
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Drift uses your location to save the places you choose, so it can suggest a task when you arrive. Your location stays on your device.</string>
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>Drift checks when you arrive at places you've saved so it can suggest a task. This needs Always access to work in the background. Your location stays on your device and is never uploaded.</string>
-    <key>NSCameraUsageDescription</key>
-    <string>Drift needs your camera to take proof photos for AI-verified tasks and to set your profile avatar.</string>
-    <key>NSContactsUsageDescription</key>
-    <string>Drift can match your contacts to find friends already on Drift. Contact emails are hashed on your device and never uploaded in plain text.</string>
-    <key>NSMotionUsageDescription</key>
-    <string>Drift uses motion data two ways: to detect exercise movement during workout challenges, and — if you turn on the phone-in-another-room guard — to check your phone stayed still overnight. Motion data is read on your device and never uploaded.</string>
-    <key>NSPhotoLibraryUsageDescription</key>
-    <string>Drift needs access to your photos to attach a proof image to a task or to set your profile avatar.</string>
-    <key>NSPhotoLibraryAddUsageDescription</key>
-    <string>Drift may save a screenshot to your photo library if you choose to share your progress.</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Drift does not record audio. This permission is required by a camera component used for pose detection.</string>
-    <key>NSSupportsLiveActivities</key>
-    <true/>
-    <key>RCTNewArchEnabled</key>
-    <true/>
-    <key>UILaunchStoryboardName</key>
-    <string>SplashScreen</string>
-    <key>UIRequiredDeviceCapabilities</key>
-    <array>
-      <string>arm64</string>
-    </array>
-    <key>UIRequiresFullScreen</key>
-    <false/>
-    <key>UIStatusBarStyle</key>
-    <string>UIStatusBarStyleDefault</string>
-    <key>UISupportedInterfaceOrientations</key>
-    <array>
-      <string>UIInterfaceOrientationPortrait</string>
-      <string>UIInterfaceOrientationPortraitUpsideDown</string>
-    </array>
-    <key>UIUserInterfaceStyle</key>
-    <string>Light</string>
-    <key>UIViewControllerBasedStatusBarAppearance</key>
-    <false/>
-    <key>UIApplicationSceneManifest</key>
-    <dict>
-      <key>UIApplicationSupportsMultipleScenes</key>
-      <false/>
-      <key>UISceneConfigurations</key>
-      <dict>
-        <key>UIWindowSceneSessionRoleApplication</key>
-        <array>
-          <dict>
-            <key>UISceneConfigurationName</key>
-            <string>Default Configuration</string>
-            <key>UISceneDelegateClassName</key>
-            <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
-          </dict>
-        </array>
-      </dict>
-    </dict>
-    <key>UIBackgroundModes</key>
-    <array>
-      <string>fetch</string>
-      <string>processing</string>
-    </array>
-    <key>BGTaskSchedulerPermittedIdentifiers</key>
-    <array>
-      <string>com.expo.modules.backgroundtask.processing</string>
-    </array>
-  </dict>
+<dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.expo.modules.backgroundtask.processing</string>
+	</array>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Drift</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.drift.app</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>exp+drift</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>drift</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSMinimumSystemVersion</key>
+	<string>12.0</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NFCReaderUsageDescription</key>
+	<string>Drift reads an NFC tag you place in another room, so you can prove your phone is there before you sleep. Drift only reads the tag's ID and never writes to it.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Drift can read your calendar to offer today's events as tasks. It never changes your calendar and nothing is uploaded.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Drift can read your calendar to offer today's events as tasks. It never changes your calendar and nothing is uploaded.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Drift uses your camera to take proof photos for your tasks, to set your profile picture, and to place the Lockbox on a real surface using augmented reality.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Drift can match your contacts to find friends already on Drift. Contact emails are hashed on your device and never uploaded in plain text.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Drift checks when you arrive at places you've saved so it can suggest a task. This needs Always access to work in the background. Your location stays on your device and is never uploaded.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Drift uses your location to save the places you choose, so it can suggest a task when you arrive. Your location stays on your device.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Drift does not record audio. This permission is required by a camera component used for pose detection.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Drift uses motion data two ways: to detect exercise movement during workout challenges, and — if you turn on the phone-in-another-room guard — to check your phone stayed still overnight. Motion data is read on your device and never uploaded.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Drift may save a screenshot to your photo library if you choose to share your progress.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Drift needs access to your photos to attach a proof image to a task or to set your profile avatar.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Drift can read your reminders to offer them as tasks. It never changes your reminders and nothing is uploaded.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>RCTNewArchEnabled</key>
+	<true/>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
+	<key>UILaunchStoryboardName</key>
+	<string>SplashScreen</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>UIRequiresFullScreen</key>
+	<false/>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+	</array>
+	<key>UIUserInterfaceStyle</key>
+	<string>Light</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+</dict>
 </plist>
