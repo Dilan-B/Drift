@@ -96,9 +96,17 @@ async function _flush() {
 
   const batch = _queue.splice(0); // grab + clear
   try {
-    await supabase.from("analytics_events").insert(batch);
-  } catch (_) {
-    // Fire-and-forget: swallow errors so analytics never crashes the app.
+    // supabase-js RETURNS errors here, it does not throw them, so the old
+    // bare try/catch hid every rejected insert. Events stopped reaching the
+    // table for a day without anything surfacing. Still fire-and-forget in
+    // production; in dev, say so, since a silent analytics table reads
+    // exactly like a feature nobody uses.
+    const { error } = await supabase.from("analytics_events").insert(batch);
+    if (error && __DEV__) {
+      console.warn("[analytics] flush failed:", error.code, error.message);
+    }
+  } catch (e) {
+    if (__DEV__) console.warn("[analytics] flush threw:", e?.message || e);
   }
 }
 
