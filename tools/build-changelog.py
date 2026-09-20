@@ -357,25 +357,24 @@ ROWS = [
     ("2026-09-11", "f61bbd1", "Infra", "Dependencies", "expo-constants and react-native-svg aligned with Expo SDK 54",
      "expo-constants was pinned ^57.0.8 against SDK 54, which expects ~18.0.14; iOS tolerated it and Android did not compile. react-native-svg fixed for Fabric registration. Also 040f48c: the new store_unavailable purchase reason mapped to real copy instead of being shown to users verbatim.",
      "1.1.7", "\u2014"),
-    # ── 1.1.8 ─────────────────────────────────────────────────
     ("2026-09-19", "81d40da", "Feature", "Cohort codes", "Study participants enter their participant ID when they redeem a code",
      "The Johns Hopkins pilot reports per participant keyed on the study's own IDs, never names or emails. A code can carry participant_id_format; when set, redemption asks for the ID, checks the format, refuses one already used on that code, and stores it uppercased so 'jhu-007' and 'JHU-007' are one person. No seat is spent until the ID is accepted, and codes without a format are unchanged. cohort_participants(cohort) returns the funnel by ID only.",
-     "1.1.8", "\u2014"),
+     "1.1.7", "\u2014"),
     ("2026-09-19", "5ef1f3a", "Feature", "Analytics", "Blocking an app is finally recorded on the server",
      "Apple's picker keeps the selection on the device and nothing wrote the blocked_apps table, so a user who blocked apps was indistinguishable from one who never did - the 'activated' step of the pilot funnel. Now logs counts only (apps, categories, web domains), never names or tokens.",
-     "1.1.8", "\u2014"),
+     "1.1.7", "\u2014"),
     ("2026-09-19", "affed23", "Feature", "Analytics", "Screen views recorded per tab",
      "trackScreen existed since analytics landed but nothing ever called it, so which features people use was invisible. Fires once per tab change.",
-     "1.1.8", "\u2014"),
+     "1.1.7", "\u2014"),
     ("2026-09-19", "c006b06", "Bug Fix", "Analytics", "Failed event uploads were silently discarded",
      "supabase-js returns insert errors rather than throwing them, so the bare try/catch around the flush hid every rejected batch; a day with no events read exactly like a day with no users. Dev builds now log the failure. Found while verifying the pilot funnel on device.",
-     "1.1.8", "\u2014"),
+     "1.1.7", "\u2014"),
     ("2026-09-17", "7aaa9ee", "Bug Fix", "Screen Time", "White border around the block screen in the app switcher",
      "The shield drew an opaque colour with no background blur style, so the blocked app's own window showed through as a white frame in the switcher snapshot, on every blocked app regardless of theme. A material makes iOS composite the shield across the whole snapshot; the opaque ground keeps the shield itself solid in use. Verified on device.",
-     "1.1.8", "\u2014"),
+     "1.1.7", "\u2014"),
     ("2026-09-19", "c79f41c", "Feature", "Analytics", "The answer to Apple's Screen Time prompt is recorded",
      "Nothing works without that permission and the answer was used then thrown away, so a signup that never blocked anything looked the same as one that refused. Wrapped at the bridge layer so every path that asks is covered.",
-     "1.1.8", "\u2014"),
+     "1.1.7", "\u2014"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
@@ -444,7 +443,7 @@ for i, a in enumerate(areas, start=8):
 
 s["G6"] = "By release"
 s["G6"].font = Font(name=FONT, bold=True, size=12, color="1F3A2A")
-rels = ["1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "Unreleased"]
+rels = ["1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "Unreleased"]
 s["G7"], s["H7"] = "Release", "Count"
 for c in ("G7", "H7"):
     s[c].font = HDR_FONT
@@ -531,5 +530,5 @@ assert sum(t.values()) == len(ROWS) and sum(r.values()) == len(ROWS)
 for k in t:
     assert k in ("Feature", "Bug Fix", "UI", "Infra", "Security", "Chore", "Docs"), f"unlisted type {k}"
 for k in r:
-    assert k in ("1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "Unreleased"), f"unlisted release {k}"
+    assert k in ("1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "Unreleased"), f"unlisted release {k}"
 print("\nAll type/release values are covered by a summary row - no change is uncounted.")
