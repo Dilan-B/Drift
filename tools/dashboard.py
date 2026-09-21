@@ -188,6 +188,14 @@ def build(d, real):
     )
 
     flag = " --real" if real else ""
+    stale = (
+        f'<div class="card" style="border-color:var(--warn)">'
+        f'<div class="lab" style="color:var(--warn)">Data health</div>'
+        f'{mo["stale_flags"]} profiles still carry sub_active = true with an '
+        f'expiry in the past, left from the Stripe era. They are NOT getting '
+        f'free Pro: has_own_entitlement() checks the date. They only corrupt '
+        f'any count that trusts the flag alone.</div>'
+    ) if mo["stale_flags"] else ""
     return f"""<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Drift Internal</title><style>{CSS}</style></head><body><div class="wrap">
@@ -223,13 +231,15 @@ recording it, so it undercounts anyone who set it up before that shipped.</div><
 <h2>Habit and access</h2>
 <div class="grid">
   {kpi("On a streak now", f"{st['on_streak']:,}", f"longest ever {st['best']} days")}
-  {kpi("Paying", f"{mo['subscribers']:,}", "RevenueCat says the subscription is live")}
+  {kpi("Paying", f"{mo['paying']:,}", "Live subscription, trials not counted")}
+  {kpi("On trial", f"{mo['trialing']:,}", "Free trial running, has not converted yet")}
   {kpi("Free Pro", f"{mo['overrides']:,}", f"{mo['redeemed']} codes redeemed in total")}
   {kpi("AI checked", f"{h['ai_checked']:,}", f"{h['photo_verified']} with photo proof")}
   {kpi("Median task", f"{int(h['median_task_min'] or 0)}<small> min</small>", "Half are shorter than this")}
   {kpi("Total XP", f"{h['xp']:,}")}
 </div>
 
+{stale}
 <h2>Categories</h2>
 <div class="card"><table><tr><th>Category</th><th class="n">Created</th>
 <th class="n">Done</th><th class="n">Rate</th><th class="n">Focus</th></tr>{crows}</table></div>

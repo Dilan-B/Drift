@@ -83,8 +83,19 @@ select json_build_object(
       'best',      coalesce(max(longest_streak),0),
       'avg_best',  coalesce(round(avg(nullif(longest_streak,0)),1),0)
   ) from pf),
+  -- sub_active alone is NOT a paying customer. Seven profiles still carry
+  -- sub_active = true with a sub_expires from June and July, left over from
+  -- the Stripe era that ended on 2026-06-18 and never cleared. The date test
+  -- is what has_own_entitlement() uses, so it is what this has to use too.
+  -- Trials are separated out because a trial is not revenue.
   'money', (select json_build_object(
-      'subscribers', (select count(*) from pf where sub_active),
+      'paying',      (select count(*) from pf
+                        where sub_active and (sub_expires is null or sub_expires > now())
+                          and coalesce(rc_period_type,'') <> 'trial'),
+      'trialing',    (select count(*) from pf
+                        where sub_active and (sub_expires is null or sub_expires > now())
+                          and rc_period_type = 'trial'),
+      'stale_flags', (select count(*) from pf where sub_active and sub_expires <= now()),
       'overrides',   (select count(*) from public.pro_overrides
                         where granted and user_id in (select id from u)
                           and (expires_at is null or expires_at > now())),
