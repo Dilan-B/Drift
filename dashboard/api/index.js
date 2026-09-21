@@ -48,11 +48,14 @@ export default async function handler(req, res) {
 
   const real = !("all" in (req.query || {}));
   try {
-    const db = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-      { auth: { persistSession: false } },
-    );
+    // trim(): a key pasted into a terminal prompt or a web form arrives with a
+    // trailing newline often enough to be worth defending against. The failure
+    // it causes is "Invalid API key", which reads like the wrong key entirely
+    // and sends you looking in the wrong place.
+    const url = (process.env.SUPABASE_URL || "").trim();
+    const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+    if (!url || !key) throw new Error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY unset");
+    const db = createClient(url, key, { auth: { persistSession: false } });
     const { data, error } = await db.rpc("internal_dashboard", { p_real: real });
     if (error) throw new Error(error.message);
 
