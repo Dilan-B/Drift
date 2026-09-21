@@ -5,7 +5,7 @@ Expo / React Native productivity app. You earn screen-time by completing tasks; 
 ## Stack
 - Expo SDK + React Native (JS/JSX, not TS). Entry: `App.js` → `Drift.jsx` (main shell, ~4k lines).
 - Supabase: auth, Postgres (RLS), Edge Functions (Deno/TS) in `supabase/functions/*`, admin SQL in `supabase/admin/*`.
-- Stripe subscriptions via edge functions. OpenAI calls are server-only (never in the client bundle).
+- OpenAI calls are server-only (never in the client bundle).
 - iOS Screen Time (Family Controls / ManagedSettings) via native `screenTime.js` bridge — only works in a dev/standalone build, not Expo Go.
 
 ## Conventions
