@@ -957,8 +957,24 @@ If NO photo or video was submitted, reject and say what to capture.`);
         `QUALITY. If the description says the image was too dark, blurred, or cropped to make out, reject and ` +
         `say to retake it. Do not guess through a bad frame.\n\n` +
 
-        `Verify when the evidence makes completion clearly more likely than not. Reject when it is unrelated, ` +
-        `contradictory, generic, or too vague to connect to the task. You are allowed — expected — to reject.\n\n` +
+        (answering
+          // The judge re-decided the whole case each time an answer came back,
+          // so it could reject over something it had never asked about. From
+          // the user's side that is answering the question and being refused
+          // for an unrelated reason — and it is final: no second question is
+          // offered on this path, and the rejection spends one of four
+          // attempts. Scope the decision to the doubt that was actually raised.
+          ? `THIS IS AN ANSWER TO A QUESTION YOU ASKED. You already read this evidence once and judged it ` +
+            `ambiguous rather than absent or contradictory — that is the only reason a question was asked at ` +
+            `all. Decide one thing now: does the answer resolve THAT doubt? If it does, verify. Do not open ` +
+            `a new line of doubt, do not re-examine points you chose not to ask about, and do not raise the ` +
+            `bar because this is a second look. Reject only if the answer is evasive, contradicts the ` +
+            `evidence, or leaves the very gap you asked about open.\n\n` +
+            `Verify when the answer plus the evidence make completion more likely than not. The user cannot ` +
+            `answer again, so an unresolved doubt you never raised is not a reason to refuse them.\n\n`
+          : `Verify when the evidence makes completion clearly more likely than not. Reject when it is ` +
+            `unrelated, contradictory, generic, or too vague to connect to the task. You are allowed — ` +
+            `expected — to reject.\n\n`) +
 
         `Write "message" to the user directly, in one or two plain sentences. On a rejection, name the exact ` +
         `thing that was missing and what would settle it next time. Never be sarcastic or scolding.\n\n` +
