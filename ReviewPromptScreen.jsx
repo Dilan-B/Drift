@@ -8,8 +8,16 @@
  *      (expo-store-review). Apple decides whether/how often it actually shows
  *      and never tells us the outcome (reviewed vs declined) — so we can't gate
  *      on the result.
- *   3. Once the prompt has been requested, we reveal the Continue button so the
- *      user can move on.
+ *   3. Once the prompt has been requested, we reveal the two ways out: write a
+ *      review in the App Store, or continue.
+ *
+ * WHY THERE IS NO "WRITE A REVIEW HERE" BUTTON
+ *   Apple's sheet IS the in-app path — it takes a rating and a written review
+ *   without leaving Drift — but requestReview() must not be called from a tap.
+ *   Apple's documentation says so outright, and the sheet silently does nothing
+ *   when throttled, so a button wired to it would do nothing a good fraction of
+ *   the time. The sheet therefore fires on its own above, and the button offers
+ *   the path that always works: the App Store's own review composer.
  *
  * Requires `expo-store-review` (npx expo install expo-store-review). Safe no-op
  * if the module is missing or review isn't available on the device.
@@ -17,12 +25,24 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, Animated, StyleSheet, Platform, Linking } from "react-native";
 import { getTheme, FF } from "./theme";
+import { getAppConfig } from "./supabase";
 import Sprout from "./SproutArt";
 
 let StoreReview = null;
 try { StoreReview = require("expo-store-review"); } catch {}
 
 const STAR = "★";
+
+// Last-resort App Store link. app_config.ios_store_url is the source of truth
+// (ForceUpdateModal reads the same row), but a review prompt that silently
+// offers nothing because a network call failed is worse than a hardcoded id.
+const FALLBACK_STORE_URL = "https://apps.apple.com/app/id6778215875";
+
+/** The App Store page, opened straight onto the write-a-review composer. */
+function writeReviewUrl(base) {
+  const url = base || FALLBACK_STORE_URL;
+  return url + (url.includes("?") ? "&" : "?") + "action=write-review";
+}
 
 export default function ReviewPromptScreen({ dark = false, onDone }) {
   const theme = getTheme(dark);
@@ -45,15 +65,20 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
       Animated.spring(s, { toValue: 1, useNativeDriver: true, damping: 9, stiffness: 220, mass: 0.6 })
     )).start();
 
-    // Resolve the App Store page up front so we can offer a manual fallback.
-    // (Requires expo.ios.appStoreUrl in app.json once the app has a listing.)
+    // Resolve the App Store page up front.
+    //
+    // StoreReview.storeUrl() reads expo.ios.appStoreUrl, which is not set, so
+    // it returns null and the store link never rendered at all. app_config is
+    // the live source of truth and needs no app release to correct.
     (async () => {
       try {
-        if (StoreReview?.storeUrl) {
-          const url = await StoreReview.storeUrl();
-          if (url) setStoreUrl(url);
-        }
-      } catch {}
+        let url = null;
+        if (StoreReview?.storeUrl) { try { url = await StoreReview.storeUrl(); } catch {} }
+        if (!url) { const cfg = await getAppConfig(); url = cfg?.ios_store_url || null; }
+        setStoreUrl(url || FALLBACK_STORE_URL);
+      } catch {
+        setStoreUrl(FALLBACK_STORE_URL);
+      }
     })();
 
     // 2. After the user has had a moment to read, auto-request the review.
@@ -76,14 +101,19 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
     return () => { cancelled = true; clearTimeout(t); };
   }, []);
 
-  // Manual fallback — opens the App Store review page directly. Works wherever
-  // the in-app prompt is suppressed (TestFlight, throttled), as long as a store
-  // URL is configured.
-  const openStorePage = async () => {
+  // Opens the App Store straight onto the review composer. This is the path
+  // that always works — the in-app sheet is throttled and invisible in
+  // TestFlight, so without this most people have no way to review at all.
+  const openWriteReview = async () => {
+    const target = writeReviewUrl(storeUrl);
     try {
-      const url = storeUrl || (StoreReview?.storeUrl ? await StoreReview.storeUrl() : null);
-      if (url) await Linking.openURL(url);
-    } catch {}
+      await Linking.openURL(target);
+    } catch {
+      // Some iOS versions refuse the composer deep link; the plain product
+      // page still lets them write one, so fall back rather than dead-end.
+      try { await Linking.openURL(storeUrl || FALLBACK_STORE_URL); } catch {}
+    }
+    onDone?.();
   };
 
   return (
@@ -122,19 +152,20 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
       <View style={s.footer}>
         {showContinue && (
           <Animated.View style={{ opacity: continueFade }}>
-            {!!storeUrl && (
-              <TouchableOpacity onPress={openStorePage} activeOpacity={0.7} style={s.storeLink}>
-                <Text style={[s.storeLinkText, { color: earn.sage }]}>Rate Drift on the App Store</Text>
-              </TouchableOpacity>
-            )}
+            {/* Primary: always rendered. It used to be gated on a storeUrl
+                that never resolved, so this was invisible in every build. */}
             <TouchableOpacity
-              onPress={onDone}
+              onPress={openWriteReview}
               activeOpacity={0.85}
               style={[s.continueBtn, { backgroundColor: earn.deep }, theme.fx.glow]}
             >
               <Text style={[s.continueText, { color: dark ? "#16261C" : "#FAF6EE" }]}>
-                Continue
+                Write a review
               </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={onDone} activeOpacity={0.7} style={s.storeLink}>
+              <Text style={[s.storeLinkText, { color: ink.mid }]}>Not now</Text>
             </TouchableOpacity>
           </Animated.View>
         )}

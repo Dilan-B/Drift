@@ -12,6 +12,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.sanghani.drift",
+      "appStoreUrl": "https://apps.apple.com/app/id6778215875",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Drift uses your camera to take proof photos for your tasks, to set your profile picture, and to place the Lockbox on a real surface using augmented reality.",
