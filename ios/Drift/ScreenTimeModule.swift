@@ -50,6 +50,9 @@ extension DeviceActivityName {
 @available(iOS 16.0, *)
 extension DeviceActivityEvent.Name {
   static let balanceDepleted = Self("drift.balanceDepleted")
+  /// Apple's 15-minute floor, armed only when the balance is shorter than it,
+  /// in case iOS declines to deliver the exact-balance event.
+  static let balanceBackstop = Self("drift.balanceBackstop")
   static func balanceCheckpoint(_ seconds: Int) -> Self {
     Self("drift.balanceCheckpoint.\(seconds)")
   }
@@ -271,11 +274,32 @@ class ScreenTimeModule: NSObject {
       let totalSec = max(60, seconds.intValue)
       let APPLE_MIN_THRESHOLD_MIN = 15
       let APPLE_MIN_THRESHOLD_SEC = APPLE_MIN_THRESHOLD_MIN * 60
-      let balanceMin = Int(ceil(Double(totalSec) / 60.0))
-      let thresholdMin = max(APPLE_MIN_THRESHOLD_MIN, balanceMin)
-      let thresholdSec = max(APPLE_MIN_THRESHOLD_SEC, totalSec)
+
+      // Arm depletion at the REAL balance, not at Apple's documented floor.
+      //
+      // This used to be max(15min, balance), so a 5-minute balance did not
+      // shield until FIFTEEN minutes of blocked-app use — ten free minutes,
+      // and the user only saw a shield when they reopened Drift and JS
+      // noticed. That is the reported bypass: stay inside the blocked app and
+      // nothing stops you.
+      //
+      // The wall-clock failsafe was supposed to cover short balances, but iOS
+      // rejects DeviceActivity schedules under 15 minutes, so it threw and was
+      // disabled for exactly the balances that needed it.
+      //
+      // Sub-15-minute EVENT thresholds are a different thing from sub-15-minute
+      // SCHEDULES, and the checkpoint events below have been armed at 5-minute
+      // steps without startMonitoring throwing. Whether iOS DELIVERS them is
+      // still unproven, so a backstop at Apple's floor is armed alongside for
+      // short balances: if the exact event is delivered we shield on time, and
+      // if it is silently dropped we land on exactly the old behaviour. The
+      // depletion handler stops monitoring on the first fire, so whichever
+      // arrives first wins and the other is discarded.
+      let thresholdSec = totalSec
+      let thresholdMin = Int(ceil(Double(totalSec) / 60.0))
       let threshold = DateComponents(minute: thresholdSec / 60, second: thresholdSec % 60)
-      let needsFailsafe = totalSec < APPLE_MIN_THRESHOLD_SEC
+      let needsBackstop = totalSec < APPLE_MIN_THRESHOLD_SEC
+      let needsFailsafe = needsBackstop
 
       // ── Checkpoint cadence ────────────────────────────────────
       // Checkpoints do double duty: they record consumed usage, and they are
@@ -295,7 +319,11 @@ class ScreenTimeModule: NSObject {
       // user with no background enforcement whatsoever. Spacing widens for large
       // balances so the count can never grow unbounded: a 4-hour balance gets
       // 15-minute spacing, not 48 events.
-      let MAX_CHECKPOINTS = 16
+      // One slot is reserved for .balanceDepleted, and another for the backstop
+      // when there is one. startMonitoring throws if an activity carries too
+      // many events, and that throw tears down BOTH monitors — leaving no
+      // background enforcement at all.
+      let MAX_CHECKPOINTS = needsBackstop ? 14 : 15
       let NUDGE_STEP_SEC  = 300
       var stepSec = NUDGE_STEP_SEC
       if totalSec > NUDGE_STEP_SEC * MAX_CHECKPOINTS {
@@ -321,6 +349,16 @@ class ScreenTimeModule: NSObject {
         webDomains:   selection.webDomainTokens,
         threshold:    threshold
       )
+      if needsBackstop {
+        // Named, not a checkpoint: DriftMonitor treats every non-checkpoint
+        // event as depletion, so this shields without an extension change.
+        events[.balanceBackstop] = DeviceActivityEvent(
+          applications: selection.applicationTokens,
+          categories:   selection.categoryTokens,
+          webDomains:   selection.webDomainTokens,
+          threshold:    DateComponents(minute: APPLE_MIN_THRESHOLD_MIN)
+        )
+      }
 
       let center = DeviceActivityCenter()
       // Always stop any existing monitor before restarting — DeviceActivity
@@ -603,6 +641,14 @@ class ScreenTimeModule: NSObject {
     info["consumedTotalSeconds"] = defaults?.integer(forKey: "drift_usage_consumed_total_seconds") ?? 0
     info["reportedSeconds"]    = defaults?.integer(forKey: "drift_usage_reported_seconds") ?? 0
     info["failsafeActive"]     = defaults?.bool(forKey: "drift_balance_failsafe_active") ?? false
+    // The sub-15-minute experiment: compare fireCount against checkpointCount.
+    // Apple documents a 15-minute floor for threshold delivery, and it is
+    // unproven whether that applies to event thresholds or only to schedules.
+    // If fireCount climbs past 1 while checkpointStepSeconds is 300, iOS is
+    // delivering them and the exact-balance depletion event is landing on time.
+    info["checkpointCount"]       = defaults?.integer(forKey: "drift_checkpoint_count") ?? 0
+    info["checkpointStepSeconds"] = defaults?.integer(forKey: "drift_checkpoint_step_seconds") ?? 0
+    info["armedSeconds"]          = defaults?.integer(forKey: "drift_balance_armed_seconds") ?? 0
     info["failsafeDeadline"]   = defaults?.double(forKey: "drift_balance_failsafe_deadline") ?? 0
 
     #if canImport(FamilyControls)
