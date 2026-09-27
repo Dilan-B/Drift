@@ -979,6 +979,13 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
         setError("That username is taken. Try another.");
       } else if (raw.includes("invalid") && raw.includes("credential")) {
         setError("Email or password is incorrect.");
+      } else if (raw.includes("sending") || (raw.includes("error") && raw.includes("email") && raw.includes("confirmation"))) {
+        // "Error sending confirmation email" — the verification email FAILED to
+        // send (SMTP/provider problem), so there is nothing in their inbox to
+        // check. This used to fall into the "email...confirm" branch below and
+        // tell them to check their email, hiding a live outage. Say what is
+        // actually true.
+        setError("We couldn't send your verification email right now. This is on our end — please try again in a few minutes.");
       } else if (raw.includes("email") && raw.includes("confirm")) {
         setError("Check your email to verify your account, then try signing in again.");
       } else if (raw.includes("network") || raw.includes("fetch")) {
