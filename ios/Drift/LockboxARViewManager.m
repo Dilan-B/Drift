@@ -7,7 +7,7 @@
 
 @interface RCT_EXTERN_MODULE(LockboxARViewManager, RCTViewManager)
 
-// Inside edge of the box, in metres.
+// Inside length of the (phone-shaped) box, in metres.
 RCT_EXPORT_VIEW_PROPERTY(boxSize, NSNumber)
 
 // A horizontal plane became available — the "Place box" control can enable.

@@ -12,22 +12,29 @@
  * So this screen is the rare half: setup, reconfiguration, and off. It is not
  * where you arm a night.
  */
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View, Text, Modal, TouchableOpacity, ScrollView, Alert,
   ActivityIndicator, Platform,
 } from "react-native";
 import { FF, getTheme } from "./theme";
 import { CloseIcon, CheckIcon, MicIcon } from "./Icons";
+import PlantSlider from "./PlantSlider";
 import * as SleepGuard from "./sleepGuard";
 
-const REWARD_CHOICES = [15, 30, 45, 60];
-const REMINDER_CHOICES = [
-  { h: 21, m: 0,  label: "9:00 PM" },
-  { h: 21, m: 45, label: "9:45 PM" },
-  { h: 22, m: 30, label: "10:30 PM" },
-  { h: 23, m: 0,  label: "11:00 PM" },
-];
+// Sliders, not a menu of four arbitrary times. Reward keeps the old 15–60 min
+// bounds. The reminder runs 8 PM → 1 AM on a timeline that continues past
+// midnight (minutes after 00:00, +1440 once past it) so it is one straight line.
+const REWARD_MIN = 15, REWARD_MAX = 60, REWARD_STEP = 5;
+const REMIND_MIN = 20 * 60, REMIND_MAX = 25 * 60, REMIND_STEP = 15;
+const toTimeline = ({ h, m }) => {
+  const v = (h % 24) * 60 + m;
+  return Math.max(REMIND_MIN, Math.min(REMIND_MAX, v < 12 * 60 ? v + 1440 : v));
+};
+const clockLabel = (v) => {
+  const n = v % 1440, h = Math.floor(n / 60), m = n % 60;
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+};
 
 export default function SleepGuardModal({ visible, dark = false, onClose, onChanged }) {
   const theme = getTheme(dark);
@@ -104,28 +111,36 @@ export default function SleepGuardModal({ visible, dark = false, onClose, onChan
     );
   };
 
-  const pickReward = async (mins) => {
+  // A slider fires on every step; persist (and let the parent reschedule the
+  // reminder) once the thumb comes to rest, not on each tick.
+  const saveTimer = useRef(null);
+  const persistSoon = (patch) => {
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      await SleepGuard.setPrefs(patch);
+      onChanged?.();
+    }, 400);
+  };
+  useEffect(() => () => clearTimeout(saveTimer.current), []);
+
+  const pickReward = (mins) => {
     setReward(mins);
-    await SleepGuard.setPrefs({ rewardMinutes: mins });
-    onChanged?.();
+    persistSoon({ rewardMinutes: mins });
   };
 
-  const pickReminder = async (c) => {
-    setReminder({ h: c.h, m: c.m });
-    await SleepGuard.setPrefs({ reminderHour: c.h, reminderMinute: c.m });
-    onChanged?.();
+  const pickReminder = (v) => {
+    const n = v % 1440;
+    const next = { h: Math.floor(n / 60), m: n % 60 };
+    setReminder(next);
+    persistSoon({ reminderHour: next.h, reminderMinute: next.m });
   };
 
-  const chip = (active) => ({
-    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 11,
-    backgroundColor: active ? earn.green : (dark ? "rgba(232,245,236,0.07)" : paper.sand),
-    borderWidth: 1,
-    borderColor: active ? earn.green : "transparent",
-  });
-  const chipText = (active) => ({
-    fontFamily: FF.bodyMed, fontSize: 13,
-    color: active ? "#fff" : ink.mid,
-  });
+  const sliderHead = (label, value) => (
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+      <Text style={{ fontFamily: FF.kicker, fontSize: 9, letterSpacing: 2.4, color: ink.faint }}>{label}</Text>
+      <Text style={{ fontFamily: FF.display, fontSize: 22, color: ink.deep, letterSpacing: -0.3 }}>{value}</Text>
+    </View>
+  );
   const kicker = {
     fontFamily: FF.kicker, fontSize: 9, letterSpacing: 1.6,
     color: ink.faint, marginBottom: 10, marginTop: 26,
@@ -205,30 +220,38 @@ export default function SleepGuardModal({ visible, dark = false, onClose, onChan
                 </View>
               </View>
 
-              <Text style={kicker}>REWARD FOR A FULL NIGHT</Text>
-              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                {REWARD_CHOICES.map(m => (
-                  <TouchableOpacity key={m} onPress={() => pickReward(m)} style={chip(reward === m)}>
-                    <Text style={chipText(reward === m)}>{m} min</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <View style={{
+                marginTop: 18, borderRadius: 24, padding: 20,
+                backgroundColor: paper.card,
+                borderWidth: 1, borderColor: ink.border,
+              }}>
+                {sliderHead("REWARD PER NIGHT", `${reward} min`)}
+                <PlantSlider
+                  minimumValue={REWARD_MIN}
+                  maximumValue={REWARD_MAX}
+                  step={REWARD_STEP}
+                  value={Math.max(REWARD_MIN, Math.min(REWARD_MAX, reward))}
+                  onValueChange={pickReward}
+                  accent={earn.sage} track={ink.ghost} soil={ink.border} textColor={ink.faint}
+                  leftLabel={`${REWARD_MIN}m`} rightLabel={`${REWARD_MAX}m`}
+                />
 
-              <Text style={kicker}>NIGHTLY REMINDER</Text>
-              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                {REMINDER_CHOICES.map(c => {
-                  const active = reminder.h === c.h && reminder.m === c.m;
-                  return (
-                    <TouchableOpacity key={c.label} onPress={() => pickReminder(c)} style={chip(active)}>
-                      <Text style={chipText(active)}>{c.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                <View style={{ height: 1, backgroundColor: ink.hairline, marginVertical: 18 }} />
+
+                {sliderHead("BEDTIME REMINDER", clockLabel(toTimeline(reminder)))}
+                <PlantSlider
+                  minimumValue={REMIND_MIN}
+                  maximumValue={REMIND_MAX}
+                  step={REMIND_STEP}
+                  value={toTimeline(reminder)}
+                  onValueChange={pickReminder}
+                  accent={earn.sage} track={ink.ghost} soil={ink.border} textColor={ink.faint}
+                  leftLabel="8 PM" rightLabel="1 AM"
+                />
+                <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, marginTop: 10 }}>
+                  Skipped on nights you've already tapped in.
+                </Text>
               </View>
-              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, marginTop: 8, lineHeight: 17 }}>
-                Only sent once a tag is registered, and skipped on nights you've
-                already tapped in.
-              </Text>
 
               {history.length > 0 && (
                 <>

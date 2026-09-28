@@ -4,7 +4,8 @@
  *
  * PHASES
  *   setup   — choose a length and (optionally) name the task
- *   place   — AR: find a surface, drop the box
+ *   place   — AR: find a surface, drop the box, adjust it; the phone going
+ *             in flat and still starts the session on its own
  *   settle  — "set your phone in the box", waiting for the sensors to go quiet
  *   active  — the box is holding. A plain countdown, screen on.
  *   breach  — the phone moved. Grace countdown; put it back or forfeit.
@@ -25,20 +26,19 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Alert, Platform,
   AppState, BackHandler, StatusBar, ActivityIndicator, findNodeHandle,
   requireNativeComponent, UIManager, TextInput, Animated, Easing,
-  AccessibilityInfo,
+  AccessibilityInfo, ScrollView, KeyboardAvoidingView,
 } from "react-native";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
-import Slider from "@react-native-community/slider";
+import PlantSlider from "./PlantSlider";
+import Sprout from "./SproutArt";
 import { FF, getTheme } from "./theme";
-import { CloseIcon, CheckIcon, LockIcon } from "./Icons";
+import { LockIcon } from "./Icons";
 import { selectionTick, notify } from "./haptics";
 import * as Lockbox from "./lockbox";
 import {
   notifyLockboxBreach, notifyLockboxLost, notifyLockboxDone,
   scheduleLockboxLoss, cancelLockboxLoss,
 } from "./notifications";
-
-const DURATIONS = [15, 25, 45, 60, 90];
 
 // The native AR view is only present in a dev/standalone build. requireNativeComponent
 // throws in Expo Go, so this is resolved lazily and the screen degrades to the
@@ -69,12 +69,12 @@ const fmt = (secs) => {
     : `${m}:${String(r).padStart(2, "0")}`;
 };
 
-export default function LockboxScreen({ dark = false, onClose, onCompleted, onStarted, onEnded }) {
+export default function LockboxScreen({ dark = false, modePicker = null, onClose, onCompleted, onStarted, onEnded }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
 
   const [phase,   setPhase]   = useState("setup");
-  const [minutes, setMinutes] = useState(25);
+  const [minutes, setMinutes] = useState(30);
   const [task,    setTask]    = useState("");
   const [session, setSession] = useState(null);
   const [left,    setLeft]    = useState(0);
@@ -83,7 +83,6 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
   const [surface, setSurface] = useState(false);   // ghost is on a surface right now
   const [placed,  setPlaced]  = useState(false);
   const [sensed,  setSensed]  = useState(false);   // face down AND still
-  const [live,    setLive]    = useState(null);    // raw sensor read, for the waiting screen
   const [busy,    setBusy]    = useState(false);
 
   const arRef      = useRef(null);
@@ -115,7 +114,7 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
 
   // Screen stays awake from the moment enforcement starts.
   useEffect(() => {
-    const needsAwake = ["waiting", "settle", "locking", "active", "breach"].includes(phase);
+    const needsAwake = ["place", "settle", "locking", "active", "breach"].includes(phase);
     if (needsAwake) activateKeepAwakeAsync().catch(() => {});
     else deactivateKeepAwake();
     return () => deactivateKeepAwake();
@@ -143,7 +142,7 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
   // Android hardware back — refuse to drop out of a live session by accident.
   useEffect(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (["active", "breach", "settle", "waiting", "locking"].includes(phaseRef.current)) return true;
+      if (["active", "breach", "settle", "locking"].includes(phaseRef.current)) return true;
       return false;
     });
     return () => sub.remove();
@@ -168,26 +167,11 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
       // once, so calling autoStart directly would pin it to the render that
       // installed it — which is why every session ran for the initial 25
       // minutes no matter what the user picked.
-      if (inBox && ["place", "waiting"].includes(phaseRef.current)) autoStartRef.current?.();
+      if (inBox && phaseRef.current === "place") autoStartRef.current?.();
     });
     try { await Lockbox.startMonitoring(); } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // While waiting for the phone to go in, poll the raw sensor state. The
-  // events alone are transition-only, so a screen driven by them shows nothing
-  // at all until something changes — which is indistinguishable from broken.
-  useEffect(() => {
-    if (phase !== "waiting") return;
-    let alive = true;
-    const poll = async () => {
-      const r = await Lockbox.currentMagnitude();
-      if (alive) setLive(r);
-    };
-    poll();
-    const id = setInterval(poll, 300);
-    return () => { alive = false; clearInterval(id); };
-  }, [phase]);
 
   /**
    * The phone is in. Tear down AR and begin for real.
@@ -351,17 +335,13 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
         <ARView
           ref={arRef}
           style={StyleSheet.absoluteFill}
-          boxSize={0.22}
           onSurfaceFound={({ nativeEvent }) => setSurface(!!nativeEvent?.found)}
           onPlaced={() => {
             notify(true);
             setPlaced(true);
-            // Stop ARKit NOW. The box is anchored and nothing further needs the
-            // camera — leaving it running only means it loses tracking against
-            // the inside of a box and Apple's coaching overlay slides back over
-            // the screen, which reads as "it isn't working".
-            callAR(arRef.current, "pauseSession");
-            setPhase("waiting");
+            // AR keeps running after the drop so the box can still be dragged,
+            // pinched and turned — it only stops once the phone is actually in
+            // (autoStart pauses it), which is a few seconds, not the session.
             watchForEntry();
           }}
           onARError={({ nativeEvent }) => {
@@ -382,69 +362,64 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
             );
           }}
         />
-        <View style={{ position: "absolute", left: 0, right: 0, bottom: 44, paddingHorizontal: 28 }}>
-          <Text style={{
-            fontFamily: FF.body, fontSize: 14, color: "rgba(255,255,255,0.9)",
-            textAlign: "center", marginBottom: 16,
-          }}>
-            {placed
-              ? (sensed
-                  ? "Got it — starting…"
-                  : "Now set your phone inside, screen up. It starts on its own.")
-              : surface
-                ? "Move it where you want, then drop it."
-                : "Move your phone slowly to find a flat surface."}
-          </Text>
+        <View style={{ position: "absolute", left: 0, right: 0, bottom: 28, paddingHorizontal: 18 }}>
+          <View style={arStyles.card}>
+            <Text style={arStyles.title}>
+              {placed
+                ? (sensed ? "Got it — starting" : "Box placed")
+                : surface ? "Aim at the spot" : "Looking for a surface"}
+            </Text>
+            <Text style={arStyles.hint}>
+              {placed
+                ? "Drag to move · pinch to resize · twist to turn.\nThen set your phone inside, screen up."
+                : surface
+                  ? "Point where your phone will sit, then drop the box."
+                  : "Move your phone slowly over a table or desk."}
+            </Text>
 
-          {!placed ? (
-            <>
+            {!placed ? (
               <TouchableOpacity
                 onPress={() => { selectionTick(); callAR(arRef.current, "place"); }}
                 disabled={!surface}
-                style={{
-                  backgroundColor: earn.green, borderRadius: 14,
-                  paddingVertical: 15, alignItems: "center", marginBottom: 10,
-                  opacity: surface ? 1 : 0.4,
-                }}
+                activeOpacity={0.85}
+                style={[arStyles.primary, { opacity: surface ? 1 : 0.4 }]}
               >
-                <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: "#fff" }}>
-                  Drop the box here
-                </Text>
+                <Text style={arStyles.primaryText}>Drop the box here</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={beginSettle} style={{ paddingVertical: 12, alignItems: "center" }}>
-                <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: "rgba(255,255,255,0.6)" }}>
-                  Skip the box
-                </Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              {/* Fallback only. The sensors normally start this themselves;
-                  this exists for a phone that will not sit flat, or a user who
-                  would rather not wait for the settle to latch. */}
+            ) : (
+              // Fallback only. The sensors normally start this themselves; this
+              // exists for a phone that will not sit flat.
               <TouchableOpacity
                 onPress={autoStart}
                 disabled={busy}
-                style={{
-                  backgroundColor: earn.green, borderRadius: 14,
-                  paddingVertical: 15, alignItems: "center", marginBottom: 10,
-                  opacity: busy ? 0.5 : 1,
-                }}
+                activeOpacity={0.85}
+                style={[arStyles.primary, { opacity: busy ? 0.5 : 1 }]}
               >
-                <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: "#fff" }}>
-                  {busy ? "Starting…" : "Start now"}
-                </Text>
+                <Text style={arStyles.primaryText}>{busy ? "Starting…" : "Start now"}</Text>
               </TouchableOpacity>
+            )}
+
+            <View style={{ flexDirection: "row", justifyContent: "center", gap: 28, marginTop: 12 }}>
+              {placed ? (
+                <TouchableOpacity
+                  onPress={() => { setPlaced(false); setSurface(false); unsubRef.current?.(); Lockbox.stopMonitoring(); callAR(arRef.current, "reset"); }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={arStyles.quiet}>Start over</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity onPress={beginSettle} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={arStyles.quiet}>Skip the box</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
-                onPress={() => { setPlaced(false); setSurface(false); callAR(arRef.current, "reset"); }}
-                style={{ paddingVertical: 12, alignItems: "center" }}
+                onPress={() => { unsubRef.current?.(); Lockbox.stopMonitoring(); setPlaced(false); setSurface(false); setPhase("setup"); }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: "rgba(255,255,255,0.6)" }}>
-                  Move it somewhere else
-                </Text>
+                <Text style={arStyles.quiet}>Cancel</Text>
               </TouchableOpacity>
-            </>
-          )}
+            </View>
+          </View>
         </View>
       </View>
     );
@@ -452,56 +427,6 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
 
   if (phase === "locking") {
     return <LockSeal onDone={() => setPhase("active")} />;
-  }
-
-  if (phase === "waiting") {
-    const flat  = !!live?.flat;
-    const still = !!live?.settled;
-    // One quiet line rather than a checklist. It still says which half is
-    // outstanding — a screen that reacts to nothing is indistinguishable from
-    // a broken one — but as a sentence, not an instrument panel.
-    const status = !live ? "Waiting for your phone…"
-                 : flat && still ? "Got it — starting…"
-                 : flat ? "Nearly — let it settle."
-                 : "Waiting for your phone…";
-
-    return (
-      <View style={[s.night, { backgroundColor: night }]}>
-        <StatusBar barStyle="light-content" />
-        <Text style={[s.bigSerif, { color: "#F7F7F4" }]}>Put your phone{"\n"}in the box</Text>
-        <Text style={[s.sub, { color: onNight }]}>
-          Screen up, so you can see the time left. It starts on its own — no
-          need to tap anything.
-        </Text>
-
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 9, marginTop: 30 }}>
-          <View style={{
-            width: 7, height: 7, borderRadius: 4,
-            backgroundColor: flat && still ? "#4DFF99" : "rgba(247,247,244,0.28)",
-          }} />
-          <Text style={{ fontFamily: FF.body, fontSize: 13.5, color: "rgba(247,247,244,0.62)" }}>
-            {status}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          onPress={autoStart}
-          disabled={busy}
-          style={{
-            marginTop: 30, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 26,
-            borderWidth: 1, borderColor: "rgba(247,247,244,0.22)", opacity: busy ? 0.5 : 1,
-          }}
-        >
-          <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: "rgba(247,247,244,0.85)" }}>
-            {busy ? "Starting…" : "Start anyway"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => { unsubRef.current?.(); Lockbox.stopMonitoring(); setPhase("setup"); }} style={{ marginTop: 16 }}>
-          <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: "rgba(247,247,244,0.45)" }}>Cancel</Text>
-        </TouchableOpacity>
-      </View>
-    );
   }
 
   if (phase === "settle") {
@@ -597,96 +522,175 @@ export default function LockboxScreen({ dark = false, onClose, onCompleted, onSt
     );
   }
 
-  // setup
+  // setup — same "greenhouse door" layout as the Drift In timer, so switching
+  // between the two modes changes the content, not the page.
+  const { fx } = theme;
+  const reward = Lockbox.rewardFor(minutes);
+  const capped = Math.round(minutes * Lockbox.EARN_RATIO) > Lockbox.MAX_REWARD_MINUTES;
+  const durLabel = minutes >= 60
+    ? `${Math.floor(minutes / 60)}h ${minutes % 60 ? `${minutes % 60}m` : ""}`.trim()
+    : `${minutes}m`;
+  const onDeep = dark ? "#16261C" : "#FAF6EE";
+
   return (
-    <View style={{ flex: 1, backgroundColor: paper.warm, paddingHorizontal: 22, paddingTop: 18 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={{ fontFamily: FF.display, fontSize: 26, color: ink.deep, letterSpacing: -0.3 }}>
-          Lockbox
-        </Text>
-        <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <CloseIcon size={22} color={ink.mid} />
-        </TouchableOpacity>
-      </View>
+    <View style={{ flex: 1, backgroundColor: paper.warm }}>
+      <StatusBar barStyle={dark ? "light-content" : "dark-content"} />
 
-      <Text style={{ fontFamily: FF.body, fontSize: 13.5, color: ink.mid, lineHeight: 20, marginTop: 10 }}>
-        Put a box on a real surface, set your phone inside, and leave it there.
-        Take it out and a countdown starts.
-      </Text>
+      <View pointerEvents="none" style={{
+        position: "absolute", top: -120, right: -90,
+        width: 300, height: 300, borderRadius: 150,
+        backgroundColor: fx.auroraMint,
+      }} />
+      <View pointerEvents="none" style={{
+        position: "absolute", bottom: -130, left: -100,
+        width: 280, height: 280, borderRadius: 140,
+        backgroundColor: fx.auroraClay,
+      }} />
 
-      <Text style={s.kicker(ink)}>HOW LONG</Text>
-      <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-        {DURATIONS.map(m => {
-          const on = minutes === m;
-          return (
-            <TouchableOpacity
-              key={m}
-              onPress={() => { selectionTick(); setMinutes(m); }}
-              style={{
-                paddingVertical: 8, paddingHorizontal: 14, borderRadius: 11,
-                backgroundColor: on ? earn.green : (dark ? "rgba(232,245,236,0.07)" : paper.sand),
-              }}
-            >
-              <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: on ? "#fff" : ink.mid }}>
-                {m >= 60 ? `${m / 60} hr` : `${m} min`}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      <Text style={s.kicker(ink)}>WHAT FOR (OPTIONAL)</Text>
-      <TextInput
-        value={task}
-        onChangeText={setTask}
-        placeholder="Studying, reading, dinner…"
-        placeholderTextColor={ink.faint}
-        maxLength={60}
-        style={{
-          fontFamily: FF.body, fontSize: 15, color: ink.deep,
-          backgroundColor: paper.card, borderRadius: 12,
-          paddingHorizontal: 14, paddingVertical: 12,
-          borderWidth: 1, borderColor: ink.hairline,
-        }}
-      />
-
-      <View style={{
-        marginTop: 26, borderRadius: 16, padding: 16,
-        backgroundColor: paper.card, borderWidth: 1,
-        borderColor: dark ? "rgba(232,245,236,0.10)" : ink.hairline,
-      }}>
-        <Text style={{ fontFamily: FF.bodyBold, fontSize: 14.5, color: ink.deep }}>
-          +{Math.max(1, Math.round(minutes * Lockbox.EARN_RATIO))} minutes if you finish
-        </Text>
-        <Text style={{ fontFamily: FF.body, fontSize: 12.5, color: ink.mid, lineHeight: 18, marginTop: 5 }}>
-          Nothing if the phone leaves the box for more than {Lockbox.GRACE_SECONDS} seconds.
-          Your screen stays on so Drift can feel it move.
-        </Text>
-      </View>
-
-      <TouchableOpacity
-        onPress={beginPlacement}
-        disabled={busy}
-        style={{
-          marginTop: 22, backgroundColor: earn.green, borderRadius: 14,
-          paddingVertical: 15, alignItems: "center", opacity: busy ? 0.5 : 1,
-        }}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 24, paddingBottom: 20 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {busy ? <ActivityIndicator size="small" color="#fff" /> : (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <CheckIcon size={16} color="#fff" />
-            <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: "#fff" }}>
-              {ARView ? "Place the box" : "Start"}
+        {modePicker}
+
+        <View style={{ marginBottom: 26 }}>
+          <Text style={{
+            fontFamily: FF.kicker, fontSize: 10, letterSpacing: 2.4,
+            color: ink.faint, marginBottom: 6,
+          }}>
+            PHONE AWAY
+          </Text>
+          <Text style={{ fontFamily: FF.display, fontSize: 40, color: ink.deep, letterSpacing: -0.4 }}>
+            Lockbox
+          </Text>
+          <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, lineHeight: 20, marginTop: 8 }}>
+            Drop a box on your desk. Phone goes in, and stays in.
+          </Text>
+        </View>
+
+        <View style={{
+          backgroundColor: paper.card,
+          borderRadius: 26,
+          borderWidth: 1,
+          borderColor: ink.border,
+          padding: 22,
+          overflow: "hidden",
+        }}>
+          <View pointerEvents="none" style={{
+            position: "absolute", right: -18, top: -14,
+            opacity: dark ? 0.10 : 0.08,
+          }}>
+            <Sprout size={110} tone={dark ? "night" : "fresh"} />
+          </View>
+
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+            <Text style={[s.fieldKicker(ink), { marginBottom: 0 }]}>LENGTH</Text>
+            <Text style={{ fontFamily: FF.display, fontSize: 24, color: ink.deep, letterSpacing: -0.4 }}>
+              {durLabel}
             </Text>
           </View>
+          <PlantSlider
+            minimumValue={15}
+            maximumValue={300}
+            step={15}
+            value={minutes}
+            onValueChange={setMinutes}
+            accent={earn.sage}
+            track={ink.ghost}
+            soil={ink.border}
+            textColor={ink.faint}
+            leftLabel="15m"
+            rightLabel="5h"
+          />
+
+          <View style={s.divider(ink)} />
+
+          <Text style={s.fieldKicker(ink)}>YOU'LL EARN</Text>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: FF.display, fontSize: 26, color: earn.sage, letterSpacing: -0.4 }}>
+                {reward}m
+              </Text>
+              <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.mid, marginTop: 2 }}>
+                {capped ? "screen time (max)" : "screen time"}
+              </Text>
+            </View>
+            <View style={{ width: 1, height: 36, backgroundColor: ink.hairline, marginHorizontal: 16 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: FF.display, fontSize: 26, color: earn.clay, letterSpacing: -0.4 }}>
+                {Lockbox.GRACE_SECONDS}s
+              </Text>
+              <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.mid, marginTop: 2 }}>
+                to put it back
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {!ARView && (
+          <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, marginTop: 14, lineHeight: 17, textAlign: "center" }}>
+            No AR on this device — just set your phone down flat.
+          </Text>
         )}
-      </TouchableOpacity>
-      {!ARView && (
-        <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, marginTop: 10, lineHeight: 17 }}>
-          AR isn't available here, so there's no box to place — set your phone face
-          down somewhere and it works the same.
-        </Text>
-      )}
+      </ScrollView>
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+      >
+        <View style={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 14 }}>
+          <View style={{
+            backgroundColor: paper.card,
+            borderRadius: 22,
+            borderWidth: 1,
+            borderColor: ink.border,
+            padding: 14,
+          }}>
+            <TextInput
+              value={task}
+              onChangeText={setTask}
+              placeholder="What for? (optional)"
+              placeholderTextColor={ink.faint}
+              maxLength={60}
+              returnKeyType="done"
+              style={{
+                backgroundColor: paper.sand,
+                borderRadius: 16,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                fontFamily: FF.bodyMed,
+                fontSize: 15,
+                color: ink.deep,
+              }}
+            />
+            <TouchableOpacity
+              onPress={beginPlacement}
+              disabled={busy}
+              activeOpacity={0.85}
+              style={[
+                {
+                  height: 54, borderRadius: 18, marginTop: 10,
+                  alignItems: "center", justifyContent: "center",
+                  flexDirection: "row", gap: 9,
+                  backgroundColor: earn.deep, opacity: busy ? 0.5 : 1,
+                },
+                fx.glow,
+              ]}
+            >
+              {busy ? <ActivityIndicator size="small" color={onDeep} /> : (
+                <>
+                  <LockIcon size={15} color={onDeep} />
+                  <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, letterSpacing: 0.2, color: onDeep }}>
+                    {ARView ? "Place the box" : "Start"}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -820,9 +824,36 @@ const baseStyles = StyleSheet.create({
 
 // Kept off the StyleSheet object: what create() returns should be treated as
 // read-only, and a section label needs the live theme anyway.
-const kickerStyle = (ink) => ({
-  fontFamily: FF.kicker, fontSize: 9, letterSpacing: 1.6,
-  color: ink.faint, marginBottom: 10, marginTop: 26,
+// Mirrors DriftInScreen's helpers so the two setup pages are typographically
+// identical.
+const fieldKicker = (ink) => ({
+  fontFamily: FF.kicker, fontSize: 9, color: ink.faint,
+  letterSpacing: 2.4, marginBottom: 10,
+});
+const divider = (ink) => ({
+  height: 1, backgroundColor: ink.hairline, marginVertical: 20,
 });
 
-const s = { ...baseStyles, kicker: kickerStyle };
+const s = { ...baseStyles, fieldKicker, divider };
+
+// The AR overlay sits on a live camera feed, so it is always dark glass
+// regardless of the app theme — light paper over a camera image is unreadable.
+const arStyles = StyleSheet.create({
+  card: {
+    borderRadius: 24, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14,
+    backgroundColor: "rgba(10,18,14,0.72)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.10)",
+  },
+  title: { fontFamily: FF.bodyBold, fontSize: 16, color: "#F7F7F4", textAlign: "center" },
+  hint: {
+    fontFamily: FF.body, fontSize: 13, lineHeight: 19, color: "rgba(247,247,244,0.66)",
+    textAlign: "center", marginTop: 5,
+  },
+  primary: {
+    height: 50, borderRadius: 16, marginTop: 16,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "#F7F7F4",
+  },
+  primaryText: { fontFamily: FF.bodyMed, fontSize: 15, color: "#0B1A11" },
+  quiet: { fontFamily: FF.bodyMed, fontSize: 13.5, color: "rgba(247,247,244,0.6)" },
+});

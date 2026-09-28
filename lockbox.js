@@ -60,7 +60,7 @@ export const GRACE_SECONDS = 5;
 
 /** Shortest session worth running. Below this the ceremony costs more than the focus. */
 export const MIN_MINUTES = 5;
-export const MAX_MINUTES = 180;
+export const MAX_MINUTES = 300;
 
 /**
  * Screen-time minutes earned per minute in the box.
@@ -71,10 +71,22 @@ export const MAX_MINUTES = 180;
  */
 export const EARN_RATIO = 0.5;
 
+/**
+ * Most screen time one Lockbox session can pay out, however long it ran.
+ * MIRRORS MAX_EARN_MINS in DriftInScreen.jsx — the two are the same deal with a
+ * different commitment device, so a 5-hour box must not out-earn a 5-hour
+ * focus session.
+ */
+export const MAX_REWARD_MINUTES = 60;
+
+/** What a session of `minutes` pays if it finishes. The one place this is computed. */
+export const rewardFor = (minutes) =>
+  Math.min(MAX_REWARD_MINUTES, Math.max(1, Math.round(minutes * EARN_RATIO)));
+
 export const DEFAULT_PREFS = {
   /** Scales the movement threshold. 1.0 is the native default (~0.08 G). */
   sensitivity: 1.0,
-  lastDurationMinutes: 25,
+  lastDurationMinutes: 30,
 };
 
 export const isAvailable = () =>
@@ -151,7 +163,7 @@ export async function startSession({ minutes, task = "" }) {
     endsAt: now + mins * 60_000,
     minutes: mins,
     task: String(task || "").trim(),
-    rewardMinutes: Math.max(1, Math.round(mins * EARN_RATIO)),
+    rewardMinutes: rewardFor(mins),
     // Set when the phone leaves the box; cleared when it comes back.
     disturbedAt: null,
     breaches: 0,

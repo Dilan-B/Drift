@@ -34,7 +34,6 @@ import { fetchTodayEvents, markImported, isCalendarSyncEnabled, isCalendarAutoIm
 import SuggestedTaskModal from "./SuggestedTaskModal";
 import AutoTasksModal from "./AutoTasksModal";
 import { Spinner } from "./Skeleton";
-import Slider from "@react-native-community/slider";
 import { selectionTick } from "./haptics";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { useFonts } from "expo-font";
@@ -86,6 +85,7 @@ import ActionPlanModal from "./ActionPlanModal";
 import * as ActionPlan from "./actionPlan";
 import OnboardingScreen from "./OnboardingScreen";
 import DriftInScreen from "./DriftInScreen";
+import PlantSlider from "./PlantSlider";
 import ProfileScreen from "./ProfileScreen";
 import PaywallScreen from "./PaywallScreen";
 import RedeemCodeModal from "./RedeemCodeModal";
@@ -638,106 +638,6 @@ const REPEAT_LABELS = Object.fromEntries(REPEAT_OPTIONS);
 // Must be multiples of the slider's 15m step so tapping one lands exactly on
 // a slider position rather than a value the thumb can't represent.
 const QUICK_LENGTHS = [15, 30, 60, 120];
-
-function PlantSlider({
-  value,
-  onValueChange,
-  minimumValue,
-  maximumValue,
-  step,
-  accent,
-  track,
-  soil,
-  textColor,
-  leftLabel,
-  rightLabel,
-}) {
-  const pct = Math.max(0, Math.min(1, (value - minimumValue) / (maximumValue - minimumValue)));
-  const leaves = [0.2, 0.4, 0.6, 0.8];
-
-  // Step-crossing feedback — mirrors the Drift In slider. See that copy for
-  // why the tick is gated on an actual value change.
-  const lastValRef = useRef(value);
-  const pulse = useRef(new Animated.Value(0)).current;
-
-  const handleChange = (v) => {
-    if (v !== lastValRef.current) {
-      lastValRef.current = v;
-      selectionTick();
-      pulse.setValue(1);
-      Animated.timing(pulse, { toValue: 0, duration: 180, useNativeDriver: false }).start();
-    }
-    onValueChange(v);
-  };
-
-  return (
-    <View style={{ marginTop: 2 }}>
-      <View style={{ height: 34, justifyContent: "center", marginHorizontal: 2 }}>
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            left: 4,
-            right: 4,
-            height: 8,
-            borderRadius: 8,
-            backgroundColor: track,
-            borderWidth: 1,
-            borderColor: soil,
-            overflow: "hidden",
-          }}
-        >
-          <Animated.View style={{
-            width: `${pct * 100}%`,
-            height: "100%",
-            backgroundColor: accent,
-            borderRadius: 8,
-            opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.62] }),
-          }} />
-        </View>
-        {leaves.map((stop, i) => {
-          const grown = pct >= stop;
-          return (
-            <View
-              key={stop}
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                left: `${stop * 100}%`,
-                top: i % 2 === 0 ? 6 : 18,
-                width: 13,
-                height: 7,
-                borderTopLeftRadius: 9,
-                borderBottomRightRadius: 9,
-                backgroundColor: grown ? accent : soil,
-                opacity: grown ? 0.74 : 0.4,
-                transform: [
-                  { translateX: -6 },
-                  { rotate: i % 2 === 0 ? "-28deg" : "28deg" },
-                ],
-              }}
-            />
-          );
-        })}
-        <Slider
-          minimumValue={minimumValue}
-          maximumValue={maximumValue}
-          step={step}
-          value={value}
-          onValueChange={handleChange}
-          minimumTrackTintColor="transparent"
-          maximumTrackTintColor="transparent"
-          thumbTintColor={accent}
-          style={{ width: "100%", height: 34 }}
-        />
-      </View>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -2 }}>
-        <Text style={{ fontFamily: FB, fontSize: 10, color: textColor }}>{leftLabel}</Text>
-        <Text style={{ fontFamily: FB, fontSize: 10, color: textColor }}>{rightLabel}</Text>
-      </View>
-    </View>
-  );
-}
 
 function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPaywall, onOpenAutoTasks }) {
   const { dark, theme } = useTheme();
@@ -1818,6 +1718,10 @@ function LevelUpModal({ level, dark, onClose }) {
 }
 
 // ── Sleep guard card ─────────────────────────────────────────
+// Set when a new personal account finishes onboarding; cleared once the setup
+// card has been shown. See sgIntro.
+const SG_INTRO_KEY = "drift_sg_intro_pending";
+
 // The nightly surface for "phone in another room". Lives on Today rather than
 // behind a settings screen on purpose: it is tapped at bedtime, half asleep,
 // on the way out of the room, and anything more than one tap from launch
@@ -3589,6 +3493,11 @@ export default function App() {
   const [sgStreak,    setSgStreak]    = useState(0);
   const [sgBusy,      setSgBusy]      = useState(false);
   const [sgDismissed, setSgDismissed] = useState(false);  // per-app-session
+  // The "Sleep with your phone in another room" setup card is an introduction,
+  // shown ONCE: on the first open after a new account finishes onboarding.
+  // After that the feature lives in The Lab. It used to show every evening,
+  // which is every cold launch, which is a nag.
+  const [sgIntro,     setSgIntro]     = useState(false);
   const [showSleepGuard, setShowSleepGuard] = useState(false);
   const [levelUp,     setLevelUp]     = useState(null);
   const [secLeft,     setSecLeft]     = useState(0);
@@ -4064,12 +3973,26 @@ export default function App() {
     // canonical auth status (same source the rest of the app trusts) rather than
     // diag.authStatus, whose format differs and was firing this prompt on every
     // open even when access WAS already granted.
+    //
+    // On a cold launch AuthorizationCenter reports .notDetermined for a moment
+    // before it has loaded the real state, so a single read said "not approved"
+    // on every fresh open even with access granted — the popup users kept
+    // seeing. Re-read a few times before believing a non-approved answer.
     let authStatus = "unknown";
-    try { authStatus = await getScreenTimeAuthStatus(); } catch {}
+    for (let i = 0; i < 4; i++) {
+      try { authStatus = await getScreenTimeAuthStatus(); } catch { authStatus = "unknown"; }
+      if (authStatus === "approved") break;
+      await new Promise(r => setTimeout(r, 750));
+    }
     if (authStatus !== "approved") {
       // Only prompt on a KNOWN non-approved state — never on an unknown/failed read.
       if (!authPromptShownRef.current && authStatus !== "unknown") {
         authPromptShownRef.current = true;
+        // At most once a day. The ref only lasts one process, so on its own it
+        // re-nagged on every cold launch.
+        const last = Number(await AsyncStorage.getItem("drift_st_auth_prompt_at").catch(() => 0)) || 0;
+        if (Date.now() - last < 24 * 3600_000) return;
+        AsyncStorage.setItem("drift_st_auth_prompt_at", String(Date.now())).catch(() => {});
         Alert.alert(
           "Screen Time access needed",
           "Drift can't block apps until you re-enable Screen Time access in Settings → Screen Time.",
@@ -4082,6 +4005,7 @@ export default function App() {
       return; // can't arm without authorization
     }
     authPromptShownRef.current = false; // reset once access is back
+    AsyncStorage.removeItem("drift_st_auth_prompt_at").catch(() => {});
 
     // (b) Re-arm if a positive balance exists but no balance monitor is active.
     if (driftInActRef.current || blockedHoursActive) return; // these manage the shield themselves
@@ -4630,7 +4554,11 @@ export default function App() {
     setScreen("app");
     // Queue the first-run sequence; do NOT open it here. It has to wait for the
     // paywall to clear — see the draining effect below.
-    if (acctType === "personal" && !hadOnboarded && !signInOnly) setPendingFirstRun(true);
+    if (acctType === "personal" && !hadOnboarded && !signInOnly) {
+      setPendingFirstRun(true);
+      AsyncStorage.setItem(SG_INTRO_KEY, "1").catch(() => {});
+      setSgIntro(true);
+    }
   }, [signInOnly]);
 
   /**
@@ -5620,7 +5548,7 @@ export default function App() {
     if (sgResult && !sgDismissed)      mode = "result";
     else if (sgArmed)                  mode = "armed";
     else if (evening && sgTag)         mode = "ready";
-    else if (evening && !sgDismissed)  mode = "setup";
+    else if (sgIntro && !sgTag && !sgDismissed) mode = "setup";
     if (!mode) return null;
 
     return {
@@ -5634,7 +5562,16 @@ export default function App() {
       onCancel: sgCancel,
       onDismiss: () => setSgDismissed(true),
     };
-  }, [appMode, sgTag, sgArmed, sgResult, sgStreak, sgBusy, sgDismissed, sgSetup, sgArm, sgCancel, minuteTick]);
+  }, [appMode, sgTag, sgArmed, sgResult, sgStreak, sgBusy, sgDismissed, sgIntro, sgSetup, sgArm, sgCancel, minuteTick]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(SG_INTRO_KEY).then(v => { if (v === "1") setSgIntro(true); }).catch(() => {});
+  }, []);
+  // Spent the moment it is actually on screen: it stays up for the rest of this
+  // app session, and is gone for good on the next launch.
+  useEffect(() => {
+    if (sleepGuardCard?.mode === "setup") AsyncStorage.removeItem(SG_INTRO_KEY).catch(() => {});
+  }, [sleepGuardCard?.mode]);
 
   const tryOpenAddTask = useCallback(() => {
     setOverlay("add");
