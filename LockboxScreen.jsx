@@ -26,7 +26,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Alert, Platform,
   AppState, BackHandler, StatusBar, ActivityIndicator, findNodeHandle,
   requireNativeComponent, UIManager, TextInput, Animated, Easing,
-  AccessibilityInfo, ScrollView, KeyboardAvoidingView, Modal, SafeAreaView,
+  AccessibilityInfo, ScrollView, KeyboardAvoidingView, SafeAreaView,
 } from "react-native";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import PlantSlider from "./PlantSlider";
@@ -79,7 +79,7 @@ const fmt = (secs) => {
     : `${m}:${String(r).padStart(2, "0")}`;
 };
 
-export default function LockboxScreen({ dark = false, modePicker = null, onClose, onCompleted, onStarted, onEnded }) {
+export default function LockboxScreen({ dark = false, modePicker = null, onClose, onCompleted, onStarted, onEnded, onImmersiveChange }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
 
@@ -105,6 +105,12 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
   const unsubRef   = useRef(null);
 
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  // Everything past setup is full screen: the app shell hides its header and
+  // tab bar. Done in the shell rather than with a <Modal>, which on this RN
+  // version could be left presented after an unmount and swallow every touch.
+  useEffect(() => { onImmersiveChange?.(phase !== "setup"); }, [phase, onImmersiveChange]);
+  useEffect(() => () => onImmersiveChange?.(false), [onImmersiveChange]);
   useEffect(() => { sessionRef.current = session; }, [session]);
 
   // Restore an in-flight session — the countdown is wall-clock based, so a
@@ -413,96 +419,94 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
       ? "Set your phone in the box, screen up"
       : surface ? "Aim at the spot, then tap to drop the box" : "Move slowly over a table or desk";
 
-    // A full-screen modal so nothing of the app shell — header, tab bar —
-    // sits over the camera. It should feel like the Camera app, not a page.
+    // Full screen (see onImmersiveChange): nothing of the app shell sits over
+    // the camera. It should feel like the Camera app, not a page.
     return (
-      <Modal visible animationType="fade" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={leave}>
-        <View style={{ flex: 1, backgroundColor: "#000" }}>
-          <StatusBar hidden />
-          <ARView
-            ref={arRef}
-            style={StyleSheet.absoluteFill}
-            onSurfaceFound={({ nativeEvent }) => setSurface(!!nativeEvent?.found)}
-            onPlaced={() => {
-              notify(true);
-              placedAtRef.current = Date.now();
-              setPlaced(true);
-              watchForEntry();
-            }}
-            onARError={({ nativeEvent }) => {
-              // Do NOT start a session here. Saying "I can't see the room" and
-              // then dropping the user into a Lockbox session implies a box was
-              // placed when none was — the one thing this screen must not lie
-              // about. Offer the two honest options and let them choose.
-              setSurface(false);
-              setPlaced(false);
-              Alert.alert(
-                "Couldn't map the room",
-                `${nativeEvent?.message || "The camera couldn't find a surface."}\n\nYou can try again, or run the session without the box — it works the same either way.`,
-                [
-                  { text: "Try again", onPress: () => callAR(arRef.current, "reset") },
-                  { text: "Without the box", onPress: () => { beginSettle(); } },
-                  { text: "Back", style: "cancel", onPress: leave },
-                ],
-              );
-            }}
-          />
+      <View style={{ flex: 1, backgroundColor: "#000" }}>
+        <StatusBar hidden />
+        <ARView
+          ref={arRef}
+          style={StyleSheet.absoluteFill}
+          onSurfaceFound={({ nativeEvent }) => setSurface(!!nativeEvent?.found)}
+          onPlaced={() => {
+            notify(true);
+            placedAtRef.current = Date.now();
+            setPlaced(true);
+            watchForEntry();
+          }}
+          onARError={({ nativeEvent }) => {
+            // Do NOT start a session here. Saying "I can't see the room" and
+            // then dropping the user into a Lockbox session implies a box was
+            // placed when none was — the one thing this screen must not lie
+            // about. Offer the two honest options and let them choose.
+            setSurface(false);
+            setPlaced(false);
+            Alert.alert(
+              "Couldn't map the room",
+              `${nativeEvent?.message || "The camera couldn't find a surface."}\n\nYou can try again, or run the session without the box — it works the same either way.`,
+              [
+                { text: "Try again", onPress: () => callAR(arRef.current, "reset") },
+                { text: "Without the box", onPress: () => { beginSettle(); } },
+                { text: "Back", style: "cancel", onPress: leave },
+              ],
+            );
+          }}
+        />
 
-          <SafeAreaView style={StyleSheet.absoluteFill} pointerEvents="box-none">
-            {/* Top: close, and one line of guidance */}
-            <View style={cam.top} pointerEvents="box-none">
-              <TouchableOpacity onPress={leave} style={cam.roundBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Text style={cam.x}>✕</Text>
-              </TouchableOpacity>
-              <View style={cam.pill}>
-                <Text style={cam.pillText}>{hint}</Text>
-              </View>
-              <View style={{ width: 38 }} />
+        <SafeAreaView style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          {/* Top: close, and one line of guidance */}
+          <View style={cam.top} pointerEvents="box-none">
+            <TouchableOpacity onPress={leave} style={cam.roundBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={cam.x}>✕</Text>
+            </TouchableOpacity>
+            <View style={cam.pill}>
+              <Text style={cam.pillText}>{hint}</Text>
             </View>
+            <View style={{ width: 38 }} />
+          </View>
 
-            {placed && !entering && (
-              <Text style={cam.gestures}>Drag · pinch · twist to adjust</Text>
-            )}
-
-            {/* Bottom: a shutter, like the Camera app */}
-            <View style={cam.bottom} pointerEvents="box-none">
-              <TouchableOpacity onPress={placed ? redo : beginSettle} style={cam.side}>
-                <Text style={cam.sideText}>{placed ? "Redo" : "Skip"}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  if (!placed) { selectionTick(); callAR(arRef.current, "place"); }
-                  else autoStart();
-                }}
-                disabled={placed ? busy : !surface}
-                activeOpacity={0.8}
-                style={[cam.shutter, { opacity: (placed ? busy : !surface) ? 0.35 : 1 }]}
-                accessibilityLabel={placed ? "Start now" : "Drop the box"}
-              >
-                <View style={cam.shutterInner}>
-                  {placed && <LockIcon size={22} color="#0B1A11" />}
-                </View>
-              </TouchableOpacity>
-
-              <View style={cam.side}>
-                {placed && <Text style={cam.sideText}>Start now</Text>}
-              </View>
-            </View>
-          </SafeAreaView>
-
-          {/* Phone is in the box: camera is off, short lock-in countdown.
-              Lifting the phone cancels it and brings the camera back. */}
-          {entering != null && (
-            <View style={[StyleSheet.absoluteFill, cam.lockIn]}>
-              <LockIcon size={26} color="#8EA8FF" />
-              <Text style={cam.lockInCount}>{entering}</Text>
-              <Text style={cam.lockInText}>Leave it there</Text>
-              <Text style={cam.lockInSub}>Pick it up to see the box again</Text>
-            </View>
+          {placed && !entering && (
+            <Text style={cam.gestures}>Drag · pinch · twist to adjust</Text>
           )}
-        </View>
-      </Modal>
+
+          {/* Bottom: a shutter, like the Camera app */}
+          <View style={cam.bottom} pointerEvents="box-none">
+            <TouchableOpacity onPress={placed ? redo : beginSettle} style={cam.side}>
+              <Text style={cam.sideText}>{placed ? "Redo" : "Skip"}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                if (!placed) { selectionTick(); callAR(arRef.current, "place"); }
+                else autoStart();
+              }}
+              disabled={placed ? busy : !surface}
+              activeOpacity={0.8}
+              style={[cam.shutter, { opacity: (placed ? busy : !surface) ? 0.35 : 1 }]}
+              accessibilityLabel={placed ? "Start now" : "Drop the box"}
+            >
+              <View style={cam.shutterInner}>
+                {placed && <LockIcon size={22} color="#0B1A11" />}
+              </View>
+            </TouchableOpacity>
+
+            <View style={cam.side}>
+              {placed && <Text style={cam.sideText}>Start now</Text>}
+            </View>
+          </View>
+        </SafeAreaView>
+
+        {/* Phone is in the box: camera is off, short lock-in countdown.
+            Lifting the phone cancels it and brings the camera back. */}
+        {entering != null && (
+          <View style={[StyleSheet.absoluteFill, cam.lockIn]}>
+            <LockIcon size={26} color="#8EA8FF" />
+            <Text style={cam.lockInCount}>{entering}</Text>
+            <Text style={cam.lockInText}>Leave it there</Text>
+            <Text style={cam.lockInSub}>Pick it up to see the box again</Text>
+          </View>
+        )}
+      </View>
     );
   }
 

@@ -3604,6 +3604,11 @@ export default function App() {
   // behaving as Pro for accounts that had never paid.
   useEffect(() => { setProStatus(proAccess); }, [proAccess]);
   const [driftInActive,  setDriftInActive]  = useState(false);
+  // Lockbox takes the whole screen — no header, no tab bar, no status-bar
+  // padding — from the AR placement through to the result screen, including
+  // the stretches where no Drift In session is active (placing, "session lost").
+  const [lockboxFull,    setLockboxFull]    = useState(false);
+  const chromeHidden = driftInActive || lockboxFull;
   const [darkMode,       setDarkMode]       = useState(false);
 
   const secRef          = useRef(0);
@@ -3679,7 +3684,7 @@ export default function App() {
   // Block tab swipes whenever an overlay/popup/nested swipe UI is active.
   useEffect(() => {
     swipeBlockedRef.current =
-      driftInActive ||
+      chromeHidden ||
       !!overlay ||
       !!popup ||
       showAccount ||
@@ -3688,7 +3693,7 @@ export default function App() {
       showRecurringTasks ||
       showReduceTime ||
       childSwipeLocked;
-  }, [driftInActive, overlay, popup, showAccount, showBlockedApps, showBlockedHours, showRecurringTasks, showReduceTime, tab, childSwipeLocked]);
+  }, [chromeHidden, overlay, popup, showAccount, showBlockedApps, showBlockedHours, showRecurringTasks, showReduceTime, tab, childSwipeLocked]);
 
   const stopTick = () => { if (tickRef.current) clearInterval(tickRef.current); };
 
@@ -6275,7 +6280,7 @@ export default function App() {
     <ThemeContext.Provider value={{ dark: darkMode, theme: activeTheme }}>
     <TouchTracker style={{
       flex: 1,
-      paddingTop: Math.max(Constants.statusBarHeight || 0, 59),
+      paddingTop: lockboxFull ? 0 : Math.max(Constants.statusBarHeight || 0, 59),
       backgroundColor: driftInActive ? th_ink.void : th_paper.warm,
     }}>
       <StatusBar barStyle={driftInActive || darkMode ? "light-content" : "dark-content"} />
@@ -6289,8 +6294,8 @@ export default function App() {
         onClose={() => setLevelUp(null)}
       />
 
-      {/* Header — hidden during active Drift In session */}
-      {!driftInActive && !showAccount && (
+      {/* Header — hidden during active Drift In session and Lockbox */}
+      {!chromeHidden && !showAccount && (
         <View style={{
           flexDirection: "row", alignItems: "center",
           paddingHorizontal: 22, paddingTop: 10, paddingBottom: 8,
@@ -6428,6 +6433,7 @@ export default function App() {
               onSessionStart={stableDriftInStart}
               onSessionTick={handleDriftInTick}
               onSessionEnd={stableDriftInEnd}
+              onImmersiveChange={setLockboxFull}
               totalXp={totalXp}
               dark={darkMode}
             />
@@ -6478,7 +6484,7 @@ export default function App() {
       </View>
 
       {/* ── Floating tab island — icons with labels stacked beneath ── */}
-      {!driftInActive && (
+      {!chromeHidden && (
         <View style={{
           paddingHorizontal: 16,
           // Sits lower / closer to the bottom edge per request. The root View no

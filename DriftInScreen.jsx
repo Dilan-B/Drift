@@ -76,7 +76,7 @@ const MAX_EARN_MINS = 60;
 
 // ── Main component ────────────────────────────────────────────
 // Memoized: stays mounted in the tab filmstrip; see SocialScreen note.
-function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSessionEnd, dark = false }) {
+function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSessionEnd, onImmersiveChange, dark = false }) {
   const theme = getTheme(dark);
   // Setup-phase colors follow the app theme; active/done always use dark forest
   const [phase,   setPhase]   = useState("setup"); // setup | active | done
@@ -295,6 +295,7 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
       <LockboxScreen
         dark={dark}
         modePicker={modePicker}
+        onImmersiveChange={onImmersiveChange}
         onClose={() => setMode("timer")}
         onStarted={() => onSessionStart?.({ task: "Lockbox", durationSeconds: 0 })}
         onEnded={() => onSessionEnd?.()}
