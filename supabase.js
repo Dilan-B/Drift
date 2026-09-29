@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { LogBox } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import "react-native-get-random-values";
 import * as SecureStore from "expo-secure-store";
@@ -204,6 +205,14 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   },
   global: { fetch: authRetryFetch },
 });
+
+// A saved session whose refresh token the server no longer has — the account
+// was deleted (the dev sign-out reset does exactly this), or the session was
+// revoked — makes supabase-js console.error "Invalid Refresh Token" on launch
+// before it clears the session. That's the correct outcome (the user lands
+// signed out); in a dev build the log just throws a full-screen red LogBox over
+// it. Only this one expected message is silenced.
+LogBox.ignoreLogs(["Invalid Refresh Token"]);
 
 // NOTE: We deliberately do NOT auto-signOut on `TOKEN_REFRESHED && !session`.
 // A failed refresh is usually transient (the app cold-starts before the network
