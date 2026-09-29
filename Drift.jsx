@@ -1717,6 +1717,19 @@ function LevelUpModal({ level, dark, onClose }) {
   );
 }
 
+// ── Dev / test accounts ──────────────────────────────────────
+// Signing out of one of these deletes the account (see signOut), so the
+// address can be reused for a fresh sign-up as many times as needed. Gmail
+// "+tag" variants count too (driftappcontact+2@gmail.com), which allows several
+// test accounts to exist at the same time.
+const DEV_RESET_EMAILS = ["driftappcontact@gmail.com"];
+const isDevResetEmail = (email) => {
+  const e = String(email || "").trim().toLowerCase();
+  const at = e.lastIndexOf("@");
+  if (at < 1) return false;
+  return DEV_RESET_EMAILS.includes(`${e.slice(0, at).split("+")[0]}@${e.slice(at + 1)}`);
+};
+
 // ── Sleep guard card ─────────────────────────────────────────
 // Set when a new personal account finishes onboarding; cleared once the setup
 // card has been shown. See sgIntro.
@@ -6074,8 +6087,23 @@ export default function App() {
     }
   };
 
-  const signOut = async () => {
+  const signOut = async ({ accountDeleted = false } = {}) => {
     setShowAccount(false);
+    // Dev/test addresses are throwaway: signing out deletes the account so the
+    // same address can sign up again as a brand-new user. Server-side this is
+    // just delete-account, which only ever acts on the caller's own account,
+    // so this check being client-side can't touch anyone else.
+    let devReset = false;
+    if (!accountDeleted) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        devReset = isDevResetEmail(data?.session?.user?.email);
+        if (devReset) {
+          const { error } = await supabase.functions.invoke("delete-account", {});
+          if (error) { devReset = false; console.warn("dev reset: delete-account failed", error.message); }
+        }
+      } catch { devReset = false; }
+    }
     markSignOutRequested();
     try { await supabase.auth.signOut(); } catch {}
     try { await stopBalanceMonitoring(); } catch {}
@@ -6117,6 +6145,13 @@ export default function App() {
     setRecurringTasks([]);
     secRef.current = 0;
     setSecLeft(0);
+    if (devReset) {
+      // Next sign-up on this device should get the full new-user experience.
+      await AsyncStorage.multiRemove(["drift_onboarded", "drift_sg_intro_pending", "drift_auto_tasks_hint_dismissed"]).catch(() => {});
+      setSignInOnly(false);
+      setOnboarding(true);
+      return;
+    }
     // Drop them straight into the sign-in screen
     setSignInOnly(true);
     setOnboarding(true);
@@ -6126,7 +6161,7 @@ export default function App() {
     try {
       const { error } = await supabase.functions.invoke("delete-account", {});
       if (error) throw error;
-      await signOut();
+      await signOut({ accountDeleted: true });
       Alert.alert("Account deleted", "Your account has been successfully deleted.");
     } catch (e) {
       Alert.alert("Could not delete account", e?.message || "Please try again later.");
