@@ -45,7 +45,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FF } from "./theme";
-import { SparkleIcon, CheckIcon, ShieldKeyIcon, ChartIcon, LockIcon } from "./Icons";
+import { SparkleIcon, CheckIcon, ShieldKeyIcon, ChartIcon, LockIcon, UsersIcon } from "./Icons";
 import { Spinner } from "./Skeleton";
 import {
   resolveOffering, pickPackage, pickFamilyPackage, describeOffer, MAX_KIDS,
@@ -82,10 +82,20 @@ const familyEstimate = (kids) => FAMILY_BASE + (FAMILY_PER_KID * kids);
 // What the subscription actually buys. Written as capabilities rather than
 // feature names — "AI-valued rewards" means nothing to someone who has used the
 // app for ninety seconds.
-const FEATURES = [
+//
+// Two lists because the two accounts are buying different things: a personal
+// account is buying a lock on their own phone, a parent is buying a way to run
+// their kids' screen time. The account type is chosen (permanently) earlier in
+// onboarding, so each only ever sees the one that applies to them.
+const PERSONAL_FEATURES = [
   { Icon: ShieldKeyIcon, title: "Your apps stay locked", desc: "Until you've earned the time back" },
   { Icon: SparkleIcon,   title: "Proof, not the honour system", desc: "Photo and video checks on every task" },
   { Icon: ChartIcon,     title: "Streaks, levels and the Grove", desc: "Your progress, and your friends'" },
+];
+const FAMILY_FEATURES = [
+  { Icon: ShieldKeyIcon, title: "You set the rules", desc: "Which apps lock, and when" },
+  { Icon: SparkleIcon,   title: "They earn their screen time", desc: "Real tasks, checked with photo proof" },
+  { Icon: UsersIcon,     title: "An account for every kid", desc: "Included in their seat, nothing extra" },
 ];
 
 export default function PaywallScreen({
@@ -104,7 +114,12 @@ export default function PaywallScreen({
   //
   // Both remain reachable from the selector either way — this only changes
   // where each account STARTS.
-  const [kids, setKids] = useState(accountType === "parent" ? 1 : 0);
+  //
+  // The plan now follows the account type outright: a personal account only
+  // sees Pro, a parent only sees Family (1–MAX_KIDS). Offering both on one
+  // screen made each audience wade through the other's options.
+  const isFamily = accountType === "parent";
+  const [kids, setKids] = useState(isFamily ? 1 : 0);
   // Defaults to ANNUAL on purpose. Annual subscribers retain ~44% at 12 months
   // against ~17% for monthly — roughly a 3x LTV gap at the same price — and for
   // Drift's under-18 users it clears Apple's Ask to Buy parental approval once
@@ -389,7 +404,7 @@ export default function PaywallScreen({
             fontFamily: FF.kicker, fontSize: 10, color: earn.green,
             letterSpacing: 2.6, marginBottom: 10,
           }}>
-            {kids > 0 ? "ONE STEP LEFT" : plan ? "ONE STEP LEFT" : "ONE LAST THING"}
+            {isFamily ? "DRIFT FAMILY" : plan ? "ONE STEP LEFT" : "DRIFT PRO"}
           </Text>
           <Text style={{
             fontFamily: FF.display, fontSize: 36, color: ink.deep,
@@ -398,7 +413,9 @@ export default function PaywallScreen({
             {/* `trial` alone, not `isFreeTrial || trial`. isFreeTrial describes
                 the product, so an ineligible user satisfied the condition with
                 trial === 0 and got "Start with 0 free days". */}
-            {trial ? `Start with ${trial} free days` : "Unlock Drift"}
+            {isFamily
+              ? (trial ? `Try it free for ${trial} days` : "Set up your family")
+              : (trial ? `Start with ${trial} free days` : "Unlock Drift")}
           </Text>
           {/* The plan stays visible on the offer, not just on the reveal. The
               user is deciding whether to pay for a specific thing they built —
@@ -408,14 +425,16 @@ export default function PaywallScreen({
             fontFamily: FF.body, fontSize: 15, color: ink.mid,
             lineHeight: 22, marginBottom: 30,
           }}>
-            {plan
-              ? `Your ${plan.taskCount} ${plan.taskCount === 1 ? "task is" : "tasks are"} set up and worth ${plan.minutesPerDay} minutes a day. Drift only works if the lock is real — that takes a server, an AI reviewing your proof, and someone keeping it running.`
-              : "Drift only works if the lock is real. That takes a server, an AI reviewing your proof, and someone keeping it running."}
+            {isFamily
+              ? "Your kids earn their screen time with real tasks. You decide the rules."
+              : plan
+                ? `Your ${plan.taskCount} ${plan.taskCount === 1 ? "task is" : "tasks are"} ready — worth ${plan.minutesPerDay} minutes a day.`
+                : "Earn your screen time back, one real task at a time."}
           </Text>
 
           {/* What you get */}
           <View style={{ gap: 16, marginBottom: 30 }}>
-            {FEATURES.map(({ Icon, title, desc }) => (
+            {(isFamily ? FAMILY_FEATURES : PERSONAL_FEATURES).map(({ Icon, title, desc }) => (
               <View key={title} style={{ flexDirection: "row", alignItems: "flex-start", gap: 14 }}>
                 <View style={{
                   width: 34, height: 34, borderRadius: 17,
@@ -434,49 +453,46 @@ export default function PaywallScreen({
             ))}
           </View>
 
-          {/* Who is this for. Children never pay for their own account — a
-              parent buys a seat per child and every child in the family
-              inherits access. */}
-          <Text style={{
-            fontFamily: FF.kicker, fontSize: 9, color: ink.faint,
-            letterSpacing: 2, marginBottom: 10,
-          }}>
-            WHO'S USING DRIFT
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
-            {[0, 1, 2, 3, 4, 5].slice(0, MAX_KIDS + 1).map(n => {
-              const on = kids === n;
-              return (
-                <TouchableOpacity
-                  key={n}
-                  onPress={() => setKids(n)}
-                  activeOpacity={0.8}
-                  style={{
-                    paddingVertical: 10, paddingHorizontal: 14,
-                    borderRadius: 12, borderWidth: 1.4,
-                    borderColor: on ? earn.green : paper.border,
-                    backgroundColor: on ? earn.sageLo : "transparent",
-                  }}
-                >
-                  <Text style={{
-                    fontFamily: FF.bodyMed, fontSize: 13,
-                    color: on ? earn.green : ink.mid,
-                  }}>
-                    {n === 0 ? "Just me" : n === 1 ? "1 kid" : `${n} kids`}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          {kids > 0 && (
-            <Text style={{
-              fontFamily: FF.body, fontSize: 12, color: ink.mid,
-              lineHeight: 18, marginTop: -12, marginBottom: 18,
-            }}>
-              Your {kids === 1 ? "child gets their" : "children get"} own account
-              at no extra charge beyond the seat. You can change this later in
-              Settings — Apple prorates the difference.
-            </Text>
+          {/* Family only: how many kids. Children never pay for their own
+              account — the parent buys a seat per child and every child in the
+              family inherits access. Personal accounts don't see this at all. */}
+          {isFamily && (
+            <>
+              <Text style={{
+                fontFamily: FF.kicker, fontSize: 9, color: ink.faint,
+                letterSpacing: 2, marginBottom: 10,
+              }}>
+                HOW MANY KIDS?
+              </Text>
+              <View style={{
+                flexDirection: "row", gap: 6, padding: 4, borderRadius: 14,
+                backgroundColor: dark ? "rgba(232,245,236,0.06)" : "#EDEEE8",
+                marginBottom: 8,
+              }}>
+                {Array.from({ length: MAX_KIDS }, (_, i) => i + 1).map(n => {
+                  const on = kids === n;
+                  return (
+                    <TouchableOpacity
+                      key={n}
+                      onPress={() => setKids(n)}
+                      activeOpacity={0.8}
+                      style={{
+                        flex: 1, paddingVertical: 11, borderRadius: 11, alignItems: "center",
+                        backgroundColor: on ? paper.card : "transparent",
+                        borderWidth: on ? 1.4 : 0, borderColor: earn.green,
+                      }}
+                    >
+                      <Text style={{ fontFamily: on ? FF.bodyBold : FF.bodyMed, fontSize: 15, color: on ? earn.green : ink.mid }}>
+                        {n}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginBottom: 20 }}>
+                You can change this later in Settings.
+              </Text>
+            </>
           )}
 
           {/* Billing period. Solo only — family tiers are monthly-only products,
