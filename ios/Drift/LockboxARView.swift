@@ -15,10 +15,9 @@
 //
 // TEARDOWN MATTERS. ARKit runs the camera, the neural engine and 60fps
 // rendering. Left running through a 90-minute session it would cook the phone
-// inside a closed box. `pauseSession()` is called the moment
-// the phone is in the box (the JS side calls it from autoStart), and the view
-// is unmounted straight after. Between the drop and that moment the camera
-// stays on only so the box can still be dragged, pinched and turned.
+// inside a closed box. `pauseSession()` is called the moment the phone is in
+// the box, and the camera only comes back (`resumeSession()`) while the phone
+// is out of it, so the user can see where to put it back.
 //
 import Foundation
 import UIKit
@@ -27,7 +26,7 @@ import SceneKit
 import React
 
 @objc(LockboxARView)
-class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
+class LockboxARView: UIView, ARSCNViewDelegate {
 
   // Events consumed by the JS component.
   @objc var onSurfaceFound: RCTDirectEventBlock?
@@ -40,6 +39,10 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   /// camera is covered, and the last good answer before that is the one that
   /// counts.
   @objc var onBoxProximity: RCTDirectEventBlock?
+  /// Whether the placed box is currently drawn. After the camera comes back on
+  /// it stays hidden until ARKit has recognised the room again, so the user
+  /// never sees it guess.
+  @objc var onBoxVisible: RCTDirectEventBlock?
 
   /// Inside LENGTH of the box, in metres. Roughly twice the box a phone ships
   /// in (~165 × 85 × 35mm): big enough to find again at a glance and to set a
@@ -66,25 +69,30 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   private var ghostPos: simd_float3?
   private var ghostYaw: Float = 0
 
-  /// The placed box is pinned to an ARAnchor rather than to a world position.
-  /// When the camera is paused (phone set down) and resumed (phone picked up),
-  /// ARKit relocalizes and moves anchors with the room. A bare world position
-  /// stays put in a coordinate system that has shifted, which is how the box
-  /// ended up floating near the phone instead of on the desk.
+  /// THE BOX DOES NOT MOVE. Once dropped it is one fixed pose in the room —
+  /// position and heading — held by an ARAnchor and saved in an ARWorldMap.
+  /// There are no gestures to adjust it.
+  ///
+  /// Why the world map: when the camera goes off (phone in the box) and comes
+  /// back on (phone picked up), a plain resume makes ARKit re-guess where it
+  /// is, and the box was drawn throughout that guessing — it jumped, drifted
+  /// and slid to a different spot. Resuming from the saved map instead makes
+  /// ARKit match the room it already knows, restores the anchor exactly where
+  /// it was saved, and the box stays hidden until that match has happened.
+  private static let anchorName = "drift.lockbox"
   private var boxAnchor: ARAnchor?
-  private var boxYaw: Float = 0
-  private var boxScale: Float = 1
-  private var isDragging = false
+  private var worldMap: ARWorldMap?
+  private var capturingMap = false
+  private var lastMapCapture: TimeInterval = 0
+  /// When tracking last became solid; the box shows only after it has held
+  /// for a moment, so a single good frame mid-relocalization can't flash it.
+  private var normalSince: TimeInterval? = nil
+  private var boxShown: Bool? = nil
   private var lastInside: Bool? = nil
 
-  // Gesture state for adjusting a placed box.
-  private var pinchStartScale: Float = 1
-  private var rotateStartYaw: Float = 0
   /// Raycast hits closer than this to the camera are the user's own hand,
   /// lap or the phone's case edge, never the surface they're aiming at.
   private static let minHitDistance: Float = 0.25
-  private static let minScale: Float = 0.6
-  private static let maxScale: Float = 2.0
 
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -117,17 +125,6 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
     view.scene = SCNScene()
     addSubview(view)
     sceneView = view
-
-    // Drag, pinch and twist a placed box. Simultaneous, so a two-finger
-    // pinch-and-turn works the way it does in Photos or Maps.
-    let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
-    pan.maximumNumberOfTouches = 1
-    let pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
-    let rotate = UIRotationGestureRecognizer(target: self, action: #selector(handleRotate(_:)))
-    for g in [pan, pinch, rotate] as [UIGestureRecognizer] {
-      g.delegate = self
-      view.addGestureRecognizer(g)
-    }
 
     // Apple's own "move your phone to find a surface" choreography. Writing our
     // own would be worse and would need localising into every language Apple
@@ -187,13 +184,13 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
     }
 
     let node = makeBoxNode(preview: false)
-    boxYaw = ghost.simdEulerAngles.y
-    boxScale = 1
-    node.simdPosition = ghost.simdPosition
-    node.simdEulerAngles = simd_float3(0, boxYaw, 0)
+    node.simdTransform = ghost.simdTransform
     view.scene.rootNode.addChildNode(node)
     boxNode = node
-    pin(at: ghost.simdPosition)
+    let anchor = ARAnchor(name: Self.anchorName, transform: ghost.simdTransform)
+    view.session.add(anchor: anchor)
+    boxAnchor = anchor
+    boxShown = true
 
     // A short drop onto the surface, so it reads as landing rather than
     // appearing. Only the inner geometry moves; the node's own position is
@@ -221,6 +218,9 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
 
   @objc func reset() {
     lastInside = nil
+    boxShown = nil
+    normalSince = nil
+    worldMap = nil
     if let a = boxAnchor { sceneView?.session.remove(anchor: a) }
     boxAnchor = nil
     boxNode?.removeFromParentNode()
@@ -240,65 +240,51 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
     sceneView?.session.pause()
   }
 
-  /// Camera back on after a pause, WITHOUT resetting: anchors survive and ARKit
-  /// relocalizes against the room it already mapped, so the placed box comes
-  /// back where it was. Used when the phone is picked up again before the
-  /// session has started.
+  /// Camera back on after a pause. From the saved world map when there is one:
+  /// ARKit relocalizes against the room it already mapped and restores the
+  /// box's anchor exactly where it was saved. Until that has happened the box
+  /// is hidden (see the render loop) instead of drawn at a guess.
   @objc func resumeSession() {
     guard let view = sceneView else { return }
-    lastInside = nil   // re-report once tracking is back
-    view.session.run(makeConfig(), options: [])
-  }
-
-  private func pin(at pos: simd_float3) {
-    guard let view = sceneView else { return }
-    if let old = boxAnchor { view.session.remove(anchor: old) }
-    var t = matrix_identity_float4x4
-    t.columns.3 = simd_float4(pos.x, pos.y, pos.z, 1)
-    let a = ARAnchor(name: "drift.lockbox", transform: t)
-    view.session.add(anchor: a)
-    boxAnchor = a
-  }
-
-  // ── Gestures (placed box only) ──────────────────────────────
-  func gestureRecognizer(_ g: UIGestureRecognizer,
-                         shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
-    return true
-  }
-
-  /// Dragging only grabs the box when the finger starts on (or near) it. It
-  /// used to follow any swipe anywhere on screen, so brushing the glass while
-  /// setting the phone down teleported the box.
-  @objc private func handlePan(_ g: UIPanGestureRecognizer) {
-    guard isPlaced, let view = sceneView, let node = boxNode else { return }
-    let p = g.location(in: view)
-    switch g.state {
-    case .began:
-      let c = view.projectPoint(node.presentation.worldPosition)
-      isDragging = hypot(CGFloat(c.x) - p.x, CGFloat(c.y) - p.y) < 140
-    case .changed:
-      guard isDragging, let hit = raycast(from: p) else { return }
-      let t = hit.worldTransform.columns.3
-      node.simdPosition = simd_float3(t.x, t.y, t.z)
-    default:
-      if isDragging { pin(at: node.simdPosition) }
-      isDragging = false
+    lastInside = nil
+    normalSince = nil
+    setBoxShown(false)
+    let config = makeConfig()
+    if isPlaced, let map = worldMap {
+      config.initialWorldMap = map
+      view.session.run(config, options: [.resetTracking, .removeExistingAnchors])
+    } else {
+      view.session.run(config, options: [])
     }
   }
 
-  @objc private func handlePinch(_ g: UIPinchGestureRecognizer) {
-    guard isPlaced, let node = boxNode else { return }
-    if g.state == .began { pinchStartScale = boxScale }
-    boxScale = min(Self.maxScale, max(Self.minScale, pinchStartScale * Float(g.scale)))
-    node.simdScale = simd_float3(repeating: boxScale)
+  private func setBoxShown(_ shown: Bool) {
+    guard shown != boxShown else { return }
+    boxShown = shown
+    boxNode?.isHidden = !shown
+    DispatchQueue.main.async { self.onBoxVisible?(["visible": shown]) }
   }
 
-  @objc private func handleRotate(_ g: UIRotationGestureRecognizer) {
-    guard isPlaced, let node = boxNode else { return }
-    if g.state == .began { rotateStartYaw = boxYaw }
-    // Screen rotation is clockwise-positive; world yaw is counter-clockwise.
-    boxYaw = rotateStartYaw - Float(g.rotation)
-    node.simdEulerAngles = simd_float3(0, boxYaw, 0)
+  /// Keep a fresh world map while the room is well mapped, so whatever moment
+  /// the camera goes off, there is a good one to come back to.
+  private func captureMapIfDue(_ frame: ARFrame, now: TimeInterval) {
+    guard !capturingMap, now - lastMapCapture > 1.5 else { return }
+    switch frame.worldMappingStatus {
+    case .mapped, .extending: break
+    default: return
+    }
+    capturingMap = true
+    lastMapCapture = now
+    DispatchQueue.main.async {
+      self.sceneView?.session.getCurrentWorldMap { map, _ in
+        DispatchQueue.main.async {
+          if let map = map, map.anchors.contains(where: { $0.name == Self.anchorName }) {
+            self.worldMap = map
+          }
+          self.capturingMap = false
+        }
+      }
+    }
   }
 
   /// Real surface geometry first, estimated plane as a fallback. Estimated
@@ -503,16 +489,23 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
     if isPlaced {
       guard let node = boxNode, let frame = sceneView?.session.currentFrame else { return }
-      // Follow the anchor as ARKit refines it (and after a relocalization).
-      if !isDragging, let id = boxAnchor?.identifier,
-         let a = frame.anchors.first(where: { $0.identifier == id }) {
-        let t = a.transform.columns.3
-        node.simdPosition = simd_float3(t.x, t.y, t.z)
-      }
-      // Only trust the phone's position while tracking is solid. Once the
-      // camera is face-down in the box the position drifts; keep the last good
-      // answer instead of reporting that drift.
-      if case .normal = frame.camera.trackingState {
+      // The anchor (restored from the world map after a resume) is the only
+      // source of the box's pose. Looked up by name: a restored anchor is a
+      // new object.
+      let anchor = frame.anchors.first(where: { $0.name == Self.anchorName })
+      if let a = anchor { boxAnchor = a; node.simdTransform = a.transform }
+
+      var solid = false
+      if case .normal = frame.camera.trackingState { solid = true }
+      if solid { normalSince = normalSince ?? time } else { normalSince = nil }
+      let settled = normalSince.map { time - $0 >= 0.4 } ?? false
+      setBoxShown(settled && anchor != nil)
+
+      if settled && anchor != nil {
+        captureMapIfDue(frame, now: time)
+        // Only trust the phone's position while tracking is solid. Once the
+        // camera is face-down in the box the position drifts; keep the last
+        // good answer instead of reporting that drift.
         updateProximity(camera: frame.camera.transform, box: node)
       }
       return

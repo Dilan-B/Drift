@@ -104,6 +104,8 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
   const [busy,    setBusy]    = useState(false);
   // Flat and still, but not in the box — shown so it doesn't just sit there.
   const [strayed, setStrayed] = useState(false);
+  // False while the camera is back on but ARKit hasn't re-found the room yet.
+  const [boxVisible, setBoxVisible] = useState(true);
 
   const arRef      = useRef(null);
   const placedAtRef = useRef(0);
@@ -529,6 +531,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
 
   const arHandlers = {
     onSurfaceFound: ({ nativeEvent }) => setSurface(!!nativeEvent?.found),
+    onBoxVisible: ({ nativeEvent }) => setBoxVisible(!!nativeEvent?.visible),
     onBoxProximity: ({ nativeEvent }) => {
       // Last word from the camera on whether the phone is inside the box.
       insideRef.current = !!nativeEvent?.inside;
@@ -537,6 +540,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
       notify(true);
       placedAtRef.current = Date.now();
       insideRef.current = false;
+      setBoxVisible(true);
       setPlaced(true);
       watchForEntry();
     },
@@ -577,7 +581,8 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
         callAR(arRef.current, "reset");
       };
       const hint = placed
-        ? (strayed ? "That's not the box — set it inside" : "Set your phone in the box, screen up")
+        ? (!boxVisible ? "Point at where you left the box"
+          : strayed ? "That's not the box — set it inside" : "Set your phone in the box, screen up")
         : surface ? "Aim at the spot, then tap to drop the box" : "Move slowly over a table or desk";
 
       // Full screen (see onImmersiveChange): nothing of the app shell sits over
@@ -598,9 +603,6 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
               <View style={{ width: 38 }} />
             </View>
 
-            {placed && !entering && (
-              <Text style={cam.gestures}>Drag · pinch · twist to adjust</Text>
-            )}
 
             {/* Bottom: a shutter, like the Camera app */}
             <View style={cam.bottom} pointerEvents="box-none">
@@ -671,7 +673,8 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
             <View style={[cam.top, { justifyContent: "center" }]}>
               <View style={[cam.pill, { backgroundColor: "rgba(150,40,30,0.85)" }]}>
                 <Text style={cam.pillText}>
-                  {strayed ? "That's not the box — set it inside" : "Put it back in the box"}
+                  {!boxVisible ? "Point at where you left the box"
+                  : strayed ? "That's not the box — set it inside" : "Put it back in the box"}
                 </Text>
               </View>
             </View>

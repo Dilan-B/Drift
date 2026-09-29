@@ -18,6 +18,8 @@ RCT_EXPORT_VIEW_PROPERTY(onPlaced, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onARError, RCTDirectEventBlock)
 // The phone moved into / out of the placed box (from the camera's position).
 RCT_EXPORT_VIEW_PROPERTY(onBoxProximity, RCTDirectEventBlock)
+// The box became visible / hidden (hidden while ARKit re-finds the room).
+RCT_EXPORT_VIEW_PROPERTY(onBoxVisible, RCTDirectEventBlock)
 
 RCT_EXTERN_METHOD(isSupported:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
