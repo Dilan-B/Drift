@@ -34,10 +34,10 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   @objc var onPlaced: RCTDirectEventBlock?
   @objc var onARError: RCTDirectEventBlock?
 
-  /// Inside LENGTH of the box, in metres. The footprint is phone-shaped (a
-  /// phone is ~150mm × 72mm), with just enough margin to set one down without
-  /// fighting the walls. It was a 22cm cube, which read as a crate on a desk.
-  @objc var boxSize: NSNumber = 0.19
+  /// Inside LENGTH of the box, in metres. Roughly twice the box a phone ships
+  /// in (~165 × 85 × 35mm): big enough to find again at a glance and to set a
+  /// phone into without aiming, small enough to still read as a phone's box.
+  @objc var boxSize: NSNumber = 0.24
 
   private var sceneView: ARSCNView?
   private var coaching: ARCoachingOverlayView?
@@ -59,9 +59,22 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   private var ghostPos: simd_float3?
   private var ghostYaw: Float = 0
 
+  /// The placed box is pinned to an ARAnchor rather than to a world position.
+  /// When the camera is paused (phone set down) and resumed (phone picked up),
+  /// ARKit relocalizes and moves anchors with the room. A bare world position
+  /// stays put in a coordinate system that has shifted, which is how the box
+  /// ended up floating near the phone instead of on the desk.
+  private var boxAnchor: ARAnchor?
+  private var boxYaw: Float = 0
+  private var boxScale: Float = 1
+  private var isDragging = false
+
   // Gesture state for adjusting a placed box.
   private var pinchStartScale: Float = 1
   private var rotateStartYaw: Float = 0
+  /// Raycast hits closer than this to the camera are the user's own hand,
+  /// lap or the phone's case edge, never the surface they're aiming at.
+  private static let minHitDistance: Float = 0.25
   private static let minScale: Float = 0.6
   private static let maxScale: Float = 2.0
 
@@ -127,8 +140,7 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
     cachedCentre = CGPoint(x: bounds.midX, y: bounds.midY)
   }
 
-  private func runSession() {
-    guard let view = sceneView else { return }
+  private func makeConfig() -> ARWorldTrackingConfiguration {
     let config = ARWorldTrackingConfiguration()
     config.planeDetection = [.horizontal]
     config.environmentTexturing = .automatic
@@ -138,7 +150,12 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
     if ARWorldTrackingConfiguration.supportsFrameSemantics(.sceneDepth) {
       config.frameSemantics.insert(.sceneDepth)
     }
-    view.session.run(config, options: [.resetTracking, .removeExistingAnchors])
+    return config
+  }
+
+  private func runSession() {
+    guard let view = sceneView else { return }
+    view.session.run(makeConfig(), options: [.resetTracking, .removeExistingAnchors])
 
     ghostPos = nil
     if previewNode == nil {
@@ -162,10 +179,13 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
     }
 
     let node = makeBoxNode(preview: false)
+    boxYaw = ghost.simdEulerAngles.y
+    boxScale = 1
     node.simdPosition = ghost.simdPosition
-    node.simdEulerAngles = simd_float3(0, ghost.simdEulerAngles.y, 0)
+    node.simdEulerAngles = simd_float3(0, boxYaw, 0)
     view.scene.rootNode.addChildNode(node)
     boxNode = node
+    pin(at: ghost.simdPosition)
 
     // A short drop onto the surface, so it reads as landing rather than
     // appearing. Only the inner geometry moves; the node's own position is
@@ -192,6 +212,8 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   }
 
   @objc func reset() {
+    if let a = boxAnchor { sceneView?.session.remove(anchor: a) }
+    boxAnchor = nil
     boxNode?.removeFromParentNode()
     boxNode = nil
     previewNode?.removeFromParentNode()
@@ -209,42 +231,83 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
     sceneView?.session.pause()
   }
 
+  /// Camera back on after a pause, WITHOUT resetting: anchors survive and ARKit
+  /// relocalizes against the room it already mapped, so the placed box comes
+  /// back where it was. Used when the phone is picked up again before the
+  /// session has started.
+  @objc func resumeSession() {
+    guard let view = sceneView else { return }
+    view.session.run(makeConfig(), options: [])
+  }
+
+  private func pin(at pos: simd_float3) {
+    guard let view = sceneView else { return }
+    if let old = boxAnchor { view.session.remove(anchor: old) }
+    var t = matrix_identity_float4x4
+    t.columns.3 = simd_float4(pos.x, pos.y, pos.z, 1)
+    let a = ARAnchor(name: "drift.lockbox", transform: t)
+    view.session.add(anchor: a)
+    boxAnchor = a
+  }
+
   // ── Gestures (placed box only) ──────────────────────────────
   func gestureRecognizer(_ g: UIGestureRecognizer,
                          shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
     return true
   }
 
+  /// Dragging only grabs the box when the finger starts on (or near) it. It
+  /// used to follow any swipe anywhere on screen, so brushing the glass while
+  /// setting the phone down teleported the box.
   @objc private func handlePan(_ g: UIPanGestureRecognizer) {
     guard isPlaced, let view = sceneView, let node = boxNode else { return }
     let p = g.location(in: view)
-    guard let hit = raycast(from: p) else { return }
-    let t = hit.worldTransform.columns.3
-    node.simdPosition = simd_float3(t.x, t.y, t.z)
+    switch g.state {
+    case .began:
+      let c = view.projectPoint(node.presentation.worldPosition)
+      isDragging = hypot(CGFloat(c.x) - p.x, CGFloat(c.y) - p.y) < 140
+    case .changed:
+      guard isDragging, let hit = raycast(from: p) else { return }
+      let t = hit.worldTransform.columns.3
+      node.simdPosition = simd_float3(t.x, t.y, t.z)
+    default:
+      if isDragging { pin(at: node.simdPosition) }
+      isDragging = false
+    }
   }
 
   @objc private func handlePinch(_ g: UIPinchGestureRecognizer) {
     guard isPlaced, let node = boxNode else { return }
-    if g.state == .began { pinchStartScale = node.simdScale.x }
-    let s = min(Self.maxScale, max(Self.minScale, pinchStartScale * Float(g.scale)))
-    node.simdScale = simd_float3(repeating: s)
+    if g.state == .began { pinchStartScale = boxScale }
+    boxScale = min(Self.maxScale, max(Self.minScale, pinchStartScale * Float(g.scale)))
+    node.simdScale = simd_float3(repeating: boxScale)
   }
 
   @objc private func handleRotate(_ g: UIRotationGestureRecognizer) {
     guard isPlaced, let node = boxNode else { return }
-    if g.state == .began { rotateStartYaw = node.simdEulerAngles.y }
+    if g.state == .began { rotateStartYaw = boxYaw }
     // Screen rotation is clockwise-positive; world yaw is counter-clockwise.
-    node.simdEulerAngles = simd_float3(0, rotateStartYaw - Float(g.rotation), 0)
+    boxYaw = rotateStartYaw - Float(g.rotation)
+    node.simdEulerAngles = simd_float3(0, boxYaw, 0)
   }
 
   /// Real surface geometry first, estimated plane as a fallback. Estimated
   /// planes are what made depth wrong: they are a guess ARKit revises for
   /// several seconds, and the box rode every revision.
+  ///
+  /// Hits within arm's reach of the lens are thrown away. With scene depth on,
+  /// the estimated plane happily lands on a hand or a knee just below the
+  /// phone, which put the box where the phone was rather than on the desk.
   private func raycast(from point: CGPoint) -> ARRaycastResult? {
     guard let view = sceneView else { return nil }
+    let cam = view.session.currentFrame?.camera.transform.columns.3
     for target in [ARRaycastQuery.Target.existingPlaneGeometry, .estimatedPlane] {
-      if let q = view.raycastQuery(from: point, allowing: target, alignment: .horizontal),
-         let hit = view.session.raycast(q).first {
+      guard let q = view.raycastQuery(from: point, allowing: target, alignment: .horizontal) else { continue }
+      for hit in view.session.raycast(q) {
+        if let c = cam {
+          let h = hit.worldTransform.columns.3
+          if simd_distance(simd_float3(c.x, c.y, c.z), simd_float3(h.x, h.y, h.z)) < Self.minHitDistance { continue }
+        }
         return hit
       }
     }
@@ -252,7 +315,7 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   }
 
   // ── Geometry ────────────────────────────────────────────────
-  /// A phone-sized glass box: translucent blue faces, bright hairline edges and
+  /// A glass box about twice a phone's retail box: translucent blue faces, bright hairline edges and
   /// a lock floating above the lid, turned to always face the viewer.
   ///
   /// Every face is drawn (lid included) with its own opacity — lid strongest,
@@ -269,8 +332,8 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
     root.addChildNode(body)
 
     let length = CGFloat(truncating: boxSize)   // along local Z — away from the viewer
-    let width  = length * 0.58                  // along local X
-    let height = length * 0.42
+    let width  = length * 0.52                  // along local X
+    let height = length * 0.30
     let e: CGFloat = 0.0022                     // edge thickness
     let a: CGFloat = preview ? 0.55 : 1.0
 
@@ -410,7 +473,16 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   /// was pointed straight at it. Instead the box is squared up to the camera:
   /// its long side runs straight away from the viewer.
   func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
-    guard !isPlaced, let view = sceneView, let ghost = previewNode else { return }
+    if isPlaced {
+      // Follow the anchor as ARKit refines it (and after a relocalization).
+      guard !isDragging, let node = boxNode, let id = boxAnchor?.identifier,
+            let a = sceneView?.session.currentFrame?.anchors.first(where: { $0.identifier == id })
+      else { return }
+      let t = a.transform.columns.3
+      node.simdPosition = simd_float3(t.x, t.y, t.z)
+      return
+    }
+    guard let view = sceneView, let ghost = previewNode else { return }
 
     guard let hit = raycast(from: cachedCentre) else {
       if isTargeting {
@@ -534,5 +606,9 @@ class LockboxARViewManager: RCTViewManager {
 
   @objc func pauseSession(_ tag: NSNumber) {
     DispatchQueue.main.async { self.lockboxView(tag)?.pauseSession() }
+  }
+
+  @objc func resumeSession(_ tag: NSNumber) {
+    DispatchQueue.main.async { self.lockboxView(tag)?.resumeSession() }
   }
 }

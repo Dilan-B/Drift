@@ -26,7 +26,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Alert, Platform,
   AppState, BackHandler, StatusBar, ActivityIndicator, findNodeHandle,
   requireNativeComponent, UIManager, TextInput, Animated, Easing,
-  AccessibilityInfo, ScrollView, KeyboardAvoidingView,
+  AccessibilityInfo, ScrollView, KeyboardAvoidingView, Modal, SafeAreaView,
 } from "react-native";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import PlantSlider from "./PlantSlider";
@@ -59,6 +59,16 @@ const callAR = (ref, command) => {
   if (id != null) arManager.dispatchViewManagerCommand(node, id, []);
 };
 
+/**
+ * After the box is dropped, how long before "phone lying still" is allowed to
+ * count as "phone is in the box". Aiming down at a desk holds the phone flat
+ * and fairly still, so without this the session could start the instant the
+ * box landed — before the phone had moved an inch.
+ */
+const ENTRY_DELAY_MS = 4000;
+/** Seconds the phone must stay in the box, camera off, before the session starts. */
+const LOCK_IN_SECONDS = 3;
+
 const fmt = (secs) => {
   const s = Math.max(0, Math.round(secs));
   const h = Math.floor(s / 3600);
@@ -82,10 +92,14 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
   const [result,  setResult]  = useState(null);
   const [surface, setSurface] = useState(false);   // ghost is on a surface right now
   const [placed,  setPlaced]  = useState(false);
-  const [sensed,  setSensed]  = useState(false);   // face down AND still
+  // Lock-in countdown once the phone is in the box (camera off); null otherwise.
+  const [entering, setEntering] = useState(null);
   const [busy,    setBusy]    = useState(false);
 
   const arRef      = useRef(null);
+  const placedAtRef = useRef(0);
+  const enterTimerRef = useRef(null);
+  const enteringRef = useRef(false);
   const phaseRef   = useRef(phase);
   const sessionRef = useRef(null);
   const unsubRef   = useRef(null);
@@ -155,23 +169,71 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
    * something we can see — and it means the last thing they do before "putting
    * the phone away" is pick it up again.
    *
+   * The camera stays on (box still drawn) until the phone is actually down.
+   * Then it switches off for a short lock-in countdown; lifting the phone
+   * during that countdown switches it back on so the box can be found again.
+   *
    * Flat, not face down: the phone goes in screen UP so the countdown is
    * readable from the box, which is the point of keeping the screen awake.
    */
+  const stopEntering = useCallback((resumeCamera) => {
+    clearInterval(enterTimerRef.current);
+    enterTimerRef.current = null;
+    if (enteringRef.current && resumeCamera) callAR(arRef.current, "resumeSession");
+    enteringRef.current = false;
+    setEntering(null);
+  }, []);
+
+  const beginEntering = useCallback(() => {
+    if (enteringRef.current || phaseRef.current !== "place") return;
+    enteringRef.current = true;
+    callAR(arRef.current, "pauseSession");
+    notify(true);
+    let left = LOCK_IN_SECONDS;
+    setEntering(left);
+    enterTimerRef.current = setInterval(() => {
+      left -= 1;
+      if (left > 0) { setEntering(left); return; }
+      clearInterval(enterTimerRef.current);
+      enterTimerRef.current = null;
+      // Through the ref, never the captured value — see autoStartRef below.
+      autoStartRef.current?.();
+    }, 1000);
+  }, []);
+
   const watchForEntry = useCallback(async () => {
     unsubRef.current?.();
-    unsubRef.current = Lockbox.onStateChange(({ state, flat }) => {
-      const inBox = state === "settled" && !!flat;
-      setSensed(inBox);
-      // Through the ref, never the captured value. This listener is installed
-      // once, so calling autoStart directly would pin it to the render that
-      // installed it — which is why every session ran for the initial 25
-      // minutes no matter what the user picked.
-      if (inBox && phaseRef.current === "place") autoStartRef.current?.();
+    unsubRef.current = Lockbox.onStateChange(({ state }) => {
+      // Picked up before the session started: camera back on, box back in view.
+      if (state === "disturbed" && enteringRef.current) {
+        selectionTick();
+        stopEntering(true);
+      }
     });
     try { await Lockbox.startMonitoring(); } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Entry is polled, not event-driven: the native side only emits transitions,
+  // so a phone that went still during ENTRY_DELAY_MS would never produce a
+  // second "settled" event once the delay ran out.
+  useEffect(() => {
+    if (phase !== "place" || !placed) return;
+    let alive = true;
+    const id = setInterval(async () => {
+      const r = await Lockbox.currentMagnitude();
+      if (!alive || !r) return;
+      const inBox = !!r.settled && !!r.flat;
+      if (enteringRef.current) {
+        if (!r.settled) stopEntering(true);
+      } else if (inBox && Date.now() - placedAtRef.current >= ENTRY_DELAY_MS) {
+        beginEntering();
+      }
+    }, 300);
+    return () => { alive = false; clearInterval(id); };
+  }, [phase, placed, beginEntering, stopEntering]);
+
+  useEffect(() => () => clearInterval(enterTimerRef.current), []);
 
   /**
    * The phone is in. Tear down AR and begin for real.
@@ -183,6 +245,10 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
    */
   const autoStart = useCallback(async () => {
     callAR(arRef.current, "pauseSession");
+    clearInterval(enterTimerRef.current);
+    enterTimerRef.current = null;
+    enteringRef.current = false;
+    setEntering(null);
     unsubRef.current?.();
     setBusy(true);
     try {
@@ -329,99 +395,114 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
   const onNight = "rgba(247,247,244,0.72)";
 
   if (phase === "place" && ARView) {
-    return (
-      <View style={{ flex: 1, backgroundColor: "#000" }}>
-        <StatusBar barStyle="light-content" />
-        <ARView
-          ref={arRef}
-          style={StyleSheet.absoluteFill}
-          onSurfaceFound={({ nativeEvent }) => setSurface(!!nativeEvent?.found)}
-          onPlaced={() => {
-            notify(true);
-            setPlaced(true);
-            // AR keeps running after the drop so the box can still be dragged,
-            // pinched and turned — it only stops once the phone is actually in
-            // (autoStart pauses it), which is a few seconds, not the session.
-            watchForEntry();
-          }}
-          onARError={({ nativeEvent }) => {
-            // Do NOT start a session here. Saying "I can't see the room" and
-            // then dropping the user into a Lockbox session implies a box was
-            // placed when none was — the one thing this screen must not lie
-            // about. Offer the two honest options and let them choose.
-            setSurface(false);
-            setPlaced(false);
-            Alert.alert(
-              "Couldn't map the room",
-              `${nativeEvent?.message || "The camera couldn't find a surface."}\n\nYou can try again, or run the session without the box — it works the same either way.`,
-              [
-                { text: "Try again", onPress: () => callAR(arRef.current, "reset") },
-                { text: "Without the box", onPress: () => { beginSettle(); } },
-                { text: "Back", style: "cancel", onPress: () => setPhase("setup") },
-              ],
-            );
-          }}
-        />
-        <View style={{ position: "absolute", left: 0, right: 0, bottom: 28, paddingHorizontal: 18 }}>
-          <View style={arStyles.card}>
-            <Text style={arStyles.title}>
-              {placed
-                ? (sensed ? "Got it — starting" : "Box placed")
-                : surface ? "Aim at the spot" : "Looking for a surface"}
-            </Text>
-            <Text style={arStyles.hint}>
-              {placed
-                ? "Drag to move · pinch to resize · twist to turn.\nThen set your phone inside, screen up."
-                : surface
-                  ? "Point where your phone will sit, then drop the box."
-                  : "Move your phone slowly over a table or desk."}
-            </Text>
+    const leave = () => {
+      stopEntering(false);
+      unsubRef.current?.();
+      Lockbox.stopMonitoring();
+      setPlaced(false); setSurface(false);
+      setPhase("setup");
+    };
+    const redo = () => {
+      stopEntering(false);
+      unsubRef.current?.();
+      Lockbox.stopMonitoring();
+      setPlaced(false); setSurface(false);
+      callAR(arRef.current, "reset");
+    };
+    const hint = placed
+      ? "Set your phone in the box, screen up"
+      : surface ? "Aim at the spot, then tap to drop the box" : "Move slowly over a table or desk";
 
-            {!placed ? (
-              <TouchableOpacity
-                onPress={() => { selectionTick(); callAR(arRef.current, "place"); }}
-                disabled={!surface}
-                activeOpacity={0.85}
-                style={[arStyles.primary, { opacity: surface ? 1 : 0.4 }]}
-              >
-                <Text style={arStyles.primaryText}>Drop the box here</Text>
+    // A full-screen modal so nothing of the app shell — header, tab bar —
+    // sits over the camera. It should feel like the Camera app, not a page.
+    return (
+      <Modal visible animationType="fade" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={leave}>
+        <View style={{ flex: 1, backgroundColor: "#000" }}>
+          <StatusBar hidden />
+          <ARView
+            ref={arRef}
+            style={StyleSheet.absoluteFill}
+            onSurfaceFound={({ nativeEvent }) => setSurface(!!nativeEvent?.found)}
+            onPlaced={() => {
+              notify(true);
+              placedAtRef.current = Date.now();
+              setPlaced(true);
+              watchForEntry();
+            }}
+            onARError={({ nativeEvent }) => {
+              // Do NOT start a session here. Saying "I can't see the room" and
+              // then dropping the user into a Lockbox session implies a box was
+              // placed when none was — the one thing this screen must not lie
+              // about. Offer the two honest options and let them choose.
+              setSurface(false);
+              setPlaced(false);
+              Alert.alert(
+                "Couldn't map the room",
+                `${nativeEvent?.message || "The camera couldn't find a surface."}\n\nYou can try again, or run the session without the box — it works the same either way.`,
+                [
+                  { text: "Try again", onPress: () => callAR(arRef.current, "reset") },
+                  { text: "Without the box", onPress: () => { beginSettle(); } },
+                  { text: "Back", style: "cancel", onPress: leave },
+                ],
+              );
+            }}
+          />
+
+          <SafeAreaView style={StyleSheet.absoluteFill} pointerEvents="box-none">
+            {/* Top: close, and one line of guidance */}
+            <View style={cam.top} pointerEvents="box-none">
+              <TouchableOpacity onPress={leave} style={cam.roundBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Text style={cam.x}>✕</Text>
               </TouchableOpacity>
-            ) : (
-              // Fallback only. The sensors normally start this themselves; this
-              // exists for a phone that will not sit flat.
-              <TouchableOpacity
-                onPress={autoStart}
-                disabled={busy}
-                activeOpacity={0.85}
-                style={[arStyles.primary, { opacity: busy ? 0.5 : 1 }]}
-              >
-                <Text style={arStyles.primaryText}>{busy ? "Starting…" : "Start now"}</Text>
-              </TouchableOpacity>
+              <View style={cam.pill}>
+                <Text style={cam.pillText}>{hint}</Text>
+              </View>
+              <View style={{ width: 38 }} />
+            </View>
+
+            {placed && !entering && (
+              <Text style={cam.gestures}>Drag · pinch · twist to adjust</Text>
             )}
 
-            <View style={{ flexDirection: "row", justifyContent: "center", gap: 28, marginTop: 12 }}>
-              {placed ? (
-                <TouchableOpacity
-                  onPress={() => { setPlaced(false); setSurface(false); unsubRef.current?.(); Lockbox.stopMonitoring(); callAR(arRef.current, "reset"); }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={arStyles.quiet}>Start over</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity onPress={beginSettle} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={arStyles.quiet}>Skip the box</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                onPress={() => { unsubRef.current?.(); Lockbox.stopMonitoring(); setPlaced(false); setSurface(false); setPhase("setup"); }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={arStyles.quiet}>Cancel</Text>
+            {/* Bottom: a shutter, like the Camera app */}
+            <View style={cam.bottom} pointerEvents="box-none">
+              <TouchableOpacity onPress={placed ? redo : beginSettle} style={cam.side}>
+                <Text style={cam.sideText}>{placed ? "Redo" : "Skip"}</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (!placed) { selectionTick(); callAR(arRef.current, "place"); }
+                  else autoStart();
+                }}
+                disabled={placed ? busy : !surface}
+                activeOpacity={0.8}
+                style={[cam.shutter, { opacity: (placed ? busy : !surface) ? 0.35 : 1 }]}
+                accessibilityLabel={placed ? "Start now" : "Drop the box"}
+              >
+                <View style={cam.shutterInner}>
+                  {placed && <LockIcon size={22} color="#0B1A11" />}
+                </View>
+              </TouchableOpacity>
+
+              <View style={cam.side}>
+                {placed && <Text style={cam.sideText}>Start now</Text>}
+              </View>
             </View>
-          </View>
+          </SafeAreaView>
+
+          {/* Phone is in the box: camera is off, short lock-in countdown.
+              Lifting the phone cancels it and brings the camera back. */}
+          {entering != null && (
+            <View style={[StyleSheet.absoluteFill, cam.lockIn]}>
+              <LockIcon size={26} color="#8EA8FF" />
+              <Text style={cam.lockInCount}>{entering}</Text>
+              <Text style={cam.lockInText}>Leave it there</Text>
+              <Text style={cam.lockInSub}>Pick it up to see the box again</Text>
+            </View>
+          )}
         </View>
-      </View>
+      </Modal>
     );
   }
 
@@ -836,24 +917,53 @@ const divider = (ink) => ({
 
 const s = { ...baseStyles, fieldKicker, divider };
 
-// The AR overlay sits on a live camera feed, so it is always dark glass
-// regardless of the app theme — light paper over a camera image is unreadable.
-const arStyles = StyleSheet.create({
-  card: {
-    borderRadius: 24, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14,
-    backgroundColor: "rgba(10,18,14,0.72)",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.10)",
+// Camera-app chrome for the AR step. Always light-on-dark regardless of the
+// app theme: it sits on a live camera feed.
+const cam = StyleSheet.create({
+  top: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingTop: 8,
   },
-  title: { fontFamily: FF.bodyBold, fontSize: 16, color: "#F7F7F4", textAlign: "center" },
-  hint: {
-    fontFamily: FF.body, fontSize: 13, lineHeight: 19, color: "rgba(247,247,244,0.66)",
-    textAlign: "center", marginTop: 5,
-  },
-  primary: {
-    height: 50, borderRadius: 16, marginTop: 16,
+  roundBtn: {
+    width: 38, height: 38, borderRadius: 19,
     alignItems: "center", justifyContent: "center",
-    backgroundColor: "#F7F7F4",
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
-  primaryText: { fontFamily: FF.bodyMed, fontSize: 15, color: "#0B1A11" },
-  quiet: { fontFamily: FF.bodyMed, fontSize: 13.5, color: "rgba(247,247,244,0.6)" },
+  x: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  pill: {
+    flexShrink: 1, marginHorizontal: 10,
+    paddingVertical: 7, paddingHorizontal: 14, borderRadius: 16,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  pillText: { fontFamily: FF.bodyMed, fontSize: 13, color: "#fff", textAlign: "center" },
+  gestures: {
+    position: "absolute", left: 0, right: 0, bottom: 150,
+    fontFamily: FF.body, fontSize: 12.5, color: "rgba(255,255,255,0.75)", textAlign: "center",
+  },
+  bottom: {
+    position: "absolute", left: 0, right: 0, bottom: 36,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 34,
+  },
+  side: { width: 84, alignItems: "center" },
+  sideText: { fontFamily: FF.bodyMed, fontSize: 14, color: "#fff" },
+  shutter: {
+    width: 78, height: 78, borderRadius: 39,
+    borderWidth: 4, borderColor: "#fff",
+    alignItems: "center", justifyContent: "center",
+  },
+  shutterInner: {
+    width: 62, height: 62, borderRadius: 31, backgroundColor: "#fff",
+    alignItems: "center", justifyContent: "center",
+  },
+  lockIn: {
+    backgroundColor: "rgba(6,10,20,0.88)",
+    alignItems: "center", justifyContent: "center",
+  },
+  lockInCount: {
+    fontFamily: FF.display, fontSize: 84, color: "#fff", marginTop: 14,
+    fontVariant: ["tabular-nums"],
+  },
+  lockInText: { fontFamily: FF.bodyMed, fontSize: 17, color: "#fff", marginTop: 4 },
+  lockInSub: { fontFamily: FF.body, fontSize: 13, color: "rgba(255,255,255,0.6)", marginTop: 8 },
 });

@@ -7,7 +7,7 @@
 
 @interface RCT_EXTERN_MODULE(LockboxARViewManager, RCTViewManager)
 
-// Inside length of the (phone-shaped) box, in metres.
+// Inside length of the box, in metres.
 RCT_EXPORT_VIEW_PROPERTY(boxSize, NSNumber)
 
 // A horizontal plane became available — the "Place box" control can enable.
@@ -23,5 +23,6 @@ RCT_EXTERN_METHOD(isSupported:(RCTPromiseResolveBlock)resolve
 RCT_EXTERN_METHOD(place:(nonnull NSNumber *)reactTag)
 RCT_EXTERN_METHOD(reset:(nonnull NSNumber *)reactTag)
 RCT_EXTERN_METHOD(pauseSession:(nonnull NSNumber *)reactTag)
+RCT_EXTERN_METHOD(resumeSession:(nonnull NSNumber *)reactTag)
 
 @end
