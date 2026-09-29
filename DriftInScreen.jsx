@@ -297,7 +297,11 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
         modePicker={modePicker}
         onImmersiveChange={onImmersiveChange}
         onClose={() => setMode("timer")}
-        onStarted={() => onSessionStart?.({ task: "Lockbox", durationSeconds: 0 })}
+        onStarted={(sess) => onSessionStart?.({
+          heading: "Lockbox",
+          task: sess?.task || "Phone in the box",
+          durationSeconds: Math.max(60, Math.round(((sess?.endsAt || 0) - Date.now()) / 1000)),
+        })}
         onEnded={() => onSessionEnd?.()}
         onCompleted={(rec) => {
           // Reuse the Drift In payout path so credits, XP and the balance

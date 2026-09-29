@@ -128,6 +128,29 @@ export async function currentMagnitude() {
   try { return await Native.currentMagnitude(); } catch { return null; }
 }
 
+/**
+ * Start logging the accelerometer on the motion coprocessor so a session can
+ * run with the screen off. Resolves { recording: bool }. Without it (no
+ * permission, old device) the session falls back to keeping the screen on.
+ */
+export async function startRecording(seconds) {
+  if (!isAvailable() || typeof Native.startRecording !== "function") return { recording: false };
+  try { return await Native.startRecording(Math.round(seconds)); }
+  catch { return { recording: false }; }
+}
+
+/**
+ * Judge a screen-off stretch from the recording.
+ * Resolves { available, breachAt: ms|null, checkedUntil: ms|null }.
+ * `checkedUntil` can fall short of `toMs` — the recording lags real time by up
+ * to a few minutes — and the remainder has to be checked again later.
+ */
+export async function checkRecorded(fromMs, toMs) {
+  if (!isAvailable() || typeof Native.checkRecorded !== "function") return { available: false };
+  try { return await Native.checkRecorded(Math.round(fromMs), Math.round(toMs), GRACE_SECONDS); }
+  catch { return { available: false }; }
+}
+
 // ── Preferences ──────────────────────────────────────────────
 export async function getPrefs() {
   try {

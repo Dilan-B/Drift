@@ -33,6 +33,13 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   @objc var onSurfaceFound: RCTDirectEventBlock?
   @objc var onPlaced: RCTDirectEventBlock?
   @objc var onARError: RCTDirectEventBlock?
+  /// Whether the phone itself is inside the placed box, from the camera's own
+  /// tracked position. Fired on change only. Motion alone can't answer this —
+  /// a phone lying still on the desk a metre away looks identical to one in
+  /// the box — but ARKit knows exactly where the phone is until the moment the
+  /// camera is covered, and the last good answer before that is the one that
+  /// counts.
+  @objc var onBoxProximity: RCTDirectEventBlock?
 
   /// Inside LENGTH of the box, in metres. Roughly twice the box a phone ships
   /// in (~165 × 85 × 35mm): big enough to find again at a glance and to set a
@@ -68,6 +75,7 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   private var boxYaw: Float = 0
   private var boxScale: Float = 1
   private var isDragging = false
+  private var lastInside: Bool? = nil
 
   // Gesture state for adjusting a placed box.
   private var pinchStartScale: Float = 1
@@ -212,6 +220,7 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   }
 
   @objc func reset() {
+    lastInside = nil
     if let a = boxAnchor { sceneView?.session.remove(anchor: a) }
     boxAnchor = nil
     boxNode?.removeFromParentNode()
@@ -237,6 +246,7 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   /// session has started.
   @objc func resumeSession() {
     guard let view = sceneView else { return }
+    lastInside = nil   // re-report once tracking is back
     view.session.run(makeConfig(), options: [])
   }
 
@@ -312,6 +322,24 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
       }
     }
     return nil
+  }
+
+  /// Is the phone within the box? The camera lens sits a few centimetres from
+  /// the phone's centre, so the footprint gets a margin; and the answer has to
+  /// be "yes" while the phone is still being lowered in, so the height window
+  /// reaches well above the lid.
+  private func updateProximity(camera: simd_float4x4, box: SCNNode) {
+    let lens = simd_float4(camera.columns.3.x, camera.columns.3.y, camera.columns.3.z, 1)
+    let local = simd_mul(simd_inverse(box.simdWorldTransform), lens)  // includes box scale
+    let length = Float(truncating: boxSize)
+    let halfL = length / 2 + 0.06
+    let halfW = length * 0.52 / 2 + 0.06
+    let height = length * 0.30
+    let inside = abs(local.x) <= halfW && abs(local.z) <= halfL
+      && local.y >= -0.05 && local.y <= height + 0.30
+    guard inside != lastInside else { return }
+    lastInside = inside
+    DispatchQueue.main.async { self.onBoxProximity?(["inside": inside]) }
   }
 
   // ── Geometry ────────────────────────────────────────────────
@@ -474,12 +502,19 @@ class LockboxARView: UIView, ARSCNViewDelegate, UIGestureRecognizerDelegate {
   /// its long side runs straight away from the viewer.
   func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
     if isPlaced {
+      guard let node = boxNode, let frame = sceneView?.session.currentFrame else { return }
       // Follow the anchor as ARKit refines it (and after a relocalization).
-      guard !isDragging, let node = boxNode, let id = boxAnchor?.identifier,
-            let a = sceneView?.session.currentFrame?.anchors.first(where: { $0.identifier == id })
-      else { return }
-      let t = a.transform.columns.3
-      node.simdPosition = simd_float3(t.x, t.y, t.z)
+      if !isDragging, let id = boxAnchor?.identifier,
+         let a = frame.anchors.first(where: { $0.identifier == id }) {
+        let t = a.transform.columns.3
+        node.simdPosition = simd_float3(t.x, t.y, t.z)
+      }
+      // Only trust the phone's position while tracking is solid. Once the
+      // camera is face-down in the box the position drifts; keep the last good
+      // answer instead of reporting that drift.
+      if case .normal = frame.camera.trackingState {
+        updateProximity(camera: frame.camera.transform, box: node)
+      }
       return
     }
     guard let view = sceneView, let ghost = previewNode else { return }

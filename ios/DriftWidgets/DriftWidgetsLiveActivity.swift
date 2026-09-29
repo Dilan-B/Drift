@@ -10,43 +10,70 @@ struct DriftInLiveActivityWidget: Widget {
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
-          Text("Drift In")
+          Text(context.attributes.heading ?? "Drift In")
             .font(.caption.weight(.bold))
         }
         DynamicIslandExpandedRegion(.trailing) {
-          Text(DriftShared.format(seconds: context.state.remainingSeconds))
+          LiveCountdown(state: context.state)
             .font(.caption.monospacedDigit())
+            .frame(maxWidth: 64, alignment: .trailing)
         }
         DynamicIslandExpandedRegion(.bottom) {
-          ProgressView(value: progress(context))
+          LiveProgress(context: context)
             .tint(Color(red: 0.184, green: 0.671, blue: 0.447))
         }
       } compactLeading: {
-        Image(systemName: "leaf.fill")
+        Image(systemName: symbol(context))
           .font(.caption)
           .foregroundStyle(Color(red: 0.184, green: 0.671, blue: 0.447))
       } compactTrailing: {
-        Text(shortTime(context.state.remainingSeconds))
+        LiveCountdown(state: context.state)
           .font(.caption2.monospacedDigit())
+          .frame(maxWidth: 44)
       } minimal: {
-        Image(systemName: "leaf.fill")
+        Image(systemName: symbol(context))
           .font(.caption2)
           .foregroundStyle(Color(red: 0.184, green: 0.671, blue: 0.447))
       }
     }
   }
 
-  private func progress(_ context: ActivityViewContext<DriftInActivityAttributes>) -> Double {
-    guard context.attributes.totalSeconds > 0 else { return 0 }
-    let elapsed = max(0, context.attributes.totalSeconds - context.state.remainingSeconds)
-    return min(1, Double(elapsed) / Double(context.attributes.totalSeconds))
+  private func symbol(_ context: ActivityViewContext<DriftInActivityAttributes>) -> String {
+    context.attributes.heading == "Lockbox" ? "lock.fill" : "leaf.fill"
   }
+}
 
-  private func shortTime(_ seconds: Int) -> String {
-    let safe = max(0, seconds)
-    let m = safe / 60
-    let s = safe % 60
-    return "\(m):\(String(format: "%02d", s))"
+/// Counts down on its own when the state carries an end date, so the lock
+/// screen stays correct while Drift is suspended — the whole point of letting
+/// the screen turn off during a session. Falls back to the last pushed value.
+@available(iOS 16.1, *)
+struct LiveCountdown: View {
+  let state: DriftInActivityAttributes.ContentState
+  var body: some View {
+    if let end = state.endsAt, !state.isComplete, end > Date() {
+      Text(timerInterval: Date()...end, countsDown: true)
+        .multilineTextAlignment(.trailing)
+    } else {
+      Text(DriftShared.format(seconds: state.remainingSeconds))
+    }
+  }
+}
+
+@available(iOS 16.1, *)
+struct LiveProgress: View {
+  let context: ActivityViewContext<DriftInActivityAttributes>
+  var body: some View {
+    let total = TimeInterval(max(1, context.attributes.totalSeconds))
+    if let end = context.state.endsAt, !context.state.isComplete, end > Date() {
+      ProgressView(timerInterval: end.addingTimeInterval(-total)...end, countsDown: false) {
+        EmptyView()
+      } currentValueLabel: {
+        EmptyView()
+      }
+    } else {
+      let elapsed = max(0, context.attributes.totalSeconds - context.state.remainingSeconds)
+      ProgressView(value: min(1, Double(elapsed) / total))
+    }
   }
 }
 
@@ -63,11 +90,11 @@ struct DriftInLockScreenView: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
       HStack {
-        Text("Drift In")
+        Text(context.attributes.heading ?? "Drift In")
           .font(.headline.weight(.bold))
           .foregroundStyle(inkDeep)
         Spacer()
-        Text(DriftShared.format(seconds: context.state.remainingSeconds))
+        LiveCountdown(state: context.state)
           .font(.headline.monospacedDigit())
           .foregroundStyle(earnGreen)
       }
@@ -77,17 +104,11 @@ struct DriftInLockScreenView: View {
         .lineLimit(1)
         .foregroundStyle(inkMid)
 
-      ProgressView(value: progress)
+      LiveProgress(context: context)
         .tint(earnTerra)
     }
     .padding()
     .activityBackgroundTint(paperWarm)
     .activitySystemActionForegroundColor(inkDeep)
-  }
-
-  private var progress: Double {
-    guard context.attributes.totalSeconds > 0 else { return 0 }
-    let elapsed = max(0, context.attributes.totalSeconds - context.state.remainingSeconds)
-    return min(1, Double(elapsed) / Double(context.attributes.totalSeconds))
   }
 }

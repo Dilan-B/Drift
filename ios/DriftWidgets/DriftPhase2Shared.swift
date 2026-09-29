@@ -38,8 +38,14 @@ struct DriftInActivityAttributes: ActivityAttributes {
   public struct ContentState: Codable, Hashable {
     var remainingSeconds: Int
     var isComplete: Bool
+    /// When the session ends. With it the lock screen counts down on its own
+    /// (Text(timerInterval:)), so the timer stays right while Drift is
+    /// suspended and the screen is off. Optional so older payloads decode.
+    var endsAt: Date? = nil
   }
 
   var taskTitle: String
   var totalSeconds: Int
+  /// Header text: "Drift In" or "Lockbox". Optional for the same reason.
+  var heading: String? = nil
 }

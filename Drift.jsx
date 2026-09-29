@@ -5920,9 +5920,9 @@ export default function App() {
     }
   };
 
-  const handleDriftInStart  = async ({ task, durationSeconds } = {}) => {
+  const handleDriftInStart  = async ({ task, durationSeconds, heading } = {}) => {
     setDriftInActive(true);
-    startDriftInLiveActivity(task || "Drift In", durationSeconds || 25 * 60).catch(() => {});
+    startDriftInLiveActivity(task || heading || "Drift In", durationSeconds || 25 * 60, heading || "Drift In").catch(() => {});
     try { await stopBalanceMonitoring(); } catch {}
     await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
     setLastArmedSeconds(-1);

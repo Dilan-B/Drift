@@ -25,4 +25,15 @@ RCT_EXTERN_METHOD(stopMonitoring:(RCTPromiseResolveBlock)resolve
 RCT_EXTERN_METHOD(currentMagnitude:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+// Screen-off enforcement: record the accelerometer while suspended, judge later.
+RCT_EXTERN_METHOD(startRecording:(nonnull NSNumber *)seconds
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(checkRecorded:(nonnull NSNumber *)fromMs
+                  to:(nonnull NSNumber *)toMs
+                  grace:(nonnull NSNumber *)grace
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end

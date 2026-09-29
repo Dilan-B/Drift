@@ -120,13 +120,14 @@ export async function consumePendingHealthEarn() {
   catch { return 0; }
 }
 
-export async function startDriftInLiveActivity(title, seconds) {
+export async function startDriftInLiveActivity(title, seconds, heading = "Drift In") {
   if (!isAvailable() || typeof Native.startDriftInLiveActivity !== "function") {
     return { started: false, reason: "unavailable" };
   }
   try {
     return await Native.startDriftInLiveActivity(
       String(title || "Drift In"),
+      String(heading || "Drift In"),
       Math.max(60, Math.floor(Number(seconds) || 0))
     );
   } catch (e) {
