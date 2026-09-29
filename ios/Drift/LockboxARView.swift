@@ -88,6 +88,9 @@ class LockboxARView: UIView, ARSCNViewDelegate {
   /// for a moment, so a single good frame mid-relocalization can't flash it.
   private var normalSince: TimeInterval? = nil
   private var boxShown: Bool? = nil
+  private var resumedAt: CFTimeInterval? = nil
+  private var usedMapFallback = false
+  private static let mapFallbackAfter: CFTimeInterval = 3.0
   private var lastInside: Bool? = nil
 
   /// Raycast hits closer than this to the camera are the user's own hand,
@@ -240,22 +243,33 @@ class LockboxARView: UIView, ARSCNViewDelegate {
     sceneView?.session.pause()
   }
 
-  /// Camera back on after a pause. From the saved world map when there is one:
-  /// ARKit relocalizes against the room it already mapped and restores the
-  /// box's anchor exactly where it was saved. Until that has happened the box
-  /// is hidden (see the render loop) instead of drawn at a guess.
+  /// Camera back on after a pause.
+  ///
+  /// Fast path first: resume the same session without resetting. ARKit still
+  /// holds its map of the room and usually re-finds itself within a second,
+  /// with the anchor intact. The box stays hidden until tracking is solid (see
+  /// the render loop), so the brief re-finding is never drawn.
+  ///
+  /// If that hasn't worked within a few seconds — typically after the screen
+  /// was off for a long time — fall back to restarting from the saved world
+  /// map, which is slower to match but reliable.
   @objc func resumeSession() {
     guard let view = sceneView else { return }
     lastInside = nil
     normalSince = nil
     setBoxShown(false)
+    resumedAt = CACurrentMediaTime()
+    usedMapFallback = false
+    view.session.run(makeConfig(), options: [])
+  }
+
+  private func resumeFromSavedMap() {
+    guard let view = sceneView, let map = worldMap else { return }
+    usedMapFallback = true
+    normalSince = nil
     let config = makeConfig()
-    if isPlaced, let map = worldMap {
-      config.initialWorldMap = map
-      view.session.run(config, options: [.resetTracking, .removeExistingAnchors])
-    } else {
-      view.session.run(config, options: [])
-    }
+    config.initialWorldMap = map
+    view.session.run(config, options: [.resetTracking, .removeExistingAnchors])
   }
 
   private func setBoxShown(_ shown: Bool) {
@@ -498,8 +512,15 @@ class LockboxARView: UIView, ARSCNViewDelegate {
       var solid = false
       if case .normal = frame.camera.trackingState { solid = true }
       if solid { normalSince = normalSince ?? time } else { normalSince = nil }
-      let settled = normalSince.map { time - $0 >= 0.4 } ?? false
+      let settled = normalSince.map { time - $0 >= 0.2 } ?? false
       setBoxShown(settled && anchor != nil)
+      if settled && anchor != nil {
+        resumedAt = nil
+      } else if let r = resumedAt, !usedMapFallback, worldMap != nil,
+                CACurrentMediaTime() - r > Self.mapFallbackAfter {
+        DispatchQueue.main.async { self.resumeFromSavedMap() }
+        resumedAt = nil
+      }
 
       if settled && anchor != nil {
         captureMapIfDue(frame, now: time)

@@ -51,12 +51,13 @@ const KEY_PREFS   = "drift_lockbox_prefs";
  * it is not a usable window for "just checking one thing". Every display and
  * both notifications read from this, so it is the only place to change it.
  *
- * At five seconds this is genuinely only a reflex window — worth knowing that
- * a scheduled local notification is not precise to the second, so the "session
- * lost" alert can land a beat after the countdown hits zero. The forfeit itself
- * is wall-clock exact either way.
+ * Ten seconds: enough to find the box again on camera (which takes a moment
+ * to come back on and re-find the room) and set the phone down, still too
+ * short to do anything with it. A scheduled local notification is not precise
+ * to the second, so the "session lost" alert can land a beat after the
+ * countdown hits zero; the forfeit itself is wall-clock exact either way.
  */
-export const GRACE_SECONDS = 5;
+export const GRACE_SECONDS = 10;
 
 /** Shortest session worth running. Below this the ceremony costs more than the focus. */
 export const MIN_MINUTES = 5;
