@@ -208,6 +208,14 @@ async function ensureConfigured(userId) {
   if (!Purchases)            { rcInitError = "sdk_missing"; return false; }
   if (!rcConfigured) {
     try {
+      // The SDK's default handler sends its ERROR-level logs to console.error,
+      // which in a dev build throws a full-screen red LogBox over the app for
+      // expected outcomes like a restore with nothing to restore. Every failure
+      // it logs is also returned to our callers, which handle it — so the log
+      // is diagnostic only and goes to console.log.
+      Purchases.setLogHandler?.((level, message) => {
+        if (__DEV__) console.log(`[RevenueCat:${level}] ${message}`);
+      });
       Purchases.configure({ apiKey: RC_APPLE_KEY, appUserID: userId || undefined });
       rcConfigured = true;
       rcIdentified = userId || null;

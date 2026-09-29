@@ -51,8 +51,8 @@ import {
   resolveOffering, pickPackage, pickFamilyPackage, describeOffer, MAX_KIDS,
 } from "./useSubscription";
 
-const TERMS_URL   = "https://dilan-b.github.io/Drift/terms.html";
-const PRIVACY_URL = "https://dilan-b.github.io/Drift/privacy.html";
+const TERMS_URL   = "https://driftproductivity.com/terms";
+const PRIVACY_URL = "https://driftproductivity.com/privacy";
 
 // Marks the reveal as spent. Per install, not per user: it is a first-run
 // flourish, and a second account on the same phone does not need the ceremony.
@@ -272,7 +272,14 @@ export default function PaywallScreen({
     setRestoring(true);
     try {
       const result = await onRestore();
-      if (!result?.success) {
+      // A thrown StoreKit error (no network, App Store sign-in dismissed, a dev
+      // build with no sandbox account) is not the same as "nothing to restore".
+      if (!result?.success && result?.reason && !REASON_MSG[result.reason]) {
+        Alert.alert(
+          "Couldn't reach the App Store",
+          "Check you're signed in to the App Store and connected, then try again.",
+        );
+      } else if (!result?.success) {
         Alert.alert(
           "Nothing to restore",
           "We couldn't find a subscription on this Apple ID. If you subscribed with a different one, sign in to that Apple ID in Settings and try again.",
