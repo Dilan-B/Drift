@@ -19,7 +19,7 @@ import { FamilyDock, HistoryList, shortDate } from "./FamilyUI";
 import {
   fetchMyFamily, fetchFamilyChildren, fetchPendingApprovals, fetchChildrenBalances,
   fetchFamilyHistory, assignChildTask, approveChildTask, rejectChildTask, setChildAppPolicy,
-  fetchAppRequests, resolveAppRequest, setFamilyPin,
+  setFamilyPin,
 } from "./family";
 
 // Curated apps a parent can choose to keep available even when time runs out.
@@ -55,7 +55,6 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
   const [tab, setTab] = useState("home");
   const [refreshing, setRefreshing] = useState(false);
   const [history, setHistory] = useState([]);
-  const [appReqs, setAppReqs] = useState([]);
   const [showPin, setShowPin] = useState(false);
   const [pin, setPin] = useState("");
   const [pinBusy, setPinBusy] = useState(false);
@@ -80,9 +79,6 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
   const reloadHistory = useCallback(async (ids) => {
     setHistory(await fetchFamilyHistory(ids));
   }, []);
-  const reloadAppReqs = useCallback(async (ids) => {
-    setAppReqs(await fetchAppRequests(ids));
-  }, []);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -92,10 +88,10 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
       const kids = await fetchFamilyChildren(fam.id);
       setChildren(kids);
       const ids = kids.map((c) => c.user_id);
-      await Promise.all([reloadApprovals(ids), reloadBalances(ids), reloadHistory(ids), reloadAppReqs(ids)]);
+      await Promise.all([reloadApprovals(ids), reloadBalances(ids), reloadHistory(ids)]);
     }
     setLoading(false);
-  }, [userId, reloadApprovals, reloadBalances, reloadHistory, reloadAppReqs]);
+  }, [userId, reloadApprovals, reloadBalances, reloadHistory]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -116,12 +112,10 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
         () => { reloadApprovals(childIds); reloadHistory(childIds); })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" },
         () => { reloadBalances(childIds); })
-      .on("postgres_changes", { event: "*", schema: "public", table: "app_requests" },
-        () => { reloadAppReqs(childIds); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, childIds.join(","), reloadApprovals, reloadBalances, reloadHistory, reloadAppReqs]);
+  }, [userId, childIds.join(","), reloadApprovals, reloadBalances, reloadHistory]);
 
   // Live: a kid joining/leaving the family (family_members change) → reload the
   // roster so new kids appear WITHOUT a manual refresh. Runs even with zero kids
@@ -169,12 +163,6 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
     setBusyId(null);
   }
 
-  async function doResolveApp(id, approve) {
-    setAppReqs((prev) => prev.filter((r) => r.id !== id)); // optimistic
-    const res = await resolveAppRequest(id, approve);
-    if (!res.ok) reloadAppReqs(childIds);
-    else { reloadAppReqs(childIds); reloadBalances(childIds); }
-  }
 
   async function savePin() {
     setPinMsg("");
@@ -281,27 +269,6 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
           <TouchableOpacity style={[s.linkRow, { borderColor: t.ink.hairline }]} onPress={() => { setShowPin(true); setPinMsg(""); }}>
             <Text style={[s.linkText, { color: t.ink.mid }]}>Set parent PIN (for picking a kid's apps)</Text>
           </TouchableOpacity>
-        )}
-
-        {/* App requests */}
-        {appReqs.length > 0 && (
-          <>
-            <Text style={[s.sectionLabel, { color: t.ink.faint }]}>APP REQUESTS</Text>
-            {appReqs.map((r) => (
-              <View key={r.id} style={[s.approvalCard, { backgroundColor: t.paper.card, borderColor: t.earn.sage }]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.childName, { color: t.ink.deep }]}>{childName(r.child_id)}</Text>
-                  <Text style={[s.approvalTask, { color: t.ink.mid }]}>Wants to use "{r.app_label}"</Text>
-                </View>
-                <TouchableOpacity style={[s.rejectBtn, { borderColor: t.ink.border }]} onPress={() => doResolveApp(r.id, false)}>
-                  <Text style={[s.rejectText, { color: t.ink.mid }]}>Deny</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[s.approveBtn, { backgroundColor: t.earn.deep }, t.fx.glow]} onPress={() => doResolveApp(r.id, true)}>
-                  <Text style={[s.approveText, { color: onDeep }]}>Allow</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </>
         )}
 
         {/* Approvals */}
