@@ -138,8 +138,20 @@ serve(async (req: Request) => {
     // then finds the app inert has no idea why, and cannot fix it — only the
     // parent can. Refusing at the door with a reason the parent can act on is
     // the kinder failure.
-    const paidSeats = Math.max(0, Number((family as { seats?: number }).seats ?? 0));
-    if (paidSeats > 0 && (count ?? 0) >= paidSeats) {
+    //
+    // Seats come from public.family_seats(): the paid seats or a grant's,
+    // whichever is larger (schema_v19). 0 means the parent hasn't bought a
+    // family plan — refuse rather than add a child the family doesn't cover.
+    const { data: seatRow, error: seatErr } = await admin.rpc("family_seats", { p_family: family.id });
+    if (seatErr) {
+      console.error("join-family seats:", seatErr.message);
+      return json({ error: "lookup_failed" }, 500);
+    }
+    const paidSeats = Math.max(0, Number(seatRow ?? 0));
+    if (paidSeats === 0) {
+      return json({ success: false, reason: "no_plan" });
+    }
+    if ((count ?? 0) >= paidSeats) {
       return json({ success: false, reason: "no_seats", seats: paidSeats });
     }
 

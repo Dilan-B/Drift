@@ -1280,6 +1280,7 @@ function ChildJoinSlide({ onDone }) {
         // the parent can fix it. Saying "full" would send the kid to try again
         // forever.
         no_seats:     "Every seat in this family is taken. Ask your parent to add one in Drift, then try again.",
+        no_plan:      "Your parent needs to choose a Drift Family plan first. Try again once they have.",
         bad_name:     "Enter your name.",
         network:      "Network error. Check your connection.",
         session:      "Couldn't finish signing in. Try again.",

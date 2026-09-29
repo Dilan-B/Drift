@@ -185,7 +185,9 @@ export async function fetchFamilyHistory(childIds) {
     .eq("status", "approved")
     .is("deleted_at", null)
     .order("completed_at", { ascending: false })
-    .limit(100);
+    // Enough for a busy family's week of stats (see ParentShell), not just
+    // the visible history list.
+    .limit(300);
   if (error) { console.warn("fetchFamilyHistory:", error.message); return []; }
   return data || [];
 }

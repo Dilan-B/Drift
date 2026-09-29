@@ -12,6 +12,7 @@ import { getTheme, FF } from "./theme";
 
 export default function FamilyProfileModal({
   visible, onClose, dark, onToggleTheme, name, subtitle, onSignOut, onDeleteAccount,
+  children,   // account-specific sections (e.g. the parent's family code + PIN)
 }) {
   const t = getTheme(dark);
   // Text sitting on an earn.deep button: light on the dark-green (light theme),
@@ -47,6 +48,8 @@ export default function FamilyProfileModal({
             <Text style={[st.name, { color: t.ink.deep }]}>{name || "Your account"}</Text>
             {subtitle ? <Text style={[st.sub, { color: t.ink.mid }]}>{subtitle}</Text> : null}
           </View>
+
+          {children}
 
           <Text style={[st.section, { color: t.ink.faint }]}>APPEARANCE</Text>
           <View style={[st.segment, { borderColor: t.ink.border, backgroundColor: t.paper.card }]}>
