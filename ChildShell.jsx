@@ -16,7 +16,7 @@ import { supabase } from "./supabase";
 import { notifyTaskApproved } from "./notifications";
 import { fetchChildFamily, fetchChildTasks, submitChildTask } from "./family";
 import FamilyProfileModal from "./FamilyProfile";
-import ChildAppsModal from "./ChildAppsModal";
+import ParentPinPad from "./ParentPinPad";
 import { FamilyDock, HistoryList, shortDate } from "./FamilyUI";
 
 const ACTIVE = ["assigned", "submitted", "rejected"];
@@ -31,7 +31,6 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
   const [showProfile, setShowProfile] = useState(false);
   const [showApps, setShowApps] = useState(false);
   const [familyId, setFamilyId] = useState(null);
-  const [blockMode, setBlockMode] = useState("categories");
   const [tab, setTab] = useState("home");
   const [refreshing, setRefreshing] = useState(false);
   const seenApprovedRef = useRef(null); // approved task ids seen on previous load
@@ -58,7 +57,6 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
       if (mounted && fam) {
         if (fam.display_name) setName(fam.display_name);
         setFamilyId(fam.family_id || null);
-        setBlockMode(fam.app_policy?.mode === "custom" ? "custom" : "categories");
       }
       await loadTasks();
     })();
@@ -199,13 +197,12 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
         onDeleteAccount={onDeleteAccount}
       />
 
-      <ChildAppsModal
+      {/* Manage app access → parent PIN → Apple's app picker. No page between. */}
+      <ParentPinPad
         visible={showApps}
         onClose={() => setShowApps(false)}
         dark={dark}
         familyId={familyId}
-        childId={userId}
-        mode={blockMode}
       />
     </View>
   );

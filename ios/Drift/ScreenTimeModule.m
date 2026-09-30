@@ -53,6 +53,7 @@ RCT_EXTERN_METHOD(consumePendingHealthEarn:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(startDriftInLiveActivity:(NSString *)title
+                  heading:(NSString *)heading
                   seconds:(nonnull NSNumber *)seconds
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)

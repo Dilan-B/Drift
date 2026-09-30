@@ -18,11 +18,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import Svg, { Circle as SvgCircle } from "react-native-svg";
 import { FF, getTheme } from "./theme";
-import Slider from "@react-native-community/slider";
 import { selectionTick } from "./haptics";
 import { CheckIcon } from "./Icons";
 import Sprout, { LeafGlyph } from "./SproutArt";
 import LockboxScreen from "./LockboxScreen";
+import PlantSlider from "./PlantSlider";
 
 // Persisted in-progress session so the countdown survives backgrounding and even
 // an app kill — the timer is wall-clock based (an end timestamp), not a ticking
@@ -69,112 +69,6 @@ function ProgressRing({ progress, accent, track }) {
   );
 }
 
-// ── Length slider with sprouting leaves along the track ──────
-function PlantSlider({
-  value,
-  onValueChange,
-  minimumValue,
-  maximumValue,
-  step,
-  accent,
-  track,
-  soil,
-  textColor,
-  leftLabel,
-  rightLabel,
-}) {
-  const pct = Math.max(0, Math.min(1, (value - minimumValue) / (maximumValue - minimumValue)));
-  const leaves = [0.2, 0.4, 0.6, 0.8];
-
-  // Feedback on each step crossing: a haptic tick plus a quick swell of the
-  // filled track. Fired only when the value actually changes step, so dragging
-  // within one step stays silent instead of machine-gunning.
-  const lastValRef = useRef(value);
-  const pulse = useRef(new Animated.Value(0)).current;
-
-  const handleChange = (v) => {
-    if (v !== lastValRef.current) {
-      lastValRef.current = v;
-      selectionTick();
-      pulse.setValue(1);
-      Animated.timing(pulse, {
-        toValue: 0, duration: 180, useNativeDriver: false,
-      }).start();
-    }
-    onValueChange(v);
-  };
-
-  return (
-    <View style={{ marginTop: 2 }}>
-      <View style={{ height: 34, justifyContent: "center", marginHorizontal: 2 }}>
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            left: 4,
-            right: 4,
-            height: 8,
-            borderRadius: 8,
-            backgroundColor: track,
-            borderWidth: 1,
-            borderColor: soil,
-            overflow: "hidden",
-          }}
-        >
-          <Animated.View style={{
-            width: `${pct * 100}%`,
-            height: "100%",
-            backgroundColor: accent,
-            borderRadius: 8,
-            // Brief brightening on each step — visible feedback for anyone
-            // with system haptics turned off.
-            opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.62] }),
-          }} />
-        </View>
-        {leaves.map((stop, i) => {
-          const grown = pct >= stop;
-          return (
-            <View
-              key={stop}
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                left: `${stop * 100}%`,
-                top: i % 2 === 0 ? 6 : 18,
-                width: 13,
-                height: 7,
-                borderTopLeftRadius: 9,
-                borderBottomRightRadius: 9,
-                backgroundColor: grown ? accent : soil,
-                opacity: grown ? 0.74 : 0.4,
-                transform: [
-                  { translateX: -6 },
-                  { rotate: i % 2 === 0 ? "-28deg" : "28deg" },
-                ],
-              }}
-            />
-          );
-        })}
-        <Slider
-          minimumValue={minimumValue}
-          maximumValue={maximumValue}
-          step={step}
-          value={value}
-          onValueChange={handleChange}
-          minimumTrackTintColor="transparent"
-          maximumTrackTintColor="transparent"
-          thumbTintColor={accent}
-          style={{ width: "100%", height: 34 }}
-        />
-      </View>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: -2 }}>
-        <Text style={{ fontFamily: FF.body, fontSize: 10, color: textColor }}>{leftLabel}</Text>
-        <Text style={{ fontFamily: FF.body, fontSize: 10, color: textColor }}>{rightLabel}</Text>
-      </View>
-    </View>
-  );
-}
-
 // Most screen time a single Drift In session can pay out, however long it ran.
 // Sessions themselves are still unrestricted — a 5-hour deep-work block is a
 // fine thing to do, it just doesn't buy more than an hour of phone.
@@ -182,7 +76,7 @@ const MAX_EARN_MINS = 60;
 
 // ── Main component ────────────────────────────────────────────
 // Memoized: stays mounted in the tab filmstrip; see SocialScreen note.
-function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSessionEnd, dark = false }) {
+function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSessionEnd, onImmersiveChange, dark = false }) {
   const theme = getTheme(dark);
   // Setup-phase colors follow the app theme; active/done always use dark forest
   const [phase,   setPhase]   = useState("setup"); // setup | active | done
@@ -360,14 +254,54 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
   // ──────────────────────────────────────────────────────────
   const { ink, paper, earn, fx } = theme;
 
+  // Shared by both setup screens so switching Timer ↔ Lockbox never moves the
+  // control under the user's thumb.
+  const modePicker = (
+    <View style={{
+      flexDirection: "row", gap: 6, padding: 4, borderRadius: 13,
+      backgroundColor: dark ? "rgba(232,245,236,0.06)" : paper.sand,
+      marginBottom: 22,
+    }}>
+      {[
+        { key: "timer",   label: "Timer" },
+        { key: "lockbox", label: "Lockbox" },
+      ].map(opt => {
+        const on = mode === opt.key;
+        return (
+          <TouchableOpacity
+            key={opt.key}
+            onPress={() => { selectionTick(); setMode(opt.key); }}
+            style={{
+              flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: "center",
+              backgroundColor: on ? paper.card : "transparent",
+            }}
+          >
+            <Text style={{
+              fontFamily: on ? FF.bodyMed : FF.body, fontSize: 13.5,
+              color: on ? ink.deep : ink.mid,
+            }}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
   // Lockbox runs its own state machine. Only reachable from setup, so a live
   // timer session can never be swapped out from under the user.
   if (mode === "lockbox") {
     return (
       <LockboxScreen
         dark={dark}
+        modePicker={modePicker}
+        onImmersiveChange={onImmersiveChange}
         onClose={() => setMode("timer")}
-        onStarted={() => onSessionStart?.({ task: "Lockbox", durationSeconds: 0 })}
+        onStarted={(sess) => onSessionStart?.({
+          heading: "Lockbox",
+          task: sess?.task || "Phone in the box",
+          durationSeconds: Math.max(60, Math.round(((sess?.endsAt || 0) - Date.now()) / 1000)),
+        })}
         onEnded={() => onSessionEnd?.()}
         onCompleted={(rec) => {
           // Reuse the Drift In payout path so credits, XP and the balance
@@ -409,37 +343,7 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Mode picker. Two ways to commit: a timer you promise to honour, or
-              a box you physically put the phone into. Same tab, same payout. */}
-          <View style={{
-            flexDirection: "row", gap: 6, padding: 4, borderRadius: 13,
-            backgroundColor: dark ? "rgba(232,245,236,0.06)" : paper.sand,
-            marginBottom: 22,
-          }}>
-            {[
-              { key: "timer",   label: "Timer" },
-              { key: "lockbox", label: "Lockbox" },
-            ].map(opt => {
-              const on = mode === opt.key;
-              return (
-                <TouchableOpacity
-                  key={opt.key}
-                  onPress={() => { selectionTick(); setMode(opt.key); }}
-                  style={{
-                    flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: "center",
-                    backgroundColor: on ? paper.card : "transparent",
-                  }}
-                >
-                  <Text style={{
-                    fontFamily: on ? FF.bodyMed : FF.body, fontSize: 13.5,
-                    color: on ? ink.deep : ink.mid,
-                  }}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {modePicker}
 
           {/* Header — editorial */}
           <View style={{ marginBottom: 26 }}>

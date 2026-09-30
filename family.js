@@ -143,47 +143,6 @@ export function setChildAppPolicy(childId, allow, mode = "categories") {
     { child_id: childId, app_policy: { mode, allow: allow || [] } });
 }
 
-// ── App-access requests (child asks, parent approves) ────────
-// Child creates a request directly (RLS: own insert).
-export async function createAppRequest(familyId, childId, appLabel, kind = "allow") {
-  const label = (appLabel || "").trim().slice(0, 80);
-  if (!familyId || !childId || !label) return { ok: false, reason: "bad_input" };
-  const { data, error } = await supabase
-    .from("app_requests")
-    .insert({ family_id: familyId, child_id: childId, app_label: label, kind })
-    .select().single();
-  if (error) { console.warn("createAppRequest:", error.message); return { ok: false, reason: "failed" }; }
-  return { ok: true, request: data };
-}
-
-// Child: their own requests + statuses.
-export async function fetchMyAppRequests(childId) {
-  if (!childId) return [];
-  const { data, error } = await supabase
-    .from("app_requests")
-    .select("id, app_label, kind, status, created_at")
-    .eq("child_id", childId).is("removed_at", null)
-    .order("created_at", { ascending: false }).limit(50);
-  if (error) { console.warn("fetchMyAppRequests:", error.message); return []; }
-  return data || [];
-}
-
-// Parent: pending requests across their kids.
-export async function fetchAppRequests(childIds) {
-  if (!childIds?.length) return [];
-  const { data, error } = await supabase
-    .from("app_requests")
-    .select("id, child_id, app_label, kind, status, created_at")
-    .in("child_id", childIds).eq("status", "pending").is("removed_at", null)
-    .order("created_at", { ascending: true });
-  if (error) { console.warn("fetchAppRequests:", error.message); return []; }
-  return data || [];
-}
-
-export function resolveAppRequest(requestId, approve) {
-  return invokeFamilyFn("resolve-app-request", { request_id: requestId, approve: !!approve });
-}
-
 // ── Parent PIN (gates the native app picker on the child device) ──
 export function setFamilyPin(pin) {
   return invokeFamilyFn("family-pin", { action: "set", pin });
@@ -226,7 +185,9 @@ export async function fetchFamilyHistory(childIds) {
     .eq("status", "approved")
     .is("deleted_at", null)
     .order("completed_at", { ascending: false })
-    .limit(100);
+    // Enough for a busy family's week of stats (see ParentShell), not just
+    // the visible history list.
+    .limit(300);
   if (error) { console.warn("fetchFamilyHistory:", error.message); return []; }
   return data || [];
 }

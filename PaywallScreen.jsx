@@ -45,14 +45,14 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FF } from "./theme";
-import { SparkleIcon, CheckIcon, ShieldKeyIcon, ChartIcon, LockIcon } from "./Icons";
+import { CheckIcon, LockIcon } from "./Icons";
 import { Spinner } from "./Skeleton";
 import {
   resolveOffering, pickPackage, pickFamilyPackage, describeOffer, MAX_KIDS,
 } from "./useSubscription";
 
-const TERMS_URL   = "https://dilan-b.github.io/Drift/terms.html";
-const PRIVACY_URL = "https://dilan-b.github.io/Drift/privacy.html";
+const TERMS_URL   = "https://driftproductivity.com/terms";
+const PRIVACY_URL = "https://driftproductivity.com/privacy";
 
 // Marks the reveal as spent. Per install, not per user: it is a first-run
 // flourish, and a second account on the same phone does not need the ceremony.
@@ -79,15 +79,6 @@ const FAMILY_BASE     = 4.99;
 const FAMILY_PER_KID  = 3.00;
 const familyEstimate = (kids) => FAMILY_BASE + (FAMILY_PER_KID * kids);
 
-// What the subscription actually buys. Written as capabilities rather than
-// feature names — "AI-valued rewards" means nothing to someone who has used the
-// app for ninety seconds.
-const FEATURES = [
-  { Icon: ShieldKeyIcon, title: "Your apps stay locked", desc: "Until you've earned the time back" },
-  { Icon: SparkleIcon,   title: "Proof, not the honour system", desc: "Photo and video checks on every task" },
-  { Icon: ChartIcon,     title: "Streaks, levels and the Grove", desc: "Your progress, and your friends'" },
-];
-
 export default function PaywallScreen({
   onPurchase, onRestore, onSignOut, onRedeemCode, offerings, introEligible = null,
   plan = null, accountType = "personal", dark = false,
@@ -104,7 +95,12 @@ export default function PaywallScreen({
   //
   // Both remain reachable from the selector either way — this only changes
   // where each account STARTS.
-  const [kids, setKids] = useState(accountType === "parent" ? 1 : 0);
+  //
+  // The plan now follows the account type outright: a personal account only
+  // sees Pro, a parent only sees Family (1–MAX_KIDS). Offering both on one
+  // screen made each audience wade through the other's options.
+  const isFamily = accountType === "parent";
+  const [kids, setKids] = useState(isFamily ? 1 : 0);
   // Defaults to ANNUAL on purpose. Annual subscribers retain ~44% at 12 months
   // against ~17% for monthly — roughly a 3x LTV gap at the same price — and for
   // Drift's under-18 users it clears Apple's Ask to Buy parental approval once
@@ -257,7 +253,14 @@ export default function PaywallScreen({
     setRestoring(true);
     try {
       const result = await onRestore();
-      if (!result?.success) {
+      // A thrown StoreKit error (no network, App Store sign-in dismissed, a dev
+      // build with no sandbox account) is not the same as "nothing to restore".
+      if (!result?.success && result?.reason && !REASON_MSG[result.reason]) {
+        Alert.alert(
+          "Couldn't reach the App Store",
+          "Check you're signed in to the App Store and connected, then try again.",
+        );
+      } else if (!result?.success) {
         Alert.alert(
           "Nothing to restore",
           "We couldn't find a subscription on this Apple ID. If you subscribed with a different one, sign in to that Apple ID in Settings and try again.",
@@ -318,14 +321,7 @@ export default function PaywallScreen({
             }}>
               {plan.minutesPerDay} minutes a day
             </Text>
-            <Text style={{
-              fontFamily: FF.body, fontSize: 15, color: ink.mid,
-              lineHeight: 22, marginBottom: 28,
-            }}>
-              That's what your {plan.taskCount === 1 ? "task is" : "tasks are"} worth once
-              you've done {plan.taskCount === 1 ? "it" : "them"}. Everything else on your
-              phone stays locked until you have.
-            </Text>
+            <View style={{ height: 14 }} />
 
             <View style={{
               backgroundColor: paper.card, borderRadius: 20, padding: 20,
@@ -369,272 +365,188 @@ export default function PaywallScreen({
   }
 
   // ── Beat two: the offer ───────────────────────────────────────────────────
+  // Deliberately sparse. The simplest paywalls convert best: a headline, three
+  // short benefits, the plan, one button. Everything Apple requires is still
+  // here (price + period on the plan, trial terms and auto-renewal in the one
+  // line under the button, Restore, Terms, Privacy) — just not repeated.
+  const periodWord = perPeriod === "/year" ? "year" : "month";
+  const terms = trial
+    ? `${trial} days free, then ${price}/${periodWord}. Renews automatically — cancel anytime in Settings.`
+    : `${price}/${periodWord}. Renews automatically — cancel anytime in Settings.`;
+  const bullets = isFamily
+    ? ["You set the rules", "They earn screen time with real tasks", "An account for every kid"]
+    : ["Apps stay locked until you earn time", "Photo proof on every task", "Streaks, levels and friends"];
+
+  const planTile = (id, label, sub, on, onPress, badge) => (
+    <TouchableOpacity
+      key={id}
+      onPress={onPress}
+      activeOpacity={0.85}
+      style={{
+        flex: 1, paddingVertical: 14, paddingHorizontal: 14,
+        borderRadius: 16, borderWidth: 1.6,
+        borderColor: on ? earn.green : paper.border,
+        backgroundColor: on ? earn.sageLo : paper.card,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: on ? earn.green : ink.deep }}>{label}</Text>
+        {badge ? (
+          <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: earn.deep }}>
+            <Text style={{ fontFamily: FF.bodyBold, fontSize: 9, color: onDeep, letterSpacing: 0.6 }}>{badge}</Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={{ fontFamily: FF.display, fontSize: 20, color: ink.deep, marginTop: 4 }}>{sub}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: paper.bg }}>
       <StatusBar barStyle={dark ? "light-content" : "dark-content"} />
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: 26,
-          paddingTop: Platform.OS === "ios" ? 72 : 40,
-          paddingBottom: 40,
+          paddingTop: Platform.OS === "ios" ? 88 : 48,
+          paddingBottom: 32,
           flexGrow: 1,
         }}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{
+          flex: 1,
           opacity: entrance,
           transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
         }}>
           <Text style={{
-            fontFamily: FF.kicker, fontSize: 10, color: earn.green,
-            letterSpacing: 2.6, marginBottom: 10,
+            fontFamily: FF.display, fontSize: 38, color: ink.deep,
+            letterSpacing: -0.6, lineHeight: 44, marginBottom: 26,
           }}>
-            {kids > 0 ? "ONE STEP LEFT" : plan ? "ONE STEP LEFT" : "ONE LAST THING"}
-          </Text>
-          <Text style={{
-            fontFamily: FF.display, fontSize: 36, color: ink.deep,
-            letterSpacing: -0.6, lineHeight: 42, marginBottom: 10,
-          }}>
-            {/* `trial` alone, not `isFreeTrial || trial`. isFreeTrial describes
-                the product, so an ineligible user satisfied the condition with
-                trial === 0 and got "Start with 0 free days". */}
-            {trial ? `Start with ${trial} free days` : "Unlock Drift"}
-          </Text>
-          {/* The plan stays visible on the offer, not just on the reveal. The
-              user is deciding whether to pay for a specific thing they built —
-              taking it off screen at the moment of the ask turns it back into a
-              generic subscription prompt. */}
-          <Text style={{
-            fontFamily: FF.body, fontSize: 15, color: ink.mid,
-            lineHeight: 22, marginBottom: 30,
-          }}>
-            {plan
-              ? `Your ${plan.taskCount} ${plan.taskCount === 1 ? "task is" : "tasks are"} set up and worth ${plan.minutesPerDay} minutes a day. Drift only works if the lock is real — that takes a server, an AI reviewing your proof, and someone keeping it running.`
-              : "Drift only works if the lock is real. That takes a server, an AI reviewing your proof, and someone keeping it running."}
+            {/* `trial` alone, not `isFreeTrial || trial`: isFreeTrial describes
+                the product, and read "Start with 0 free days" to the ineligible. */}
+            {isFamily
+              ? (trial ? `Try Drift Family free for ${trial} days` : "Drift Family")
+              : (trial ? `Try Drift free for ${trial} days` : "Unlock Drift")}
           </Text>
 
-          {/* What you get */}
-          <View style={{ gap: 16, marginBottom: 30 }}>
-            {FEATURES.map(({ Icon, title, desc }) => (
-              <View key={title} style={{ flexDirection: "row", alignItems: "flex-start", gap: 14 }}>
+          <View style={{ gap: 14, marginBottom: 32 }}>
+            {bullets.map((b) => (
+              <View key={b} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <View style={{
-                  width: 34, height: 34, borderRadius: 17,
-                  backgroundColor: earn.sageLo,
+                  width: 24, height: 24, borderRadius: 12, backgroundColor: earn.sageLo,
                   alignItems: "center", justifyContent: "center",
                 }}>
-                  <Icon size={17} color={earn.green} />
+                  <CheckIcon size={13} color={earn.green} />
                 </View>
-                <View style={{ flex: 1, paddingTop: 2 }}>
-                  <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: ink.deep }}>{title}</Text>
-                  <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, marginTop: 2, lineHeight: 18 }}>
-                    {desc}
-                  </Text>
-                </View>
+                <Text style={{ fontFamily: FF.bodyMed, fontSize: 16, color: ink.deep, flex: 1 }}>{b}</Text>
               </View>
             ))}
           </View>
 
-          {/* Who is this for. Children never pay for their own account — a
-              parent buys a seat per child and every child in the family
-              inherits access. */}
-          <Text style={{
-            fontFamily: FF.kicker, fontSize: 9, color: ink.faint,
-            letterSpacing: 2, marginBottom: 10,
-          }}>
-            WHO'S USING DRIFT
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
-            {[0, 1, 2, 3, 4, 5].slice(0, MAX_KIDS + 1).map(n => {
-              const on = kids === n;
-              return (
-                <TouchableOpacity
-                  key={n}
-                  onPress={() => setKids(n)}
-                  activeOpacity={0.8}
-                  style={{
-                    paddingVertical: 10, paddingHorizontal: 14,
-                    borderRadius: 12, borderWidth: 1.4,
-                    borderColor: on ? earn.green : paper.border,
-                    backgroundColor: on ? earn.sageLo : "transparent",
-                  }}
-                >
-                  <Text style={{
-                    fontFamily: FF.bodyMed, fontSize: 13,
-                    color: on ? earn.green : ink.mid,
-                  }}>
-                    {n === 0 ? "Just me" : n === 1 ? "1 kid" : `${n} kids`}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          {kids > 0 && (
-            <Text style={{
-              fontFamily: FF.body, fontSize: 12, color: ink.mid,
-              lineHeight: 18, marginTop: -12, marginBottom: 18,
-            }}>
-              Your {kids === 1 ? "child gets their" : "children get"} own account
-              at no extra charge beyond the seat. You can change this later in
-              Settings — Apple prorates the difference.
-            </Text>
-          )}
-
-          {/* Billing period. Solo only — family tiers are monthly-only products,
-              so offering a toggle there would advertise something StoreKit
-              cannot sell. */}
-          {kids === 0 && annualOffered && (
-            <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
-              {[
-                { id: "annual",  label: "Yearly",  sub: annual?.product?.priceString || FALLBACK_ANNUAL },
-                { id: "monthly", label: "Monthly", sub: monthly?.product?.priceString || FALLBACK_MONTHLY },
-              ].map(opt => {
-                const on = effBilling === opt.id;
-                return (
-                  <TouchableOpacity
-                    key={opt.id}
-                    onPress={() => setBilling(opt.id)}
-                    activeOpacity={0.85}
-                    style={{
-                      flex: 1, paddingVertical: 14, paddingHorizontal: 14,
-                      borderRadius: 16, borderWidth: 1.6,
-                      borderColor: on ? earn.green : paper.border,
-                      backgroundColor: on ? earn.sageLo : paper.card,
-                    }}
-                  >
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: on ? earn.green : ink.deep }}>
-                        {opt.label}
+          {/* The plan. Family: how many kids (children never pay; the parent
+              buys a seat per child). Personal: yearly or monthly. */}
+          {isFamily ? (
+            <>
+              <View style={{
+                flexDirection: "row", gap: 6, padding: 4, borderRadius: 14, marginBottom: 12,
+                backgroundColor: dark ? "rgba(232,245,236,0.06)" : "#EDEEE8",
+              }}>
+                {Array.from({ length: MAX_KIDS }, (_, i) => i + 1).map(n => {
+                  const on = kids === n;
+                  return (
+                    <TouchableOpacity
+                      key={n}
+                      onPress={() => setKids(n)}
+                      activeOpacity={0.8}
+                      accessibilityLabel={`${n} ${n === 1 ? "kid" : "kids"}`}
+                      style={{
+                        flex: 1, paddingVertical: 10, borderRadius: 11, alignItems: "center",
+                        backgroundColor: on ? paper.card : "transparent",
+                        borderWidth: on ? 1.4 : 0, borderColor: earn.green,
+                      }}
+                    >
+                      <Text style={{ fontFamily: on ? FF.bodyBold : FF.bodyMed, fontSize: 15, color: on ? earn.green : ink.mid }}>
+                        {n}
                       </Text>
-                      {/* Only rendered off two REAL prices — never a hardcoded claim. */}
-                      {opt.id === "annual" && annualSavingsPct > 0 && (
-                        <View style={{
-                          paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
-                          backgroundColor: earn.deep,
-                        }}>
-                          <Text style={{ fontFamily: FF.bodyBold, fontSize: 9, color: onDeep, letterSpacing: 0.6 }}>
-                            SAVE {annualSavingsPct}%
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 3 }}>
-                      {opt.sub}{opt.id === "annual" ? " a year" : " a month"}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+                      <Text style={{ fontFamily: FF.body, fontSize: 10, color: on ? earn.green : ink.faint }}>
+                        {n === 1 ? "kid" : "kids"}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <View style={{ flexDirection: "row" }}>
+                {planTile("family", `${kids} ${kids === 1 ? "kid" : "kids"}`, `${price}/mo`, true, () => {})}
+              </View>
+            </>
+          ) : annualOffered ? (
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              {/* The savings badge is computed from the two live prices, never hardcoded. */}
+              {planTile("annual", "Yearly", `${annual?.product?.priceString || FALLBACK_ANNUAL}/yr`,
+                effBilling === "annual", () => setBilling("annual"),
+                annualSavingsPct > 0 ? `SAVE ${annualSavingsPct}%` : null)}
+              {planTile("monthly", "Monthly", `${monthly?.product?.priceString || FALLBACK_MONTHLY}/mo`,
+                effBilling === "monthly", () => setBilling("monthly"))}
+            </View>
+          ) : (
+            <View style={{ flexDirection: "row" }}>
+              {planTile("monthly", "Monthly", `${price}/mo`, true, () => {})}
             </View>
           )}
 
-          {/* The offer. Apple requires the price, the period, the trial length
-              and what it converts to, all BEFORE the purchase button. */}
-          <View style={{
-            backgroundColor: paper.card,
-            borderRadius: 20, padding: 20, marginBottom: 18,
-            borderWidth: 1.5, borderColor: earn.green,
-          }}>
-            <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
-              <Text style={{ fontFamily: FF.bodyMed, fontSize: 16, color: ink.deep }}>
-                {kids > 0 ? `Drift Family · ${kids} ${kids === 1 ? "kid" : "kids"}` : "Drift Pro"}
-              </Text>
-              <Text style={{ fontFamily: FF.display, fontSize: 26, color: ink.deep, letterSpacing: -0.4 }}>
-                {price}
-                <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid }}>{perPeriod}</Text>
-              </Text>
-            </View>
-            <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, marginTop: 8, lineHeight: 19 }}>
-              {trial
-                ? `Free for ${trial} days, then ${price} ${perPeriod === "/year" ? "per year" : "per month"}. Cancel any time before the trial ends and you won't be charged.`
-                : `${price} ${perPeriod === "/year" ? "per year" : "per month"}.`}
-              {priceIsEstimate ? " Exact price is confirmed by the App Store before you pay." : ""}
-            </Text>
-          </View>
+          <View style={{ flex: 1, minHeight: 28 }} />
 
           <TouchableOpacity
             onPress={handlePurchase}
             disabled={busy}
             activeOpacity={0.85}
             style={{
-              paddingVertical: 17, borderRadius: 16,
+              paddingVertical: 18, borderRadius: 16,
               backgroundColor: busy ? earn.sageLo : earn.deep,
               alignItems: "center", justifyContent: "center",
-              flexDirection: "row", gap: 8,
             }}
           >
             {purchasing
               ? <Spinner size={22} color={onDeep} />
-              : (
-                <>
-                  <Text style={{ fontFamily: FF.bodyBold, fontSize: 13, color: onDeep, letterSpacing: 1.6 }}>
-                    {trial ? `START MY ${trial} FREE DAYS` : "SUBSCRIBE"}
-                  </Text>
-                  <CheckIcon size={14} color={onDeep} />
-                </>
-              )}
-          </TouchableOpacity>
-
-          {/* Auto-renewal disclosure. Required verbatim-ish by 3.1.2. */}
-          <Text style={{
-            fontFamily: FF.body, fontSize: 11, color: ink.faint,
-            textAlign: "center", lineHeight: 17, marginTop: 14,
-          }}>
-            Renews automatically at {price}{perPeriod} until cancelled. Cancel
-            any time in Settings › Apple ID › Subscriptions. Payment is charged
-            to your Apple ID.
-          </Text>
-
-          {/* Restore — mandatory. */}
-          <TouchableOpacity
-            onPress={handleRestore}
-            disabled={busy}
-            style={{ paddingVertical: 16, alignItems: "center" }}
-          >
-            {restoring
-              ? <Spinner size={16} color={ink.mid} />
-              : <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: earn.green }}>
-                  Restore purchase
+              : <Text style={{ fontFamily: FF.bodyBold, fontSize: 16, color: onDeep }}>
+                  {trial ? "Start free trial" : "Continue"}
                 </Text>}
           </TouchableOpacity>
 
-          {/* Cohort codes. Deliberately quiet — this is for people arriving
-              from a partner programme who were given a code, not a discount to
-              go hunting for. It has to live here regardless: this screen is the
-              only thing a non-subscriber ever sees, so a study participant has
-              no other route to the place they redeem. */}
-          {!!onRedeemCode && (
-            <TouchableOpacity
-              onPress={onRedeemCode}
-              disabled={busy}
-              style={{ paddingVertical: 10, alignItems: "center", marginBottom: 6 }}
-            >
-              <Text style={{ fontFamily: FF.body, fontSize: 12.5, color: ink.faint }}>
-                Have a cohort code?
-              </Text>
-            </TouchableOpacity>
-          )}
+          {/* Apple 3.1.2: trial length, what it converts to, auto-renewal, how to cancel. */}
+          <Text style={{
+            fontFamily: FF.body, fontSize: 11, color: ink.faint,
+            textAlign: "center", lineHeight: 16, marginTop: 12,
+          }}>
+            {terms}{priceIsEstimate ? " Final price shown by the App Store." : ""}
+          </Text>
 
-          {/* Legal links — mandatory. */}
-          <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6 }}>
-            <TouchableOpacity onPress={() => open(TERMS_URL)}>
-              <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.faint, textDecorationLine: "underline" }}>
-                Terms of Use
-              </Text>
+          {/* Restore, Terms, Privacy (all mandatory), cohort code, sign out — one quiet row. */}
+          <View style={{
+            flexDirection: "row", flexWrap: "wrap", justifyContent: "center",
+            columnGap: 16, rowGap: 6, marginTop: 18,
+          }}>
+            <TouchableOpacity onPress={handleRestore} disabled={busy}>
+              {restoring
+                ? <Spinner size={14} color={ink.mid} />
+                : <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid }}>Restore</Text>}
             </TouchableOpacity>
-            <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.faint }}>·</Text>
+            <TouchableOpacity onPress={() => open(TERMS_URL)}>
+              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>Terms</Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => open(PRIVACY_URL)}>
-              <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.faint, textDecorationLine: "underline" }}>
-                Privacy Policy
-              </Text>
+              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>Privacy</Text>
+            </TouchableOpacity>
+            {!!onRedeemCode && (
+              <TouchableOpacity onPress={onRedeemCode} disabled={busy}>
+                <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>Have a code?</Text>
+              </TouchableOpacity>
+            )}
+            {/* The way out: this paywall has no dismiss, so sign-out must exist. */}
+            <TouchableOpacity onPress={onSignOut}>
+              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>Sign out</Text>
             </TouchableOpacity>
           </View>
-
-          {/* The way out. Not a dismiss — this paywall has none — but a user
-              must never be trapped in an account they can't leave. */}
-          <TouchableOpacity onPress={onSignOut} style={{ paddingVertical: 18, alignItems: "center" }}>
-            <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>
-              Sign out
-            </Text>
-          </TouchableOpacity>
         </Animated.View>
       </ScrollView>
     </View>

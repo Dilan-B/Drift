@@ -51,16 +51,17 @@ const KEY_PREFS   = "drift_lockbox_prefs";
  * it is not a usable window for "just checking one thing". Every display and
  * both notifications read from this, so it is the only place to change it.
  *
- * At five seconds this is genuinely only a reflex window — worth knowing that
- * a scheduled local notification is not precise to the second, so the "session
- * lost" alert can land a beat after the countdown hits zero. The forfeit itself
- * is wall-clock exact either way.
+ * Ten seconds: enough to find the box again on camera (which takes a moment
+ * to come back on and re-find the room) and set the phone down, still too
+ * short to do anything with it. A scheduled local notification is not precise
+ * to the second, so the "session lost" alert can land a beat after the
+ * countdown hits zero; the forfeit itself is wall-clock exact either way.
  */
-export const GRACE_SECONDS = 5;
+export const GRACE_SECONDS = 10;
 
 /** Shortest session worth running. Below this the ceremony costs more than the focus. */
 export const MIN_MINUTES = 5;
-export const MAX_MINUTES = 180;
+export const MAX_MINUTES = 300;
 
 /**
  * Screen-time minutes earned per minute in the box.
@@ -71,10 +72,22 @@ export const MAX_MINUTES = 180;
  */
 export const EARN_RATIO = 0.5;
 
+/**
+ * Most screen time one Lockbox session can pay out, however long it ran.
+ * MIRRORS MAX_EARN_MINS in DriftInScreen.jsx — the two are the same deal with a
+ * different commitment device, so a 5-hour box must not out-earn a 5-hour
+ * focus session.
+ */
+export const MAX_REWARD_MINUTES = 60;
+
+/** What a session of `minutes` pays if it finishes. The one place this is computed. */
+export const rewardFor = (minutes) =>
+  Math.min(MAX_REWARD_MINUTES, Math.max(1, Math.round(minutes * EARN_RATIO)));
+
 export const DEFAULT_PREFS = {
   /** Scales the movement threshold. 1.0 is the native default (~0.08 G). */
   sensitivity: 1.0,
-  lastDurationMinutes: 25,
+  lastDurationMinutes: 30,
 };
 
 export const isAvailable = () =>
@@ -116,6 +129,29 @@ export async function currentMagnitude() {
   try { return await Native.currentMagnitude(); } catch { return null; }
 }
 
+/**
+ * Start logging the accelerometer on the motion coprocessor so a session can
+ * run with the screen off. Resolves { recording: bool }. Without it (no
+ * permission, old device) the session falls back to keeping the screen on.
+ */
+export async function startRecording(seconds) {
+  if (!isAvailable() || typeof Native.startRecording !== "function") return { recording: false };
+  try { return await Native.startRecording(Math.round(seconds)); }
+  catch { return { recording: false }; }
+}
+
+/**
+ * Judge a screen-off stretch from the recording.
+ * Resolves { available, breachAt: ms|null, checkedUntil: ms|null }.
+ * `checkedUntil` can fall short of `toMs` — the recording lags real time by up
+ * to a few minutes — and the remainder has to be checked again later.
+ */
+export async function checkRecorded(fromMs, toMs) {
+  if (!isAvailable() || typeof Native.checkRecorded !== "function") return { available: false };
+  try { return await Native.checkRecorded(Math.round(fromMs), Math.round(toMs), GRACE_SECONDS); }
+  catch { return { available: false }; }
+}
+
 // ── Preferences ──────────────────────────────────────────────
 export async function getPrefs() {
   try {
@@ -151,7 +187,7 @@ export async function startSession({ minutes, task = "" }) {
     endsAt: now + mins * 60_000,
     minutes: mins,
     task: String(task || "").trim(),
-    rewardMinutes: Math.max(1, Math.round(mins * EARN_RATIO)),
+    rewardMinutes: rewardFor(mins),
     // Set when the phone leaves the box; cleared when it comes back.
     disturbedAt: null,
     breaches: 0,

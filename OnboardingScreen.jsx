@@ -1014,7 +1014,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           <View style={styles.stepBadge}><WaveIcon size={24} color={ACCENT} /></View>
           <Text style={styles.question}>Enter your code</Text>
           <Text style={styles.questionSub}>
-            We sent an 8-digit code to {verificationEmail}. Enter it below to finish creating your Drift account.
+            We emailed an 8-digit code to {verificationEmail}. Enter it below — or tap the link in that email on this phone.
           </Text>
 
           <View style={styles.authForm}>
@@ -1287,6 +1287,7 @@ function ChildJoinSlide({ onDone }) {
         // the parent can fix it. Saying "full" would send the kid to try again
         // forever.
         no_seats:     "Every seat in this family is taken. Ask your parent to add one in Drift, then try again.",
+        no_plan:      "Your parent needs to choose a Drift Family plan first. Try again once they have.",
         bad_name:     "Enter your name.",
         network:      "Network error. Check your connection.",
         session:      "Couldn't finish signing in. Try again.",

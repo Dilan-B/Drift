@@ -16,10 +16,11 @@ import { supabase } from "./supabase";
 import { notifyChildSubmittedTask } from "./notifications";
 import FamilyProfileModal from "./FamilyProfile";
 import { FamilyDock, HistoryList, shortDate } from "./FamilyUI";
+import { FamilyWeekCard, useFamilyWeek } from "./FamilyStats";
 import {
   fetchMyFamily, fetchFamilyChildren, fetchPendingApprovals, fetchChildrenBalances,
   fetchFamilyHistory, assignChildTask, approveChildTask, rejectChildTask, setChildAppPolicy,
-  fetchAppRequests, resolveAppRequest, setFamilyPin,
+  setFamilyPin,
 } from "./family";
 
 // Curated apps a parent can choose to keep available even when time runs out.
@@ -55,7 +56,6 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
   const [tab, setTab] = useState("home");
   const [refreshing, setRefreshing] = useState(false);
   const [history, setHistory] = useState([]);
-  const [appReqs, setAppReqs] = useState([]);
   const [showPin, setShowPin] = useState(false);
   const [pin, setPin] = useState("");
   const [pinBusy, setPinBusy] = useState(false);
@@ -80,9 +80,6 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
   const reloadHistory = useCallback(async (ids) => {
     setHistory(await fetchFamilyHistory(ids));
   }, []);
-  const reloadAppReqs = useCallback(async (ids) => {
-    setAppReqs(await fetchAppRequests(ids));
-  }, []);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -92,10 +89,10 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
       const kids = await fetchFamilyChildren(fam.id);
       setChildren(kids);
       const ids = kids.map((c) => c.user_id);
-      await Promise.all([reloadApprovals(ids), reloadBalances(ids), reloadHistory(ids), reloadAppReqs(ids)]);
+      await Promise.all([reloadApprovals(ids), reloadBalances(ids), reloadHistory(ids)]);
     }
     setLoading(false);
-  }, [userId, reloadApprovals, reloadBalances, reloadHistory, reloadAppReqs]);
+  }, [userId, reloadApprovals, reloadBalances, reloadHistory]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -116,12 +113,10 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
         () => { reloadApprovals(childIds); reloadHistory(childIds); })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" },
         () => { reloadBalances(childIds); })
-      .on("postgres_changes", { event: "*", schema: "public", table: "app_requests" },
-        () => { reloadAppReqs(childIds); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, childIds.join(","), reloadApprovals, reloadBalances, reloadHistory, reloadAppReqs]);
+  }, [userId, childIds.join(","), reloadApprovals, reloadBalances, reloadHistory]);
 
   // Live: a kid joining/leaving the family (family_members change) → reload the
   // roster so new kids appear WITHOUT a manual refresh. Runs even with zero kids
@@ -169,12 +164,6 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
     setBusyId(null);
   }
 
-  async function doResolveApp(id, approve) {
-    setAppReqs((prev) => prev.filter((r) => r.id !== id)); // optimistic
-    const res = await resolveAppRequest(id, approve);
-    if (!res.ok) reloadAppReqs(childIds);
-    else { reloadAppReqs(childIds); reloadBalances(childIds); }
-  }
 
   async function savePin() {
     setPinMsg("");
@@ -210,6 +199,50 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
   }
 
   const mins = (id) => Math.max(0, Math.ceil((balances[id] || 0) / 60));
+  const week = useFamilyWeek(history, childIds);
+  const hasKids = children.length > 0;
+
+  // Family code + parent PIN. Setup things: on the home screen until the first
+  // kid joins, then they move into the profile sheet (where they're still one
+  // tap away for adding another kid) and the home screen shows the family.
+  const setupSection = (
+    <>
+      <View style={[s.card, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
+        <Text style={[s.cardLabel, { color: t.ink.faint }]}>FAMILY CODE</Text>
+        {loading ? <ActivityIndicator color={t.earn.sage} style={{ marginVertical: 14 }} />
+          : <Text style={[s.code, { color: t.ink.deep }]}>{family?.code || "—"}</Text>}
+        <TouchableOpacity style={[s.shareBtn, { backgroundColor: t.earn.deep }, t.fx.glow]} onPress={shareCode} disabled={!family?.code}>
+          <Text style={[s.shareBtnText, { color: onDeep }]}>Share code</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Parent PIN — gates the app picker on a kid's device */}
+      {showPin ? (
+        <View style={[s.pinCard, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
+          <Text style={[s.pinLabel, { color: t.ink.mid }]}>Set a PIN. You'll enter it on your kid's phone to pick which apps get blocked.</Text>
+          <TextInput
+            style={[s.input, { borderColor: t.ink.border, color: t.ink.deep, backgroundColor: t.paper.warm, textAlign: "center", letterSpacing: 8, fontSize: 22 }]}
+            placeholder="••••" placeholderTextColor={t.ink.faint}
+            value={pin} onChangeText={(v) => setPin(v.replace(/\D/g, "").slice(0, 8))}
+            keyboardType="number-pad" secureTextEntry maxLength={8}
+          />
+          {pinMsg ? <Text style={s.err}>{pinMsg}</Text> : null}
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+            <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.paper.warm, flex: 1 }]} onPress={() => { setShowPin(false); setPin(""); setPinMsg(""); }}>
+              <Text style={[s.modalBtnText, { color: t.ink.mid }]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, flex: 1 }, t.fx.glow]} onPress={savePin} disabled={pinBusy}>
+              {pinBusy ? <ActivityIndicator color={onDeep} /> : <Text style={[s.modalBtnText, { color: onDeep }]}>Save PIN</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <TouchableOpacity style={[s.linkRow, { borderColor: t.ink.hairline }]} onPress={() => { setShowPin(true); setPinMsg(""); }}>
+          <Text style={[s.linkText, { color: t.ink.mid }]}>Set parent PIN (for picking a kid's apps)</Text>
+        </TouchableOpacity>
+      )}
+    </>
+  );
 
   return (
     <View style={[s.root, { backgroundColor: t.paper.warm, paddingTop: Platform.OS === "ios" ? 64 : 40 }]}>
@@ -247,62 +280,7 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
           </>
         ) : (
         <>
-        {/* Family code */}
-        <View style={[s.card, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
-          <Text style={[s.cardLabel, { color: t.ink.faint }]}>FAMILY CODE</Text>
-          {loading ? <ActivityIndicator color={t.earn.sage} style={{ marginVertical: 14 }} />
-            : <Text style={[s.code, { color: t.ink.deep }]}>{family?.code || "—"}</Text>}
-          <TouchableOpacity style={[s.shareBtn, { backgroundColor: t.earn.deep }, t.fx.glow]} onPress={shareCode} disabled={!family?.code}>
-            <Text style={[s.shareBtnText, { color: onDeep }]}>Share code</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Parent PIN — gates the app picker on a kid's device */}
-        {showPin ? (
-          <View style={[s.pinCard, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
-            <Text style={[s.pinLabel, { color: t.ink.mid }]}>Set a PIN. You'll enter it on your kid's phone to pick which apps get blocked.</Text>
-            <TextInput
-              style={[s.input, { borderColor: t.ink.border, color: t.ink.deep, backgroundColor: t.paper.warm, textAlign: "center", letterSpacing: 8, fontSize: 22 }]}
-              placeholder="••••" placeholderTextColor={t.ink.faint}
-              value={pin} onChangeText={(v) => setPin(v.replace(/\D/g, "").slice(0, 8))}
-              keyboardType="number-pad" secureTextEntry maxLength={8}
-            />
-            {pinMsg ? <Text style={s.err}>{pinMsg}</Text> : null}
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
-              <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.paper.warm, flex: 1 }]} onPress={() => { setShowPin(false); setPin(""); setPinMsg(""); }}>
-                <Text style={[s.modalBtnText, { color: t.ink.mid }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, flex: 1 }, t.fx.glow]} onPress={savePin} disabled={pinBusy}>
-                {pinBusy ? <ActivityIndicator color={onDeep} /> : <Text style={[s.modalBtnText, { color: onDeep }]}>Save PIN</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <TouchableOpacity style={[s.linkRow, { borderColor: t.ink.hairline }]} onPress={() => { setShowPin(true); setPinMsg(""); }}>
-            <Text style={[s.linkText, { color: t.ink.mid }]}>Set parent PIN (for picking a kid's apps)</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* App requests */}
-        {appReqs.length > 0 && (
-          <>
-            <Text style={[s.sectionLabel, { color: t.ink.faint }]}>APP REQUESTS</Text>
-            {appReqs.map((r) => (
-              <View key={r.id} style={[s.approvalCard, { backgroundColor: t.paper.card, borderColor: t.earn.sage }]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.childName, { color: t.ink.deep }]}>{childName(r.child_id)}</Text>
-                  <Text style={[s.approvalTask, { color: t.ink.mid }]}>Wants to use "{r.app_label}"</Text>
-                </View>
-                <TouchableOpacity style={[s.rejectBtn, { borderColor: t.ink.border }]} onPress={() => doResolveApp(r.id, false)}>
-                  <Text style={[s.rejectText, { color: t.ink.mid }]}>Deny</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[s.approveBtn, { backgroundColor: t.earn.deep }, t.fx.glow]} onPress={() => doResolveApp(r.id, true)}>
-                  <Text style={[s.approveText, { color: onDeep }]}>Allow</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </>
-        )}
+        {hasKids ? <FamilyWeekCard week={week} dark={dark} /> : setupSection}
 
         {/* Approvals */}
         {approvals.length > 0 && (
@@ -341,7 +319,10 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[s.childName, { color: t.ink.deep }]}>{cc.display_name || "Kid"}</Text>
-                <Text style={[s.childSub, { color: t.ink.mid }]}>{mins(cc.user_id)} min left today</Text>
+                <Text style={[s.childSub, { color: t.ink.mid }]}>
+                  {mins(cc.user_id)} min left · {week.perKid[cc.user_id]?.weekTasks || 0} this week
+                  {week.perKid[cc.user_id]?.streak > 1 ? ` · ${week.perKid[cc.user_id].streak}-day streak` : ""}
+                </Text>
               </View>
               <TouchableOpacity style={[s.smallBtn, { backgroundColor: t.earn.sageLo }]} onPress={() => setAppsFor(cc)}>
                 <Text style={[s.smallBtnText, { color: t.earn.greenD }]}>Apps</Text>
@@ -426,7 +407,14 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
         subtitle={userEmail || "Drift parent account"}
         onSignOut={onSignOut}
         onDeleteAccount={onDeleteAccount}
-      />
+      >
+        {hasKids && (
+          <>
+            <Text style={[s.sectionLabel, { color: t.ink.faint, marginTop: 8 }]}>ADD A KID</Text>
+            {setupSection}
+          </>
+        )}
+      </FamilyProfileModal>
     </View>
   );
 }

@@ -11,8 +11,9 @@
 // is lifted, which means streaming CMDeviceMotion in real time while Drift is
 // on screen. That only works in the foreground — iOS freezes the app once the
 // screen locks, and neither of Drift's background modes (fetch, processing)
-// permits continuous accelerometer updates. The session screen therefore holds
-// expo-keep-awake for its whole duration, exactly as Drift In already does.
+// permits continuous accelerometer updates. For the screen-off stretch, see
+// startRecording / checkRecorded at the bottom: CMSensorRecorder logs the
+// accelerometer while Drift is suspended and the log is judged afterwards.
 //
 // THRESHOLDING HAPPENS HERE, NOT IN JS
 // Bridging 20 samples a second into JavaScript to compare a float against a
@@ -212,9 +213,119 @@ class LockboxModule: RCTEventEmitter {
     }
   }
 
+  // ── Screen-off enforcement ──────────────────────────────────
+  // The live stream above stops the moment iOS suspends Drift, which it does as
+  // soon as the screen locks. CMSensorRecorder keeps logging the accelerometer
+  // on the motion coprocessor regardless — no app running, no battery cost to
+  // speak of — and lets us read that log back afterwards. That is what lets the
+  // phone lock during a session: whatever happened while it was dark is judged
+  // from the recording the next time Drift runs.
+  //
+  // The recording lags real time by up to a few minutes, so a check may come
+  // back covering less than was asked for. `checkedUntil` says how far it got;
+  // the caller re-checks the remainder later rather than assuming it was fine.
+  private let recorder = CMSensorRecorder()
+
+  @objc(startRecording:resolver:rejecter:)
+  func startRecording(_ seconds: NSNumber,
+                      resolver resolve: @escaping RCTPromiseResolveBlock,
+                      rejecter reject: @escaping RCTPromiseRejectBlock) {
+    guard CMSensorRecorder.isAccelerometerRecordingAvailable() else {
+      resolve(["recording": false, "reason": "unavailable"])
+      return
+    }
+    let status = CMSensorRecorder.authorizationStatus()
+    if status == .denied || status == .restricted {
+      resolve(["recording": false, "reason": "denied"])
+      return
+    }
+    // Capped by iOS at 12 hours; a session is at most 5.
+    let dur = min(12 * 3600, max(60, seconds.doubleValue))
+    DispatchQueue.global(qos: .utility).async {
+      self.recorder.recordAccelerometer(forDuration: dur)
+      resolve(["recording": true])
+    }
+  }
+
+  /// Scan the recorded accelerometer between two instants (ms since epoch) for
+  /// a stretch where the phone was out of the box — moving, or not lying flat —
+  /// for longer than `grace` seconds. Mirrors the live thresholds above, applied
+  /// to raw acceleration (gravity included), so "still" means |a| ≈ 1 G.
+  @objc(checkRecorded:to:grace:resolver:rejecter:)
+  func checkRecorded(_ fromMs: NSNumber, to toMs: NSNumber, grace: NSNumber,
+                     resolver resolve: @escaping RCTPromiseResolveBlock,
+                     rejecter reject: @escaping RCTPromiseRejectBlock) {
+    guard CMSensorRecorder.isAccelerometerRecordingAvailable(),
+          CMSensorRecorder.authorizationStatus() == .authorized else {
+      resolve(["available": false])
+      return
+    }
+    let from = Date(timeIntervalSince1970: fromMs.doubleValue / 1000)
+    let to = Date(timeIntervalSince1970: toMs.doubleValue / 1000)
+    guard to > from else {
+      resolve(["available": true, "checkedUntil": toMs, "breachAt": NSNull(), "samples": 0])
+      return
+    }
+    let graceS = max(1, grace.doubleValue)
+    let moveThreshold = threshold
+    let flatThreshold = self.flatThreshold
+
+    DispatchQueue.global(qos: .userInitiated).async {
+      var samples = 0
+      var lastAt: Date? = nil
+      var outSince: Date? = nil     // start of the current out-of-box stretch
+      var calmSince: Date? = nil    // start of the current calm run inside it
+      var breachAt: Date? = nil
+
+      if let list = self.recorder.accelerometerData(from: from, to: to) {
+        for case let d as CMRecordedAccelerometerData in list {
+          samples += 1
+          let t = d.startDate
+          lastAt = t
+          let a = d.acceleration
+          let mag = (a.x * a.x + a.y * a.y + a.z * a.z).squareRoot()
+          let moving = abs(mag - 1.0) > moveThreshold
+          let flat = abs(a.z) > flatThreshold
+          let disturbed = moving || !flat
+
+          if disturbed {
+            if outSince == nil { outSince = t }
+            calmSince = nil
+          } else if let o = outSince {
+            if calmSince == nil { calmSince = t }
+            // A full second of calm, flat samples ends the stretch.
+            if t.timeIntervalSince(calmSince!) >= 1.0 {
+              if calmSince!.timeIntervalSince(o) > graceS { breachAt = o.addingTimeInterval(graceS); break }
+              outSince = nil
+              calmSince = nil
+            }
+          }
+          if let o = outSince, calmSince == nil, t.timeIntervalSince(o) > graceS {
+            breachAt = o.addingTimeInterval(graceS)
+            break
+          }
+        }
+      }
+
+      resolve([
+        "available": true,
+        "samples": samples,
+        "checkedUntil": lastAt.map { $0.timeIntervalSince1970 * 1000 as Any } ?? NSNull(),
+        "breachAt": breachAt.map { $0.timeIntervalSince1970 * 1000 as Any } ?? NSNull(),
+      ])
+    }
+  }
+
   override func invalidate() {
     if monitoring { motion.stopDeviceMotionUpdates() }
     monitoring = false
     super.invalidate()
+  }
+}
+
+// CMSensorDataList is NSFastEnumeration-only; this lets it drive a for-in loop.
+extension CMSensorDataList: @retroactive Sequence {
+  public func makeIterator() -> NSFastEnumerationIterator {
+    return NSFastEnumerationIterator(self)
   }
 }

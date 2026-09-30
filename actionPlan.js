@@ -36,20 +36,21 @@ const KEY = (userId) => `drift_action_plan_${userId || "anon"}`;
 export const EARN_RATIO = 0.5;
 
 export const HARDEST = [
-  { key: "morning",   label: "Mornings",   window: [7 * 60,  11 * 60] },
-  { key: "afternoon", label: "Afternoons", window: [13 * 60, 17 * 60] },
-  { key: "evening",   label: "Evenings",   window: [18 * 60, 21 * 60] },
-  { key: "late",      label: "Late night", window: null },  // uses phone-down time
+  // `short` is the segmented-control label on the plan screen.
+  { key: "morning",   label: "Mornings",   short: "Morning",   window: [7 * 60,  11 * 60] },
+  { key: "afternoon", label: "Afternoons", short: "Afternoon", window: [13 * 60, 17 * 60] },
+  { key: "evening",   label: "Evenings",   short: "Evening",   window: [18 * 60, 21 * 60] },
+  { key: "late",      label: "Late night", short: "Late",      window: null },  // uses phone-down time
 ];
 
 export const SWAPS = [
   { key: "walk",    label: "Go for a walk" },
   { key: "read",    label: "Read" },
   { key: "sleep",   label: "Sleep earlier" },
-  { key: "friend",  label: "Message a friend properly" },
+  { key: "friend",  label: "Call a friend" },
   { key: "move",    label: "Train or stretch" },
   { key: "tidy",    label: "Tidy one thing" },
-  { key: "make",    label: "Work on something of mine" },
+  { key: "make",    label: "Make something" },
 ];
 
 export const DEFAULT_PLAN = {

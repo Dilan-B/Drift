@@ -7,7 +7,7 @@
 
 @interface RCT_EXTERN_MODULE(LockboxARViewManager, RCTViewManager)
 
-// Inside edge of the box, in metres.
+// Inside length of the box, in metres.
 RCT_EXPORT_VIEW_PROPERTY(boxSize, NSNumber)
 
 // A horizontal plane became available — the "Place box" control can enable.
@@ -16,6 +16,10 @@ RCT_EXPORT_VIEW_PROPERTY(onSurfaceFound, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onPlaced, RCTDirectEventBlock)
 // ARKit unsupported, or tracking failed. JS falls back to a non-AR flow.
 RCT_EXPORT_VIEW_PROPERTY(onARError, RCTDirectEventBlock)
+// The phone moved into / out of the placed box (from the camera's position).
+RCT_EXPORT_VIEW_PROPERTY(onBoxProximity, RCTDirectEventBlock)
+// The box became visible / hidden (hidden while ARKit re-finds the room).
+RCT_EXPORT_VIEW_PROPERTY(onBoxVisible, RCTDirectEventBlock)
 
 RCT_EXTERN_METHOD(isSupported:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
@@ -23,5 +27,6 @@ RCT_EXTERN_METHOD(isSupported:(RCTPromiseResolveBlock)resolve
 RCT_EXTERN_METHOD(place:(nonnull NSNumber *)reactTag)
 RCT_EXTERN_METHOD(reset:(nonnull NSNumber *)reactTag)
 RCT_EXTERN_METHOD(pauseSession:(nonnull NSNumber *)reactTag)
+RCT_EXTERN_METHOD(resumeSession:(nonnull NSNumber *)reactTag)
 
 @end

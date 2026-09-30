@@ -227,6 +227,30 @@ export async function cancelLockboxLoss() {
   try { await Notifications.cancelScheduledNotificationAsync("drift-lockbox-lost"); } catch {}
 }
 
+/**
+ * The session's end, scheduled up front. With the screen allowed to turn off,
+ * Drift is usually suspended when a session finishes, so the "you're done"
+ * moment has to come from the system. Same identifier as notifyLockboxDone, so
+ * the in-app one replaces rather than duplicates it.
+ */
+export async function scheduleLockboxEnd(seconds) {
+  if (!(await ensureGranted())) return;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: "drift-lockbox-done",
+      content: {
+        title: "Lockbox finished",
+        body: "Take your phone out and open Drift to collect your time.",
+      },
+      trigger: { seconds: Math.max(1, Math.round(seconds)), repeats: false },
+    });
+  } catch {}
+}
+
+export async function cancelLockboxEnd() {
+  try { await Notifications.cancelScheduledNotificationAsync("drift-lockbox-done"); } catch {}
+}
+
 export async function notifyLockboxDone(rewardMinutes) {
   await fireImmediate(
     "drift-lockbox-done",

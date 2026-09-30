@@ -514,8 +514,9 @@ class ScreenTimeModule: NSObject {
     resolve(seconds)
   }
 
-  @objc(startDriftInLiveActivity:seconds:resolver:rejecter:)
+  @objc(startDriftInLiveActivity:heading:seconds:resolver:rejecter:)
   func startDriftInLiveActivity(_ title: NSString,
+                                heading: NSString,
                                 seconds: NSNumber,
                                 resolver resolve: @escaping RCTPromiseResolveBlock,
                                 rejecter reject: @escaping RCTPromiseRejectBlock) {
@@ -536,13 +537,16 @@ class ScreenTimeModule: NSObject {
           }
           let duration = max(60, seconds.intValue)
           let safeTitle = String(title).trimmingCharacters(in: .whitespacesAndNewlines)
+          let head = String(heading).trimmingCharacters(in: .whitespacesAndNewlines)
           let attributes = DriftInActivityAttributes(
             taskTitle: safeTitle.isEmpty ? "Drift In" : String(safeTitle.prefix(64)),
-            totalSeconds: duration
+            totalSeconds: duration,
+            heading: head.isEmpty ? nil : head
           )
           let state = DriftInActivityAttributes.ContentState(
             remainingSeconds: duration,
-            isComplete: false
+            isComplete: false,
+            endsAt: Date().addingTimeInterval(TimeInterval(duration))
           )
           _ = try Activity.request(
             attributes: attributes,
@@ -572,7 +576,8 @@ class ScreenTimeModule: NSObject {
         let remaining = max(0, seconds.intValue)
         let state = DriftInActivityAttributes.ContentState(
           remainingSeconds: remaining,
-          isComplete: remaining == 0
+          isComplete: remaining == 0,
+          endsAt: Date().addingTimeInterval(TimeInterval(remaining))
         )
         for activity in Activity<DriftInActivityAttributes>.activities {
           await activity.update(using: state)

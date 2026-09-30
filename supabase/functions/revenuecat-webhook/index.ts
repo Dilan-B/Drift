@@ -205,19 +205,20 @@ serve(async (req: Request) => {
     return json({ ok: true, skipped: "profile vanished" });
   }
 
-  // 5. Family seats. Only meaningful for a parent who bought a family tier.
-  // Seats are cleared to 0 on revoke so children lose access with the parent,
-  // rather than staying entitled off a stale seat count.
+  // 5. Family seats — written on EVERY event, from the product actually held.
+  // A solo product writes 0: it used to write nothing, which left the family
+  // row's old default of 1 seat in place, so a $4.99 solo plan quietly covered
+  // a child (schema_v19). Cleared to 0 on revoke so children lose access with
+  // the parent. Grants that cover children live in pro_overrides.seats and
+  // are combined by public.family_seats(), not written here.
   const seats = active ? seatsForProduct(productId) : 0;
-  if (seats > 0 || HARD_REVOKE.has(type)) {
-    const { error: famErr } = await admin.from("families")
-      .update({ seats })
-      .eq("parent_id", profileId)
-      .is("deleted_at", null);
-    // Not fatal: a solo subscriber has no family row, and .update() matching
-    // nothing is not an error. Only a real failure is worth logging.
-    if (famErr) console.warn("families seats update:", famErr.code || famErr.message);
-  }
+  const { error: famErr } = await admin.from("families")
+    .update({ seats })
+    .eq("parent_id", profileId)
+    .is("deleted_at", null);
+  // Not fatal: a solo subscriber has no family row, and .update() matching
+  // nothing is not an error. Only a real failure is worth logging.
+  if (famErr) console.warn("families seats update:", famErr.code || famErr.message);
 
   return json({ ok: true, active, type, seats, via: profileId === appUserId ? "app_user_id" : "alias" });
 });
