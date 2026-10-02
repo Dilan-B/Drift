@@ -16,7 +16,7 @@
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Drift uses your camera to take proof photos for your tasks, to set your profile picture, and to place the Lockbox on a real surface using augmented reality.",
-        "NSMotionUsageDescription": "Drift uses motion data to detect exercise movement.",
+        "NSMotionUsageDescription": "Drift uses motion data to detect exercise movement during workout challenges, and to check your phone stays put during a Lockbox session or overnight with the phone-in-another-room guard, including while the screen is off. Motion data is read on your device and never uploaded.",
         "NSLocationWhenInUseUsageDescription": "Drift uses your location to save the places you choose, so it can suggest a task when you arrive. Your location stays on your device.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Drift checks when you arrive at places you've saved so it can suggest a task. This needs Always access to work in the background. Your location stays on your device and is never uploaded.",
         "NSCalendarsUsageDescription": "Drift can read your calendar to offer today's events as tasks. It never changes your calendar and nothing is uploaded.",

@@ -79,7 +79,7 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Drift does not record audio. This permission is required by a camera component used for pose detection.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>Drift uses motion data two ways: to detect exercise movement during workout challenges, and — if you turn on the phone-in-another-room guard — to check your phone stayed still overnight. Motion data is read on your device and never uploaded.</string>
+	<string>Drift uses motion data to detect exercise movement during workout challenges, and to check your phone stays put during a Lockbox session or overnight with the phone-in-another-room guard, including while the screen is off. Motion data is read on your device and never uploaded.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Drift may save a screenshot to your photo library if you choose to share your progress.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
