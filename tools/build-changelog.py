@@ -411,6 +411,21 @@ ROWS = [
     ("2026-09-29", "bb56a59", "Chore", "Dev", "Signing out of the team test address deletes that account",
      "So driftappcontact@gmail.com (and +tag variants) can be reused for fresh sign-up tests. Uses the existing delete-account function, which only acts on the caller. Scoped to that address only; also in release builds. 4bf228a stops the resulting stale-session error from red-screening dev builds.",
      "1.1.8", "\u2014"),
+    ("2026-10-01", "56843dd", "Bug Fix", "Lockbox", "A finished Lockbox session could pay out twice",
+     "finishSession read the session, appended history, then cleared it, with nothing stopping a second caller in between. The countdown, the grace ticker and the End button can all settle at once, so overlapping calls each saw the session and each wrote a paid record. It is now serialized; the second caller gets null.",
+     "1.1.8", "\u2014"),
+    ("2026-10-01", "56843dd", "Bug Fix", "Payments", "An out-of-order EXPIRATION could revoke a renewed subscriber",
+     "The webhook only de-duplicated by event id, and RevenueCat can redeliver out of order. Writes now apply only if the event is at least as new as the last applied one (event_timestamp_ms vs rc_last_event_at, checked in the UPDATE). Also, the ledger row was written before the profile update, so a delivery that 500'd was dropped as a duplicate on retry; it is now written after. Deployed 2026-10-01.",
+     "1.1.8", "Edge deploy"),
+    ("2026-10-01", "56843dd", "Bug Fix", "Codes", "A class redeeming a study code on one school network was blocked after 20",
+     "The per-IP hourly limit counted successful redemptions as attempts. It now counts failed guesses only, which is what brute force produces. Deployed 2026-10-01.",
+     "1.1.8", "Edge deploy"),
+    ("2026-10-01", "56843dd", "Bug Fix", "Screen Time", "Background shield blocked every app category for non-Pro users",
+     "The DriftMonitor extension forced .all categories for any non-Pro user when the balance ran out, while the in-app path had already moved to honouring the user's picks. The extension now matches: picks win, and .all is only the fallback when nothing is picked.",
+     "1.1.8", "Native build"),
+    ("2026-10-01", "56843dd", "Bug Fix", "Codes", "Redeeming a dated code after a revoke restored permanent access",
+     "redeem_cohort_code's never-shorten rule treated a revoked grant (granted = false, expires_at null) as permanent, so any later 30-day code came back permanent with the old child seats. schema_v20 only honours an existing grant that is live. Migration written; not yet pushed.",
+     "1.1.8", "SQL migration"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
