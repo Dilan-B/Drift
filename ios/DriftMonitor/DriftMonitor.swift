@@ -151,11 +151,19 @@ class DriftMonitor: DeviceActivityMonitor {
           let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
     else { return }
 
+    // Mirrors applyBlocking() in blockedApps.js: the user's own picks win for
+    // everyone, and Pro only matters when nothing is picked — a non-Pro user
+    // with an empty selection falls back to every category. This used to force
+    // .all for any non-Pro user, so the background shield blocked far more
+    // than the foreground one the user had just seen.
     let isPro = defaults.bool(forKey: "drift_pro_access")
+    let picked = !selection.applicationTokens.isEmpty
+      || !selection.categoryTokens.isEmpty
+      || !selection.webDomainTokens.isEmpty
     let store = ManagedSettingsStore(named: storeName())
     store.shield.applications = selection.applicationTokens.isEmpty
       ? nil : selection.applicationTokens
-    if isPro {
+    if picked || isPro {
       store.shield.applicationCategories = selection.categoryTokens.isEmpty
         ? nil : .specific(selection.categoryTokens)
     } else {

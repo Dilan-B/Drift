@@ -29,7 +29,10 @@ create policy "read app config"
 insert into public.app_config (key, value) values
   ('min_ios_version', '1.0.0'),
   ('ios_store_url',   'https://apps.apple.com/app/idYOUR_APP_ID')
-on conflict (key) do update set value = excluded.value, updated_at = now();
+-- Seed only. This used to overwrite on conflict, so re-running the file put
+-- the placeholder store URL back over the real one (20260903000002_store_url)
+-- and reset min_ios_version to 1.0.0. Change live values with the UPDATEs below.
+on conflict (key) do nothing;
 
 select * from public.app_config;
 

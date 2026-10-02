@@ -116,9 +116,12 @@ serve(async (req: Request) => {
       admin.from("redeem_code_attempts")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id).gte("created_at", hourAgo),
+      // Failed guesses only. A classroom redeeming a study code shares one
+      // school IP, and counting their successes locked out everyone after the
+      // twentieth participant. Brute force is all failures, so it still trips.
       admin.from("redeem_code_attempts")
         .select("*", { count: "exact", head: true })
-        .eq("ip_hash", ipHash).gte("created_at", hourAgo),
+        .eq("ip_hash", ipHash).eq("success", false).gte("created_at", hourAgo),
     ]);
     if ((userTries ?? 0) >= MAX_PER_USER_PER_HOUR || (ipTries ?? 0) >= MAX_PER_IP_PER_HOUR) {
       return json({ error: "rate_limit", message: "Too many attempts. Try again later." }, 429);

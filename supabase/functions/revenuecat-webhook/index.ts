@@ -140,6 +140,11 @@ serve(async (req: Request) => {
   const periodType  = event.period_type ? String(event.period_type).toLowerCase() : null;
   const expiresAtMs = typeof event.expiration_at_ms === "number" ? event.expiration_at_ms : null;
   const expiresAt   = expiresAtMs ? new Date(expiresAtMs).toISOString() : null;
+  // When RevenueCat says the event happened, not when it reached us. Ordering
+  // is decided on this; a missing stamp is treated as "now".
+  const eventAt     = new Date(
+    typeof event.event_timestamp_ms === "number" ? event.event_timestamp_ms : Date.now(),
+  ).toISOString();
 
   // 2. Which Drift user is this? app_user_id alone is not enough.
   //
@@ -159,21 +164,7 @@ serve(async (req: Request) => {
     return json({ ok: true, skipped: "no matching account" });
   }
 
-  // 3. Idempotency. RevenueCat retries on any non-2xx and can redeliver out of
-  // order; replaying a stale EXPIRATION after a RENEWAL would revoke a paying
-  // customer.
-  const { error: dupeErr } = await admin.from("rc_webhook_events").insert({
-    id: event.id, app_user_id: appUserId, type, product_id: productId,
-    period_type: periodType, expiration_at: expiresAt,
-  });
-  if (dupeErr) {
-    if (dupeErr.code === "23505") return json({ ok: true, duplicate: true });
-    // Not fatal — better to process the event than to drop it over a ledger
-    // hiccup. Worst case is a redundant idempotent write.
-    console.warn("rc_webhook_events insert:", dupeErr.message);
-  }
-
-  // 4. Entitlement state. Active while not hard-revoked and not past expiry.
+  // 3. Entitlement state. Active while not hard-revoked and not past expiry.
   // period_type 'trial' is ACTIVE — the 7-day free trial grants full access.
   const notExpired = !expiresAtMs || expiresAtMs > Date.now();
   const active = !HARD_REVOKE.has(type) && notExpired;
@@ -186,9 +177,15 @@ serve(async (req: Request) => {
       rc_period_type: periodType,
       rc_product_id: productId,
       rc_expires_at: expiresAt,
-      rc_last_event_at: new Date().toISOString(),
+      rc_last_event_at: eventAt,
     })
     .eq("id", profileId)
+    // Ordering. RevenueCat can redeliver out of order, and a stale
+    // EXPIRATION replayed after a RENEWAL would revoke a paying customer.
+    // Event-id dedup does not stop that (they are different events), so the
+    // write only lands if this event is at least as new as the last one
+    // applied. Done in the UPDATE itself so two deliveries cannot race past it.
+    .or(`rc_last_event_at.is.null,rc_last_event_at.lte.${eventAt}`)
     .select("id");
 
   if (updErr) {
@@ -197,15 +194,29 @@ serve(async (req: Request) => {
     console.error("profiles entitlement update failed:", updErr.code || updErr.message);
     return json({ error: "update_failed" }, 500);
   }
-  // An update matching no row is not an error to PostgREST, so this used to
-  // report { ok, active: true } having granted nothing. resolveProfileId just
-  // found the row, so this only fires on a race with an account deletion.
+  // An update matching no row is not an error to PostgREST. resolveProfileId
+  // just found the row, so this is the ordering guard refusing an older event
+  // (or, rarely, a race with an account deletion). 200 either way: a retry
+  // would be refused the same way.
   if (!updated?.length) {
-    console.error("webhook: entitlement update matched no profile", { profileId, type });
-    return json({ ok: true, skipped: "profile vanished" });
+    console.warn("webhook: event older than last applied, or profile gone", { type, eventAt });
+    return json({ ok: true, skipped: "stale event" });
   }
 
-  // 5. Family seats — written on EVERY event, from the product actually held.
+  // Ledger, written only once the entitlement has landed. It used to go in
+  // first, so a delivery whose profile update failed (500 → RevenueCat
+  // retries) found its own id on the retry and was dropped as a duplicate.
+  // A redelivery of an applied event now re-applies the same write, which the
+  // ordering guard allows and which changes nothing.
+  const { error: ledgerErr } = await admin.from("rc_webhook_events").insert({
+    id: event.id, app_user_id: appUserId, type, product_id: productId,
+    period_type: periodType, expiration_at: expiresAt,
+  });
+  if (ledgerErr && ledgerErr.code !== "23505") {
+    console.warn("rc_webhook_events insert:", ledgerErr.message);
+  }
+
+  // 4. Family seats — written on EVERY event, from the product actually held.
   // A solo product writes 0: it used to write nothing, which left the family
   // row's old default of 1 seat in place, so a $4.99 solo plan quietly covered
   // a child (schema_v19). Cleared to 0 on revoke so children lose access with

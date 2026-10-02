@@ -224,7 +224,17 @@ export const isComplete = (session, now = Date.now()) =>
  * Only a completed session pays out; a forfeited one earns nothing, which is
  * the entire deterrent.
  */
-export async function finishSession(status) {
+let settling = null;
+export function finishSession(status) {
+  // Serialized: the countdown, the grace ticker and the End button can all
+  // settle at once, and two overlapping read→append→clear runs would both see
+  // the session and both write a paid record. The loser now sees null.
+  const run = (settling || Promise.resolve()).then(() => settleOnce(status));
+  settling = run.catch(() => {});
+  return run;
+}
+
+async function settleOnce(status) {
   const s = await getSession();
   if (!s) return null;
   const record = {
