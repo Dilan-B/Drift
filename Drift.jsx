@@ -92,6 +92,9 @@ import RedeemCodeModal from "./RedeemCodeModal";
 import { useSubscription } from "./useSubscription";
 import ReviewPromptScreen from "./ReviewPromptScreen";
 import { claimReviewPrompt } from "./reviewPrompt";
+import {
+  FREE_BLOCK_LIMIT, FREE_DAILY_TASKS, FREE_MAX_LEVEL_IDX, displayLevelIdx, tasksDoneOn, fetchFreeDailyTasks,
+} from "./freeTier";
 import TutorialOverlay from "./TutorialOverlay";
 import ParentShell from "./ParentShell";
 import { identify, track, trackScreen, startAnalytics, stopAnalytics } from "./analytics";
@@ -579,8 +582,9 @@ function CreditTicker({ value, seconds, textColor }) {
 
 // Free-tier credit formula.
 //
-// Free users don't get AI access, so we don't grade the task at all — credits
-// are a flat multiplier of the chosen duration. This is deliberate:
+// Free users don't get AI VALUATION (their proof is still AI-checked), so we
+// don't grade the task at all — credits are a flat multiplier of the chosen
+// duration. This is deliberate:
 //   - It's predictable: the user can see exactly what they'll earn before saving.
 //   - It avoids any title/category "review" that would feel like a lighter AI.
 //   - Upgrading to Pro unlocks the AI valuation, which is the actual value-add.
@@ -595,7 +599,8 @@ const MIN_REWARD_RATIO = 0.25;
 // time. The ratio-based cap already keeps short tasks in check; this bounds the
 // long tail (a 3h+ task tops out here rather than scaling forever).
 const MAX_REWARD_MINUTES = 60;
-// const FREE_TASK_LIMIT = 5; // removed — no free tier limits for now
+// The free plan's daily task allowance lives in freeTier.js, and is enforced by
+// verify-task — see FREE_DAILY_TASKS.
 // GRANT_MINS and the "Take 15m" button it powered are gone. The button handed
 // out 15 unearned minutes, three times a day, on a tap — 45 minutes of the
 // exact thing the app exists to make you earn. The onboarding step that used to
@@ -752,7 +757,10 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
       done:    false,
       credits,
       xp,
-      aiCheck:  isSubActive, // AI Check is mandatory for Pro users (off for free)
+      // Photo proof for everyone. The free plan used to complete tasks on a
+      // tap; it now gets the same check, and its daily allowance is counted in
+      // approved checks (verify-task).
+      aiCheck:  true,
       aiValued: !!aiValued,
       aiPending: !!aiPending, // credits are provisional until the bg evaluator finishes
       aiReasoning: reasoning || "",
@@ -768,7 +776,8 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
       : null;
 
     // Free user → flat duration-based credits, no AI eval call.
-    // (Free tier doesn't get any AI grading — credits are purely mins × multiplier.)
+    // (Free tier doesn't get AI valuation — credits are purely mins × multiplier.
+    // Its proof is still AI-checked when the task is completed.)
     if (!isSubActive) {
       const { credits, xp, reasoning } = freeTierCredits(mins);
       onSave(buildTask({ credits, xp, reasoning, aiValued: false }), recurrence);
@@ -1148,10 +1157,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                 text taking up the page. */}
             <View style={{ alignItems: "center", marginTop: 16 }}>
               <TouchableOpacity
-                onPress={() => {
-                  if (!isSubActive) { onOpenPaywall?.(); return; }
-                  setShowAiInfo(v => !v);
-                }}
+                onPress={() => setShowAiInfo(v => !v)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 activeOpacity={0.7}
                 style={{
@@ -1162,23 +1168,36 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                   borderColor: showAiInfo ? earn.blue : "transparent",
                 }}
               >
-                {isSubActive
-                  ? <SparkleIcon size={17} color={earn.blue} />
-                  : <LockIcon size={16} color={ink.mid} />}
+                <SparkleIcon size={17} color={earn.blue} />
               </TouchableOpacity>
 
-              {showAiInfo && isSubActive && (
+              {showAiInfo && (
                 <View style={{
                   marginTop: 10,
                   padding: 14, borderRadius: 18,
                   backgroundColor: paper.card,
                   borderWidth: 1, borderColor: ink.border,
                 }}>
-                  <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, lineHeight: 18, textAlign: "center" }}>
-                    AI reads your task to set its value and sort it into a
-                    category for you, then checks your proof before credits
-                    are earned.
-                  </Text>
+                  {isSubActive ? (
+                    <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, lineHeight: 18, textAlign: "center" }}>
+                      AI reads your task to set its value and sort it into a
+                      category for you, then checks your proof before credits
+                      are earned.
+                    </Text>
+                  ) : (
+                    <>
+                      <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, lineHeight: 18, textAlign: "center" }}>
+                        AI checks your proof before credits are earned. With Pro
+                        it also reads your task and sets its value by how hard
+                        it is.
+                      </Text>
+                      {!!onOpenPaywall && (
+                        <TouchableOpacity onPress={onOpenPaywall} style={{ marginTop: 8, alignSelf: "center", paddingVertical: 4 }}>
+                          <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: earn.sage }}>See Pro</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  )}
                 </View>
               )}
 
@@ -1830,7 +1849,7 @@ function SleepGuardCard({ mode, armedAt, result, streak, busy, onSetup, onArm, o
   );
 }
 
-function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, scrollRef, onReduceScreenTime, onSwipeLockChange, dark, secLeft, showAutoTasksHint, onOpenAutoTasks, onDismissAutoTasksHint, sleepGuard }) {
+function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroRef, addRef, scrollRef, onReduceScreenTime, onSwipeLockChange, dark, secLeft, showAutoTasksHint, onOpenAutoTasks, onDismissAutoTasksHint, sleepGuard, isPro = true, freeTasksLeft = null, freeDailyTasks = FREE_DAILY_TASKS, onUpgrade }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Text color that sits on a `deep` (primary) button. In dark mode the deep
@@ -1844,13 +1863,27 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
   const done          = tasks.filter(t => t.done);
   const unlocked      = credits.balance > 0;
   const inDebt        = credits.balance < 0;
-  const lv            = getLevel(totalXp);
-  const lvIdx         = getLevelIdx(totalXp);
+  // The plant shown is capped on the free plan (freeTier.js); XP is not.
+  const lvIdx         = displayLevelIdx(getLevelIdx(totalXp), isPro);
+  const lv            = LEVELS[lvIdx] || LEVELS[0];
   const stillEarnable = pending.reduce((s, t) => s + t.credits, 0);
   const subtleActionBg = dark ? "rgba(232,245,236,0.085)" : paper.sand;
   const subtleActionBorder = dark ? "rgba(232,245,236,0.13)" : "transparent";
 
   const handleTaskTap = (t) => {
+    // Free plan out of tasks for today. verify-task enforces this for checked
+    // tasks; asking here first saves a photo the server would turn away, and
+    // covers the onboarding starter tasks that complete without a check.
+    if (!isPro && freeTasksLeft != null && freeTasksLeft <= 0) {
+      Alert.alert(
+        "That's today's free tasks",
+        `The free plan earns from ${freeDailyTasks} tasks a day. Go Pro for unlimited tasks, or come back tomorrow.`,
+        onUpgrade
+          ? [{ text: "Not now", style: "cancel" }, { text: "See Pro", onPress: onUpgrade }]
+          : [{ text: "OK" }],
+      );
+      return;
+    }
     if (t.aiCheck) setAiCheckTask(t);
     else setVerifyTask(t);
   };
@@ -1899,6 +1932,8 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
       task={aiCheckTask}
       onVerified={() => { onComplete(aiCheckTask.id); setAiCheckTask(null); }}
       onCancel={() => setAiCheckTask(null)}
+      // The check sheet is closing as this fires; the paywall waits for it.
+      onUpgrade={onUpgrade ? () => setTimeout(onUpgrade, 450) : undefined}
       dark={dark}
     />
     <ScrollView
@@ -2504,13 +2539,17 @@ function StatBlock({ dot, label, value, ink }) {
 // memo every App-level state tick re-renders this whole tree and starves the
 // JS thread (dropped taps). Props must keep stable identities — see the
 // stable-handler wrappers in App.
-const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, onAddTask, spentToday = 0, dark }) {
+const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, onAddTask, spentToday = 0, isPro = true, onUpgrade, dark }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
   // Dark text for the light-green `deep` button in dark mode (see TodayView).
   const onDeep = dark ? "#16261C" : "#FAF6EE";
-  const lv        = getLevel(totalXp);
-  const lvIdx     = getLevelIdx(totalXp);
+  const realIdx   = getLevelIdx(totalXp);
+  const lvIdx     = displayLevelIdx(realIdx, isPro);
+  const lv        = LEVELS[lvIdx] || LEVELS[0];
+  // On the free plan the plant stops at FREE_MAX_LEVEL_IDX. Below it, progress
+  // reads as usual; at it, the bar gives way to what Pro grows into.
+  const capped    = !isPro && realIdx >= FREE_MAX_LEVEL_IDX;
   const prog      = xpProg(totalXp);
   const toNext    = xpToNext(totalXp);
   const done      = tasks.filter(t => t.done);
@@ -2640,7 +2679,19 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
             <LevelIcon index={lvIdx} size={27} color={earn.sage} strokeWidth={1.9} />
           </View>
         </View>
-        {toNext > 0 && (
+        {capped && (
+          <TouchableOpacity onPress={onUpgrade} disabled={!onUpgrade} activeOpacity={0.75}>
+            <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, lineHeight: 19 }}>
+              {realIdx > FREE_MAX_LEVEL_IDX
+                ? `You've grown enough for ${LEVELS[realIdx].name}. `
+                : `${toNext} XP to ${LEVELS[FREE_MAX_LEVEL_IDX + 1].name}. `}
+              <Text style={{ fontFamily: FF.bodyMed, color: earn.sage }}>
+                Pro grows your plant past {LEVELS[FREE_MAX_LEVEL_IDX].name}.
+              </Text>
+            </Text>
+          </TouchableOpacity>
+        )}
+        {!capped && toNext > 0 && (
           <>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
               <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: ink.faint, letterSpacing: 1.6 }}>
@@ -3588,9 +3639,10 @@ export default function App() {
 
   // ── Pro access — everything is free for now ────────────────────────────
   // ── Entitlement ──────────────────────────────────────────────
-  // Drift is paid-only: $4.99/mo or $29.99/yr after a 7-day trial. This was
-  // hardcoded `true` while payments were switched off; it is now the real
-  // answer from RevenueCat, OR a manual grant in pro_overrides.
+  // Personal accounts are free with limits (freeTier.js) or Pro at $4.99/mo or
+  // $29.99/yr; Family is subscribe-to-start. proAccess is the real answer from
+  // RevenueCat, OR a manual grant in pro_overrides — false means "free plan"
+  // for a personal account and "paywall" for a parent.
   //
   // Children are entitled through their PARENT and never see a paywall, so
   // appMode === "child" short-circuits to true. The server agrees: is_pro()
@@ -3612,6 +3664,34 @@ export default function App() {
   // only surface a cohort participant can reach.
   const [redeemOnPaywall, setRedeemOnPaywall] = useState(false);
   const proAccessRef = useRef(false);
+
+  // ── Pro upgrade sheet (free plan) ────────────────────────────
+  // The paywall as a closable sheet, opened from a free-plan limit or an
+  // Upgrade row. `reason` is analytics only — which limit people hit is the
+  // question the free tier exists to answer.
+  const [paywallReason, setPaywallReason] = useState(null);
+  const openPaywall = useCallback((reason = "upgrade") => {
+    if (proAccessRef.current) return;
+    track("paywall_opened", { reason });
+    setPaywallReason(reason);
+  }, []);
+  // Purchase or redemption succeeded: proAccess flips, and the sheet has done
+  // its job. PaywallScreen deliberately doesn't dismiss itself on success.
+  useEffect(() => { if (proAccess) setPaywallReason(null); }, [proAccess]);
+  // Stable per-reason openers for the memoised tabs, which would otherwise
+  // re-render on every App render for a fresh arrow.
+  const openLockboxPaywall   = useCallback(() => openPaywall("lockbox"), [openPaywall]);
+  const openTaskLimitPaywall = useCallback(() => openPaywall("task_limit"), [openPaywall]);
+  const openPlantPaywall     = useCallback(() => openPaywall("plant_stage"), [openPaywall]);
+  const openChallengePaywall = useCallback(() => openPaywall("challenge"), [openPaywall]);
+
+  // The free plan's daily task allowance, read from the same app_config row
+  // verify-task enforces so the two can't disagree.
+  const [freeDailyTasks, setFreeDailyTasks] = useState(FREE_DAILY_TASKS);
+  useEffect(() => { fetchFreeDailyTasks().then(setFreeDailyTasks).catch(() => {}); }, []);
+  const freeTasksLeft = proAccess
+    ? null
+    : Math.max(0, freeDailyTasks - tasksDoneOn(taskHistory, todayKey()));
   // Tell the native Screen-Time extension what this user actually is. This was
   // pinned to `true` while the app was free for everyone, which left the shield
   // behaving as Pro for accounts that had never paid.
@@ -3630,6 +3710,7 @@ export default function App() {
   const driftInActRef   = useRef(driftInActive);
   const swipeBlockedRef = useRef(false);
   const levelIdxRef     = useRef(null);
+  const levelXpRef      = useRef(null);
   const appActiveRef    = useRef(true);   // true while app is foregrounded
   const processedAuthUrlRef = useRef("");
   // Same job for drift://add-friend links. Without it a redelivered URL sends
@@ -3654,7 +3735,10 @@ export default function App() {
   const userIdRef      = useRef(null);
   const appModeRef     = useRef("personal"); // gates the personal screen-time subsystem
   useEffect(() => {
-    const idx = getLevelIdx(totalXp);
+    // The DISPLAYED stage: free accounts stop at FREE_MAX_LEVEL_IDX.
+    const idx = displayLevelIdx(getLevelIdx(totalXp), proAccess);
+    const xpRose = levelXpRef.current != null && totalXp > levelXpRef.current;
+    levelXpRef.current = totalXp;
     if (screen !== "app") {
       levelIdxRef.current = idx;
       return;
@@ -3663,11 +3747,17 @@ export default function App() {
       levelIdxRef.current = idx;
       return;
     }
-    if (idx > levelIdxRef.current) {
+    // Only XP grows the plant. proAccess resolving at boot (or a purchase)
+    // can move the displayed stage without anything having been earned, and
+    // celebrating that would be a "level up" for opening the app.
+    if (idx > levelIdxRef.current && xpRose) {
       setLevelUp(LEVELS[idx]);
+      // Reaching Sapling (stage 3) is a success moment worth a review ask;
+      // reviewPrompt.js decides whether one is actually due.
+      if (idx === FREE_MAX_LEVEL_IDX) setTimeout(askForReviewIfDue, 3000);
     }
     levelIdxRef.current = idx;
-  }, [totalXp, screen]);
+  }, [totalXp, screen, proAccess, askForReviewIfDue]);
   const setChildSwipeLockedNow = useCallback((locked) => {
     const next = !!locked;
     swipeBlockedRef.current = next;
@@ -4600,11 +4690,11 @@ export default function App() {
    */
   useEffect(() => {
     if (!pendingFirstRun) return;
-    if (!proAccess || screen !== "app" || appMode !== "personal") return;
+    if (screen !== "app" || appMode !== "personal") return;
     setPendingFirstRun(false);
     setFirstTimeBlockedApps(true);
     setShowBlockedApps(true);
-  }, [pendingFirstRun, proAccess, screen, appMode]);
+  }, [pendingFirstRun, screen, appMode]);
 
   // Supabase email confirmation links open here before a user is signed in.
   // Deep-link friend invites — drift://add-friend/[username]
@@ -5411,10 +5501,13 @@ export default function App() {
 
     track("task_completed", { credits: task.credits, xp: task.xp });
 
-    // Ask for a review only after real engagement (Apple 5.6.3 rejected
-    // prompting during onboarding) — never before the third completed task.
-    // Whether an ask is actually due is reviewPrompt.js's call.
-    if (nh.length >= 3) askForReviewIfDue();
+    // Ask for a review only after real engagement. Apple (5.6.3) rejected
+    // prompting during onboarding, before the user had done anything; the
+    // first completed task is the first earned unlock, which is engagement and
+    // the happiest moment the app has. Onboarding never completes a task on
+    // the user's behalf, so this cannot fire during it. Whether an ask is
+    // actually due is reviewPrompt.js's call.
+    if (nh.length >= 1) askForReviewIfDue();
 
     // ── Server-of-truth writes ──
     if (userId) {
@@ -5592,8 +5685,19 @@ export default function App() {
   }, [sleepGuardCard?.mode]);
 
   const tryOpenAddTask = useCallback(() => {
+    // A task added today can only be earned today, so on a free plan with no
+    // tasks left there is nothing it could pay out. Say so up front rather
+    // than after the user has written it and taken the photo.
+    if (freeTasksLeft != null && freeTasksLeft <= 0) {
+      Alert.alert(
+        "That's today's free tasks",
+        `The free plan earns from ${freeDailyTasks} tasks a day. Go Pro for unlimited tasks, or come back tomorrow.`,
+        [{ text: "Not now", style: "cancel" }, { text: "See Pro", onPress: () => openPaywall("task_limit") }],
+      );
+      return;
+    }
     setOverlay("add");
-  }, []);
+  }, [freeTasksLeft, freeDailyTasks, openPaywall]);
 
   // ── Suggested tasks (place arrival / calendar import) ────────
   // Suggestions are shown one at a time; confirming or dismissing pulls the
@@ -5770,15 +5874,24 @@ export default function App() {
     return () => { cancelled = true; };
   }, [appMode, showAutoTasks]);
 
-  // Opening the app picker from The Lab. Pro goes straight to Apple's picker —
-  // no in-app middleman screen. Free tier has nothing to pick (blocking is by
-  // category), so it still gets the sheet, which explains that and offers the
-  // upgrade. Lifted out of ProfileScreen when these rows moved to The Lab.
+  // Opening the app picker from The Lab: straight to Apple's picker, no in-app
+  // middleman screen. Free accounts get the same picker with a cap on how many
+  // things they can pick (FamilyPickerView in ScreenTimeModule.swift); if they
+  // ran into it, offer Pro on the way out. Lifted out of ProfileScreen when
+  // these rows moved to The Lab.
   const openBlockedAppsPicker = useCallback(async () => {
     setFirstTimeBlockedApps(false);
-    if (!proAccess) { setShowBlockedApps(true); return; }
-    const { opened, reason } = await openNativeAppPicker();
-    if (opened) return;
+    const { opened, reason, hitLimit } = await openNativeAppPicker();
+    if (opened) {
+      if (hitLimit && !proAccessRef.current) {
+        Alert.alert(
+          `The free plan blocks up to ${FREE_BLOCK_LIMIT}`,
+          "Drift Pro blocks as many apps, categories and websites as you like.",
+          [{ text: "Not now", style: "cancel" }, { text: "See Pro", onPress: () => openPaywall("block_limit") }],
+        );
+      }
+      return;
+    }
     if (reason === "denied") {
       Alert.alert("Screen Time access needed",
         "Enable Drift in Settings > Screen Time so Drift can block apps.");
@@ -5786,7 +5899,7 @@ export default function App() {
       Alert.alert("Not available",
         "Apple Screen Time blocking requires a custom build of Drift.");
     }
-  }, [proAccess]);
+  }, [openPaywall]);
 
   const dismissAutoTasksHint = useCallback(() => {
     setAutoTasksHint(false);
@@ -6227,10 +6340,12 @@ export default function App() {
     />
   );
 
-  // ── The paywall ──────────────────────────────────────────────
-  // Onboarding, then sign-up, then this. Rendered as a full screen rather than
-  // a modal because there is nothing behind it to go back to — a dismissible
-  // paywall on a paid-only app is just a broken paywall.
+  // ── The paywall (Family) ─────────────────────────────────────
+  // Parent accounts only. Personal accounts without Pro are on the free plan
+  // (freeTier.js) and meet the paywall as a closable sheet instead — see
+  // openPaywall. Family is subscribe-to-start: onboarding, then sign-up, then
+  // this. Rendered as a full screen rather than a modal because a parent
+  // without a subscription has nothing behind it to go back to.
   //
   // Ordering matters, and it is not obvious: this sits AFTER the child shell
   // (a child is entitled through their parent and must never see a paywall) but
@@ -6250,7 +6365,7 @@ export default function App() {
   // useSubscription: a user previously confirmed as Pro is already inside
   // proAccess via the cached answer, so they never reach this branch and never
   // see a paywall flash on a flaky connection.
-  if (userId && !proAccess) {
+  if (userId && !proAccess && appMode === "parent") {
     // Undecided. Hold on the boot splash — never the app. useSubscription
     // guarantees this resolves within RESOLVE_TIMEOUT_MS.
     if (!subResolved) return <BootSplash />;
@@ -6424,7 +6539,7 @@ export default function App() {
               Alert.alert("Screen Time", `Status: ${next}. Open Settings -> Screen Time to grant access.`);
             }
           }}
-          onUpgrade={() => {}}
+          onUpgrade={() => openPaywall("profile")}
           onSignOut={signOut}
           onDeleteAccount={deleteAccount}
           onProRedeemed={subRefresh}
@@ -6460,6 +6575,10 @@ export default function App() {
               onOpenAutoTasks={() => setShowAutoTasks(true)}
               onDismissAutoTasksHint={dismissAutoTasksHint}
               sleepGuard={sleepGuardCard}
+              isPro={proAccess}
+              freeTasksLeft={freeTasksLeft}
+              freeDailyTasks={freeDailyTasks}
+              onUpgrade={openTaskLimitPaywall}
             />
           </View>
           <View style={{ width: TAB_W, height: "100%", backgroundColor: driftInActive ? th_ink.void : th_paper.warm }}>
@@ -6469,6 +6588,8 @@ export default function App() {
               onSessionTick={handleDriftInTick}
               onSessionEnd={stableDriftInEnd}
               onImmersiveChange={setLockboxFull}
+              lockboxLocked={!proAccess}
+              onUpgrade={openLockboxPaywall}
               totalXp={totalXp}
               dark={darkMode}
             />
@@ -6478,11 +6599,11 @@ export default function App() {
               half={groveHalf}
               onHalfChange={setGroveHalf}
               dark={darkMode}
-              statsProps={{ tasks: statsTasks, totalXp, skips: 0, onAddTask: tryOpenAddTask, spentToday }}
+              statsProps={{ tasks: statsTasks, totalXp, skips: 0, onAddTask: tryOpenAddTask, spentToday, isPro: proAccess, onUpgrade: openPlantPaywall }}
               socialProps={{
                 userId,
                 isPremium: proAccess,
-                onOpenPaywall: NOOP,
+                onOpenPaywall: openChallengePaywall,
                 onSwipeLockChange: setChildSwipeLockedNow,
                 onChallengeResolved: stableChallengeResolved,
                 // My own spend, so the leaderboard can place me without
@@ -6500,8 +6621,12 @@ export default function App() {
               visible={tab === "lab"}
               onOpenAutoTasks={() => setShowAutoTasks(true)}
               onOpenBlockedApps={openBlockedAppsPicker}
-              onOpenBlockedHours={() => setShowBlockedHours(true)}
-              onOpenRecurringTasks={() => setShowRecurringTasks(true)}
+              // Blocked hours and repeating tasks are Pro (freeTier.js). Both
+              // were already inert without it — the hours never armed and
+              // templates never materialised — but the editors still opened,
+              // so a free user could set them up and watch nothing happen.
+              onOpenBlockedHours={() => proAccess ? setShowBlockedHours(true) : openPaywall("blocked_hours")}
+              onOpenRecurringTasks={() => proAccess ? setShowRecurringTasks(true) : openPaywall("recurring")}
               onOpenSleepGuard={() => setShowSleepGuard(true)}
               onOpenActionPlan={() => setShowActionPlan(true)}
               actionPlanSummary={ActionPlan.planSummary(actionPlan)}
@@ -6583,7 +6708,7 @@ export default function App() {
             // single tap: accept the suggestion, tap it done, collect the
             // credits, having done nothing. A task Drift suggested is not a
             // task Drift watched you do.
-            aiCheck: proAccess,
+            aiCheck: true,
             aiValued: false,
             aiPending: false,
             aiReasoning: reasoning || "",
@@ -6638,7 +6763,7 @@ export default function App() {
               onClose={() => setOverlay(null)}
               userId={userId}
               isSubActive={proAccess}
-              onOpenPaywall={NOOP}
+              onOpenPaywall={() => openPaywall("add_task")}
               onOpenAutoTasks={autoTasksHint ? () => { setOverlay(null); setShowAutoTasks(true); } : null}
             />
           )}
@@ -6652,7 +6777,8 @@ export default function App() {
         firstTime={firstTimeBlockedApps}
         dark={darkMode}
         isPro={proAccess}
-        onUpgrade={() => {}}
+        // That sheet is a Modal; close it before the paywall's opens.
+        onUpgrade={() => { setShowBlockedApps(false); setTimeout(() => openPaywall("block_limit"), 450); }}
         onClose={() => {
           const wasFirstTime = firstTimeBlockedApps;
           setShowBlockedApps(false);
@@ -6681,6 +6807,33 @@ export default function App() {
           tasks to have actually experienced the app's value. */}
       <Modal visible={showReviewPrompt} animationType="slide" onRequestClose={() => setShowReviewPrompt(false)}>
         <ReviewPromptScreen dark={darkMode} onDone={() => setShowReviewPrompt(false)} />
+      </Modal>
+
+      {/* Pro upgrade sheet — the free plan's paywall. Closes itself when
+          proAccess flips (see openPaywall). */}
+      <Modal
+        visible={!!paywallReason}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setPaywallReason(null)}
+      >
+        <PaywallScreen
+          dark={darkMode}
+          accountType="personal"
+          offerings={subOfferings}
+          onPurchase={subPurchase}
+          onRestore={subRestore}
+          onSignOut={signOut}
+          onRedeemCode={() => setRedeemOnPaywall(true)}
+          introEligible={subIntroEligible}
+          onClose={() => setPaywallReason(null)}
+        />
+        <RedeemCodeModal
+          visible={redeemOnPaywall}
+          dark={darkMode}
+          onClose={() => setRedeemOnPaywall(false)}
+          onRedeemed={subRefresh}
+        />
       </Modal>
       <BlockedHoursModal
         visible={showBlockedHours}

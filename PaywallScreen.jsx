@@ -1,7 +1,12 @@
 /**
  * PaywallScreen.jsx
- * The hard paywall. Drift has no free tier — onboarding, then sign-up, then
- * this, and nothing past it until the subscription (or a manual grant) is live.
+ * Two jobs, one screen:
+ *   - FAMILY (parent accounts): the hard paywall. Onboarding, then sign-up,
+ *     then this, and nothing past it until the subscription is live. Family is
+ *     subscribe-to-start; the parent is the one paying.
+ *   - PRO (personal accounts): an upgrade sheet over the free tier, opened when
+ *     someone runs into a free-plan limit or taps Upgrade. Pass `onClose` and
+ *     it gets a close button and no sign-out. See freeTier.js for the limits.
  *
  * ── Things here that exist because Apple rejects builds without them ─────────
  * Guideline 3.1.2 / 3.1.1 require, on any screen that sells a subscription:
@@ -19,8 +24,9 @@
  *
  * ── The escape hatch ─────────────────────────────────────────────────────────
  * A paywall with no way out is a trap, and a reviewer who cannot get past it
- * fails the build. There is deliberately no dismiss, but there IS sign-out —
- * so a user who doesn't want to pay can leave, and support can move an account.
+ * fails the build. The hard (Family) paywall has no dismiss, but there IS
+ * sign-out — so a parent who doesn't want to pay can leave, and support can
+ * move an account. The Pro sheet closes like any other sheet.
  *
  * ── Why this screen has two beats ────────────────────────────────────────────
  * When a `plan` is passed (the tasks the user just picked in onboarding) the
@@ -81,7 +87,7 @@ const familyEstimate = (kids) => FAMILY_BASE + (FAMILY_PER_KID * kids);
 
 export default function PaywallScreen({
   onPurchase, onRestore, onSignOut, onRedeemCode, offerings, introEligible = null,
-  plan = null, accountType = "personal", dark = false,
+  plan = null, accountType = "personal", dark = false, onClose = null,
 }) {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring,  setRestoring]  = useState(false);
@@ -375,7 +381,10 @@ export default function PaywallScreen({
     : `${price}/${periodWord}. Renews automatically — cancel anytime in Settings.`;
   const bullets = isFamily
     ? ["You set the rules", "They earn screen time with real tasks", "An account for every kid"]
-    : ["Apps stay locked until you earn time", "Photo proof on every task", "Streaks, levels and friends"];
+    // What Pro adds over the free plan — the person reading this is already
+    // using the free plan, so selling them what they have is wasted space.
+    : ["Block as many apps as you want", "Unlimited tasks, valued by AI",
+       "Lockbox, blocked hours and repeating tasks", "Grow your plant past Sapling"];
 
   const planTile = (id, label, sub, on, onPress, badge) => (
     <TouchableOpacity
@@ -404,10 +413,21 @@ export default function PaywallScreen({
   return (
     <View style={{ flex: 1, backgroundColor: paper.bg }}>
       <StatusBar barStyle={dark ? "light-content" : "dark-content"} />
+      {!!onClose && (
+        <TouchableOpacity
+          onPress={onClose}
+          disabled={busy}
+          accessibilityLabel="Close"
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={{ position: "absolute", top: Platform.OS === "ios" ? 22 : 16, right: 20, zIndex: 2, padding: 6 }}
+        >
+          <Text style={{ fontSize: 26, lineHeight: 28, color: ink.mid }}>×</Text>
+        </TouchableOpacity>
+      )}
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: 26,
-          paddingTop: Platform.OS === "ios" ? 88 : 48,
+          paddingTop: Platform.OS === "ios" ? (onClose ? 64 : 88) : 48,
           paddingBottom: 32,
           flexGrow: 1,
         }}
@@ -426,7 +446,7 @@ export default function PaywallScreen({
                 the product, and read "Start with 0 free days" to the ineligible. */}
             {isFamily
               ? (trial ? `Try Drift Family free for ${trial} days` : "Drift Family")
-              : (trial ? `Try Drift free for ${trial} days` : "Unlock Drift")}
+              : (trial ? `Try Drift Pro free for ${trial} days` : "Go Pro")}
           </Text>
 
           <View style={{ gap: 14, marginBottom: 32 }}>
@@ -542,10 +562,13 @@ export default function PaywallScreen({
                 <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>Have a code?</Text>
               </TouchableOpacity>
             )}
-            {/* The way out: this paywall has no dismiss, so sign-out must exist. */}
-            <TouchableOpacity onPress={onSignOut}>
-              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>Sign out</Text>
-            </TouchableOpacity>
+            {/* The way out of the hard paywall, which has no dismiss. The Pro
+                sheet closes instead, so it doesn't need one. */}
+            {!onClose && (
+              <TouchableOpacity onPress={onSignOut}>
+                <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>Sign out</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </Animated.View>
       </ScrollView>

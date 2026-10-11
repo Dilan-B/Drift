@@ -5,7 +5,7 @@
 //
 //   requestAuthorization()              -> "approved" | "denied" | "notDetermined"
 //   getAuthorizationStatus()            -> string
-//   presentFamilyActivityPicker()       -> void (Apple's secure app picker)
+//   presentFamilyActivityPicker()       -> { committed, hitLimit } (Apple's picker; free users capped)
 //   applyShield()                       -> void
 //   clearShield()                       -> void
 //   startBalanceMonitoring(seconds:N)   -> void  (iOS-enforced timer)
@@ -85,16 +85,68 @@ final class ScreenTimeSelectionStore: ObservableObject {
   }
 }
 
+/// How many apps + categories + websites a free user may block. Mirrors
+/// FREE_BLOCK_LIMIT in freeTier.js — change both together.
+let DRIFT_FREE_BLOCK_LIMIT = 3
+
+/// The picker edits a DRAFT and only writes it to the store on Done.
+///
+/// It used to bind straight to the store, so every tap was saved the moment it
+/// was made. That cannot enforce a cap: Apple's picker has no selection limit,
+/// so a free user's fourth app would already be persisted (and shielded by the
+/// extension) before anything could object. With a draft, Done is simply
+/// unavailable while the draft is over the limit, and Cancel keeps whatever
+/// was saved before.
+///
+/// Apple only lets us count tokens, never name them, so the cap counts each
+/// app, category and website as one pick.
 @available(iOS 16.0, *)
 struct FamilyPickerView: View {
-  @ObservedObject var store = ScreenTimeSelectionStore.shared
-  var onDone: () -> Void
+  /// nil = no cap (Pro).
+  let limit: Int?
+  /// committed: Done was tapped. hitLimit: the draft went over the cap at
+  /// some point, so JS can offer Pro on the way out.
+  var onFinish: (_ committed: Bool, _ hitLimit: Bool) -> Void
+
+  @State private var draft: FamilyActivitySelection
+  @State private var hitLimit = false
+
+  init(limit: Int?, onFinish: @escaping (Bool, Bool) -> Void) {
+    self.limit = limit
+    self.onFinish = onFinish
+    _draft = State(initialValue: ScreenTimeSelectionStore.shared.selection)
+  }
+
+  private var count: Int {
+    draft.applicationTokens.count + draft.categoryTokens.count + draft.webDomainTokens.count
+  }
+  private var overLimit: Bool { limit.map { count > $0 } ?? false }
 
   var body: some View {
     NavigationView {
-      FamilyActivityPicker(selection: $store.selection)
-        .navigationTitle("Apps to block")
-        .navigationBarItems(trailing: Button("Done", action: onDone))
+      VStack(spacing: 0) {
+        FamilyActivityPicker(selection: $draft)
+        if let limit = limit {
+          Text(overLimit
+               ? "The free plan blocks up to \(limit). Remove \(count - limit) to save, or go Pro to block everything."
+               : "Free plan: \(count) of \(limit) picked.")
+            .font(.footnote)
+            .foregroundColor(overLimit ? .red : .secondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+        }
+      }
+      .onChange(of: count) { _ in if overLimit { hitLimit = true } }
+      .navigationTitle("Apps to block")
+      .navigationBarItems(
+        leading: Button("Cancel") { onFinish(false, hitLimit) },
+        trailing: Button("Done") {
+          ScreenTimeSelectionStore.shared.selection = draft
+          onFinish(true, hitLimit)
+        }
+        .disabled(overLimit)
+      )
     }
   }
 }
@@ -162,10 +214,21 @@ class ScreenTimeModule: NSObject {
         guard let root = Self.topViewController() else {
           reject("no_vc", "No root view controller", nil); return
         }
-        let host = UIHostingController(rootView: FamilyPickerView(onDone: {
-          root.dismiss(animated: true) { resolve(nil) }
-        }))
+        // Free vs Pro comes from the flag JS writes through setProStatus — the
+        // same one the DriftMonitor extension reads.
+        let isPro = UserDefaults(suiteName: DRIFT_APP_GROUP)?.bool(forKey: "drift_pro_access") ?? false
+        let host = UIHostingController(rootView: FamilyPickerView(
+          limit: isPro ? nil : DRIFT_FREE_BLOCK_LIMIT,
+          onFinish: { committed, hitLimit in
+            root.dismiss(animated: true) {
+              resolve(["committed": committed, "hitLimit": hitLimit])
+            }
+          }
+        ))
         host.modalPresentationStyle = .formSheet
+        // Swipe-to-dismiss would leave the draft unsaved AND this promise
+        // unresolved; Done and Cancel are the only ways out.
+        host.isModalInPresentation = true
         root.present(host, animated: true, completion: nil)
       }
       return

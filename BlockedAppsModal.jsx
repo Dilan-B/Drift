@@ -17,6 +17,7 @@ import {
   getScreenTimeAuthStatus, pickBlockedAppsNative, getBlockedSelectionCount,
 } from "./blockedApps";
 import { FF, getTheme } from "./theme";
+import { FREE_BLOCK_LIMIT } from "./freeTier";
 
 // Remapped onto the organic-editorial system — see theme.js FF.
 const FO  = FF.bodyBold;
@@ -24,8 +25,9 @@ const FOM = FF.kicker;
 const FK  = FF.bodyMed;
 const FB  = FF.body;
 
-// `isPro` / `onUpgrade` are still accepted so existing call sites keep working,
-// but app selection is no longer gated on a subscription.
+// Everyone picks their own apps. Free users are capped at FREE_BLOCK_LIMIT
+// picks — the native picker enforces it (Done is disabled over the cap), this
+// sheet only says so and offers Pro when someone ran into it.
 export default function BlockedAppsModal({ visible, onClose, dark = false, firstTime = false, isPro = false, onUpgrade }) {
   const theme = getTheme(dark);
   const { ink, paper, earn } = theme;
@@ -72,8 +74,18 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
 
   const openPicker = async () => {
     if (!(await ensureAccess())) return;
-    await pickBlockedAppsNative();
+    const res = await pickBlockedAppsNative();
     await refreshSelection();
+    // Not during first-run: that sheet is the onboarding gate, and stacking
+    // the paywall on it mid-setup is exactly the onboarding upsell the free
+    // tier exists to remove. The cap line below still says what happened.
+    if (res?.hitLimit && !isPro && !firstTime && onUpgrade) {
+      Alert.alert(
+        `Free plan blocks up to ${FREE_BLOCK_LIMIT}`,
+        "Drift Pro blocks as many apps, categories and websites as you like.",
+        [{ text: "Not now", style: "cancel" }, { text: "See Pro", onPress: onUpgrade }],
+      );
+    }
   };
 
   return (
@@ -135,7 +147,9 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
               {selectionCount > 0 ? "Change blocked apps" : "Pick apps with Apple Screen Time"}
             </Text>
             <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4, textAlign: "center" }}>
-              Apps, categories, or web domains.
+              {isPro
+                ? "Apps, categories, or web domains."
+                : `Up to ${FREE_BLOCK_LIMIT} apps, categories, or web domains on the free plan.`}
             </Text>
           </TouchableOpacity>
 
@@ -146,7 +160,9 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
             }}>
               <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: earn.green }} />
               <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid }}>
-                {selectionCount} {selectionCount === 1 ? "selection" : "selections"} saved
+                {isPro
+                  ? `${selectionCount} ${selectionCount === 1 ? "selection" : "selections"} saved`
+                  : `${selectionCount} of ${FREE_BLOCK_LIMIT} saved`}
               </Text>
             </View>
           )}

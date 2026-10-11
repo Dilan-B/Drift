@@ -1,6 +1,8 @@
 // Drift – AI Task Verification Edge Function
 // Proxies OpenAI calls so the API key never reaches the client.
-// Rate limits: 5/hour and 20/day per authenticated user.
+// Rate limits: 5/hour and 20/day per authenticated user. Free (non-Pro)
+// callers additionally get app_config.free_daily_tasks APPROVED checks per
+// local day, then 402 free_limit — see "Free tier" below.
 //
 // ── What this function enforces, and why it looks like this ──────────────────
 //
@@ -142,6 +144,61 @@ async function proGatingEnforced(client: any): Promise<boolean> {
   } catch {
     return gatingFlag?.on ?? false;
   }
+}
+
+// ── Free tier ────────────────────────────────────────────────
+// A caller is_pro() says no to is a FREE user, not a blocked one: they get
+// app_config.free_daily_tasks approved checks per local day (schema_v21), and
+// 402 free_limit after that. Nothing about entitlement changes — the free tier
+// is what happens to a "no", so is_pro() stays the one definition of Pro.
+//
+// Counted from ai_check_usage rows with verified = true. Users can insert and
+// read their own rows there but not update or delete them, so the count only
+// ever goes up. Rejections, follow-up questions and too-early submissions are
+// not approvals and do not use the allowance — a user whose photo was turned
+// down has not had their task, and charging them for it would be a second
+// rejection.
+//
+// Same caching and fail-safe shape as the gating flag: a failed read keeps the
+// last value seen, else the seeded default.
+const FREE_DAILY_TASKS_DEFAULT = 3;
+let freeAllowance: { n: number; ts: number } | null = null;
+
+async function freeDailyTasks(client: any): Promise<number> {
+  if (freeAllowance && Date.now() - freeAllowance.ts < FLAG_TTL_MS) return freeAllowance.n;
+  try {
+    const { data, error } = await client
+      .from("app_config").select("value").eq("key", "free_daily_tasks").maybeSingle();
+    if (error) throw error;
+    const parsed = parseInt(String(data?.value ?? ""), 10);
+    const n = Number.isFinite(parsed) && parsed >= 0 ? parsed : FREE_DAILY_TASKS_DEFAULT;
+    freeAllowance = { n, ts: Date.now() };
+    return n;
+  } catch {
+    return freeAllowance?.n ?? FREE_DAILY_TASKS_DEFAULT;
+  }
+}
+
+/**
+ * Start of the caller's local day, as an ISO instant.
+ *
+ * The client's "today" is local, and the allowance has to reset when the
+ * user's day does: counting from UTC midnight told someone in New Jersey who
+ * used their three tasks at 9pm that they were still out of them at 8am.
+ * The client sends Date#getTimezoneOffset() (minutes, UTC minus local).
+ *
+ * The offset is the caller's word, so it is clamped to real timezones
+ * (UTC-12..UTC+14). Lying about it can shift the window by at most a day's
+ * worth of hours, which buys a few extra nano-model calls — still under the
+ * 5/hour and 20/day ceilings above, which do not trust the client at all.
+ */
+function localDayStartIso(tzOffsetMin: unknown, now = new Date()): string {
+  const raw = Number(tzOffsetMin);
+  const off = Number.isFinite(raw) ? Math.max(-840, Math.min(720, Math.round(raw))) : 0;
+  // Shift into the caller's wall clock, truncate to midnight, shift back.
+  const local = new Date(now.getTime() - off * 60_000);
+  local.setUTCHours(0, 0, 0, 0);
+  return new Date(local.getTime() + off * 60_000).toISOString();
 }
 
 const cors = {
@@ -294,15 +351,10 @@ serve(async (req: Request) => {
     }
     // Enforced only when app_config.enforce_pro_gating = 'true'. See
     // proGatingEnforced above; flip it in the SQL editor, no deploy needed.
-    if (!subActive && await proGatingEnforced(supabase)) {
-      return json({
-        error: "subscription_required",
-        // Not "Tap profile → Upgrade": that row does nothing (onUpgrade is a
-        // no-op in Drift.jsx), and a non-subscriber is normally stopped at the
-        // paywall long before they could get here.
-        message: "AI Check needs Drift Pro. Subscribe or redeem a cohort code to use it.",
-      }, 402);
-    }
+    // A non-Pro caller is not turned away here: they are a free user, and
+    // their daily allowance is checked once the request body (which carries
+    // their timezone) has been parsed — see "Free tier" above.
+    const freeCaller = !subActive && await proGatingEnforced(supabase);
 
     // ── 2. Rate limiting ─────────────────────────────────────
     const now      = new Date();
@@ -346,11 +398,42 @@ serve(async (req: Request) => {
       frames?: string[];
       videoMeta?: { durationSec?: number; frameCount?: number; sizeBytes?: number };
       followUpAnswer?: string;
+      tzOffsetMin?: number;
     };
     try { body = await req.json(); }
     catch { return reject("invalid_json", 400); }
 
     const { proofText, imageBase64, frames, videoMeta, followUpAnswer } = body;
+
+    // ── 3a. Free tier allowance ──────────────────────────────
+    // Before the task lookup and any model call, so a free user who is out of
+    // checks costs one count query and nothing else.
+    if (freeCaller) {
+      const allowance = await freeDailyTasks(supabase);
+      const { count: approvedToday, error: countErr } = await supabase
+        .from("ai_check_usage")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("verified", true)
+        .gte("created_at", localDayStartIso(body.tzOffsetMin));
+      // A failed count is not "zero used": that would hand out unlimited checks
+      // whenever the ledger hiccups. Say so and let them retry.
+      if (countErr) {
+        console.error("free allowance count failed:", countErr.code || "unknown");
+        return reject("task_lookup_failed", 503, {
+          message: "Couldn't check your plan right now. Try again in a moment.",
+        });
+      }
+      if ((approvedToday ?? 0) >= allowance) {
+        return json({
+          error: "free_limit",
+          limit: allowance,
+          message: allowance === 1
+            ? "The free plan includes 1 verified task a day. Go Pro for unlimited tasks, or come back tomorrow."
+            : `The free plan includes ${allowance} verified tasks a day. Go Pro for unlimited tasks, or come back tomorrow.`,
+        }, 402);
+      }
+    }
 
     // taskId is the contract: the server reads title, duration and creation
     // time off the row, because anything sent from here is a field it would

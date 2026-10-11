@@ -130,9 +130,9 @@ export async function requestScreenTimeAuth() {
  * counts are sent, never names or tokens.
  */
 export async function pickBlockedAppsNative() {
-  const ok = await nativePresentPicker();
-  if (ok) await trackBlockedSelection();
-  return ok;
+  const res = await nativePresentPicker();
+  if (res?.committed) await trackBlockedSelection();
+  return res;
 }
 
 async function trackBlockedSelection() {
@@ -159,8 +159,10 @@ export async function openNativeAppPicker() {
     status = await nativeRequestAuth();
     if (status !== "approved") return { opened: false, reason: "denied", status };
   }
-  const ok = await pickBlockedAppsNative();
-  return ok ? { opened: true, status } : { opened: false, reason: "picker_failed", status };
+  const res = await pickBlockedAppsNative();
+  return res
+    ? { opened: true, status, hitLimit: res.hitLimit }
+    : { opened: false, reason: "picker_failed", status };
 }
 
 /**
