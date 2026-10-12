@@ -448,6 +448,9 @@ ROWS = [
     ("2026-10-11", "f72e835", "Bug Fix", "Website", "GitHub Pages site advertised $0.99/month after a 3-day trial",
      "The docs/ pages were never updated when Pro was repriced to $4.99/$29.99 (0e7cd87). Six pages and the structured-data price now match driftproductivity.com. Live on Pages since 2026-10-11, independent of the app.",
      "1.2.0", "\u2014"),
+    ("2026-10-12", "90dc57e", "Feature", "Billing", "Loyalty pricing: monthly Pro drops 50\u00a2 every 2 months, down to $2.99",
+     "$4.99 for months 0-1, then $4.49, $3.99, $3.49 and $2.99 from month 8, counted over an unbroken paid run (trial days excluded). Unsubscribing or lapsing resets it. Apple won't let an app change one subscriber's price, so each step is a promotional offer on com.drift.pro.month (loyalty_449/399/349 for 2 months, loyalty_299 for 12) that the subscriber confirms once; it starts at their next renewal. The webhook keeps profiles.sub_paid_since (guarded like the other subscription columns). Ships switched off: needs schema_v22 pushed, the webhook deployed, the four offers in App Store Connect, the subscription key in RevenueCat, then app_config.loyalty_pricing = 'true'.",
+     "1.2.0", "SQL migration, Edge deploy, App Store Connect"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
