@@ -424,8 +424,30 @@ ROWS = [
      "The DriftMonitor extension forced .all categories for any non-Pro user when the balance ran out, while the in-app path had already moved to honouring the user's picks. The extension now matches: picks win, and .all is only the fallback when nothing is picked.",
      "1.1.8", "Native build"),
     ("2026-10-01", "56843dd", "Bug Fix", "Codes", "Redeeming a dated code after a revoke restored permanent access",
-     "redeem_cohort_code's never-shorten rule treated a revoked grant (granted = false, expires_at null) as permanent, so any later 30-day code came back permanent with the old child seats. schema_v20 only honours an existing grant that is live. Migration written; not yet pushed.",
+     "redeem_cohort_code's never-shorten rule treated a revoked grant (granted = false, expires_at null) as permanent, so any later 30-day code came back permanent with the old child seats. schema_v20 only honours an existing grant that is live. Applied (20261001000001 confirmed in the live migration history 2026-10-11).",
      "1.1.8", "SQL migration"),
+    # ── 2026-10-11 ────────────────────────────────────────────
+    ("2026-10-11", "f06f1a2", "Feature", "Billing", "Free tier for personal accounts",
+     "The hard paywall turned away teens, who mostly can't start an App Store subscription without a parent's card. Free: up to 3 blocked apps/categories/sites, 3 photo-verified tasks a day (flat duration-based credits), plant stages 1-3, focus timer. Pro: unlimited picks and tasks, AI-valued credits, Lockbox, blocked hours, repeating tasks, stages 4+, challenges. Family stays a hard paywall. verify-task gives non-Pro callers app_config.free_daily_tasks approved checks since their local midnight, then 402 free_limit; is_pro() unchanged. Migration applied and verify-task deployed 2026-10-11, both verified live.",
+     "1.2.0", "Native build, SQL migration, Edge deploy"),
+    ("2026-10-11", "f06f1a2", "Feature", "Screen Time", "App picker caps free users at 3 picks",
+     "Apple's picker has no selection limit and was bound straight to the saved selection, so every tap persisted (and was shielded) before anything could object. It now edits a draft: Done is disabled over the cap and Cancel keeps the old selection. Also fixes swipe-to-dismiss leaving the picker's promise unresolved.",
+     "1.2.0", "Native build"),
+    ("2026-10-11", "f06f1a2", "Feature", "Paywall", "Pro upgrade sheet, and upgrade buttons that work",
+     "The paywall doubles as a closable Pro sheet for personal accounts. Every upgrade entry point (profile row, challenges, repeating tasks, AI info, picker limit) was a no-op; they now open it, as do the free-plan limits, Lockbox, blocked hours and the plant cap.",
+     "1.2.0", "\u2014"),
+    ("2026-10-11", "f06f1a2", "Feature", "Onboarding", "New users go straight to picking apps and the tour",
+     "The first-run sequence waited for proAccess, i.e. for a purchase. With the free tier it runs right after sign-up.",
+     "1.2.0", "\u2014"),
+    ("2026-10-11", "f06f1a2", "Feature", "Reviews", "Rating prompt after the first completed task and on reaching Sapling",
+     "Was after the third task only. The first earned unlock is the happiest moment in the app; onboarding never completes a task, so this stays clear of the 5.6.3 rejection. reviewPrompt.js still caps asks at 3 a year, 90 days apart.",
+     "1.2.0", "\u2014"),
+    ("2026-10-11", "e82b13b", "Bug Fix", "Screen Time", "Screen time drained while the phone was locked or idle",
+     "When iOS hadn't reported usage yet, Drift charged wall-clock time since it was last in the foreground, and a one-shot failsafe for balances under 15 minutes marked the whole balance spent at its deadline. Both billed a locked phone and time in unblocked apps. The DeviceActivityMonitor usage counter is now the only source of drain; the heartbeat and failsafe are gone. The visible balance can trail real use by one 5-15 minute checkpoint; the shield itself does not lag.",
+     "1.2.0", "Native build"),
+    ("2026-10-11", "f72e835", "Bug Fix", "Website", "GitHub Pages site advertised $0.99/month after a 3-day trial",
+     "The docs/ pages were never updated when Pro was repriced to $4.99/$29.99 (0e7cd87). Six pages and the structured-data price now match driftproductivity.com. Live on Pages since 2026-10-11, independent of the app.",
+     "1.2.0", "\u2014"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
@@ -494,7 +516,7 @@ for i, a in enumerate(areas, start=8):
 
 s["G6"] = "By release"
 s["G6"].font = Font(name=FONT, bold=True, size=12, color="1F3A2A")
-rels = ["1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "Unreleased"]
+rels = ["1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "1.2.0", "Unreleased"]
 s["G7"], s["H7"] = "Release", "Count"
 for c in ("G7", "H7"):
     s[c].font = HDR_FONT
@@ -581,5 +603,5 @@ assert sum(t.values()) == len(ROWS) and sum(r.values()) == len(ROWS)
 for k in t:
     assert k in ("Feature", "Bug Fix", "UI", "Infra", "Security", "Chore", "Docs"), f"unlisted type {k}"
 for k in r:
-    assert k in ("1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "Unreleased"), f"unlisted release {k}"
+    assert k in ("1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "1.2.0", "Unreleased"), f"unlisted release {k}"
 print("\nAll type/release values are covered by a summary row - no change is uncounted.")
