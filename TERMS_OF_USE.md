@@ -1,6 +1,6 @@
 # Drift Terms of Use
 
-**Effective: June 7, 2026**
+**Effective: October 12, 2026**
 
 By creating a Drift account or using the app, you agree to these terms. If you don't, please don't use Drift.
 
@@ -37,11 +37,12 @@ If you submit a photo or text proof for AI verification:
 
 ## 5. Subscription and payments
 
-Drift offers a paid Pro tier. Subscriptions are processed by Stripe and (if shipped via App Store) auto-renew through your Apple ID:
+Drift is free to use with daily limits (currently up to 3 blocked apps and 3 verified tasks a day). Drift Pro and Drift Family are paid subscriptions, sold through the App Store, that auto-renew through your Apple ID:
 - You can cancel anytime in your Settings → Apple ID → Subscriptions. Cancellation takes effect at the end of the current billing period.
 - Prices may change with at least 30 days' notice. You can cancel before the new price takes effect.
-- Refunds are handled by Apple (App Store) or Stripe (web).
-- A 7-day free trial may be offered at our discretion. Misuse of the trial system (multiple accounts, fraudulent payment) is grounds for termination.
+- Refunds are handled by Apple.
+- Monthly Drift Pro gets cheaper the longer you stay subscribed without a break. Each lower price is an Apple promotional offer that we show in the app for you to accept. Turning off auto-renew or letting the subscription lapse starts the schedule over.
+- A free trial may be offered at our discretion. Misuse of the trial system (multiple accounts, fraudulent payment) is grounds for termination.
 
 ## 6. Beta access (TestFlight)
 
@@ -71,7 +72,7 @@ To the maximum extent allowed by law, our total liability for any claim related 
 We're not liable for:
 - Lost productivity or missed earnings while using (or being blocked by) the app.
 - Damage caused by following AI verification outcomes literally.
-- Third-party services we depend on (Supabase, OpenAI, Apple, Stripe) experiencing outages.
+- Third-party services we depend on (Supabase, OpenAI, Apple, RevenueCat) experiencing outages.
 
 ## 10. Changes
 

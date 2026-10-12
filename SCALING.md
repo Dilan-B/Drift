@@ -10,8 +10,7 @@ How the backend handles load. Last updated 2026-06-05.
 | `verify-task`   | 5/hour, 20/day | – |
 | `evaluate-task` | 30/hour, 200/day | – |
 | `claim-trial`   | 1 per lifetime | 3/10min, 1 every 30 days |
-| `create-checkout` | n/a | (Stripe handles) |
-| `stripe-webhook` | n/a | (signature-verified) |
+| `revenuecat-webhook` | n/a | (shared-secret auth) |
 
 Excess requests return HTTP 429 immediately — no DB write, no OpenAI call.
 
@@ -43,9 +42,9 @@ If you grow past that:
 - Move the subscription check to a polling model (every 60s) instead of real-time
 - Or only open the channel when the user views the paywall
 
-### Stripe webhook
-Idempotent — re-running the same event has no extra effect.
-Stripe retries failed deliveries automatically (up to 3 days).
+### RevenueCat webhook
+Idempotent — re-running the same event has no extra effect, and an event older than the last one applied is ignored.
+RevenueCat retries failed deliveries automatically.
 
 ## What to add when you hit real scale
 

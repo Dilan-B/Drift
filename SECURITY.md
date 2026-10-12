@@ -34,19 +34,18 @@
 - ✅ Rate limits: 5/hour, 20/day for `verify-task`; 30/hour, 200/day for `evaluate-task`.
 - ✅ Input validation: task title ≤ 200 chars; proof text ≤ 1000; image ≤ 375 KB base64; duration clamped to [1, 720] minutes.
 - ✅ Output sanitization: stripping markdown code fences, validating JSON shape before sending back.
-- ✅ `stripe-webhook` verifies Stripe's HMAC signature before trusting any event.
+- ✅ `revenuecat-webhook` rejects any event without the shared `REVENUECAT_WEBHOOK_SECRET` in its Authorization header.
 - ✅ Service-role key only available inside edge functions (never in client bundle).
 
 ### Secrets management
 - ✅ OpenAI key → Supabase secret (`OPENAI_API_KEY`)
-- ✅ Stripe secret → Supabase secret (`STRIPE_SECRET_KEY`)
-- ✅ Stripe webhook secret → Supabase secret (`STRIPE_WEBHOOK_SECRET`)
+- ✅ RevenueCat webhook secret → Supabase secret (`REVENUECAT_WEBHOOK_SECRET`)
 - ✅ `.env` is gitignored
 - ✅ `EXPO_PUBLIC_OPENAI_KEY` exists only as a dev fallback — production builds should remove it.
 
 ### Subscription enforcement
 - ✅ `sub_active` on `profiles` is the single source of truth.
-- ✅ Only the Stripe webhook (with verified signature) can flip the flag.
+- ✅ Only the RevenueCat webhook (service role) can flip the flag; a trigger rejects anyone else (`profiles_guard_entitlement_columns`).
 - ✅ App reads via `useSubscription` hook with real-time channel — instant update after upgrade.
 - ✅ AI buttons display a paywall prompt when `sub_active = false`.
 
@@ -65,7 +64,6 @@
 | 2 | Direct OpenAI dev fallback | `EXPO_PUBLIC_OPENAI_KEY` lets dev builds work without deploying edge functions. **Must remove for prod release** — set `allowDirect: false` in `aiEvaluate.js` callers and delete the env var. |
 | 3 | Email confirmation | Currently disabled in Supabase. Turn it on (Auth → Settings → "Confirm email") for production. |
 | 4 | Account deletion | No GDPR-style "delete my data" flow yet. Add one before launch. |
-| 5 | Stripe Customer Portal | Users currently have to email support to cancel. Add a portal session edge function. |
 
 ---
 

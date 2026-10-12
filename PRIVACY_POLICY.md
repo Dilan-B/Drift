@@ -1,6 +1,6 @@
 # Drift Privacy Policy
 
-**Effective: June 7, 2026**
+**Effective: October 12, 2026**
 
 This Privacy Policy describes how Drift ("we", "us") handles your data when you use the Drift mobile application. We've kept it short and human-readable. If something here isn't clear, email **driftappcontact@gmail.com** and we'll explain.
 
@@ -36,6 +36,7 @@ This Privacy Policy describes how Drift ("we", "us") handles your data when you 
 - **Account, tasks, friendships, screen-time history**: Supabase (PostgreSQL, hosted in the US). Encrypted at rest and in transit.
 - **AI verification proofs**: sent over HTTPS to OpenAI through our Supabase Edge Function, used for one evaluation, then discarded. Neither we nor OpenAI retain training data from these submissions.
 - **Apple Screen Time selection**: stored *only on your device* (iOS UserDefaults). Never uploaded to our servers.
+- **Subscription status**: purchases are made through Apple. RevenueCat receives your Drift account ID and the receipt Apple issues so it can tell us whether your subscription is active. It does not receive your tasks, proofs or screen-time data.
 - **Local app state** (current day's balance, dark mode preference): stored on your device only.
 
 ## Who can see your data
@@ -70,7 +71,7 @@ If you're in the EEA, UK, or California, you have additional rights under GDPR /
 - All network traffic uses HTTPS / TLS 1.2+. Plain HTTP is disabled in our iOS build.
 - Passwords are hashed and salted by Supabase Auth (bcrypt-equivalent).
 - The Supabase anon key shipped with the app is restricted by Row Level Security — it can't read or modify another user's data.
-- We do not store payment card details — Stripe handles those directly.
+- We do not store payment card details — Apple handles all payments.
 
 ## Changes to this policy
 
