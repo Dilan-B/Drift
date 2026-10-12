@@ -33,11 +33,22 @@ export async function getAuthorizationStatus() {
  * Presents Apple's FamilyActivityPicker so the user can choose which apps,
  * categories, and web domains to block. The selection is persisted natively;
  * we never see the bundle IDs (Apple intentionally hides them).
+ *
+ * Resolves false if the picker couldn't open, else { committed, hitLimit }:
+ * committed is false when the user cancelled (nothing was saved), and hitLimit
+ * is true when a free user went over the pick cap at some point — see
+ * FamilyPickerView in ScreenTimeModule.swift. Builds that predate the cap
+ * resolve null, which reads as a plain save.
  */
 export async function presentAppPicker() {
   if (!isAvailable()) return false;
-  try { await Native.presentFamilyActivityPicker(); return true; }
-  catch { return false; }
+  try {
+    const res = await Native.presentFamilyActivityPicker();
+    return {
+      committed: res?.committed !== false,
+      hitLimit: res?.hitLimit === true,
+    };
+  } catch { return false; }
 }
 
 /** Shield all app categories (free tier — blocks social, entertainment, etc.). */

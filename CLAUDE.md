@@ -14,6 +14,13 @@ Expo / React Native productivity app. You earn screen-time by completing tasks; 
   `pro_overrides` grant (manual or redeemed cohort code), a beta unlock, and a
   child's seat under a paying parent. Add new entitlement sources there, never by
   hand-rolling the OR in an edge function — that is how they drifted apart before.
+- Personal accounts have a **free tier** (`freeTier.js` lists the limits): up to 3
+  blocked picks, 3 photo-verified tasks a day, plant stages 1–3. It is not an
+  entitlement source — it is what a "no" from `is_pro()` means for a personal
+  account. The task allowance is enforced in `verify-task` (approved rows in
+  `ai_check_usage` since the caller's local midnight, limit in
+  `app_config.free_daily_tasks`); the pick cap in the native picker
+  (`DRIFT_FREE_BLOCK_LIMIT`). Family (parent accounts) is still a hard paywall.
 - OpenAI calls are server-only (never in the client bundle).
 - iOS Screen Time (Family Controls / ManagedSettings) via native `screenTime.js` bridge — only works in a dev/standalone build, not Expo Go.
 

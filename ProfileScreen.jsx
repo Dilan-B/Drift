@@ -400,19 +400,18 @@ export default function ProfileScreen({
             <Row
               id="upgrade"
               title="Upgrade to Pro"
-              sub="AI checks and challenges"
+              sub="Unlimited apps and tasks, Lockbox, challenges"
               cta="UPGRADE"
               accent={earn.terra}
               icon={(c) => <SparkleIcon size={20} color={c} />}
               onPress={onUpgrade}
             />
           )}
-          {/* Shown regardless of subActive. Gating it on !subActive made it
-              doubly unreachable: a non-Pro user never renders this screen at
-              all (Drift.jsx returns the paywall first), and a Pro user was
-              filtered out here — so nobody could ever see it. Someone on a
-              dated cohort grant has a real reason to come back and enter a
-              second code. */}
+          {/* Shown regardless of subActive. Gating it on !subActive once made
+              it unreachable: non-Pro users never saw this screen (they were
+              stopped at the paywall), and Pro users were filtered out here.
+              Free-plan users reach it now, and someone on a dated cohort
+              grant has a real reason to come back and enter a second code. */}
           <Row
             id="redeemCode"
             title="Redeem a code"

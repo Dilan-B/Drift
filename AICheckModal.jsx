@@ -97,7 +97,7 @@ function withTimeout(promise, ms) {
 }
 
 // ── Main Modal Component ──────────────────────────────────────
-export default function AICheckModal({ visible, task, onVerified, onCancel, dark = false }) {
+export default function AICheckModal({ visible, task, onVerified, onCancel, onUpgrade, dark = false }) {
   const theme = getTheme(dark);
   const BG   = theme.paper.card;
   const SURF = theme.paper.warm;
@@ -313,6 +313,9 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
                   ? { durationSec: video.durationSec, frameCount: video.frames.length }
                   : undefined,
                 followUpAnswer: answering ? answer.trim() : undefined,
+                // So the free plan's daily allowance resets at the user's
+                // midnight, not UTC's. Minutes, UTC minus local.
+                tzOffsetMin: new Date().getTimezoneOffset(),
               },
             }),
             INVOKE_TIMEOUT_MS
@@ -346,12 +349,18 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, dark
         invokeErr = e;
       }
 
-      // Subscription required → bounce to paywall, do NOT fall back to direct OpenAI
-      if (body?.error === "subscription_required" || status === 402) {
+      // Out of free checks for today (free_limit), or a server that predates
+      // the free tier and still turns non-Pro callers away outright
+      // (subscription_required). Either way the way forward is Pro or
+      // tomorrow — never a direct OpenAI fallback.
+      if (body?.error === "free_limit" || body?.error === "subscription_required" || status === 402) {
         Alert.alert(
-          "Pro feature",
-          body?.message || "AI Check requires an active Pro subscription.",
-          [{ text: "OK", onPress: onCancel }]
+          body?.error === "free_limit" ? "That's today's free tasks" : "Pro feature",
+          body?.message || "You've used today's free verified tasks. Go Pro for unlimited tasks, or come back tomorrow.",
+          onUpgrade
+            ? [{ text: "Not now", style: "cancel", onPress: onCancel },
+               { text: "See Pro", onPress: () => { onCancel?.(); onUpgrade(); } }]
+            : [{ text: "OK", onPress: onCancel }]
         );
         return;
       }

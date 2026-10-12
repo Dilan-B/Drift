@@ -76,7 +76,11 @@ const MAX_EARN_MINS = 60;
 
 // ── Main component ────────────────────────────────────────────
 // Memoized: stays mounted in the tab filmstrip; see SocialScreen note.
-function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSessionEnd, onImmersiveChange, dark = false }) {
+//
+// `lockboxLocked` is true for free accounts: Lockbox is a Pro feature (see
+// freeTier.js), so its tab stays visible but sends the user to `onUpgrade`
+// instead of opening. The timer is free for everyone.
+function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSessionEnd, onImmersiveChange, lockboxLocked = false, onUpgrade, dark = false }) {
   const theme = getTheme(dark);
   // Setup-phase colors follow the app theme; active/done always use dark forest
   const [phase,   setPhase]   = useState("setup"); // setup | active | done
@@ -264,13 +268,17 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
     }}>
       {[
         { key: "timer",   label: "Timer" },
-        { key: "lockbox", label: "Lockbox" },
+        { key: "lockbox", label: lockboxLocked ? "Lockbox · Pro" : "Lockbox", locked: lockboxLocked },
       ].map(opt => {
         const on = mode === opt.key;
         return (
           <TouchableOpacity
             key={opt.key}
-            onPress={() => { selectionTick(); setMode(opt.key); }}
+            onPress={() => {
+              selectionTick();
+              if (opt.locked) { onUpgrade?.(); return; }
+              setMode(opt.key);
+            }}
             style={{
               flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: "center",
               backgroundColor: on ? paper.card : "transparent",
