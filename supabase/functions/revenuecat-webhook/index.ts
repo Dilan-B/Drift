@@ -33,6 +33,11 @@
 // The tier drives families.seats. is_pro() then entitles children in join
 // order up to that number.
 //
+// Monthly Pro also steps down in price the longer someone stays (loyalty
+// pricing, schema_v22): this function records when the current unbroken paid
+// run started (profiles.sub_paid_since) and clears it when they unsubscribe or
+// lapse. The steps themselves are promotional offers — see loyaltyPricing.js.
+//
 // ── SETUP (RevenueCat dashboard → Project → Integrations → Webhooks) ────────
 //   URL:    https://<project-ref>.functions.supabase.co/revenuecat-webhook
 //   Header: Authorization = the same string stored in the Supabase secret
@@ -216,7 +221,25 @@ serve(async (req: Request) => {
     console.warn("rc_webhook_events insert:", ledgerErr.message);
   }
 
-  // 4. Family seats — written on EVERY event, from the product actually held.
+  // 4. Loyalty pricing (schema_v22). profiles.sub_paid_since is the start of
+  // the current unbroken PAID run; the monthly price steps down every two
+  // months of it. Runs here, after the ordering guard above let this event
+  // through, so a stale replay can't restart or clear someone's run.
+  // Unsubscribing (CANCELLATION / UNSUBSCRIBE) or losing access clears it;
+  // the next paid period starts a new one at $4.99. Not fatal: this is a
+  // discount schedule, and failing the delivery would make RevenueCat retry
+  // an entitlement that has already landed.
+  const { error: paidErr } = await admin.rpc("apply_sub_paid_since", {
+    p_uid: profileId,
+    p_type: type,
+    p_cancel_reason: event.cancel_reason ? String(event.cancel_reason) : null,
+    p_period_type: periodType,
+    p_active: active,
+    p_event_at: eventAt,
+  });
+  if (paidErr) console.warn("apply_sub_paid_since:", paidErr.code || paidErr.message);
+
+  // 5. Family seats — written on EVERY event, from the product actually held.
   // A solo product writes 0: it used to write nothing, which left the family
   // row's old default of 1 seat in place, so a $4.99 solo plan quietly covered
   // a child (schema_v19). Cleared to 0 on revoke so children lose access with

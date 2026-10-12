@@ -86,7 +86,7 @@ const ENTITLEMENT_ID  = "Pro";
 // solo IDs below are a LAST-RESORT fallback: pickPackage() prefers RevenueCat's
 // package types (offering.monthly / offering.annual), which is why the solo
 // products kept working while these constants were wrong.
-const PRODUCT_MONTHLY = "com.drift.pro.month";
+export const PRODUCT_MONTHLY = "com.drift.pro.month";
 const PRODUCT_ANNUAL  = "com.drift.pro.annual";
 
 // Family tiers. Children never pay; a parent buys a tier sized to how many
@@ -160,6 +160,19 @@ export function pickPackage(offering, planType) {
     || pkgs.find(p => p.product?.identifier === PRODUCT_MONTHLY)
     || pkgs[0]
     || null;
+}
+
+/**
+ * A loyalty promotional offer (loyaltyPricing.js) on the monthly product, or
+ * null if App Store Connect doesn't have it. Promotional offers show up in
+ * product.discounts once they exist on the product, so this is also how the
+ * app knows the store side has been set up.
+ */
+export function findLoyaltyDiscount(offerings, offerId) {
+  if (!offerId) return null;
+  const pkg = pickPackage(resolveOffering(offerings), "monthly");
+  if (pkg?.product?.identifier !== PRODUCT_MONTHLY) return null;
+  return (pkg.product.discounts || []).find(d => d?.identifier === offerId) || null;
 }
 
 /** Trial length + price, read off the real package so the paywall never lies. */
@@ -493,6 +506,35 @@ export function useSubscription(userId) {
   }, [userId, offerings]);
 
   /**
+   * Redeem a loyalty promotional offer on the monthly product.
+   *
+   * Apple only lets a subscriber's price change with their consent, so this
+   * shows Apple's own confirmation sheet; once confirmed, the lower price
+   * starts at their next renewal. RevenueCat signs the offer with the
+   * subscription key uploaded in its dashboard — without that key
+   * getPromotionalOffer() returns nothing and this reports offer_unavailable.
+   */
+  const redeemLoyaltyOffer = useCallback(async (offerId) => {
+    if (Platform.OS !== "ios") return { success: false, reason: "ios_only" };
+    if (!Purchases?.getPromotionalOffer) return { success: false, reason: "sdk_missing" };
+    try {
+      if (!(await ensureConfigured(userId))) return { success: false, reason: "sdk_missing" };
+      const off = offerings || await Purchases.getOfferings();
+      const pkg = pickPackage(resolveOffering(off), "monthly");
+      const discount = findLoyaltyDiscount(off, offerId);
+      if (!pkg || !discount) return { success: false, reason: "offer_unavailable" };
+      const promo = await Purchases.getPromotionalOffer(pkg.product, discount);
+      if (!promo) return { success: false, reason: "offer_unavailable" };
+      const { customerInfo } = await Purchases.purchaseDiscountedPackage(pkg, promo);
+      setEntitled(hasProEntitlement(customerInfo));
+      return { success: true };
+    } catch (e) {
+      if (e?.userCancelled) return { success: false, reason: "cancelled" };
+      return { success: false, reason: e?.message || "unknown" };
+    }
+  }, [userId, offerings]);
+
+  /**
    * Restore. Apple REQUIRES this on any paid screen — a user who reinstalls, or
    * signs in on a new device, must be able to recover access without paying
    * twice, and its absence is a guideline 3.1.1 rejection on its own.
@@ -558,6 +600,7 @@ export function useSubscription(userId) {
     sdkError: rcInitError,
     offerings,
     introEligible,
+    redeemLoyaltyOffer,
     purchase,
     restore,
     checkEntitlement,

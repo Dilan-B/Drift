@@ -89,7 +89,8 @@ import PlantSlider from "./PlantSlider";
 import ProfileScreen from "./ProfileScreen";
 import PaywallScreen from "./PaywallScreen";
 import RedeemCodeModal from "./RedeemCodeModal";
-import { useSubscription } from "./useSubscription";
+import { useSubscription, findLoyaltyDiscount } from "./useSubscription";
+import { LOYALTY_LADDER, fetchLoyaltyStep, shouldOfferStep, markStepAccepted, snoozeStep } from "./loyaltyPricing";
 import ReviewPromptScreen from "./ReviewPromptScreen";
 import { claimReviewPrompt } from "./reviewPrompt";
 import {
@@ -3657,6 +3658,8 @@ export default function App() {
     restore: subRestore,
     refresh: subRefresh,
     introEligible: subIntroEligible,
+    entitled: subEntitled,
+    redeemLoyaltyOffer: subRedeemLoyalty,
   } = useSubscription(userId);
   const proAccess = appMode === "child" || subProAccess;
   // Owned here rather than inside ProfileScreen because the paywall branch
@@ -4622,6 +4625,52 @@ export default function App() {
     setFirstTimeBlockedApps(true);
     setShowBlockedApps(true);
   }, [pendingFirstRun, screen, appMode]);
+
+  // ── Loyalty pricing (loyaltyPricing.js) ─────────────────────────
+  // A monthly subscriber who has reached a new price step is offered it once
+  // per step, a few seconds after the app settles. Only for people paying
+  // through the App Store (subEntitled) — a comped or cohort account has no
+  // price to lower. Waits out onboarding and any open sheet so it never
+  // stacks on top of them; "Not now" snoozes that step for a few days.
+  const loyaltyAskedRef = useRef(false);
+  useEffect(() => {
+    if (screen !== "app" || appMode !== "personal" || !userId || !subEntitled) return;
+    if (loyaltyAskedRef.current || showTutorial || showBlockedApps || paywallReason) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const step = await fetchLoyaltyStep();
+      if (cancelled || !step) return;
+      // The offer must exist on the product in App Store Connect, or Apple's
+      // sheet has nothing to show.
+      const discount = findLoyaltyDiscount(subOfferings, step.offerId);
+      if (!discount || !(await shouldOfferStep(userId, step)) || cancelled) return;
+      loyaltyAskedRef.current = true;
+      const price = discount.priceString || step.price;
+      track("loyalty_offer_shown", { tier: step.tier });
+      Alert.alert(
+        `Your price drops to ${price}/month`,
+        `Thanks for sticking with Drift. Every two months you stay, Pro gets cheaper, down to ${LOYALTY_LADDER[LOYALTY_LADDER.length - 1].price}. Confirm with Apple and ${price} starts at your next renewal.`,
+        [
+          { text: "Not now", style: "cancel", onPress: () => snoozeStep(userId, step) },
+          {
+            text: "Lock it in",
+            onPress: async () => {
+              const res = await subRedeemLoyalty(step.offerId);
+              track("loyalty_offer_result", { tier: step.tier, ok: !!res?.success, reason: res?.reason || null });
+              if (res?.success) {
+                markStepAccepted(userId, step);
+                Alert.alert("You're all set", `${price}/month starts at your next renewal.`);
+              } else if (res?.reason !== "cancelled") {
+                Alert.alert("Couldn't apply it right now", "We'll offer it again next time you open Drift.");
+                loyaltyAskedRef.current = false;
+              }
+            },
+          },
+        ],
+      );
+    }, 4000);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [screen, appMode, userId, subEntitled, subOfferings, showTutorial, showBlockedApps, paywallReason, subRedeemLoyalty]);
 
   // Supabase email confirmation links open here before a user is signed in.
   // Deep-link friend invites — drift://add-friend/[username]

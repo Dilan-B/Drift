@@ -21,6 +21,13 @@ Expo / React Native productivity app. You earn screen-time by completing tasks; 
   `ai_check_usage` since the caller's local midnight, limit in
   `app_config.free_daily_tasks`); the pick cap in the native picker
   (`DRIFT_FREE_BLOCK_LIMIT`). Family (parent accounts) is still a hard paywall.
+- **Loyalty pricing** (`loyaltyPricing.js`, `schema_v22`): monthly Pro drops 50¢
+  every 2 months of unbroken paid subscription, $4.99 → $2.99; unsubscribing or
+  lapsing resets it. Apple won't let an app change one subscriber's price, so
+  each step is a promotional offer (`loyalty_449` … `loyalty_299` on
+  `com.drift.pro.month`) the user confirms once. The webhook owns the clock
+  (`profiles.sub_paid_since`, guarded). Off until `app_config.loyalty_pricing`
+  is `'true'` AND the offers exist in App Store Connect.
 - OpenAI calls are server-only (never in the client bundle).
 - iOS Screen Time (Family Controls / ManagedSettings) via native `screenTime.js` bridge — only works in a dev/standalone build, not Expo Go.
 
