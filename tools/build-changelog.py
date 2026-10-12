@@ -451,6 +451,9 @@ ROWS = [
     ("2026-10-12", "90dc57e", "Feature", "Billing", "Loyalty pricing: monthly Pro drops 50\u00a2 every 2 months, down to $2.99",
      "$4.99 for months 0-1, then $4.49, $3.99, $3.49 and $2.99 from month 8, counted over an unbroken paid run (trial days excluded). Unsubscribing or lapsing resets it. Apple won't let an app change one subscriber's price, so each step is a promotional offer on com.drift.pro.month (loyalty_449/399/349 for 2 months, loyalty_299 for 12) that the subscriber confirms once; it starts at their next renewal. The webhook keeps profiles.sub_paid_since (guarded like the other subscription columns). Ships switched off: needs schema_v22 pushed, the webhook deployed, the four offers in App Store Connect, the subscription key in RevenueCat, then app_config.loyalty_pricing = 'true'.",
      "1.2.0", "SQL migration, Edge deploy, App Store Connect"),
+    ("2026-10-12", "36aef9e", "UI", "Paywall", "Simpler Pro sheet, and it shows loyalty pricing",
+     "Down to a name, one line on what Pro adds, two plan rows and one button (trial on the button), from a two-line headline, four bullets and tiles. Monthly reads 'Your price drops every 2 months you stay, down to $2.99/mo' using Apple's localized floor price, only while loyalty_pricing is on and the offer exists; the terms add that each lower price is offered in the app to accept. Apple 3.1.2 items unchanged.",
+     "1.2.0", "\u2014"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
