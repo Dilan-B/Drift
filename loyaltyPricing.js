@@ -34,6 +34,20 @@ export const LOYALTY_LADDER = [
   { tier: 4, price: "$2.99", offerId: "loyalty_299" },
 ];
 
+/**
+ * Whether loyalty pricing is switched on (app_config.loyalty_pricing). For
+ * display only — the paywall still needs the offer to exist on the product
+ * before it mentions a price.
+ */
+export async function fetchLoyaltyEnabled() {
+  try {
+    const cfg = await getAppConfig();
+    return String(cfg?.loyalty_pricing ?? "").trim().toLowerCase() === "true";
+  } catch {
+    return false;
+  }
+}
+
 /** The $2.99 offer lasts 12 months, so the floor is offered again each year. */
 const FLOOR_OFFER_MONTHS = 12;
 const FLOOR_STARTS_AT_MONTH = 8;

@@ -100,6 +100,9 @@ export default function LabScreen({
   onOpenActionPlan,
   actionPlanSummary,
   onReplayTour,
+  // Dev builds only (Drift.jsx passes null in release): opens the Pro sheet
+  // regardless of plan, so the paywall can be checked on a Pro account.
+  onPreviewPaywall = null,
 }) {
   const theme = getTheme(dark);
   const { ink, paper, earn, fx } = theme;
@@ -322,8 +325,18 @@ export default function LabScreen({
             title="Replay the tour"
             sub="The guided walkthrough from your first launch."
             onPress={onReplayTour}
-            last
+            last={!onPreviewPaywall}
           />
+          {!!onPreviewPaywall && (
+            <LinkRow
+              theme={theme}
+              Icon={SparkleIcon}
+              title="Preview paywall (dev)"
+              sub="Opens the Pro sheet on any account. Not in release builds."
+              onPress={onPreviewPaywall}
+              last
+            />
+          )}
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 8 }}>

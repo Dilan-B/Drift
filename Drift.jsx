@@ -90,7 +90,7 @@ import ProfileScreen from "./ProfileScreen";
 import PaywallScreen from "./PaywallScreen";
 import RedeemCodeModal from "./RedeemCodeModal";
 import { useSubscription, findLoyaltyDiscount } from "./useSubscription";
-import { LOYALTY_LADDER, fetchLoyaltyStep, shouldOfferStep, markStepAccepted, snoozeStep } from "./loyaltyPricing";
+import { LOYALTY_LADDER, fetchLoyaltyEnabled, fetchLoyaltyStep, shouldOfferStep, markStepAccepted, snoozeStep } from "./loyaltyPricing";
 import ReviewPromptScreen from "./ReviewPromptScreen";
 import { claimReviewPrompt } from "./reviewPrompt";
 import {
@@ -3692,6 +3692,9 @@ export default function App() {
   // verify-task enforces so the two can't disagree.
   const [freeDailyTasks, setFreeDailyTasks] = useState(FREE_DAILY_TASKS);
   useEffect(() => { fetchFreeDailyTasks().then(setFreeDailyTasks).catch(() => {}); }, []);
+  // Whether the Pro sheet may mention that monthly gets cheaper over time.
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState(false);
+  useEffect(() => { fetchLoyaltyEnabled().then(setLoyaltyEnabled).catch(() => {}); }, []);
   const freeTasksLeft = proAccess
     ? null
     : Math.max(0, freeDailyTasks - tasksDoneOn(taskHistory, todayKey()));
@@ -6602,6 +6605,7 @@ export default function App() {
               // opening it — measuring the hero while it's scrolled off to the
               // side would put the highlight off-screen. The delay lets the tab
               // slide settle so measureInWindow reads final positions.
+              onPreviewPaywall={__DEV__ ? () => setPaywallReason("dev_preview") : null}
               onReplayTour={() => {
                 setTab("today");
                 setTimeout(() => { tourReplayRef.current = true; setShowTutorial(true); }, 420);
@@ -6794,6 +6798,7 @@ export default function App() {
           onSignOut={signOut}
           onRedeemCode={() => setRedeemOnPaywall(true)}
           introEligible={subIntroEligible}
+          loyaltyEnabled={loyaltyEnabled}
           onClose={() => setPaywallReason(null)}
         />
         <RedeemCodeModal

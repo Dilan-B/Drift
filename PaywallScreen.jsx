@@ -54,8 +54,9 @@ import { FF } from "./theme";
 import { CheckIcon, LockIcon } from "./Icons";
 import { Spinner } from "./Skeleton";
 import {
-  resolveOffering, pickPackage, pickFamilyPackage, describeOffer, MAX_KIDS,
+  resolveOffering, pickPackage, pickFamilyPackage, describeOffer, MAX_KIDS, findLoyaltyDiscount,
 } from "./useSubscription";
+import { LOYALTY_LADDER } from "./loyaltyPricing";
 
 const TERMS_URL   = "https://driftproductivity.com/terms";
 const PRIVACY_URL = "https://driftproductivity.com/privacy";
@@ -88,6 +89,7 @@ const familyEstimate = (kids) => FAMILY_BASE + (FAMILY_PER_KID * kids);
 export default function PaywallScreen({
   onPurchase, onRestore, onSignOut, onRedeemCode, offerings, introEligible = null,
   plan = null, accountType = "personal", dark = false, onClose = null,
+  loyaltyEnabled = false,
 }) {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring,  setRestoring]  = useState(false);
@@ -371,42 +373,59 @@ export default function PaywallScreen({
   }
 
   // ── Beat two: the offer ───────────────────────────────────────────────────
-  // Deliberately sparse. The simplest paywalls convert best: a headline, three
-  // short benefits, the plan, one button. Everything Apple requires is still
-  // here (price + period on the plan, trial terms and auto-renewal in the one
-  // line under the button, Restore, Terms, Privacy) — just not repeated.
+  // One name, one line on what it adds, the plan, one button. It used to carry
+  // a two-line headline, four checkmark bullets and side-by-side tiles, which
+  // read as a lot to take in for a single decision. Everything Apple requires
+  // is still here (price + period on each plan, trial terms and auto-renewal
+  // under the button, Restore, Terms, Privacy) — just not repeated.
   const periodWord = perPeriod === "/year" ? "year" : "month";
   const terms = trial
     ? `${trial} days free, then ${price}/${periodWord}. Renews automatically — cancel anytime in Settings.`
     : `${price}/${periodWord}. Renews automatically — cancel anytime in Settings.`;
-  const bullets = isFamily
-    ? ["You set the rules", "They earn screen time with real tasks", "An account for every kid"]
+  const pitch = isFamily
+    ? "You set the rules. They earn their screen time with real tasks."
     // What Pro adds over the free plan — the person reading this is already
     // using the free plan, so selling them what they have is wasted space.
-    : ["Block as many apps as you want", "Unlimited tasks, valued by AI",
-       "Lockbox, blocked hours and repeating tasks", "Grow your plant past Sapling"];
+    : "Block every app, unlimited tasks, Lockbox and your full plant.";
 
-  const planTile = (id, label, sub, on, onPress, badge) => (
+  // Loyalty pricing (loyaltyPricing.js): monthly gets cheaper the longer
+  // someone stays. Shown only when the switch is on AND the floor offer exists
+  // on the product, and the floor price is Apple's own localized string — so
+  // the line can never advertise a price or currency the store won't honour.
+  const loyaltyFloor = (!isFamily && loyaltyEnabled)
+    ? findLoyaltyDiscount(offerings, LOYALTY_LADDER[LOYALTY_LADDER.length - 1].offerId)?.priceString || null
+    : null;
+
+  const planRow = (id, label, priceText, on, onPress, note, badge) => (
     <TouchableOpacity
       key={id}
       onPress={onPress}
       activeOpacity={0.85}
+      accessibilityRole="radio"
+      accessibilityState={{ selected: on }}
       style={{
-        flex: 1, paddingVertical: 14, paddingHorizontal: 14,
-        borderRadius: 16, borderWidth: 1.6,
+        paddingVertical: 16, paddingHorizontal: 18, borderRadius: 16, borderWidth: 1.6,
         borderColor: on ? earn.green : paper.border,
         backgroundColor: on ? earn.sageLo : paper.card,
       }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: on ? earn.green : ink.deep }}>{label}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <View style={{
+          width: 20, height: 20, borderRadius: 10, marginRight: 12,
+          borderWidth: on ? 6 : 1.6, borderColor: on ? earn.green : ink.faint,
+        }} />
+        <Text style={{ fontFamily: FF.bodyMed, fontSize: 16, color: ink.deep }}>{label}</Text>
         {badge ? (
-          <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: earn.deep }}>
-            <Text style={{ fontFamily: FF.bodyBold, fontSize: 9, color: onDeep, letterSpacing: 0.6 }}>{badge}</Text>
-          </View>
+          <Text style={{ fontFamily: FF.bodyBold, fontSize: 11, color: earn.green, marginLeft: 8 }}>{badge}</Text>
         ) : null}
+        <View style={{ flex: 1 }} />
+        <Text style={{ fontFamily: FF.bodyMed, fontSize: 16, color: ink.deep }}>{priceText}</Text>
       </View>
-      <Text style={{ fontFamily: FF.display, fontSize: 20, color: ink.deep, marginTop: 4 }}>{sub}</Text>
+      {note ? (
+        <Text style={{ fontFamily: FF.body, fontSize: 12.5, color: ink.mid, marginTop: 6, marginLeft: 32, lineHeight: 17 }}>
+          {note}
+        </Text>
+      ) : null}
     </TouchableOpacity>
   );
 
@@ -427,7 +446,7 @@ export default function PaywallScreen({
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: 26,
-          paddingTop: Platform.OS === "ios" ? (onClose ? 64 : 88) : 48,
+          paddingTop: Platform.OS === "ios" ? (onClose ? 72 : 96) : 56,
           paddingBottom: 32,
           flexGrow: 1,
         }}
@@ -438,35 +457,20 @@ export default function PaywallScreen({
           opacity: entrance,
           transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
         }}>
-          <Text style={{
-            fontFamily: FF.display, fontSize: 38, color: ink.deep,
-            letterSpacing: -0.6, lineHeight: 44, marginBottom: 26,
-          }}>
-            {/* `trial` alone, not `isFreeTrial || trial`: isFreeTrial describes
-                the product, and read "Start with 0 free days" to the ineligible. */}
-            {isFamily
-              ? (trial ? `Try Drift Family free for ${trial} days` : "Drift Family")
-              : (trial ? `Try Drift Pro free for ${trial} days` : "Go Pro")}
+          <Text style={{ fontFamily: FF.display, fontSize: 36, color: ink.deep, letterSpacing: -0.5 }}>
+            {isFamily ? "Drift Family" : "Drift Pro"}
           </Text>
-
-          <View style={{ gap: 14, marginBottom: 32 }}>
-            {bullets.map((b) => (
-              <View key={b} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{
-                  width: 24, height: 24, borderRadius: 12, backgroundColor: earn.sageLo,
-                  alignItems: "center", justifyContent: "center",
-                }}>
-                  <CheckIcon size={13} color={earn.green} />
-                </View>
-                <Text style={{ fontFamily: FF.bodyMed, fontSize: 16, color: ink.deep, flex: 1 }}>{b}</Text>
-              </View>
-            ))}
-          </View>
+          <Text style={{ fontFamily: FF.body, fontSize: 16, color: ink.mid, lineHeight: 23, marginTop: 8, marginBottom: 32 }}>
+            {pitch}
+          </Text>
 
           {/* The plan. Family: how many kids (children never pay; the parent
               buys a seat per child). Personal: yearly or monthly. */}
           {isFamily ? (
             <>
+              <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.mid, marginBottom: 8 }}>
+                How many kids?
+              </Text>
               <View style={{
                 flexDirection: "row", gap: 6, padding: 4, borderRadius: 14, marginBottom: 12,
                 backgroundColor: dark ? "rgba(232,245,236,0.06)" : "#EDEEE8",
@@ -488,33 +492,28 @@ export default function PaywallScreen({
                       <Text style={{ fontFamily: on ? FF.bodyBold : FF.bodyMed, fontSize: 15, color: on ? earn.green : ink.mid }}>
                         {n}
                       </Text>
-                      <Text style={{ fontFamily: FF.body, fontSize: 10, color: on ? earn.green : ink.faint }}>
-                        {n === 1 ? "kid" : "kids"}
-                      </Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
-              <View style={{ flexDirection: "row" }}>
-                {planTile("family", `${kids} ${kids === 1 ? "kid" : "kids"}`, `${price}/mo`, true, () => {})}
-              </View>
+              {planRow("family", `${kids} ${kids === 1 ? "kid" : "kids"}`, `${price}/mo`, true, () => {})}
             </>
           ) : annualOffered ? (
-            <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ gap: 10 }}>
               {/* The savings badge is computed from the two live prices, never hardcoded. */}
-              {planTile("annual", "Yearly", `${annual?.product?.priceString || FALLBACK_ANNUAL}/yr`,
-                effBilling === "annual", () => setBilling("annual"),
-                annualSavingsPct > 0 ? `SAVE ${annualSavingsPct}%` : null)}
-              {planTile("monthly", "Monthly", `${monthly?.product?.priceString || FALLBACK_MONTHLY}/mo`,
-                effBilling === "monthly", () => setBilling("monthly"))}
+              {planRow("annual", "Yearly", `${annual?.product?.priceString || FALLBACK_ANNUAL}/yr`,
+                effBilling === "annual", () => setBilling("annual"), null,
+                annualSavingsPct > 0 ? `Save ${annualSavingsPct}%` : null)}
+              {planRow("monthly", "Monthly", `${monthly?.product?.priceString || FALLBACK_MONTHLY}/mo`,
+                effBilling === "monthly", () => setBilling("monthly"),
+                loyaltyFloor ? `Your price drops every 2 months you stay, down to ${loyaltyFloor}/mo.` : null)}
             </View>
           ) : (
-            <View style={{ flexDirection: "row" }}>
-              {planTile("monthly", "Monthly", `${price}/mo`, true, () => {})}
-            </View>
+            planRow("monthly", "Monthly", `${price}/mo`, true, () => {},
+              loyaltyFloor ? `Your price drops every 2 months you stay, down to ${loyaltyFloor}/mo.` : null)
           )}
 
-          <View style={{ flex: 1, minHeight: 28 }} />
+          <View style={{ flex: 1, minHeight: 32 }} />
 
           <TouchableOpacity
             onPress={handlePurchase}
@@ -529,7 +528,9 @@ export default function PaywallScreen({
             {purchasing
               ? <Spinner size={22} color={onDeep} />
               : <Text style={{ fontFamily: FF.bodyBold, fontSize: 16, color: onDeep }}>
-                  {trial ? "Start free trial" : "Continue"}
+                  {/* `trial` alone, not `isFreeTrial || trial`: isFreeTrial
+                      describes the product, and read "0 free days" to the ineligible. */}
+                  {trial ? `Start ${trial}-day free trial` : "Continue"}
                 </Text>}
           </TouchableOpacity>
 
@@ -539,12 +540,13 @@ export default function PaywallScreen({
             textAlign: "center", lineHeight: 16, marginTop: 12,
           }}>
             {terms}{priceIsEstimate ? " Final price shown by the App Store." : ""}
+            {loyaltyFloor && effBilling === "monthly" ? " Each lower price is offered in the app for you to accept." : ""}
           </Text>
 
           {/* Restore, Terms, Privacy (all mandatory), cohort code, sign out — one quiet row. */}
           <View style={{
             flexDirection: "row", flexWrap: "wrap", justifyContent: "center",
-            columnGap: 16, rowGap: 6, marginTop: 18,
+            columnGap: 16, rowGap: 6, marginTop: 16,
           }}>
             <TouchableOpacity onPress={handleRestore} disabled={busy}>
               {restoring
