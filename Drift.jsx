@@ -3769,16 +3769,22 @@ export default function App() {
     })
   ).current;
 
-  // ── Screen time only drains when user could be on a blocked app ──
+  // ── Screen time drains ONLY on blocked-app usage ──
   //
-  // Reality check: we cannot detect *which* other app the user is in from
-  // React Native. So we approximate: time drains ONLY when Drift is NOT
-  // in the foreground. When you're inside Drift itself you're not on a
-  // blocked app, so nothing is "consumed."
+  // The single source of drain is the DeviceActivityMonitor extension, which
+  // counts time spent in the apps the user picked and records it in the App
+  // Group; consumeUsedSeconds() hands JS the delta since the last read.
   //
-  // When a native blocker (iOS Family Controls / Android UsageStats) is
-  // wired in, replace this with: only drain when blocker reports a
-  // blocked app is foregrounded.
+  // There is deliberately NO wall-clock drain anywhere. Drift used to charge
+  // "time since Drift was last in the foreground" whenever iOS had not yet
+  // reported usage, which billed a locked phone, a phone in a drawer, and time
+  // in apps the user never blocked. The cost of usage-only counting is lag:
+  // iOS records usage at checkpoints (5–15 min apart), so the visible balance
+  // can trail real use by up to one step. Enforcement does not lag — the
+  // extension shields at the exact threshold on its own.
+  //
+  // Without native blocking (Expo Go, Android, the simulator) nothing can see
+  // blocked-app usage, so nothing drains.
 
   const startTick = (initialSec) => {
     stopTick();
@@ -3786,25 +3792,17 @@ export default function App() {
     // Sync the displayed value immediately so the header doesn't show stale
     // balance for up to a second after a task completes / session ends.
     setSecLeft(initialSec);
-    // (No setInterval — drain is computed from wall-clock delta on foreground.)
+    // (No setInterval — drain comes from native usage, see above.)
   };
 
-  // Foreground display sync.
-  //
-  // When iOS native blocking is available, the DeviceActivityMonitor extension
-  // counts real restricted-app usage. JS polls for native deltas and updates
-  // the visible timer, but it must NOT tick down by wall clock while Drift is
-  // foregrounded because that would charge time when no blocked app is in use.
-  // Without native blocking (Expo Go / Android / dev), we tick the balance down
-  // in real time so the timer is visibly alive and testable. We don't tick during
-  // a Drift In focus session (the shield is up — you're not spending).
+  // Foreground display sync: poll for native usage deltas (e.g. a checkpoint
+  // that landed while Drift was backgrounded) and refresh the visible timer.
+  // consumeUsedSeconds() returns 0 when native blocking is unavailable.
   useEffect(() => {
     if (screen !== "app") return;
     const tick = async () => {
-      if (nativeArmedRef.current) {
-        const used = await consumeUsedSeconds();
-        if (used > 0) drainBy(used);
-      }
+      const used = await consumeUsedSeconds();
+      if (used > 0) drainBy(used);
       setSecLeft(secRef.current);
     };
     tick();
@@ -3815,46 +3813,24 @@ export default function App() {
 
   // ── Screen-time drain (works across background AND full kill) ──
   //
-  // The model: whenever Drift is NOT in the foreground, we assume the user
-  // is spending their earned balance on other apps. To make this work even
-  // when the JS context is killed (swipe-up close), we persist a
-  // `drift_last_alive` timestamp constantly. On launch, we compare to wall
-  // clock to compute elapsed time.
+  // The extension keeps counting while Drift is backgrounded or killed, so
+  // every entry point (launch, foreground, the 1s tick, background refresh)
+  // just collects consumeUsedSeconds(). The native counter only advances on
+  // read, so whichever path reads first charges it and the rest see 0.
   //
-  // We update last_alive:
-  //   - every 15s while foregrounded ("I'm still alive")
-  //   - immediately when backgrounded
-  //   - immediately when returning to foreground (after draining)
-  //
-  // We DO drain when:
-  //   - user backgrounds (live foreground→background transition)
-  //   - app launches with credits > 0 and last_alive is older than now
-  //
-  // We DON'T drain when:
-  //   - a Drift In focus session is active (the shield is up)
-  //   - no credits to drain
-  const bgTimeRef = useRef(null);
-  const nativeArmedRef = useRef(false);
-  // True once the launch drain has subtracted the time spent while Drift was
+  // True once the launch drain has subtracted usage recorded while Drift was
   // closed. After that the LOCAL balance is strictly fresher than anything the
-  // server can hand back during this boot, because the drain is computed from
-  // persisted state plus wall clock and its write-back is fire-and-forget.
-  // Guards the two restore sites below — see the comment there.
+  // server can hand back during this boot, because the drain's write-back is
+  // fire-and-forget. Guards the two restore sites below — see the comment there.
   const launchDrainAppliedRef = useRef(false);
-  // Elapsed seconds the launch drain computed but could not apply yet (balance
-  // not hydrated). Carried rather than dropped: the old code reset
-  // drift_last_alive regardless, so a drain that no-opped erased the evidence
-  // and that period was never billed.
+  // Usage seconds the launch drain read but could not apply yet (balance not
+  // hydrated). Reading advances the native counter, so dropping these would
+  // mean that usage is never billed.
   const pendingDrainSecRef = useRef(0);
   const nativeArmFailedSecondsRef = useRef(null);
 
-  const persistLastAlive = useCallback(() => {
-    AsyncStorage.setItem("drift_last_alive", String(Date.now())).catch(() => {});
-  }, []);
-
   // Returns true when the drain was applied (or was legitimately unnecessary),
-  // false when it could not be applied and the caller must retry. Callers use
-  // this to decide whether it is safe to reset the drift_last_alive heartbeat.
+  // false when it could not be applied and the caller must retry.
   const drainBy = useCallback((elapsedSec) => {
     if (elapsedSec <= 0) return true;
     if (driftInActRef.current) return true; // shield is up; nothing is being spent
@@ -4034,105 +4010,59 @@ export default function App() {
     }
   }, [blockedHoursActive]);
 
-  // 1. Heartbeat while foregrounded — every 15s, write "I'm alive" timestamp
-  useEffect(() => {
-    if (screen !== "app") return;
-    persistLastAlive();
-    // 5s, not 15s: this timestamp is the ONLY record of when Drift was last
-    // in the foreground, and iOS can terminate a backgrounded app without the
-    // AppState listener ever firing. Every second of staleness here is a second
-    // of screen time the user gets for free.
-    const id = setInterval(persistLastAlive, 5_000);
-    return () => clearInterval(id);
-  }, [screen, persistLastAlive]);
+  // Shield as soon as a drain empties the balance, rather than waiting for the
+  // shield-sync effect's next render.
+  const shieldIfEmpty = useCallback(async () => {
+    if (appModeRef.current === "personal" && secRef.current <= 0 && shieldStateRef.current !== "on") {
+      await applyBlocking([], { freeTier: !proAccessRef.current }).catch(() => {});
+      shieldStateRef.current = "on";
+    }
+  }, []);
 
-  // 2. AppState transitions: drain on foregrounding, stamp on backgrounding
+  // 1. Foregrounding: charge blocked-app usage iOS recorded while we were away.
+  // Time spent away from Drift is NOT charged by itself — the phone may have
+  // been locked, or in apps the user never blocked.
   useEffect(() => {
     const sub = AppState.addEventListener("change", async (next) => {
       if (next !== "active") {
         appActiveRef.current = false;
-        bgTimeRef.current = Date.now();
-        persistLastAlive();
         stopTick();
-      } else {
-        appActiveRef.current = true;
-        if (bgTimeRef.current && screen === "app") {
-          const bgStart = bgTimeRef.current;
-          bgTimeRef.current = null;
-          // Retry any balance/XP writes that failed while offline.
-          if (userIdRef.current) flushPendingStats(userIdRef.current).catch(() => {});
-          if (nativeArmedRef.current) {
-            const used = await consumeUsedSeconds();
-            if (used > 0) {
-              drainBy(used);
-            } else {
-              // Checkpoints only fire every 15min; for shorter bg stints,
-              // fall back to wall-clock so the timer visibly moves.
-              const elapsedSec = Math.floor((Date.now() - bgStart) / 1000);
-              if (elapsedSec > 0) drainBy(elapsedSec);
-            }
-          } else {
-            const elapsedSec = Math.floor((Date.now() - bgStart) / 1000);
-            drainBy(elapsedSec);
-          }
-          if (appModeRef.current === "personal" && secRef.current <= 0 && shieldStateRef.current !== "on") {
-            await applyBlocking([], { freeTier: !proAccessRef.current }).catch(() => {});
-            shieldStateRef.current = "on";
-          }
-          persistLastAlive();
-        }
+        return;
       }
+      appActiveRef.current = true;
+      if (screen !== "app") return;
+      // Retry any balance/XP writes that failed while offline.
+      if (userIdRef.current) flushPendingStats(userIdRef.current).catch(() => {});
+      const used = await consumeUsedSeconds();
+      if (used > 0) drainBy(used);
+      await shieldIfEmpty();
     });
     return () => { sub.remove(); stopTick(); };
-  }, [screen, drainBy, persistLastAlive]);
+  }, [screen, drainBy, shieldIfEmpty]);
 
-  // 3. Launch-time catch-up: app just opened — drain by actual blocked-app usage
-  // (native) or wall-clock delta (fallback when native unavailable).
+  // 2. Launch-time catch-up: charge blocked-app usage recorded while Drift was
+  // closed.
   const launchDrainRanRef = useRef(false);
   useEffect(() => {
     if (screen !== "app" || launchDrainRanRef.current) return;
     launchDrainRanRef.current = true;
     (async () => {
       try {
-        const lastStr = await AsyncStorage.getItem("drift_last_alive");
-        const last = lastStr ? parseInt(lastStr, 10) : null;
-
-        let toDrain = 0;
-        if (nativeArmedRef.current) {
-          const used = await consumeUsedSeconds();
-          if (used > 0) {
-            toDrain = used;
-          } else if (Number.isFinite(last)) {
-            toDrain = Math.min(Math.max(0, Math.floor((Date.now() - last) / 1000)), 86_400);
-          }
-        } else {
-          if (!last || !Number.isFinite(last)) { persistLastAlive(); return; }
-          toDrain = Math.min(Math.max(0, Math.floor((Date.now() - last) / 1000)), 86_400);
-        }
-
+        const used = await consumeUsedSeconds();
+        if (used <= 0) return;
         // drainBy is a no-op when the balance hasn't hydrated yet (it bails on
-        // secRef.current <= 0). The old code called persistLastAlive()
-        // unconditionally right after, which reset the clock and destroyed the
-        // only record that the time had passed — so a boot that lost the race
-        // never charged the user for that stretch, and never could again.
-        // That is the "sometimes it doesn't go down after a full close" report.
-        const applied = toDrain > 0 ? drainBy(toDrain) : true;
-        if (!applied) {
-          pendingDrainSecRef.current = toDrain;
-          // Deliberately NOT resetting drift_last_alive: leaving it stale is
-          // what lets the retry below (or the next launch) still see the gap.
+        // secRef.current <= 0). The read above already advanced the native
+        // counter, so hold the seconds for the retry below instead of losing
+        // them.
+        if (!drainBy(used)) {
+          pendingDrainSecRef.current += used;
           return;
         }
         launchDrainAppliedRef.current = true;
-
-        if (appModeRef.current === "personal" && secRef.current <= 0 && shieldStateRef.current !== "on") {
-          await applyBlocking([], { freeTier: !proAccessRef.current }).catch(() => {});
-          shieldStateRef.current = "on";
-        }
-        persistLastAlive();
+        await shieldIfEmpty();
       } catch {}
     })();
-  }, [screen, drainBy, persistLastAlive]);
+  }, [screen, drainBy, shieldIfEmpty]);
 
   // Retry a launch drain that couldn't be applied because the balance landed
   // after it ran. Fires when secLeft first becomes non-zero.
@@ -4140,11 +4070,8 @@ export default function App() {
     if (!pendingDrainSecRef.current || secLeft <= 0) return;
     const owed = pendingDrainSecRef.current;
     pendingDrainSecRef.current = 0;
-    if (drainBy(owed)) {
-      launchDrainAppliedRef.current = true;
-      persistLastAlive();
-    }
-  }, [secLeft, drainBy, persistLastAlive]);
+    if (drainBy(owed)) launchDrainAppliedRef.current = true;
+  }, [secLeft, drainBy]);
 
   useEffect(() => {
     AsyncStorage.getItem("drift_dark_mode").then(v => {
@@ -4481,8 +4408,8 @@ export default function App() {
         setTotalXp(prev => Math.max(prev, stats.totalXp));
       }
       // Skipped once the launch drain has run. Two boot paths race to set the
-      // balance: the drain (persisted state minus wall-clock time the app was
-      // closed) and this restore. The drain's write-back through
+      // balance: the drain (persisted state minus blocked-app usage recorded
+      // while the app was closed) and this restore. The drain's write-back through
       // syncProfileStats is fire-and-forget, and fetchProfileStats caches for
       // 20s — so this can easily hand back the PRE-drain figure and silently
       // undo the subtraction. That is the other half of "closing the app
@@ -4733,12 +4660,8 @@ export default function App() {
     AsyncStorage.getItem("drift_last_armed_seconds").then(v => {
       const val = v != null ? Number(v) : -1;
       setLastArmedSeconds(val);
-      nativeArmedRef.current = isNativeBlockingAvailable() && val > 0;
     });
   }, []);
-  useEffect(() => {
-    nativeArmedRef.current = isNativeBlockingAvailable() && lastArmedSeconds > 0;
-  }, [lastArmedSeconds]);
 
   useEffect(() => {
     // The personal balance→shield mapping never runs for family accounts in
@@ -5329,16 +5252,12 @@ export default function App() {
       try {
         if (desired === "off") {
           await clearBlocking().catch(() => {});
-          const res = await startBalanceMonitoring(Math.max(60, secLeft)).catch(() => ({ started: false }));
-          // Mark armed so the drain effects charge actual blocked-app usage
-          // (consumeUsedSeconds) rather than wall-clock time.
-          nativeArmedRef.current = isNativeBlockingAvailable() && res?.started !== false;
+          await startBalanceMonitoring(Math.max(60, secLeft)).catch(() => {});
         } else {
           await stopBalanceMonitoring().catch(() => {});
           // custom → block the parent-picked apps; categories → block whole
           // categories (freeTier path).
           await applyBlocking([], { freeTier: childBlockMode !== "custom" }).catch(() => {});
-          nativeArmedRef.current = false;
         }
       } catch {}
     })();

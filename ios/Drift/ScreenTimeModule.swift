@@ -266,11 +266,9 @@ class ScreenTimeModule: NSObject {
       // (the old `DateComponents(second: 5)`) never fired, which is why the
       // extension never woke and nothing was enforced when Drift was closed.
       //
-      // We arm one usage event at the user's exact balance when it is above
-      // Apple's minimum. For shorter balances, iOS may not deliver a usage
-      // threshold, so we also arm a one-shot wall-clock failsafe that shields
-      // at the deadline. That is stricter than usage-only counting, but it
-      // prevents over-limit use while Drift is closed.
+      // We arm one usage event at the user's exact balance. Every event here
+      // counts BLOCKED-APP USAGE only — never wall-clock time — so a locked
+      // phone or time in unblocked apps never spends the balance.
       let totalSec = max(60, seconds.intValue)
       let APPLE_MIN_THRESHOLD_MIN = 15
       let APPLE_MIN_THRESHOLD_SEC = APPLE_MIN_THRESHOLD_MIN * 60
@@ -283,9 +281,11 @@ class ScreenTimeModule: NSObject {
       // noticed. That is the reported bypass: stay inside the blocked app and
       // nothing stops you.
       //
-      // The wall-clock failsafe was supposed to cover short balances, but iOS
-      // rejects DeviceActivity schedules under 15 minutes, so it threw and was
-      // disabled for exactly the balances that needed it.
+      // There used to be a one-shot wall-clock failsafe for short balances. It
+      // shielded at "armed time + balance" and marked the WHOLE balance spent
+      // whether or not a blocked app had been opened — time drained while the
+      // phone sat locked. It is no longer armed; the usage backstop below
+      // covers the same case without charging idle time.
       //
       // Sub-15-minute EVENT thresholds are a different thing from sub-15-minute
       // SCHEDULES, and the checkpoint events below have been armed at 5-minute
@@ -299,7 +299,6 @@ class ScreenTimeModule: NSObject {
       let thresholdMin = Int(ceil(Double(totalSec) / 60.0))
       let threshold = DateComponents(minute: thresholdSec / 60, second: thresholdSec % 60)
       let needsBackstop = totalSec < APPLE_MIN_THRESHOLD_SEC
-      let needsFailsafe = needsBackstop
 
       // ── Checkpoint cadence ────────────────────────────────────
       // Checkpoints do double duty: they record consumed usage, and they are
@@ -370,8 +369,10 @@ class ScreenTimeModule: NSObject {
         defaults?.set(totalSec, forKey: "drift_balance_armed_seconds")
         defaults?.set(thresholdMin, forKey: "drift_balance_threshold_min")
         defaults?.set(thresholdSec, forKey: "drift_balance_threshold_seconds")
-        defaults?.set(needsFailsafe, forKey: "drift_balance_failsafe_active")
-        defaults?.set(Date().addingTimeInterval(TimeInterval(totalSec)).timeIntervalSince1970, forKey: "drift_balance_failsafe_deadline")
+        // Stays false so a .driftBalanceFailsafe interval armed by an older
+        // build can never charge the balance (DriftMonitor checks this flag).
+        defaults?.set(false, forKey: "drift_balance_failsafe_active")
+        defaults?.removeObject(forKey: "drift_balance_failsafe_deadline")
         defaults?.set(0, forKey: "drift_usage_consumed_total_seconds")
         defaults?.set(0, forKey: "drift_usage_reported_seconds")
         defaults?.set(0, forKey: "drift_usage_consumed_seconds")
@@ -387,22 +388,6 @@ class ScreenTimeModule: NSObject {
           during: schedule,
           events: events
         )
-        if needsFailsafe {
-          // Best-effort only: iOS rejects DeviceActivity schedules shorter than
-          // 15 minutes, so this throws for sub-15-min balances. Isolate it in
-          // its own do/catch so a failsafe failure does NOT tear down the main
-          // .driftBalance monitor. Previously a thrown failsafe hit the outer
-          // catch and stopped BOTH monitors, leaving small balances with NO
-          // background enforcement — the "doesn't block until you reopen" bug.
-          do {
-            try center.startMonitoring(
-              .driftBalanceFailsafe,
-              during: Self.oneShotSchedule(afterSeconds: totalSec)
-            )
-          } catch {
-            UserDefaults(suiteName: DRIFT_APP_GROUP)?.set(false, forKey: "drift_balance_failsafe_active")
-          }
-        }
         resolve(nil)
       } catch {
         center.stopMonitoring([.driftBalance, .driftBalanceFailsafe])
@@ -694,18 +679,6 @@ class ScreenTimeModule: NSObject {
     formatter.timeZone = TimeZone.current
     formatter.dateFormat = "yyyy-MM-dd"
     return formatter.string(from: date)
-  }
-
-  @available(iOS 16.0, *)
-  private static func oneShotSchedule(afterSeconds seconds: Int) -> DeviceActivitySchedule {
-    let calendar = Calendar.current
-    let start = Date()
-    let end = start.addingTimeInterval(TimeInterval(max(60, seconds)))
-    return DeviceActivitySchedule(
-      intervalStart: calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: start),
-      intervalEnd: calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: end),
-      repeats: false
-    )
   }
 
   private static func topViewController(_ base: UIViewController? =
