@@ -454,6 +454,22 @@ ROWS = [
     ("2026-10-12", "36aef9e", "UI", "Paywall", "Simpler Pro sheet, and it shows loyalty pricing",
      "Down to a name, one line on what Pro adds, two plan rows and one button (trial on the button), from a two-line headline, four bullets and tiles. Monthly reads 'Your price drops every 2 months you stay, down to $2.99/mo' using Apple's localized floor price, only while loyalty_pricing is on and the offer exists; the terms add that each lower price is offered in the app to accept. Apple 3.1.2 items unchanged.",
      "1.2.0", "\u2014"),
+    # ── 2026-10-26 ────────────────────────────────────────────
+    ("2026-10-26", "cf38bc0", "Feature", "i18n", "App available in 20 languages",
+     "English plus Simplified/Traditional Chinese, Hindi, Spanish, French, Arabic, Portuguese, Russian, Indonesian, German, Japanese, Turkish, Vietnamese, Korean, Italian, Polish, Ukrainian, Thai and Dutch. English-as-key tr() with lazy-loaded catalogs; follows the device language or a picker in Profile (switching reloads the JS). Push notifications, AI feedback, the Screen Time shield/widgets and iOS permission prompts are translated too. Machine-authored translations, not reviewed by native speakers. Arabic text is translated but the layout is not mirrored.",
+     "1.3.0", "Native build, Edge deploy"),
+    ("2026-10-26", "cf38bc0", "Security", "Privacy", "Parental consent before a child can join a family",
+     "COPPA needs verifiable parental consent before collecting data from under-13s. Parents now see a direct notice (what is collected, who sees it, retention, rights) and consent; the Drift Family purchase is the verification method. join-family refuses a code until the family has consented (deploy join-family only once 1.3.0 is live, or current-version families can't add children). Parents can view, delete per child, or withdraw consent (erases every child). Consent is versioned and logged in parental_consent_events.",
+     "1.3.0", "SQL migration, Edge deploy"),
+    ("2026-10-26", "cf38bc0", "Bug Fix", "Account", "Deleting an account left most of its data behind",
+     "delete-account called .delete() on tables guarded by prevent_hard_delete(), which raised, and the errors were swallowed, so tasks, ledger, analytics etc. survived. erase_account() (service-role only) now erases every user table under a transaction-local drift.erasure flag, scrubs the profile, and erases a parent's children too. Also revokes the Sign in with Apple token (Apple requires it; needs the APPLE_* secrets). Migration applied 2026-10-26 and verified live.",
+     "1.3.0", "SQL migration, Edge deploy"),
+    ("2026-10-26", "cf38bc0", "Security", "Privacy", "Children kept out of AI checks and analytics; retention purge",
+     "verify-task and evaluate-task reject child accounts, so nothing a child does reaches OpenAI; child analytics are disabled client-side, refused by RLS, and existing rows deleted. purge_expired_data() runs nightly via pg_cron (analytics 13 months, AI usage 90 days, push tokens 9 months, inactive child accounts 18 months). Neutral age gate at sign-up: 13+ for personal, 18+ for parent.",
+     "1.3.0", "SQL migration, Edge deploy"),
+    ("2026-10-26", "cf38bc0", "Docs", "Privacy", "Privacy policy rewritten to match what the app does",
+     "The old policy omitted data the app collects and named a processor it no longer uses. New one lists every data type and provider, a children's section, a retention table, CCPA/GDPR/consumer-health-data rights. Plus SECURITY_PROGRAM.md (the written security program COPPA requires).",
+     "1.3.0", "\u2014"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
@@ -522,7 +538,7 @@ for i, a in enumerate(areas, start=8):
 
 s["G6"] = "By release"
 s["G6"].font = Font(name=FONT, bold=True, size=12, color="1F3A2A")
-rels = ["1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "1.2.0", "Unreleased"]
+rels = ["1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "1.2.0", "1.3.0", "Unreleased"]
 s["G7"], s["H7"] = "Release", "Count"
 for c in ("G7", "H7"):
     s[c].font = HDR_FONT
@@ -537,9 +553,8 @@ note_row = 8 + len(areas) + 2
 s[f"A{note_row}"] = "Notes"
 s[f"A{note_row}"].font = Font(name=FONT, bold=True, size=12, color="1F3A2A")
 notes = [
-    "1.1.8 is the last version submitted to the App Store. Everything marked Unreleased is on main but not shipped.",
+    "1.2.0 is the version live on the App Store; 1.3.0 is the next submission. Everything marked Unreleased is on main but not shipped.",
     "\"Needs\" says what a change requires beyond a normal JS reload: a native rebuild, an edge-function deploy, or SQL run in Supabase.",
-    "Native-build items are currently blocked on Apple Developer account access, so they are not device-tested.",
     "Counts on this sheet are formulas over the Changes tab — they update if you edit, add or delete rows there.",
 ]
 for i, n in enumerate(notes, start=note_row + 1):
@@ -609,5 +624,5 @@ assert sum(t.values()) == len(ROWS) and sum(r.values()) == len(ROWS)
 for k in t:
     assert k in ("Feature", "Bug Fix", "UI", "Infra", "Security", "Chore", "Docs"), f"unlisted type {k}"
 for k in r:
-    assert k in ("1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "1.2.0", "Unreleased"), f"unlisted release {k}"
+    assert k in ("1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "1.2.0", "1.3.0", "Unreleased"), f"unlisted release {k}"
 print("\nAll type/release values are covered by a summary row - no change is uncounted.")
