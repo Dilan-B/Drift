@@ -99,5 +99,5 @@ Use a real iPhone.
 - These files cannot be fully verified from Windows.
 - WidgetKit, ActivityKit, AppIntents, HealthKit, App Groups, and extension
   embedding must be validated in Xcode with the correct Apple Developer team.
-- If the bundle identifier mismatch noted in `docs/RIAAN_XCODE_TESTING.md`
+- If the bundle identifier mismatch noted in `RIAAN_XCODE_TESTING.md`
   still exists, resolve that before adding the new targets.

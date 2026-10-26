@@ -30,3 +30,8 @@ supabase/admin/diagnose_recurring_duplicates.sql
 # project-ref stays tracked so a clone knows which project this is.
 supabase/.temp/cli-latest
 dashboard.html
+
+# Business documents — keep on your machine, never in this public repo.
+SAMENTITYID.pdf
+Entity Registration Checklist.pdf
+Drift_Pitch_Deck.pptx

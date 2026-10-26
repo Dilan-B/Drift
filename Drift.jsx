@@ -1583,7 +1583,7 @@ function ShareWinSheet({ task, dark, onClose }) {
   const timeText = `${task.minutes}m`;
 
   const doShare = async () => {
-    const msg = tr("I just earned {{earnedText}} of screen time by doing \"{{title}}\" for {{timeText}} on Drift.", { earnedText, title: task.title, timeText }) + "\n\nhttps://apps.apple.com/app/id6746262733";
+    const msg = tr("I just earned {{earnedText}} of screen time by doing \"{{title}}\" for {{timeText}} on Drift.", { earnedText, title: task.title, timeText }) + "\n\nhttps://apps.apple.com/app/id6778215875";
     try {
       await Share.share({ message: msg });
     } catch {}
