@@ -102,10 +102,22 @@ Then build the `Drift` scheme from `ios/Drift.xcworkspace` in Xcode. On Xcode
 27, `npx expo run:ios` can't find the simulator; build with `xcodebuild`
 instead (see `CLAUDE.md` for the exact command).
 
-The backend runs on Supabase: apply `supabase/migrations/` with
-`supabase db push`, deploy the functions, and set `OPENAI_API_KEY`,
-`OPENAI_MODEL` (must be vision-capable) and `REVENUECAT_WEBHOOK_SECRET` as
-function secrets.
+The backend runs on Supabase. `supabase/migrations/` only starts in August
+2026 and assumes the tables created before it, so a fresh project needs the
+base schema first:
+
+1. Run the setup SQL in the comment block in `supabase.js` (profiles,
+   screen time, friendships, challenges).
+2. Run `supabase/admin/schema_v*.sql` in version order, plus the unnumbered
+   table files (`push_tokens.sql`, `analytics_events.sql`). They are written
+   to be safe to re-run.
+3. Apply `supabase/migrations/` with `supabase db push`.
+
+Bootstrapping a brand-new project from scratch this way hasn't been tested
+end to end, so expect to fix up an ordering issue or two.
+
+Then deploy the functions and set `OPENAI_API_KEY`, `OPENAI_MODEL` (must be
+vision-capable) and `REVENUECAT_WEBHOOK_SECRET` as function secrets.
 
 ## Legal
 
