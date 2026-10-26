@@ -30,6 +30,7 @@ import {
   CAL_SOURCE_GOOGLE, CAL_SOURCE_DEVICE,
 } from "./calendarSync";
 
+import { tr } from "./i18n";
 export default function AutoTasksModal({ visible, dark = false, onClose, onImportCalendar }) {
   const theme = getTheme(dark);
   const { ink, paper, earn, fx } = theme;
@@ -97,19 +98,15 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
     // discover it at the gym.
     if (on && res.granted && res.notifications === false) {
       Alert.alert(
-        "Turn on notifications",
-        "Place suggestions arrive as a notification, so with notifications off nothing will reach you. Enable them in Settings › Drift › Notifications.",
+        tr("Turn on notifications"),
+        tr("Place suggestions arrive as a notification, so with notifications off nothing will reach you. Enable them in Settings › Drift › Notifications."),
       );
     }
     if (on && !res.granted) {
       setPlacesOn(false);
       Alert.alert(
-        res.reason === "foreground_only" ? "Always-on location needed" : "Location needed",
-        res.reason === "foreground_only"
-          ? "Drift needs \"Always\" location access to notice when you arrive somewhere. You can change this in Settings → Drift → Location."
-          : res.reason === "unavailable"
-            ? "Location isn't available in this build."
-            : "Enable location access for Drift to use place suggestions.",
+        res.reason === "foreground_only" ? tr("Always-on location needed") : tr("Location needed"),
+        res.reason === "foreground_only" ? tr("Drift needs \"Always\" location access to notice when you arrive somewhere. You can change this in Settings → Drift → Location.") : res.reason === "unavailable" ? tr("Location isn't available in this build.") : tr("Enable location access for Drift to use place suggestions."),
       );
     }
   };
@@ -125,19 +122,18 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
       setGeoStatus(res.status || (await getGeofenceStatus()));
       if (res.ok) {
         Alert.alert(
-          "Test sent",
-          `A "You're at ${res.place.label}" notification should appear now. Tap it — ` +
-          `it should open Drift with "${res.place.title}" ready to confirm.` +
+          tr("Test sent"),
+          tr("A \"You're at {{label}}\" notification should appear now. Tap it — it should open Drift with \"{{title}}\" ready to confirm.", { label: res.place.label, title: res.place.title }) +
           (res.status?.background !== "granted"
-            ? "\n\nNote: location is set to While Using, so real arrivals won't fire while Drift is closed."
+            ? tr("\n\nNote: location is set to While Using, so real arrivals won't fire while Drift is closed.")
             : ""),
         );
       } else if (res.reason === "blocked") {
-        Alert.alert("Not set up yet", res.blocker);
+        Alert.alert(tr("Not set up yet"), res.blocker);
       } else if (res.reason === "notifications_denied") {
-        Alert.alert("Notifications are off", "Turn them on in Settings › Drift › Notifications, then test again.");
+        Alert.alert(tr("Notifications are off"), tr("Turn them on in Settings › Drift › Notifications, then test again."));
       } else {
-        Alert.alert("Test failed", `The arrival didn't go through (${res.reason}).`);
+        Alert.alert(tr("Test failed"), tr("The arrival didn't go through ({{reason}}).", { reason: res.reason }));
       }
     } finally {
       setTesting(false);
@@ -154,11 +150,11 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
     try {
       const coords = await getCurrentCoords();
       if (!coords) {
-        Alert.alert("Couldn't get location", "Make sure location access is on, then try again.");
+        Alert.alert(tr("Couldn't get location"), tr("Make sure location access is on, then try again."));
         return;
       }
       const res = await addPlace({
-        label: newLabel.trim() || activeTemplate.label || "Place",
+        label: newLabel.trim() || activeTemplate.label || tr("Place"),
         title: activeTemplate.title,
         cat: activeTemplate.cat,
         minutes: activeTemplate.minutes,
@@ -166,7 +162,7 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
         longitude: coords.longitude,
       });
       if (!res.ok && res.reason === "limit") {
-        Alert.alert("Place limit reached", `You can save up to ${MAX_PLACES} places.`);
+        Alert.alert(tr("Place limit reached"), tr("You can save up to {{MAX_PLACES}} places.", { MAX_PLACES }));
         return;
       }
       setNewLabel("");
@@ -179,10 +175,10 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
   };
 
   const deletePlace = (p) => {
-    Alert.alert(`Remove ${p.label}?`, "You'll stop getting task suggestions there.", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(tr("Remove {{label}}?", { label: p.label }), tr("You'll stop getting task suggestions there."), [
+      { text: tr("Cancel"), style: "cancel" },
       {
-        text: "Remove", style: "destructive",
+        text: tr("Remove"), style: "destructive",
         onPress: async () => { await removePlace(p.id); setPlaces(await getPlaces()); },
       },
     ]);
@@ -199,7 +195,7 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
       if (!ok) {
         setCalOn(false);
         await setCalendarSyncEnabled(false);
-        Alert.alert("Calendar access needed", "Allow calendar access to import events as tasks.");
+        Alert.alert(tr("Calendar access needed"), tr("Allow calendar access to import events as tasks."));
         return;
       }
       setCalendars(await listCalendars());
@@ -246,8 +242,8 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
       setCalIds(ids);
       if (empty && calSource === CAL_SOURCE_GOOGLE) {
         Alert.alert(
-          "No Google calendar yet",
-          "Add your Google account in Settings → Apps → Calendar → Accounts, make sure Calendars is switched on for it, then tap Recheck again."
+          tr("No Google calendar yet"),
+          tr("Add your Google account in Settings → Apps → Calendar → Accounts, make sure Calendars is switched on for it, then tap Recheck again.")
         );
       }
     } finally {
@@ -287,9 +283,9 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
           paddingHorizontal: 22, marginBottom: 18,
         }}>
           <View style={{ flex: 1 }}>
-            <Text style={kicker}>AUTOMATIC TASKS</Text>
+            <Text style={kicker}>{tr("AUTOMATIC TASKS")}</Text>
             <Text style={{ fontFamily: FF.display, fontSize: 34, color: ink.deep, letterSpacing: -0.4 }}>
-              Suggestions
+              {tr("Suggestions")}
             </Text>
           </View>
           <TouchableOpacity
@@ -314,10 +310,10 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: ink.deep }}>
-                  Place suggestions
+                  {tr("Place suggestions")}
                 </Text>
                 <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 3, lineHeight: 17 }}>
-                  Arrive somewhere you've saved and Drift offers the task.
+                  {tr("Arrive somewhere you've saved and Drift offers the task.")}
                 </Text>
               </View>
               <Switch
@@ -343,29 +339,26 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                       fontFamily: FF.bodyMed, fontSize: 12,
                       color: geoStatus.ready ? earn.deep : theme.danger.fg,
                     }}>
-                      {geoStatus.ready ? "Arrivals are armed" : "Arrivals won't fire"}
+                      {geoStatus.ready ? tr("Arrivals are armed") : tr("Arrivals won't fire")}
                     </Text>
                     <Text style={{
                       fontFamily: FF.body, fontSize: 11, lineHeight: 16, marginTop: 3,
                       color: geoStatus.ready ? ink.mid : theme.danger.fg,
                     }}>
-                      {geoStatus.ready
-                        ? `Monitoring ${geoStatus.placeCount} place${geoStatus.placeCount === 1 ? "" : "s"} in the background.`
-                        : geoStatus.blocker}
+                      {geoStatus.ready ? (geoStatus.placeCount === 1 ? tr("Monitoring 1 place in the background.") : tr("Monitoring {{placeCount}} places in the background.", { placeCount: geoStatus.placeCount })) : geoStatus.blocker}
                     </Text>
-                    {!geoStatus.ready && geoStatus.blocker?.startsWith("Regions aren't") && (
+                    {!geoStatus.ready && geoStatus.blockerCode === "not_monitoring" && (
                       <TouchableOpacity onPress={rearm} style={{ paddingTop: 8 }}>
-                        <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: earn.deep }}>Re-arm</Text>
+                        <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: earn.deep }}>{tr("Re-arm")}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
                 )}
 
-                <Text style={kicker}>SAVED PLACES</Text>
+                <Text style={kicker}>{tr("SAVED PLACES")}</Text>
                 {places.length === 0 ? (
                   <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, lineHeight: 18, marginBottom: 14 }}>
-                    None yet. Stand at a place you go often — your gym, the
-                    library — and save it below.
+                    {tr("None yet. Stand at a place you go often — your gym, the library — and save it below.")}
                   </Text>
                 ) : (
                   <View style={{ gap: 8, marginBottom: 14 }}>
@@ -389,18 +382,18 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
                           <Text style={{ fontFamily: FF.body, fontSize: 12, color: earn.deep, opacity: testing ? 0.5 : 1 }}>
-                            Test
+                            {tr("Test")}
                           </Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => deletePlace(p)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                          <Text style={{ fontFamily: FF.body, fontSize: 12, color: theme.danger.fg }}>Remove</Text>
+                          <Text style={{ fontFamily: FF.body, fontSize: 12, color: theme.danger.fg }}>{tr("Remove")}</Text>
                         </TouchableOpacity>
                       </View>
                     ))}
                   </View>
                 )}
 
-                <Text style={kicker}>SAVE WHERE YOU ARE</Text>
+                <Text style={kicker}>{tr("SAVE WHERE YOU ARE")}</Text>
                 <TextInput
                   value={newLabel}
                   onChangeText={(t) => {
@@ -411,7 +404,7 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                     if (preset && t.trim().toLowerCase() !== preset.label.toLowerCase()) setPreset(null);
                   }}
                   onFocus={() => setShowSuggest(true)}
-                  placeholder="What is this place?"
+                  placeholder={tr("What is this place?")}
                   placeholderTextColor={ink.faint}
                   maxLength={40}
                   autoCorrect={false}
@@ -452,9 +445,7 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                 )}
 
                 <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.faint, marginTop: 8, lineHeight: 16 }}>
-                  {newLabel.trim() && !preset
-                    ? `Suggests "${activeTemplate.title}" (${activeTemplate.minutes}m) when you arrive — pick a suggestion above for a better fit.`
-                    : `Suggests "${activeTemplate.title}" (${activeTemplate.minutes}m) when you arrive.`}
+                  {newLabel.trim() && !preset ? tr("Suggests \"{{title}}\" ({{minutes}}m) when you arrive — pick a suggestion above for a better fit.", { title: activeTemplate.title, minutes: activeTemplate.minutes }) : tr("Suggests \"{{title}}\" ({{minutes}}m) when you arrive.", { title: activeTemplate.title, minutes: activeTemplate.minutes })}
                 </Text>
                 <TouchableOpacity
                   onPress={savePlaceHere}
@@ -471,7 +462,7 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                     ? <ActivityIndicator size="small" color={onDeep} />
                     : <CheckIcon size={15} color={onDeep} />}
                   <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: onDeep }}>
-                    {savingPlace ? "Saving…" : "Save this place"}
+                    {savingPlace ? tr("Saving…") : tr("Save this place")}
                   </Text>
                 </TouchableOpacity>
               </>
@@ -484,11 +475,10 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: ink.deep }}>
-                    Calendar sync
+                    {tr("Calendar sync")}
                   </Text>
                   <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 3, lineHeight: 17 }}>
-                    Bring today's events in as tasks. Read-only — Drift never
-                    changes your calendar.
+                    {tr("Bring today's events in as tasks. Read-only — Drift never changes your calendar.")}
                   </Text>
                 </View>
                 <Switch
@@ -504,13 +494,13 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                   <View style={{ height: 1, backgroundColor: ink.hairline, marginVertical: 18 }} />
 
                   {/* Source picker — Google is the default. */}
-                  <Text style={kicker}>CALENDAR ACCOUNT</Text>
+                  <Text style={kicker}>{tr("CALENDAR ACCOUNT")}</Text>
                   <View style={{
                     flexDirection: "row", gap: 6, padding: 4, borderRadius: 16,
                     backgroundColor: paper.sand, marginBottom: 16,
                   }}>
                     {[
-                      { key: CAL_SOURCE_GOOGLE, label: "Google" },
+                      { key: CAL_SOURCE_GOOGLE, label: tr("Google") },
                       { key: CAL_SOURCE_DEVICE, label: "iPhone" },
                     ].map(opt => {
                       const on = calSource === opt.key;
@@ -536,7 +526,7 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                     })}
                   </View>
 
-                  <Text style={kicker}>CALENDARS TO USE</Text>
+                  <Text style={kicker}>{tr("CALENDARS TO USE")}</Text>
                   {calLoading ? (
                     <ActivityIndicator color={earn.sage} style={{ marginVertical: 12 }} />
                   ) : needsGoogleConnect ? (
@@ -545,12 +535,10 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                       borderWidth: 1.2, borderColor: ink.hairline,
                     }}>
                       <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: ink.deep }}>
-                        Connect Google Calendar
+                        {tr("Connect Google Calendar")}
                       </Text>
                       <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 6, lineHeight: 18 }}>
-                        Drift reads Google Calendar through iOS. Open Settings →
-                        Apps → Calendar → Accounts → Add Account → Google, sign
-                        in, and turn Calendars on. Then come back and recheck.
+                        {tr("Drift reads Google Calendar through iOS. Open Settings → Apps → Calendar → Accounts → Add Account → Google, sign in, and turn Calendars on. Then come back and recheck.")}
                       </Text>
                       <TouchableOpacity
                         onPress={recheckCalendars}
@@ -562,7 +550,7 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                         }}
                       >
                         <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: onDeep }}>
-                          Recheck
+                          {tr("Recheck")}
                         </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -571,13 +559,13 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                         style={{ marginTop: 10, alignItems: "center" }}
                       >
                         <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid }}>
-                          Use my iPhone calendar instead
+                          {tr("Use my iPhone calendar instead")}
                         </Text>
                       </TouchableOpacity>
                     </View>
                   ) : sourceCalendars.length === 0 ? (
                     <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, lineHeight: 18 }}>
-                      No iPhone calendars found on this device.
+                      {tr("No iPhone calendars found on this device.")}
                     </Text>
                   ) : (
                     <View style={{ gap: 8 }}>
@@ -621,11 +609,10 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: ink.deep }}>
-                        Import automatically
+                        {tr("Import automatically")}
                       </Text>
                       <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 3, lineHeight: 17 }}>
-                        Pull today's events in once a day on their own. Off means
-                        you import by hand below.
+                        {tr("Pull today's events in once a day on their own. Off means you import by hand below.")}
                       </Text>
                     </View>
                     <Switch
@@ -650,7 +637,7 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
                       fontFamily: FF.bodyMed, fontSize: 14,
                       color: calIds.length ? onDeep : ink.faint,
                     }}>
-                      Import today's events
+                      {tr("Import today's events")}
                     </Text>
                   </TouchableOpacity>
                 </>
@@ -662,8 +649,7 @@ export default function AutoTasksModal({ visible, dark = false, onClose, onImpor
             fontFamily: FF.body, fontSize: 11, color: ink.faint,
             lineHeight: 17, textAlign: "center", paddingHorizontal: 8,
           }}>
-            Your location and calendar stay on this device. Drift never uploads
-            either one.
+            {tr("Your location and calendar stay on this device. Drift never uploads either one.")}
           </Text>
         </ScrollView>
       </View>

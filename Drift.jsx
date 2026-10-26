@@ -98,13 +98,15 @@ import {
 } from "./freeTier";
 import TutorialOverlay from "./TutorialOverlay";
 import ParentShell from "./ParentShell";
-import { identify, track, trackScreen, startAnalytics, stopAnalytics } from "./analytics";
+import { identify, track, trackScreen, startAnalytics, stopAnalytics, disableAnalytics } from "./analytics";
+import { getAppleRevocationCode } from "./appleSignIn";
 import ChildShell from "./ChildShell";
 import { cached, rateLimited } from "./apiGuards";
 import {
   TouchTracker, OriginPanel, OriginSheet, Backdrop, Pop, FadeInUp, Pulse, useCountUp, getLastTouch,
 } from "./Anim";
 
+import { tr } from "./i18n";
 // ── Theme context ─────────────────────────────────────────────
 export const ThemeContext = createContext({ dark: false, theme: getTheme(false) });
 const useTheme = () => useContext(ThemeContext);
@@ -132,7 +134,7 @@ function BootSplash() {
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: ink.void }}>
       <StatusBar barStyle="light-content" />
       <Text style={{ fontFamily: "Georgia", fontSize: 52, color: "#2FAB72" }}>D</Text>
-      <Text style={{ fontFamily: "Georgia", fontSize: 12, color: "#4A8060", letterSpacing: 5, marginTop: 4 }}>DRIFT</Text>
+      <Text style={{ fontFamily: "Georgia", fontSize: 12, color: "#4A8060", letterSpacing: 5, marginTop: 4 }}>{tr("DRIFT")}</Text>
     </View>
   );
 }
@@ -147,32 +149,32 @@ const FB  = FF.body;      // body text joins the brand sans instead of system de
 
 // ── Data constants ───────────────────────────────────────────
 const CATS = {
-  work:     { c: "#3A7AB8", l: "Work" },
-  physical: { c: "#2FAB72", l: "Physical" },
-  outdoor:  { c: "#3DA870", l: "Outdoor" },
-  learning: { c: "#7B6EC8", l: "Learning" },
-  life:     { c: "#5AB4D4", l: "Life" },
-  social:   { c: "#3A9BB5", l: "Social" },
+  work:     { c: "#3A7AB8", get l() { return tr("Work"); } },
+  physical: { c: "#2FAB72", get l() { return tr("Physical"); } },
+  outdoor:  { c: "#3DA870", get l() { return tr("Outdoor"); } },
+  learning: { c: "#7B6EC8", get l() { return tr("Learning"); } },
+  life:     { c: "#5AB4D4", get l() { return tr("Life"); } },
+  social:   { c: "#3A9BB5", get l() { return tr("Social"); } },
 };
 
 const EFFORT = [
-  { id: 1, label: "Light",    mult: 0.5,  desc: "Quick task, easy admin, low exertion" },
-  { id: 2, label: "Moderate", mult: 0.75, desc: "Focused work, gym, cooking, studying" },
-  { id: 3, label: "Intense",  mult: 1.25, desc: "Hard workout, deep sprint, long outdoor" },
+  { id: 1, get label() { return tr("Light"); }, mult: 0.5,  get desc() { return tr("Quick task, easy admin, low exertion"); } },
+  { id: 2, get label() { return tr("Moderate"); }, mult: 0.75, get desc() { return tr("Focused work, gym, cooking, studying"); } },
+  { id: 3, get label() { return tr("Intense"); },  mult: 1.25, get desc() { return tr("Hard workout, deep sprint, long outdoor"); } },
 ];
 
 
 const LEVELS = [
-  { name: "Seedling",   min: 0     },
-  { name: "Sprout",     min: 150   },
-  { name: "Sapling",    min: 400   },
-  { name: "Grove",      min: 900   },
-  { name: "Canopy",     min: 2000  },
-  { name: "Forest",     min: 4000  },
-  { name: "Old Growth", min: 8000  },
-  { name: "Redwood",    min: 15000 },
-  { name: "Ancient",    min: 25000 },
-  { name: "Eternal",    min: 50000 },
+  { get name() { return tr("Seedling"); },   min: 0     },
+  { get name() { return tr("Sprout"); },     min: 150   },
+  { get name() { return tr("Sapling"); },    min: 400   },
+  { get name() { return tr("Grove"); },      min: 900   },
+  { get name() { return tr("Canopy"); },     min: 2000  },
+  { get name() { return tr("Forest"); },     min: 4000  },
+  { get name() { return tr("Old Growth"); }, min: 8000  },
+  { get name() { return tr("Redwood"); },    min: 15000 },
+  { get name() { return tr("Ancient"); },    min: 25000 },
+  { get name() { return tr("Eternal"); },    min: 50000 },
 ];
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -367,11 +369,11 @@ function TimePickerButton({ value, onChange, fallback = "9:00 AM", dark = false,
             >
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                 <TouchableOpacity onPress={() => setIosOpen(false)} style={{ paddingVertical: 10, paddingHorizontal: 4 }}>
-                  <Text style={{ fontFamily: FB, fontSize: 15, color: ink.mid }}>Cancel</Text>
+                  <Text style={{ fontFamily: FB, fontSize: 15, color: ink.mid }}>{tr("Cancel")}</Text>
                 </TouchableOpacity>
-                <Text style={{ fontFamily: FK, fontSize: 18, color: ink.deep }}>Choose time</Text>
+                <Text style={{ fontFamily: FK, fontSize: 18, color: ink.deep }}>{tr("Choose time")}</Text>
                 <TouchableOpacity onPress={confirmIos} style={{ paddingVertical: 10, paddingHorizontal: 4 }}>
-                  <Text style={{ fontFamily: FK, fontSize: 15, color: earn.green }}>Done</Text>
+                  <Text style={{ fontFamily: FK, fontSize: 15, color: earn.green }}>{tr("Done")}</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker
@@ -393,7 +395,12 @@ function TimePickerButton({ value, onChange, fallback = "9:00 AM", dark = false,
     </>
   );
 }
-const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAY_NAMES = {
+  get length() { return 7; },
+  get 0() { return tr("Sun"); }, get 1() { return tr("Mon"); }, get 2() { return tr("Tue"); },
+  get 3() { return tr("Wed"); }, get 4() { return tr("Thu"); }, get 5() { return tr("Fri"); },
+  get 6() { return tr("Sat"); },
+};
 const recurrenceDaysFor = frequency => {
   if (frequency === "weekdays") return [1, 2, 3, 4, 5];
   if (frequency === "weekends") return [0, 6];
@@ -401,14 +408,14 @@ const recurrenceDaysFor = frequency => {
 };
 const recurrenceLabel = item => {
   const frequency = item?.frequency || "daily";
-  if (frequency === "daily") return "Daily";
-  if (frequency === "weekdays") return "Weekdays";
-  if (frequency === "weekends") return "Weekends";
+  if (frequency === "daily") return tr("Daily");
+  if (frequency === "weekdays") return tr("Weekdays");
+  if (frequency === "weekends") return tr("Weekends");
   if (frequency === "custom") {
     const days = (item.days || []).map(d => WEEKDAY_NAMES[d]).filter(Boolean);
-    return days.length ? days.join(", ") : "Custom";
+    return days.length ? days.join(", ") : tr("Custom");
   }
-  return "Repeats";
+  return tr("Repeats");
 };
 const recurrenceMatchesDate = (item, date = new Date()) => {
   const frequency = item?.frequency || "daily";
@@ -628,17 +635,17 @@ function freeTierCredits(mins) {
   return {
     credits,
     xp,
-    reasoning: "Credits based on task duration.",
+    reasoning: tr("Credits based on task duration."),
   };
 }
 
 // ── Add Task Overlay ─────────────────────────────────────────
 const REPEAT_OPTIONS = [
-  ["none", "Just once"],
-  ["daily", "Every day"],
-  ["weekdays", "Weekdays"],
-  ["weekends", "Weekends"],
-  ["custom", "Custom days"],
+  ["none", tr("Just once")],
+  ["daily", tr("Every day")],
+  ["weekdays", tr("Weekdays")],
+  ["weekends", tr("Weekends")],
+  ["custom", tr("Custom days")],
 ];
 const REPEAT_LABELS = Object.fromEntries(REPEAT_OPTIONS);
 // Must be multiples of the slider's 15m step so tapping one lands exactly on
@@ -740,11 +747,11 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
     if (!title.trim() || evaluating) return;
     const trimmed = title.trim();
     if (BLOCKED_TASK_RE.test(trimmed)) {
-      setEvalError("That task isn't allowed. Try something productive!");
+      setEvalError(tr("That task isn't allowed. Try something productive!"));
       return;
     }
     if (trimmed.length < MIN_TASK_TITLE_LEN || trimmed.split(/\s+/).length < MIN_TASK_TITLE_WORDS || VAGUE_TASK_RE.test(trimmed)) {
-      setEvalError("Be specific! Describe what you'll actually do (e.g. \"Read 20 pages\" not \"stuff\").");
+      setEvalError(tr("Be specific! Describe what you'll actually do (e.g. \"Read 20 pages\" not \"stuff\")."));
       return;
     }
     setEvaluating(true);
@@ -838,7 +845,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
             alignItems: "center",
           }}>
             <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: earn.greenD }}>
-              Task added
+              {tr("Task added")}
             </Text>
           </View>
         )}
@@ -857,10 +864,10 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                 fontFamily: FF.kicker, fontSize: 10, letterSpacing: 2.4,
                 color: ink.faint, marginBottom: 6,
               }}>
-                {isSubActive ? "NEW TASK · AI VALUED" : "NEW TASK"}
+                {isSubActive ? tr("NEW TASK · AI VALUED") : tr("NEW TASK")}
               </Text>
               <Text style={{ fontFamily: FF.display, fontSize: 36, color: ink.deep, letterSpacing: -0.4 }}>
-                Add a task
+                {tr("Add a task")}
               </Text>
             </View>
             <TouchableOpacity
@@ -901,7 +908,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
 
               {/* Length */}
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                <Text style={[fieldKicker, { marginBottom: 0 }]}>LENGTH</Text>
+                <Text style={[fieldKicker, { marginBottom: 0 }]}>{tr("LENGTH")}</Text>
                 <Text style={{ fontFamily: FF.display, fontSize: 24, color: ink.deep, letterSpacing: -0.4 }}>
                   {durLabel}
                 </Text>
@@ -961,10 +968,10 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                 style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
               >
                 <View style={{ flex: 1, paddingRight: 12 }}>
-                  <Text style={[fieldKicker, { marginBottom: 0 }]}>ALREADY DONE</Text>
+                  <Text style={[fieldKicker, { marginBottom: 0 }]}>{tr("ALREADY DONE")}</Text>
                   {already && (
                     <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.faint, marginTop: 4, lineHeight: 15 }}>
-                      Prove it right away — but you'll need solid evidence.
+                      {tr("Prove it right away — but you'll need solid evidence.")}
                     </Text>
                   )}
                 </View>
@@ -991,10 +998,10 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                 activeOpacity={0.7}
                 style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
               >
-                <Text style={[fieldKicker, { marginBottom: 0 }]}>REPEAT</Text>
+                <Text style={[fieldKicker, { marginBottom: 0 }]}>{tr("REPEAT")}</Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: recur === "none" ? ink.mid : earn.sage }}>
-                    {REPEAT_LABELS[recur] || "Once"}
+                    {REPEAT_LABELS[recur] || tr("Once")}
                   </Text>
                   <Text style={{
                     fontFamily: FF.body, fontSize: 11, color: ink.faint,
@@ -1053,9 +1060,9 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
               >
                 <LockIcon size={16} color={ink.mid} />
                 <Text style={{ flex: 1, fontFamily: FF.body, fontSize: 12, color: ink.mid }}>
-                  Recurring task schedules are a Pro feature.
+                  {tr("Recurring task schedules are a Pro feature.")}
                 </Text>
-                <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: earn.sage, letterSpacing: 1 }}>UPGRADE</Text>
+                <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: earn.sage, letterSpacing: 1 }}>{tr("UPGRADE")}</Text>
               </TouchableOpacity>
             )}
             {repeatOpen && recur !== "none" && isSubActive && (
@@ -1068,7 +1075,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
               }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, flex: 1 }}>
-                    Create this task at
+                    {tr("Create this task at")}
                   </Text>
                   <TimePickerButton
                     value={recurTime}
@@ -1131,14 +1138,14 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
               {/* Earn preview — the one thing worth knowing before you commit.
                   The kicker says "estimated" so the numbers need no caption
                   explaining that AI sets the final value. */}
-              <Text style={fieldKicker}>ESTIMATED EARNINGS</Text>
+              <Text style={fieldKicker}>{tr("ESTIMATED EARNINGS")}</Text>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontFamily: FF.display, fontSize: 26, color: earn.sage, letterSpacing: -0.4 }}>
                     {earnPreview.credits}m
                   </Text>
                   <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                    screen time
+                    {tr("screen time")}
                   </Text>
                 </View>
                 <View style={{ width: 1, height: 36, backgroundColor: ink.hairline, marginHorizontal: 16 }} />
@@ -1147,7 +1154,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                     +{earnPreview.xp}
                   </Text>
                   <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                    experience
+                    {tr("experience")}
                   </Text>
                 </View>
               </View>
@@ -1181,20 +1188,16 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                 }}>
                   {isSubActive ? (
                     <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, lineHeight: 18, textAlign: "center" }}>
-                      AI reads your task to set its value and sort it into a
-                      category for you, then checks your proof before credits
-                      are earned.
+                      {tr("AI reads your task to set its value and sort it into a category for you, then checks your proof before credits are earned.")}
                     </Text>
                   ) : (
                     <>
                       <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, lineHeight: 18, textAlign: "center" }}>
-                        AI checks your proof before credits are earned. With Pro
-                        it also reads your task and sets its value by how hard
-                        it is.
+                        {tr("AI checks your proof before credits are earned. With Pro it also reads your task and sets its value by how hard it is.")}
                       </Text>
                       {!!onOpenPaywall && (
                         <TouchableOpacity onPress={onOpenPaywall} style={{ marginTop: 8, alignSelf: "center", paddingVertical: 4 }}>
-                          <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: earn.sage }}>See Pro</Text>
+                          <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: earn.sage }}>{tr("See Pro")}</Text>
                         </TouchableOpacity>
                       )}
                     </>
@@ -1211,8 +1214,8 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                   style={{ marginTop: 18, paddingVertical: 6 }}
                 >
                   <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, textAlign: "center" }}>
-                    or let Drift add them from your{" "}
-                    <Text style={{ fontFamily: FF.bodyMed, color: earn.sage }}>calendar or places</Text>
+                    {tr("or let Drift add them from your{{p}}", { p: " " })}
+                    <Text style={{ fontFamily: FF.bodyMed, color: earn.sage }}>{tr("calendar or places")}</Text>
                   </Text>
                 </TouchableOpacity>
               )}
@@ -1241,7 +1244,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
               )}
               <TextInput
                 value={title} onChangeText={setTitle}
-                placeholder='What needs doing? e.g. "30 min gym"'
+                placeholder={tr("What needs doing? e.g. \"30 min gym\"")}
                 placeholderTextColor={ink.faint}
                 maxLength={80}
                 returnKeyType="go"
@@ -1282,7 +1285,7 @@ function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPay
                   fontFamily: FF.bodyMed, fontSize: 15, letterSpacing: 0.2,
                   color: ready ? (dark ? "#16261C" : "#FAF6EE") : ink.faint,
                 }}>
-                  {evaluating ? "Adding…" : ready ? "Add task" : "Name your task first"}
+                  {evaluating ? tr("Adding…") : ready ? tr("Add task") : tr("Name your task first")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1304,8 +1307,8 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
 
   const QUESTIONS = [
     {
-      q: `Spent ~${task.minutes} minutes?`,
-      sub: "Close enough is fine. Make it real.",
+      q: tr("Spent ~{{minutes}} minutes?", { minutes: task.minutes }),
+      sub: tr("Close enough is fine. Make it real."),
       Icon: ({ size, color }) => (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <SvgCircle cx="12" cy="13" r="8" stroke={color} strokeWidth={2} />
@@ -1314,8 +1317,8 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
       ),
     },
     {
-      q: "Focused time?",
-      sub: "No background scrolling.",
+      q: tr("Focused time?"),
+      sub: tr("No background scrolling."),
       Icon: ({ size, color }) => (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <SvgCircle cx="12" cy="12" r="9" stroke={color} strokeWidth={2} />
@@ -1360,13 +1363,13 @@ function TaskVerifyModal({ task, onConfirm, onCancel, dark }) {
         ...theme.fx.glow,
       }}>
         <Text style={{ fontFamily: FK, fontSize: 16, color: dark ? "#16261C" : "#fff" }}>
-          {step < QUESTIONS.length - 1 ? "Yes" : "Claim credits"}
+          {step < QUESTIONS.length - 1 ? tr("Yes") : tr("Claim credits")}
         </Text>
       </Pop>
 
       <TouchableOpacity onPress={onCancel} style={{ paddingVertical: 12, alignItems: "center" }}>
         <Text style={{ fontFamily: FB, fontSize: 13, color: ink.mid }}>
-          {step === 0 ? "Cancel" : "No"}
+          {step === 0 ? tr("Cancel") : tr("No")}
         </Text>
       </TouchableOpacity>
     </OriginSheet>
@@ -1396,13 +1399,13 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
   return (
     <OriginSheet visible={visible} onClose={onClose} align="bottom"
       sheetStyle={[s2.panel, s2.bottomSheetPanel, { backgroundColor: paper.card, borderColor: ink.border }]}>
-      <Text style={[s2.kicker, { color: ink.faint }]}>SCREEN TIME</Text>
-      <Text style={[s2.panelTitle, { color: ink.deep }]}>Remove time</Text>
+      <Text style={[s2.kicker, { color: ink.faint }]}>{tr("SCREEN TIME")}</Text>
+      <Text style={[s2.panelTitle, { color: ink.deep }]}>{tr("Remove time")}</Text>
       <Text style={[s2.panelText, { color: ink.mid }]}>
-        Give back earned minutes.
+        {tr("Give back earned minutes.")}
       </Text>
       {maxMins < 1 ? (
-        <Text style={[s2.emptyText, { color: ink.faint }]}>No time to remove.</Text>
+        <Text style={[s2.emptyText, { color: ink.faint }]}>{tr("No time to remove.")}</Text>
       ) : (
         <View style={s2.amountGrid}>
           {options.map(m => (
@@ -1427,17 +1430,17 @@ function ReduceScreenTimeModal({ visible, balanceSec, dark, onClose, onReduce })
                 selected === maxMins && { borderColor: earn.sage, backgroundColor: earn.sageLo },
               ]}
             >
-              <Text style={[s2.amountText, { color: selected === maxMins ? earn.sage : ink.deep }]}>All</Text>
+              <Text style={[s2.amountText, { color: selected === maxMins ? earn.sage : ink.deep }]}>{tr("All")}</Text>
             </Pop>
           )}
         </View>
       )}
       <View style={[s2.actions, s2.quickActions]}>
         <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, s2.quickActionBtn, { borderColor: ink.border }]}>
-          <Text numberOfLines={1} style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
+          <Text numberOfLines={1} style={[s2.ghostText, { color: ink.mid }]}>{tr("Cancel")}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={confirm} disabled={!selected} style={[s2.solidBtn, s2.quickActionBtn, { backgroundColor: selected ? earn.deep : ink.faint }, selected && theme.fx.glow]}>
-          <Text numberOfLines={1} style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Reduce</Text>
+          <Text numberOfLines={1} style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>{tr("Reduce")}</Text>
         </TouchableOpacity>
       </View>
     </OriginSheet>
@@ -1551,7 +1554,7 @@ function FloatingFeedback({ popup }) {
         )}
         {popup.xp > 0 && (
           <View style={{ backgroundColor: earn.blue, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 16 }}>
-            <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 1 }}>+{popup.xp} XP</Text>
+            <Text style={{ fontFamily: FO, fontSize: 12, color: "#fff", letterSpacing: 1 }}>{tr("+{{xp}} XP", { xp: popup.xp })}</Text>
           </View>
         )}
       </Animated.View>
@@ -1580,7 +1583,7 @@ function ShareWinSheet({ task, dark, onClose }) {
   const timeText = `${task.minutes}m`;
 
   const doShare = async () => {
-    const msg = `I just earned ${earnedText} of screen time by doing "${task.title}" for ${timeText} on Drift.\n\nhttps://apps.apple.com/app/id6746262733`;
+    const msg = tr("I just earned {{earnedText}} of screen time by doing \"{{title}}\" for {{timeText}} on Drift.", { earnedText, title: task.title, timeText }) + "\n\nhttps://apps.apple.com/app/id6746262733";
     try {
       await Share.share({ message: msg });
     } catch {}
@@ -1620,7 +1623,7 @@ function ShareWinSheet({ task, dark, onClose }) {
             {task.title}
           </Text>
           <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, textAlign: "center" }}>
-            {timeText} {cat.l.toLowerCase()} · +{earnedText} earned
+            {tr("{{timeText}} {{toLowerCase}} · +{{earnedText}} earned", { timeText, toLowerCase: cat.l.toLowerCase(), earnedText })}
           </Text>
         </View>
 
@@ -1633,11 +1636,11 @@ function ShareWinSheet({ task, dark, onClose }) {
           }}
         >
           <Text style={{ fontFamily: FF.bodyBold, fontSize: 15, color: "#fff", letterSpacing: 0.3 }}>
-            Share your win
+            {tr("Share your win")}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={dismiss} activeOpacity={0.7} style={{ alignItems: "center", paddingVertical: 10 }}>
-          <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: ink.mid }}>Not now</Text>
+          <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: ink.mid }}>{tr("Not now")}</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -1721,15 +1724,15 @@ function LevelUpModal({ level, dark, onClose }) {
             </View>
           </View>
 
-          <Text style={[s2.kicker, { color: ink.faint, textAlign: "center" }]}>LEVEL UP</Text>
+          <Text style={[s2.kicker, { color: ink.faint, textAlign: "center" }]}>{tr("LEVEL UP")}</Text>
           <Text style={[s2.panelTitle, { color: ink.deep, textAlign: "center", marginBottom: 4 }]}>
             {level.name}
           </Text>
           <Text style={[s2.panelText, { color: ink.mid, textAlign: "center", marginBottom: 20 }]}>
-            Nice work. Your progress grew into a new tier.
+            {tr("Nice work. Your progress grew into a new tier.")}
           </Text>
           <Pop onPress={onClose} style={[s2.solidBtn, { width: "100%", backgroundColor: earn.deep }, theme.fx.glow]}>
-            <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Continue</Text>
+            <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>{tr("Continue")}</Text>
           </Pop>
         </Animated.View>
       </Pressable>
@@ -1768,30 +1771,26 @@ function SleepGuardCard({ mode, armedAt, result, streak, busy, onSetup, onArm, o
 
   const copy = {
     setup: {
-      title: "Sleep with your phone in another room",
-      body: "Stick an NFC tag in the next room. Tap it at bedtime and Drift checks that your phone stayed there all night.",
-      cta: "Set it up",
+      title: tr("Sleep with your phone in another room"),
+      body: tr("Stick an NFC tag in the next room. Tap it at bedtime and Drift checks that your phone stayed there all night."),
+      cta: tr("Set it up"),
       onPress: onSetup,
     },
     ready: {
-      title: "Ready for bed?",
-      body: streak > 0
-        ? `Put your phone in the other room and tap the tag. ${streak} night${streak === 1 ? "" : "s"} in a row so far.`
-        : "Put your phone in the other room and tap the tag to start the night.",
-      cta: "Tap the tag",
+      title: tr("Ready for bed?"),
+      body: streak > 0 ? (streak === 1 ? tr("Put your phone in the other room and tap the tag. 1 night in a row so far.") : tr("Put your phone in the other room and tap the tag. {{streak}} nights in a row so far.", { streak })) : tr("Put your phone in the other room and tap the tag to start the night."),
+      cta: tr("Tap the tag"),
       onPress: onArm,
     },
     armed: {
-      title: "Good night",
-      body: armedAt
-        ? `Armed at ${new Date(armedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. Leave your phone where it is and Drift will check in the morning.`
-        : "Leave your phone where it is. Drift will check in the morning.",
-      cta: "Cancel tonight",
+      title: tr("Good night"),
+      body: armedAt ? tr("Armed at {{toLocaleTimeString}}. Leave your phone where it is and Drift will check in the morning.", { toLocaleTimeString: new Date(armedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) }) : tr("Leave your phone where it is. Drift will check in the morning."),
+      cta: tr("Cancel tonight"),
       onPress: onCancel,
       quiet: true,
     },
     result: {
-      title: won ? "Your phone stayed put" : moved ? "Your phone moved" : "Last night",
+      title: won ? tr("Your phone stayed put") : moved ? tr("Your phone moved") : tr("Last night"),
       body: describeSleepResult(result),
       cta: null,
     },
@@ -1877,11 +1876,11 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
     // covers the onboarding starter tasks that complete without a check.
     if (!isPro && freeTasksLeft != null && freeTasksLeft <= 0) {
       Alert.alert(
-        "That's today's free tasks",
-        `The free plan earns from ${freeDailyTasks} tasks a day. Go Pro for unlimited tasks, or come back tomorrow.`,
+        tr("That's today's free tasks"),
+        tr("The free plan earns from {{freeDailyTasks}} tasks a day. Go Pro for unlimited tasks, or come back tomorrow.", { freeDailyTasks }),
         onUpgrade
-          ? [{ text: "Not now", style: "cancel" }, { text: "See Pro", onPress: onUpgrade }]
-          : [{ text: "OK" }],
+          ? [{ text: tr("Not now"), style: "cancel" }, { text: tr("See Pro"), onPress: onUpgrade }]
+          : [{ text: tr("OK") }],
       );
       return;
     }
@@ -1893,9 +1892,9 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
   // being noisy: card fades up first, then heading, then the list rows.
   const askDeleteTask = (t) => {
     if (!t) return;
-    Alert.alert(`Delete ${t.title} task?`, `"${t.title}" will be removed from today.`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => onDelete?.(t.id) },
+    Alert.alert(tr("Delete {{title}} task?", { title: t.title }), tr("\"{{title}}\" will be removed from today.", { title: t.title }), [
+      { text: tr("Cancel"), style: "cancel" },
+      { text: tr("Delete"), style: "destructive", onPress: () => onDelete?.(t.id) },
     ]);
   };
 
@@ -2004,7 +2003,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
               color: ink.mid,
               marginTop: 4,
             }}>
-              {unlocked ? "Available now" : inDebt ? "Earn this back to unlock" : "No time earned yet"}
+              {unlocked ? tr("Available now") : inDebt ? tr("Earn this back to unlock") : tr("No time earned yet")}
             </Text>
 
             {/* iOS enforces Screen Time in ~15-minute windows, so blocking can
@@ -2018,7 +2017,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
                 marginTop: 8,
                 lineHeight: 15,
               }}>
-                iOS enforces blocking in ~15-minute windows, so timing is approximate.
+                {tr("iOS enforces blocking in ~15-minute windows, so timing is approximate.")}
               </Text>
             )}
           </View>
@@ -2076,20 +2075,20 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
         <View style={{ flexDirection: "row", gap: 28 }}>
           <StatBlock
             dot={earn.terra}
-            label="EARNED"
+            label={tr("EARNED")}
             value={fmtMins(credits.earned || 0)}
             ink={ink}
           />
           <StatBlock
             dot={ink.faint}
-            label="USED"
+            label={tr("USED")}
             value={fmtMins(credits.spent || 0)}
             ink={ink}
           />
           {stillEarnable > 0 && (
             <StatBlock
               dot={earn.clay}
-              label="EARNABLE"
+              label={tr("EARNABLE")}
               value={fmtMins(stillEarnable)}
               ink={ink}
             />
@@ -2127,7 +2126,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
               minimumFontScale={0.88}
               style={{ flex: 1, fontFamily: FF.bodyBold, fontSize: 14, color: ink.deep }}
             >
-              Start earning
+              {tr("Start earning")}
             </Text>
             <Text style={{ fontFamily: FF.serifReg, fontSize: 22, color: ink.faint, marginTop: -2 }}>›</Text>
           </TouchableOpacity>
@@ -2155,7 +2154,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
                 minimumFontScale={0.85}
                 style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.deep, textAlign: "center" }}
               >
-                Remove time
+                {tr("Remove time")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -2175,7 +2174,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
           letterSpacing: 2.4,
           color: ink.faint,
         }}>
-          TODAY
+          {tr("TODAY")}
         </Text>
         {/* The tour spotlights this button, and getting its rect has been
             fiddly: a ref on the TouchableOpacity — or on a style-less wrapper —
@@ -2210,7 +2209,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
             }}
           >
             <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
-            <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: onDeep }}>Add task</Text>
+            <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: onDeep }}>{tr("Add task")}</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -2236,8 +2235,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
             style={{ flex: 1 }}
           >
             <Text style={{ fontFamily: FF.body, fontSize: 12.5, color: ink.mid, lineHeight: 18 }}>
-              Let tasks add themselves — from your calendar, or when you arrive
-              somewhere. <Text style={{ fontFamily: FF.bodyMed, color: earn.sage }}>Set up</Text>
+              {tr("Let tasks add themselves — from your calendar, or when you arrive somewhere.")}{" "} <Text style={{ fontFamily: FF.bodyMed, color: earn.sage }}>{tr("Set up")}</Text>
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -2285,7 +2283,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
             marginBottom: 6,
             letterSpacing: -0.4,
           }}>
-            No tasks
+            {tr("No tasks")}
           </Text>
           <Text style={{
             fontFamily: FF.body,
@@ -2294,7 +2292,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
             marginBottom: 22,
             textAlign: "center",
           }}>
-            Add one to begin.
+            {tr("Add one to begin.")}
           </Text>
           <TouchableOpacity
             onPress={onAdd}
@@ -2307,7 +2305,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
             }}
           >
             <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
-            <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: onDeep }}>Add task</Text>
+            <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: onDeep }}>{tr("Add task")}</Text>
           </TouchableOpacity>
           <Text style={{
             fontFamily: FF.body,
@@ -2316,7 +2314,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
             marginTop: 16,
             letterSpacing: 0.2,
           }}>
-            Earn time.
+            {tr("Earn time.")}
           </Text>
         </Animated.View>
       )}
@@ -2328,8 +2326,8 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
           <View key={t.id} style={{ marginBottom: 10 }}>
           <Swipeable
             onDelete={() => onDelete?.(t.id)}
-            confirmTitle={`Delete ${t.title} task?`}
-            confirmMessage={`"${t.title}" will be removed.`}
+            confirmTitle={tr("Delete {{title}} task?", { title: t.title })}
+            confirmMessage={tr("\"{{title}}\" will be removed.", { title: t.title })}
             onActiveChange={onSwipeLockChange}
           >
           <TouchableOpacity
@@ -2414,7 +2412,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
                   }}>
                     <SparkleIcon size={9} color={earn.blue} />
                     <Text style={{ fontFamily: FF.bodyMed, fontSize: 9, color: earn.blue, letterSpacing: 0.5 }}>
-                      AI
+                      {tr("AI")}
                     </Text>
                   </View>
                 )}
@@ -2460,7 +2458,7 @@ function TodayView({ tasks, credits, totalXp, onComplete, onDelete, onAdd, heroR
         <Animated.View style={{ opacity: listOp, marginTop: 22 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: ink.faint, letterSpacing: 1.6 }}>
-              DONE TODAY
+              {tr("DONE TODAY")}
             </Text>
             <View style={{ flex: 1, height: 1, backgroundColor: ink.hairline }} />
             <Text style={{ fontFamily: FF.bodyMed, fontSize: 11, color: ink.faint }}>
@@ -2595,13 +2593,13 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
           marginBottom: 8,
           letterSpacing: -0.4,
         }}>
-          No stats
+          {tr("No stats")}
         </Text>
         <Text style={{
           fontFamily: FF.body, fontSize: 13, color: ink.mid,
           textAlign: "center", marginBottom: 28, lineHeight: 20,
         }}>
-          Complete a task first.
+          {tr("Complete a task first.")}
         </Text>
         <TouchableOpacity
           onPress={onAddTask}
@@ -2614,7 +2612,7 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
           }}
         >
           <Text style={{ fontFamily: FF.body, fontSize: 16, color: onDeep, marginTop: -1 }}>+</Text>
-          <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: onDeep }}>Add task</Text>
+          <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: onDeep }}>{tr("Add task")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -2636,10 +2634,10 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
         letterSpacing: -0.4,
         marginBottom: 4,
       }}>
-        Growth
+        {tr("Growth")}
       </Text>
       <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, marginBottom: 22 }}>
-        Your progress.
+        {tr("Your progress.")}
       </Text>
 
       {/* Level card — editorial */}
@@ -2663,13 +2661,13 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontFamily: FF.kicker, fontSize: 10, color: ink.faint, letterSpacing: 2.4, marginBottom: 6 }}>
-              CURRENT TIER
+              {tr("CURRENT TIER")}
             </Text>
             <Text style={{ fontFamily: FF.display, fontSize: 30, color: ink.deep, letterSpacing: -0.3 }}>
               {lv.name}
             </Text>
             <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, marginTop: 2 }}>
-              {totalXp.toLocaleString()} XP total
+              {tr("{{totalXp}} XP total", { totalXp: totalXp.toLocaleString() })}
             </Text>
           </View>
           <View style={{
@@ -2683,11 +2681,9 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
         {capped && (
           <TouchableOpacity onPress={onUpgrade} disabled={!onUpgrade} activeOpacity={0.75}>
             <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, lineHeight: 19 }}>
-              {realIdx > FREE_MAX_LEVEL_IDX
-                ? `You've grown enough for ${LEVELS[realIdx].name}. `
-                : `${toNext} XP to ${LEVELS[FREE_MAX_LEVEL_IDX + 1].name}. `}
+              {realIdx > FREE_MAX_LEVEL_IDX ? tr("You've grown enough for {{name}}. ", { name: LEVELS[realIdx].name }) : tr("{{toNext}} XP to {{name}}. ", { toNext, name: LEVELS[FREE_MAX_LEVEL_IDX + 1].name })}
               <Text style={{ fontFamily: FF.bodyMed, color: earn.sage }}>
-                Pro grows your plant past {LEVELS[FREE_MAX_LEVEL_IDX].name}.
+                {tr("Pro grows your plant past {{name}}.", { name: LEVELS[FREE_MAX_LEVEL_IDX].name })}
               </Text>
             </Text>
           </TouchableOpacity>
@@ -2696,10 +2692,10 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
           <>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
               <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: ink.faint, letterSpacing: 1.6 }}>
-                PROGRESS
+                {tr("PROGRESS")}
               </Text>
               <Text style={{ fontFamily: FF.bodyMed, fontSize: 11, color: ink.mid }}>
-                {toNext} XP to next tier
+                {tr("{{toNext}} XP to next tier", { toNext })}
               </Text>
             </View>
             <View style={{ height: 4, borderRadius: 2, backgroundColor: ink.hairline, overflow: "hidden" }}>
@@ -2719,10 +2715,10 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
         <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 16 }}>
           <View>
             <Text style={{ fontFamily: FF.kicker, fontSize: 10, color: ink.faint, letterSpacing: 2.4, marginBottom: 4 }}>
-              THIS WEEK
+              {tr("THIS WEEK")}
             </Text>
             <Text style={{ fontFamily: FF.display, fontSize: 22, color: ink.deep, letterSpacing: -0.3 }}>
-              {fmtMins(weekly.total)} earned
+              {tr("{{fmtMins}} earned", { fmtMins: fmtMins(weekly.total) })}
             </Text>
           </View>
           <View style={{
@@ -2731,7 +2727,7 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
             backgroundColor: earn.sageLo,
           }}>
             <Text style={{ fontFamily: FF.bodyBold, fontSize: 13, color: earn.greenD }}>
-              {streak}-day streak
+              {tr("{{streak}}-day streak", { streak })}
             </Text>
           </View>
         </View>
@@ -2776,7 +2772,7 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
         marginBottom: 14,
       }}>
         <Text style={{ fontFamily: FF.kicker, fontSize: 10, color: ink.faint, letterSpacing: 2.4, marginBottom: 6 }}>
-          SCREEN TIME TODAY
+          {tr("SCREEN TIME TODAY")}
         </Text>
         <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
           <Text style={{ fontFamily: FF.display, fontSize: 30, color: ink.deep, letterSpacing: -0.3 }}>
@@ -2784,7 +2780,7 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
           </Text>
           {earnedToday > 0 && (
             <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid }}>
-              of {fmtMins(earnedToday)} earned
+              {tr("of {{fmtMins}} earned", { fmtMins: fmtMins(earnedToday) })}
             </Text>
           )}
         </View>
@@ -2801,21 +2797,15 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
         )}
 
         <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 10, lineHeight: 17 }}>
-          {spentToday === 0
-            ? "Nothing spent yet today."
-            : earnedToday === 0
-              ? "Time carried over from earlier."
-              : spentToday >= earnedToday
-                ? "You've used everything you earned today."
-                : `${fmtMins(earnedToday - spentToday)} of today's earnings still banked.`}
+          {spentToday === 0 ? tr("Nothing spent yet today.") : earnedToday === 0 ? tr("Time carried over from earlier.") : spentToday >= earnedToday ? tr("You've used everything you earned today.") : tr("{{fmtMins}} of today's earnings still banked.", { fmtMins: fmtMins(earnedToday - spentToday) })}
         </Text>
       </View>
 
       {/* Stat tiles */}
       <View style={{ flexDirection: "row", gap: 12, marginBottom: 14 }}>
         {[
-          ["Earned", fmtMins(done.reduce((s, t) => s + t.credits, 0)), earn.terra],
-          ["Tasks done", `${done.length}`, earn.sage],
+          [tr("Earned"), fmtMins(done.reduce((s, t) => s + t.credits, 0)), earn.terra],
+          [tr("Tasks done"), `${done.length}`, earn.sage],
         ].map(([l, v, dot]) => (
           <View key={l} style={{
             flex: 1,
@@ -2846,10 +2836,10 @@ const ProgressView = React.memo(function ProgressView({ tasks, totalXp, skips, o
           marginBottom: 14,
         }}>
           <Text style={{ fontFamily: FF.kicker, fontSize: 10, color: ink.faint, letterSpacing: 2.4, marginBottom: 4 }}>
-            BREAKDOWN
+            {tr("BREAKDOWN")}
           </Text>
           <Text style={{ fontFamily: FF.display, fontSize: 22, color: ink.deep, letterSpacing: -0.3, marginBottom: 16 }}>
-            Earned by type
+            {tr("Earned by type")}
           </Text>
           {Object.entries(catCounts).sort((a, b) => b[1] - a[1]).map(([cat, mins], idx, arr) => {
             const meta = CATS[cat] || { c: "#888", l: cat };
@@ -2905,7 +2895,7 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
     const sM = timeToMins(start);
     const eM = timeToMins(end);
     if (sM == null || eM == null || sM === eM) {
-      Alert.alert("Blocked hours", "Use times like 10:00 PM and 7:00 AM.");
+      Alert.alert(tr("Blocked hours"), tr("Use times like 10:00 PM and 7:00 AM."));
       return;
     }
     setDraft(list => [
@@ -2923,15 +2913,15 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={s2.backdrop}>
         <Pressable onPress={(e) => e.stopPropagation?.()} style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
-          <Text style={[s2.kicker, { color: ink.faint }]}>BLOCKED HOURS</Text>
-          <Text style={[s2.panelTitle, { color: ink.deep }]}>Blocked hours</Text>
+          <Text style={[s2.kicker, { color: ink.faint }]}>{tr("BLOCKED HOURS")}</Text>
+          <Text style={[s2.panelTitle, { color: ink.deep }]}>{tr("Blocked hours")}</Text>
           <Text style={[s2.panelText, { color: ink.mid }]}>
-            Balance is 0 during these windows.
+            {tr("Balance is 0 during these windows.")}
           </Text>
 
           <View style={{ gap: 8, marginBottom: 14 }}>
             {draft.length === 0 ? (
-              <Text style={[s2.emptyText, { color: ink.faint }]}>No blocked hours yet.</Text>
+              <Text style={[s2.emptyText, { color: ink.faint }]}>{tr("No blocked hours yet.")}</Text>
             ) : draft.map(rule => (
               <View
                 key={rule.id}
@@ -2951,7 +2941,7 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
                     {prettyTime(rule.start)} - {prettyTime(rule.end)}
                   </Text>
                   <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                    Repeats every day
+                    {tr("Repeats every day")}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -2964,7 +2954,7 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
                   }}
                 >
                   <Text style={{ fontFamily: FK, fontSize: 12, color: rule.enabled ? earn.greenD : ink.mid }}>
-                    {rule.enabled ? "On" : "Off"}
+                    {rule.enabled ? tr("On") : tr("Off")}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -2983,7 +2973,7 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
               ["End", end, setEnd],
             ].map(([label, value, setter]) => (
               <View key={label} style={{ flex: 1 }}>
-                <Text style={[s.label, { color: ink.faint }]}>{label}</Text>
+                <Text style={[s.label, { color: ink.faint }]}>{label === "Start" ? tr("Start") : tr("End")}</Text>
                 <TimePickerButton
                   value={value}
                   onChange={setter}
@@ -3020,16 +3010,16 @@ function BlockedHoursModal({ visible, rules, dark, onClose, onSave }) {
                 justifyContent: "center",
               }}
             >
-              <Text style={{ fontFamily: FK, fontSize: 14, color: dark ? "#16261C" : "#fff" }}>Add</Text>
+              <Text style={{ fontFamily: FK, fontSize: 14, color: dark ? "#16261C" : "#fff" }}>{tr("Add")}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={s2.actions}>
             <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, { borderColor: ink.border }]}>
-              <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
+              <Text style={[s2.ghostText, { color: ink.mid }]}>{tr("Cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={save} style={[s2.solidBtn, { backgroundColor: earn.green }, theme.fx.glow]}>
-              <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Save</Text>
+              <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>{tr("Save")}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -3056,15 +3046,15 @@ function RecurringTasksModal({ visible, templates, dark, onClose, onSave }) {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={s2.backdrop}>
         <Pressable onPress={(e) => e.stopPropagation?.()} style={[s2.panel, { backgroundColor: paper.card, borderColor: ink.border }]}>
-          <Text style={[s2.kicker, { color: ink.faint }]}>RECURRING TASKS</Text>
-          <Text style={[s2.panelTitle, { color: ink.deep }]}>Schedule</Text>
+          <Text style={[s2.kicker, { color: ink.faint }]}>{tr("RECURRING TASKS")}</Text>
+          <Text style={[s2.panelTitle, { color: ink.deep }]}>{tr("Schedule")}</Text>
           <Text style={[s2.panelText, { color: ink.mid }]}>
-            Tasks that come back automatically.
+            {tr("Tasks that come back automatically.")}
           </Text>
 
           <View style={{ gap: 8, marginBottom: 16 }}>
             {draft.length === 0 ? (
-              <Text style={[s2.emptyText, { color: ink.faint }]}>No recurring tasks yet.</Text>
+              <Text style={[s2.emptyText, { color: ink.faint }]}>{tr("No recurring tasks yet.")}</Text>
             ) : draft.map(item => (
               <View
                 key={item.id}
@@ -3084,7 +3074,7 @@ function RecurringTasksModal({ visible, templates, dark, onClose, onSave }) {
                     {item.title}
                   </Text>
                   <Text style={{ fontFamily: FB, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                    {recurrenceLabel(item)} at {prettyTime(item.time)} - {fmtMins(item.credits)} reward
+                    {tr("{{recurrenceLabel}} at {{prettyTime}} - {{fmtMins}} reward", { recurrenceLabel: recurrenceLabel(item), prettyTime: prettyTime(item.time), fmtMins: fmtMins(item.credits) })}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -3097,7 +3087,7 @@ function RecurringTasksModal({ visible, templates, dark, onClose, onSave }) {
                   }}
                 >
                   <Text style={{ fontFamily: FK, fontSize: 12, color: item.enabled === false ? ink.mid : earn.greenD }}>
-                    {item.enabled === false ? "Off" : "On"}
+                    {item.enabled === false ? tr("Off") : tr("On")}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -3112,10 +3102,10 @@ function RecurringTasksModal({ visible, templates, dark, onClose, onSave }) {
 
           <View style={s2.actions}>
             <TouchableOpacity onPress={onClose} style={[s2.ghostBtn, { borderColor: ink.border }]}>
-              <Text style={[s2.ghostText, { color: ink.mid }]}>Cancel</Text>
+              <Text style={[s2.ghostText, { color: ink.mid }]}>{tr("Cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={save} style={[s2.solidBtn, { backgroundColor: earn.green }, theme.fx.glow]}>
-              <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>Save</Text>
+              <Text style={[s2.solidText, { color: dark ? "#1F3A2A" : "#FAF6EE" }]}>{tr("Save")}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -3378,7 +3368,7 @@ function GroveTab({ half, onHalfChange, dark, statsProps, socialProps }) {
         borderRadius: 16, backgroundColor: paper.sand,
         borderWidth: 1, borderColor: ink.hairline,
       }}>
-        {[{ key: "you", label: "You" }, { key: "friends", label: "Friends" }].map(opt => {
+        {[{ key: "you", label: tr("You") }, { key: "friends", label: tr("Friends") }].map(opt => {
           const on = half === opt.key;
           return (
             <TouchableOpacity
@@ -3422,10 +3412,10 @@ function GroveTab({ half, onHalfChange, dark, statsProps, socialProps }) {
 // The Grove as the "You" half, which freed this one for The Lab without
 // crowding the island to five.
 const TABS = [
-  { id: "today",    label: "Today",     Icon: IconToday },
-  { id: "driftin",  label: "Drift In",  Icon: IconDrift },
-  { id: "friends",  label: "The Grove", Icon: IconGrove },
-  { id: "lab",      label: "The Lab",   Icon: IconLab   },
+  { id: "today",    get label() { return tr("Today"); },     Icon: IconToday },
+  { id: "driftin",  get label() { return tr("Drift In"); },  Icon: IconDrift },
+  { id: "friends",  get label() { return tr("The Grove"); }, Icon: IconGrove },
+  { id: "lab",      get label() { return tr("The Lab"); },   Icon: IconLab   },
 ];
 
 // ── Root App ─────────────────────────────────────────────────
@@ -4084,11 +4074,11 @@ export default function App() {
         if (Date.now() - last < 24 * 3600_000) return;
         AsyncStorage.setItem("drift_st_auth_prompt_at", String(Date.now())).catch(() => {});
         Alert.alert(
-          "Screen Time access needed",
-          "Drift can't block apps until you re-enable Screen Time access in Settings → Screen Time.",
+          tr("Screen Time access needed"),
+          tr("Drift can't block apps until you re-enable Screen Time access in Settings → Screen Time."),
           [
-            { text: "Later", style: "cancel" },
-            { text: "Open Settings", onPress: () => { try { Linking.openSettings?.(); } catch {} } },
+            { text: tr("Later"), style: "cancel" },
+            { text: tr("Open Settings"), onPress: () => { try { Linking.openSettings?.(); } catch {} } },
           ],
         );
       }
@@ -4343,18 +4333,18 @@ export default function App() {
 
   // Shared path for password sign-in, OAuth sign-in, and verified email links.
   const ONBOARDING_TASKS = {
-    make_bed:         { title: "Make your bed",        cat: "life",        minutes: 2 },
-    workout:          { title: "Work out",             cat: "physical",    minutes: 30 },
-    read:             { title: "Read",                 cat: "learning",    minutes: 20 },
-    meditate:         { title: "Meditate",             cat: "life",        minutes: 10 },
-    journal:          { title: "Journal",              cat: "life",        minutes: 10 },
-    walk:             { title: "Go for a walk",        cat: "outdoor",     minutes: 15 },
-    clean:            { title: "Clean / tidy up",      cat: "life",        minutes: 15 },
-    study:            { title: "Study",                cat: "learning",    minutes: 30 },
-    cook:             { title: "Cook a meal",          cat: "life",        minutes: 20 },
-    stretch:          { title: "Stretch",              cat: "physical",    minutes: 5 },
-    no_phone_morning: { title: "No phone for 1 hour",  cat: "life",        minutes: 60 },
-    practice:         { title: "Practice a skill",     cat: "learning",    minutes: 20 },
+    make_bed:         { title: tr("Make your bed"),        cat: "life",        minutes: 2 },
+    workout:          { title: tr("Work out"),             cat: "physical",    minutes: 30 },
+    read:             { title: tr("Read"),                 cat: "learning",    minutes: 20 },
+    meditate:         { title: tr("Meditate"),             cat: "life",        minutes: 10 },
+    journal:          { title: tr("Journal"),              cat: "life",        minutes: 10 },
+    walk:             { title: tr("Go for a walk"),        cat: "outdoor",     minutes: 15 },
+    clean:            { title: tr("Clean / tidy up"),      cat: "life",        minutes: 15 },
+    study:            { title: tr("Study"),                cat: "learning",    minutes: 30 },
+    cook:             { title: tr("Cook a meal"),          cat: "life",        minutes: 20 },
+    stretch:          { title: tr("Stretch"),              cat: "physical",    minutes: 5 },
+    no_phone_morning: { title: tr("No phone for 1 hour"),  cat: "life",        minutes: 60 },
+    practice:         { title: tr("Practice a skill"),     cat: "learning",    minutes: 20 },
   };
 
   /**
@@ -4465,8 +4455,8 @@ export default function App() {
       console.warn("completeAuthenticatedUser: no session and no user — returning to sign-in");
       track("onboarding_complete_no_session");
       Alert.alert(
-        "Couldn't finish signing you in",
-        "Your session didn't stick. Please sign in again — nothing you set up was lost.",
+        tr("Couldn't finish signing you in"),
+        tr("Your session didn't stick. Please sign in again — nothing you set up was lost."),
       );
       await backToSignIn();
       return;
@@ -4479,7 +4469,7 @@ export default function App() {
     if (!isVerified) {
       markSignOutRequested();
       await supabase.auth.signOut().catch(() => {});
-      Alert.alert("Verify your account", "Confirm your email or phone number before continuing.");
+      Alert.alert(tr("Verify your account"), tr("Confirm your email or phone number before continuing."));
       await backToSignIn();
       return;
     }
@@ -4534,6 +4524,7 @@ export default function App() {
       );
       // Server is the source of truth for account type (immutable once set).
       if (prof?.account_type) acctType = prof.account_type;
+      if (acctType === "child") disableAnalytics();
       if (prof?.username) {
         setUserName(prof.username);
         AsyncStorage.setItem("drift_username", prof.username);
@@ -4651,20 +4642,20 @@ export default function App() {
       const price = discount.priceString || step.price;
       track("loyalty_offer_shown", { tier: step.tier });
       Alert.alert(
-        `Your price drops to ${price}/month`,
-        `Thanks for sticking with Drift. Every two months you stay, Pro gets cheaper, down to ${LOYALTY_LADDER[LOYALTY_LADDER.length - 1].price}. Confirm with Apple and ${price} starts at your next renewal.`,
+        tr("Your price drops to {{price}}/month", { price }),
+        tr("Thanks for sticking with Drift. Every two months you stay, Pro gets cheaper, down to {{price}}. Confirm with Apple and {{price2}} starts at your next renewal.", { price: LOYALTY_LADDER[LOYALTY_LADDER.length - 1].price, price2: price }),
         [
-          { text: "Not now", style: "cancel", onPress: () => snoozeStep(userId, step) },
+          { text: tr("Not now"), style: "cancel", onPress: () => snoozeStep(userId, step) },
           {
-            text: "Lock it in",
+            text: tr("Lock it in"),
             onPress: async () => {
               const res = await subRedeemLoyalty(step.offerId);
               track("loyalty_offer_result", { tier: step.tier, ok: !!res?.success, reason: res?.reason || null });
               if (res?.success) {
                 markStepAccepted(userId, step);
-                Alert.alert("You're all set", `${price}/month starts at your next renewal.`);
+                Alert.alert(tr("You're all set"), tr("{{price}}/month starts at your next renewal.", { price }));
               } else if (res?.reason !== "cancelled") {
-                Alert.alert("Couldn't apply it right now", "We'll offer it again next time you open Drift.");
+                Alert.alert(tr("Couldn't apply it right now"), tr("We'll offer it again next time you open Drift."));
                 loyaltyAskedRef.current = false;
               }
             },
@@ -4684,7 +4675,7 @@ export default function App() {
       if (!result.handled) return;
       processedAuthUrlRef.current = url;
       if (result.error) {
-        Alert.alert("Could not verify email", result.error.message || "Open the latest verification email and try again.");
+        Alert.alert(tr("Could not verify email"), result.error.message || tr("Open the latest verification email and try again."));
         return;
       }
       await completeAuthenticatedUser(result.user);
@@ -4714,19 +4705,19 @@ export default function App() {
               .ilike("username", username).maybeSingle()
           )
         );
-        if (!profile) { Alert.alert("Not found", `@${username} isn't on Drift yet.`); return; }
-        if (profile.id === userId) { Alert.alert("That's you", "You can't add yourself."); return; }
+        if (!profile) { Alert.alert(tr("Not found"), tr("@{{username}} isn't on Drift yet.", { username })); return; }
+        if (profile.id === userId) { Alert.alert(tr("That's you"), tr("You can't add yourself.")); return; }
         const { error } = await rateLimited(`friend_request_${userId}`, { limit: 20, windowMs: 60_000 }, () =>
           supabase.from("friendships").insert({
             user_id: userId, friend_id: profile.id, status: "pending",
           })
         );
         if (error && error.code !== "23505") {
-          Alert.alert("Couldn't send", error.message);
+          Alert.alert(tr("Couldn't send"), error.message);
         } else {
-          Alert.alert("Request sent", `Friend request sent to @${username}.`);
+          Alert.alert(tr("Request sent"), tr("Friend request sent to @{{username}}.", { username }));
         }
-      } catch (e) { Alert.alert("Error", e?.message || "Try again."); }
+      } catch (e) { Alert.alert(tr("Error"), e?.message || tr("Try again.")); }
     };
     Linking.getInitialURL().then(handleUrl);
     const sub = Linking.addEventListener("url", ({ url }) => handleUrl(url));
@@ -5114,6 +5105,7 @@ export default function App() {
             );
             if (pErr) console.warn("profile fetch:", pErr.message);
             if (prof?.account_type) bootAcctType = prof.account_type;
+            if (bootAcctType === "child") disableAnalytics();
             if (prof?.username) {
               setUserName(prof.username);
               AsyncStorage.setItem("drift_username", prof.username);
@@ -5531,18 +5523,18 @@ export default function App() {
       const motion = await SleepGuard.requestMotionAuth();
       if (motion !== "authorized") {
         Alert.alert(
-          "Motion access needed",
-          "Drift uses Motion & Fitness to check your phone stayed still overnight. Turn it on in Settings \u203a Drift \u203a Motion & Fitness.",
+          tr("Motion access needed"),
+          tr("Drift uses Motion & Fitness to check your phone stayed still overnight. Turn it on in Settings › Drift › Motion & Fitness."),
         );
         return;
       }
       const id = await SleepGuard.registerTag();
       setSgTag(id);
       track("sleepguard_tag_registered");
-      Alert.alert("Tag saved", "Leave it in the room where your phone will sleep. Tap it at bedtime to start a night.");
+      Alert.alert(tr("Tag saved"), tr("Leave it in the room where your phone will sleep. Tap it at bedtime to start a night."));
     } catch (e) {
       if (e?.code !== "cancelled" && e?.message !== "cancelled") {
-        Alert.alert("Couldn't read that tag", "Hold your phone still against the tag and try again.");
+        Alert.alert(tr("Couldn't read that tag"), tr("Hold your phone still against the tag and try again."));
       }
     } finally {
       setSgBusy(false);
@@ -5564,16 +5556,16 @@ export default function App() {
         // The NFC sheet already said so in red. A second alert saying the same
         // thing just makes them dismiss two things.
         if (!res.shownOnSheet) {
-          Alert.alert("Different tag", "That isn't the tag you set up. Tap the one in your sleep room.");
+          Alert.alert(tr("Different tag"), tr("That isn't the tag you set up. Tap the one in your sleep room."));
         }
       } else if (res.reason === "motion_denied") {
-        Alert.alert("Motion access needed", "Turn on Motion & Fitness for Drift in Settings to use this.");
+        Alert.alert(tr("Motion access needed"), tr("Turn on Motion & Fitness for Drift in Settings to use this."));
       } else if (res.reason === "no_tag") {
         await sgSetup();
       }
     } catch (e) {
       if (e?.code !== "cancelled" && e?.message !== "cancelled") {
-        Alert.alert("Couldn't read that tag", "Hold your phone still against the tag and try again.");
+        Alert.alert(tr("Couldn't read that tag"), tr("Hold your phone still against the tag and try again."));
       }
     } finally {
       setSgBusy(false);
@@ -5661,9 +5653,9 @@ export default function App() {
     // than after the user has written it and taken the photo.
     if (freeTasksLeft != null && freeTasksLeft <= 0) {
       Alert.alert(
-        "That's today's free tasks",
-        `The free plan earns from ${freeDailyTasks} tasks a day. Go Pro for unlimited tasks, or come back tomorrow.`,
-        [{ text: "Not now", style: "cancel" }, { text: "See Pro", onPress: () => openPaywall("task_limit") }],
+        tr("That's today's free tasks"),
+        tr("The free plan earns from {{freeDailyTasks}} tasks a day. Go Pro for unlimited tasks, or come back tomorrow.", { freeDailyTasks }),
+        [{ text: tr("Not now"), style: "cancel" }, { text: tr("See Pro"), onPress: () => openPaywall("task_limit") }],
       );
       return;
     }
@@ -5856,19 +5848,19 @@ export default function App() {
     if (opened) {
       if (hitLimit && !proAccessRef.current) {
         Alert.alert(
-          `The free plan blocks up to ${FREE_BLOCK_LIMIT}`,
-          "Drift Pro blocks as many apps, categories and websites as you like.",
-          [{ text: "Not now", style: "cancel" }, { text: "See Pro", onPress: () => openPaywall("block_limit") }],
+          tr("The free plan blocks up to {{FREE_BLOCK_LIMIT}}", { FREE_BLOCK_LIMIT }),
+          tr("Drift Pro blocks as many apps, categories and websites as you like."),
+          [{ text: tr("Not now"), style: "cancel" }, { text: tr("See Pro"), onPress: () => openPaywall("block_limit") }],
         );
       }
       return;
     }
     if (reason === "denied") {
-      Alert.alert("Screen Time access needed",
-        "Enable Drift in Settings > Screen Time so Drift can block apps.");
+      Alert.alert(tr("Screen Time access needed"),
+        tr("Enable Drift in Settings > Screen Time so Drift can block apps."));
     } else if (reason === "unavailable") {
-      Alert.alert("Not available",
-        "Apple Screen Time blocking requires a custom build of Drift.");
+      Alert.alert(tr("Not available"),
+        tr("Apple Screen Time blocking requires a custom build of Drift."));
     }
   }, [openPaywall]);
 
@@ -5882,7 +5874,7 @@ export default function App() {
     if (!(await isCalendarSyncEnabled())) return;
     const events = await fetchTodayEvents();
     if (events.length === 0) {
-      Alert.alert("Nothing to import", "No new events on today's calendar.");
+      Alert.alert(tr("Nothing to import"), tr("No new events on today's calendar."));
       return;
     }
     // Mark imported up-front so re-running never double-offers the same event;
@@ -6019,7 +6011,7 @@ export default function App() {
 
   const handleDriftInStart  = async ({ task, durationSeconds, heading } = {}) => {
     setDriftInActive(true);
-    startDriftInLiveActivity(task || heading || "Drift In", durationSeconds || 25 * 60, heading || "Drift In").catch(() => {});
+    startDriftInLiveActivity(task || heading || tr("Drift In"), durationSeconds || 25 * 60, heading || tr("Drift In")).catch(() => {});
     try { await stopBalanceMonitoring(); } catch {}
     await AsyncStorage.multiRemove(["drift_last_armed_seconds", "drift_last_armed_balance"]).catch(() => {});
     setLastArmedSeconds(-1);
@@ -6042,9 +6034,9 @@ export default function App() {
       }
       if (!hasSelection) {
         Alert.alert(
-          "No apps to block",
-          "You haven't picked any apps yet. Drift In will still run, but distracting apps won't be blocked. Open Profile → Blocked apps to pick some.",
-          [{ text: "OK" }]
+          tr("No apps to block"),
+          tr("You haven't picked any apps yet. Drift In will still run, but distracting apps won't be blocked. Open Profile → Blocked apps to pick some."),
+          [{ text: tr("OK") }]
         );
       }
     } catch {}
@@ -6056,11 +6048,11 @@ export default function App() {
       if (res && res.applied === false && res.reason) {
         // In Expo Go this always fails — don't bother the user with the alert.
         if (!/Expo Go|unavailable/i.test(res.reason)) {
-          Alert.alert("Couldn't block apps", res.reason);
+          Alert.alert(tr("Couldn't block apps"), res.reason);
         }
       }
     } catch (e) {
-      Alert.alert("Block error", e?.message || String(e));
+      Alert.alert(tr("Block error"), e?.message || String(e));
     }
   };
   const handleDriftInEnd    = () => {
@@ -6243,12 +6235,20 @@ export default function App() {
 
   const deleteAccount = async () => {
     try {
-      const { error } = await supabase.functions.invoke("delete-account", {});
+      // Sign in with Apple users confirm once more so the server can revoke
+      // their Apple token (App Store 5.1.1(v)). Cancelling the sheet cancels
+      // the deletion; any other failure still deletes — the data matters more.
+      const { data: { user: me } = {} } = await supabase.auth.getUser();
+      const apple = await getAppleRevocationCode(me);
+      if (apple.cancelled) return;
+      const { error } = await supabase.functions.invoke("delete-account", {
+        body: apple.code ? { apple_authorization_code: apple.code } : {},
+      });
       if (error) throw error;
       await signOut({ accountDeleted: true });
-      Alert.alert("Account deleted", "Your account has been successfully deleted.");
+      Alert.alert(tr("Account deleted"), tr("Your account has been successfully deleted."));
     } catch (e) {
-      Alert.alert("Could not delete account", e?.message || "Please try again later.");
+      Alert.alert(tr("Could not delete account"), e?.message || tr("Please try again later."));
       throw e;
     }
   };
@@ -6430,7 +6430,7 @@ export default function App() {
             letterSpacing: 4,
             flex: 1,
           }}>
-            DRIFT
+            {tr("DRIFT")}
           </Text>
 
           {/* Time pill — small clock + status text */}
@@ -6462,7 +6462,7 @@ export default function App() {
                 : displaySecLeft > 0 ? (displaySecLeft < 120 ? "#C0392B" : th_earn.sage)
                 : th_ink.mid,
             }}>
-              {blockedHoursActive ? "blocked" : displaySecLeft !== 0 ? fmtSecLeft(displaySecLeft) : "no time"}
+              {blockedHoursActive ? "blocked" : displaySecLeft !== 0 ? fmtSecLeft(displaySecLeft) : tr("no time")}
             </Text>
           </View>
 
@@ -6507,7 +6507,7 @@ export default function App() {
             const next = await requestScreenTimeAuth();
             setScreenTimeStatus(next);
             if (next !== "approved") {
-              Alert.alert("Screen Time", `Status: ${next}. Open Settings -> Screen Time to grant access.`);
+              Alert.alert(tr("Screen Time"), tr("Status: {{next}}. Open Settings -> Screen Time to grant access.", { next }));
             }
           }}
           onUpgrade={() => openPaywall("profile")}

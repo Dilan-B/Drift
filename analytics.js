@@ -53,7 +53,17 @@ const _deviceInfo = {
  * Call this right after sign-in / session restore.
  */
 export function identify(userId) {
-  _userId = userId;
+  _userId = _disabled ? null : userId;
+}
+
+// Children's accounts are never tracked (COPPA data minimisation, and the
+// promise in the parental notice). The analytics_events insert policy enforces
+// the same thing server-side; this just avoids queueing doomed inserts.
+let _disabled = false;
+export function disableAnalytics() {
+  _disabled = true;
+  _userId = null;
+  _queue = [];
 }
 
 /**

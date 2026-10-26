@@ -15,7 +15,7 @@
 //
 // POST { family_code: string, child_name: string }
 //   → { success: true, access_token, refresh_token, user_id, username, display_name }
-//   → { success: false, reason: "invalid_code" | "inactive" | "family_full" | "bad_name" }
+//   → { success: false, reason: "invalid_code" | "inactive" | "no_consent" | "family_full" | "bad_name" }
 //
 // NOTE: no caller Authorization is required (the child has no session yet).
 // Abuse mitigation here is the per-family cap + the 31^6 code space; a per-IP
@@ -66,7 +66,7 @@ serve(async (req: Request) => {
       // seats: how many children the parent has paid for.
       // Without it in this select the seat check below reads undefined and
       // silently never fires.
-      .select("id, parent_id, active, deleted_at, seats")
+      .select("id, parent_id, active, deleted_at, seats, consent_at")
       .eq("code", code)
       .maybeSingle();
     if (famErr) {
@@ -75,6 +75,9 @@ serve(async (req: Request) => {
     }
     if (!family || family.deleted_at) return json({ success: false, reason: "invalid_code" });
     if (!family.active) return json({ success: false, reason: "inactive" });
+    // COPPA: no child data before verifiable parental consent. The parent gives
+    // it in-app (family-privacy "grant"); until then the code is inert.
+    if (!family.consent_at) return json({ success: false, reason: "no_consent" });
 
     const anon = createClient(
       Deno.env.get("SUPABASE_URL")!,

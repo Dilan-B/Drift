@@ -50,6 +50,7 @@
 // they got there.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { replyLanguageLine } from "../_shared/languages.ts";
 
 // ── Limits ────────────────────────────────────────────────────
 const MAX_PER_HOUR = 5;
@@ -285,6 +286,14 @@ serve(async (req: Request) => {
     if (authErr || !user) return reject("Unauthorized", 401);
     if (!isEmailVerified(user)) return reject("email_not_verified", 403);
 
+    // Children's accounts never reach OpenAI (COPPA: the parental notice
+    // promises it, and it keeps a child's photos/text away from a third party).
+    {
+      const { data: prof } = await supabase
+        .from("profiles").select("account_type").eq("id", user.id).maybeSingle();
+      if (prof?.account_type === "child") return reject("child_account", 403);
+    }
+
     // Reject oversized requests early — protect from amplification attacks
     const lenHeader = parseInt(req.headers.get("content-length") || "0", 10);
     if (lenHeader && lenHeader > MAX_BODY_BYTES) return reject("body_too_large", 413);
@@ -399,6 +408,7 @@ serve(async (req: Request) => {
       videoMeta?: { durationSec?: number; frameCount?: number; sizeBytes?: number };
       followUpAnswer?: string;
       tzOffsetMin?: number;
+      locale?: string; // app language (i18n/languages.js); the reply is written in it
     };
     try { body = await req.json(); }
     catch { return reject("invalid_json", 400); }
@@ -1075,7 +1085,8 @@ If NO photo or video was submitted, reject and say what to capture.`);
             `when the evidence is ` +
             `unrelated, clearly contradictory, or so vague that no answer would rescue it — a question is ` +
             `for resolving doubt, not for giving an obviously false claim a second try.\n`) +
-        `\nReply ONLY with valid JSON, no markdown:\n` +
+        `\n` + replyLanguageLine(body.locale, `"message", "shortfall" and "question"`) +
+        `Reply ONLY with valid JSON, no markdown:\n` +
         `{"verified": true or false, "confidence": "high" or "medium" or "low", ` +
         `"message": "1-2 sentences to the user", "shortfall": "what was missing, or empty string if verified", ` +
         `"question": "one clarifying question, or empty string"}`,

@@ -3,6 +3,7 @@
 // Rate-limited per user: 30/hour, 200/day.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { replyLanguageLine } from "../_shared/languages.ts";
 
 const MAX_PER_HOUR = 30;
 const MAX_PER_DAY  = 200;
@@ -83,6 +84,14 @@ serve(async (req: Request) => {
     const { data: { user }, error: authErr } = await supabase.auth.getUser();
     if (authErr || !user) return json({ error: "Unauthorized" }, 401);
     if (!isEmailVerified(user)) return json({ error: "email_not_verified" }, 403);
+
+    // Children's accounts never reach OpenAI (COPPA: the parental notice
+    // promises it, and it keeps a child's photos/text away from a third party).
+    {
+      const { data: prof } = await supabase
+        .from("profiles").select("account_type").eq("id", user.id).maybeSingle();
+      if (prof?.account_type === "child") return json({ error: "child_account" }, 403);
+    }
 
     // Subscription gate (cached + dev-bypass; graceful fallback if RPC missing)
     let subActive: boolean | null = cachedSub(user.id);
@@ -178,6 +187,7 @@ serve(async (req: Request) => {
       `Task: "${title.replace(/"/g, "'")}"\n` +
       `Duration: ${mins} min\n\n` +
       `XP ≈ credits × 0.6 + 8 (round to integer)\n\n` +
+      replyLanguageLine(body.locale, `"reasoning"`) +
       `Reply ONLY this JSON (no markdown):\n` +
       `{"productive":<bool>,"credits":<int>,"xp":<int>,"category":"<one of: work|physical|outdoor|learning|social|life>","reasoning":"one short sentence"}`;
 

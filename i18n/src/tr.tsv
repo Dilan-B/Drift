@@ -1,0 +1,1447 @@
+1	\n\nNot: Konum "Uygulamayı Kullanırken" olarak ayarlı, bu yüzden Drift kapalıyken gerçek varışlar tetiklenmez.
+2	 Her düşük fiyat, kabul etmen için uygulama içinde sunulur.
+3	 Nihai fiyat App Store'da gösterilir.
+4	 · geri gönderildi, tekrar dene
+5	 · {{streak}} günlük seri
+6	"{{title}}" bugünden kaldırılacak.
+7	"{{title}}" silinecek.
+8	"{{title}}" — kabul etmek veya reddetmek için Drift'i aç.
+9	(İSTEĞE BAĞLI)
+11	+ Görev
+12	+{{minutes}} dk
+13	+{{minutes}} dk{{p}}
+14	Bitince +{{p}} dakika
+15	Yerinde kalırsa +{{rewardMinutes}} dk seni bekliyor
+16	+{{xp}} XP
+17	Üst üste 1 gece.
+18	10 burpee
+19	10 dk koşu
+20	10 dk · Nefes al ve sıfırlan
+21	10 dk · Düşüncelerini yaz
+22	10 dakikalık koşu
+23	12+ karakter, rakam, simge
+24	15 dk · Temiz hava
+25	15 dk · Alanını düzenle
+26	2 dk · Güne iyi başla
+27	20 lunge
+28	20 dk · Kitap veya makale
+29	20 dk · Düzgün bir şey ye
+30	20 dk · Müzik, sanat, kod vb.
+31	20 şınav
+32	20 mekik
+33	30 jumping jack
+34	30 dk · Egzersiz veya spor salonu
+35	30 dk · Ödev veya ders
+36	30 squat
+37	3–20 karakter, harf/rakam/_
+38	5 dk · Gevşe
+39	SAATTE 5 · GÜNDE 20 SINIRI
+40	60 dk · Sabah detoksu
+41	60 saniye plank
+42	9:00 Günlük toplantı
+43	@kullaniciadi
+44	@{{fromUsername}} Drift'te seninle birlikte büyümek istiyor.
+45	@{{leaderName}} bugün senden daha az ekran süresinde. Sen {{spent}} seviyesindesin.
+46	@{{name}} meydan okumanı kabul etti
+47	@{{name}} meydan okumanı reddetti
+48	@{{username}} adlı kişinin Drift hesabı yok.
+49	@{{username}} bugün henüz bildirmedi.
+50	@{{username}} henüz Drift'te değil.
+51	Şimdi "{{label}} konumundasın" bildirimi gelmeli. Ona dokun — Drift "{{title}}" onaylanmaya hazır şekilde açılır.
+52	Bütün gece diğer odada. +{{max}} dakika kazanıldı.
+53	Bir bildirim jetonu
+54	Önce bir ebeveynin kendi uygulamasında PIN belirlemesi gerekiyor.
+56	HESAP
+57	ÇOCUK EKLE
+58	YZ
+59	YZ KONTROLÜ
+60	Kredi kazanmadan önce yapay zekâ kanıtını kontrol eder. Pro ile görevini de okur ve zorluğuna göre değerini belirler.
+61	Yapay zekâ özellikleri etkin bir abonelik gerektirir.
+62	Yapay zekâ görevini okuyup değerini ve kategorisini belirler, ardından kredi kazanmadan önce kanıtını kontrol eder.
+63	ZATEN YAPILDI
+64	GÖRÜNÜM
+65	ARŞİV
+66	OTOMATİK GÖREVLER
+67	Bırak
+68	Oturumu bırak
+69	Oturum bırakılsın mı?
+70	Bırakırsan kredi kazanamazsın.
+71	Kazanılmış yaklaşık {{m}} dk kaldı.
+72	Kabul et
+73	Kabul ediliyor…
+74	Hesap silindi
+75	Hesap ayarları profilinde.
+76	Eylem planı
+77	Ekle
+78	"{{title}}" ({{minutes}} dk) eklensin mi? Onaylamak için dokun.
+79	Görev ekle
+80	Cevap ekle
+81	Beni Drift'te ekle: {{link}}
+82	Başlamak için bir tane ekle.
+83	Kanıt ekle
+84	Gerçek görevler ekle
+85	Görev ekle
+86	Bu görev eklensin mi?
+87	Google hesabını Ayarlar → Uygulamalar → Takvim → Hesaplar'dan ekle, Takvimler'in açık olduğundan emin ol, sonra Yeniden Kontrol Et'e dokun.
+88	Onaylarsan bugüne eklenir
+89	Ekleniyor…
+90	Bu engelli saatleri ekler. Seninkiler aynen kalır.
+91	Öğleden sonra
+92	Öğleden sonraları
+93	Tekrar
+94	Noktaya doğrult, kutuyu bırakmak için dokun
+95	Havalimanı
+96	Ali
+97	Tümü
+98	Her şey tamam
+99	Etkinlikleri görev olarak almak için takvim erişimine izin ver.
+100	Ayarlar'dan kameraya izin ver.
+101	Ayarlar'dan fotoğraf erişimine izin ver.
+102	İzinli
+103	İzinli uygulamalar
+104	Süre neredeyse bitti
+105	Az kaldı
+106	Hesabın var mı? Giriş yap
+107	{{display_name}} için her zaman izin ver
+108	"Her Zaman" konum izni gerekli
+109	Bu e-postayla zaten bir hesap var — giriş yapmaya geç.
+110	Bu e-postayla zaten bir hesap var. Giriş yapmayı dene.
+111	Kadim
+112	Doğrulamayı bitirmek için soruyu yanıtla.
+113	App Store kodları yalnızca iPhone'da kullanılabilir.
+114	Uygulama engelleme Drift'in tam sürümünü gerektirir — bunu daha sonra kurabilirsin.
+115	Apple Ekran Süresi ile uygulama engelleme yalnızca iOS'ta.
+116	Uygulama istekleri
+117	Apple Ekran Süresi engellemesi özel bir Drift sürümü gerektirir.
+118	Apple Ekran Süresi engellemesi özel bir Drift sürümü gerektirir. Drift'i güncelleyip tekrar dene.
+119	Apple ile giriş başarısız.
+120	Randevu
+121	Onayla
+122	Uygulamalar
+123	Uygulamalar kilitlenir
+124	Süren bitince\nuygulamalar kilitlenir
+125	Uygulamalar, kategoriler veya web alan adları.
+126	Arşivle
+127	Emin misin?
+128	{{toLocaleTimeString}} itibarıyla etkin. Telefonunu olduğu yerde bırak, Drift sabah kontrol edecek.
+129	Kollar
+130	Varışlar etkin
+131	Varışlar tetiklenmez
+132	Kaydettiğin bir yere vardığında Drift görevi önerir.
+133	Ata
+134	Drift'in çocuğun hakkında tuttuğu bilgileri istediğin zaman görebilir (adının yanındaki Veri'ye dokun), silebilir ya da onayını geri çekebilirsin; geri çekmek tüm çocukların verisini siler ve yeni veri toplanmasını durdurur. Sorular: driftappcontact@gmail.com.
+135	En az 3 karakter.
+136	Spor salonunda
+137	Şimdi kullanılabilir
+138	ÇOCUKLARIN KATILMADAN ÖNCE
+139	ENGELLİ SAATLER
+140	DÖKÜM
+141	Geri
+142	Girişe dön
+143	Bu aralıklarda bakiye 0'dır.
+144	Banka
+145	Banka işi
+146	Bar
+147	Berber
+148	Basketbol
+149	Basketbol sahası
+150	Net ol! Gerçekte ne yapacağını yaz (ör. "20 sayfa oku", "bir şeyler" değil).
+151	Plaj
+152	Sahilde yürüyüş
+153	Bisiklet yolu
+154	Engelleme hatası
+155	Her uygulamayı engelle, sınırsız görev, Lockbox ve bitkinin tamamı.
+156	Engelli
+157	Engellenen uygulamalar
+158	Engelli saatler
+159	Engelli.
+160	Kitapçı
+161	Botanik bahçesi
+162	İki hesapta da Pro var, bu yüzden tamamlanma YZ Kontrolü ile doğrulanır.
+163	İkisi de isteğe bağlı, sen açana kadar kapalı ve cihazında kalır. Profil → Otomatik görevler'de bulabilirsin.
+164	Bouldering
+165	Bouldering duvarı
+166	Bowling
+167	Bowling salonu
+168	Boks salonu
+169	Boks antrenmanı
+170	Nefes al.
+171	Bugünün etkinliklerini görev olarak al. Salt okunur — Drift takvimini asla değiştirmez.
+172	Hatalar, fikirler, her şey. Her mesajı okuyoruz.
+173	Üretim oturumu
+174	Minicik bir ekip yapıyor. Değerlendirme yazmak on saniye sürer ve gerçekten işe yarar.
+175	Burpee
+176	Otobüs durağı
+177	Hesap oluşturarak şunları kabul edersin:{{p}}
+178	TAKVİM HESABI
+179	KULLANILACAK TAKVİMLER
+180	KATEGORİ
+181	MEYDAN OKUMA
+182	MEYDAN OKUMA KAYBEDİLDİ
+183	MEYDAN OKUMA KAZANILDI
+184	MEYDAN OKUMALAR - {{length}}
+185	KULLANICI ADINI AL
+186	{{credits}} DK KREDİYİ AL
+187	KAPAT
+188	TAMAMLANAN
+189	GÜVEN: {{p}}
+190	KİŞİLER
+191	DEVAM
+192	MEVCUT SEVİYE
+193	Kafe
+194	Takvim
+195	Takvim erişimi gerekli
+196	Takvim senkronu
+197	Takvimler ve yerler
+198	Bir arkadaşını ara
+199	Kamera
+200	Kamp işleri
+201	Kamp alanı
+202	Kampüs
+203	Bu doğrulanamıyor
+204	İptal
+205	Bu meydan okuma iptal edilsin mi?
+206	Bu geceyi iptal et
+207	Taç
+208	Araba işi
+209	Oto tamirci
+210	Oto yıkama
+211	Eksikleri tamamla
+212	Meydan okuma
+213	Meydan okumalar
+214	Onaylamadan önce istediğini değiştir.
+215	Engellenen uygulamaları değiştir
+216	App Store'da oturum açık ve internete bağlı olduğundan emin ol, sonra tekrar dene.
+217	Hesabını doğrulamak için e-postanı kontrol et, sonra tekrar giriş yap.
+218	Hesabını doğrulamak için e-postanı kontrol et, sonra tekrar giriş yapmayı dene.
+219	Önce bir Drift Family planı seç. Drift kurulumu bir yetişkinin yaptığını böyle doğrular.
+220	Engellenecek uygulamaları seç
+221	Saat seç
+222	Hangi uygulamaların engelleneceğini seç.\nDrift kapalıyken bile uygular.
+223	Okunacak takvimleri seç ve kayıtlı yerleri yönet.
+224	Kilise
+225	Kredileri al
+226	Temizle / toparla
+227	Odanı topla
+228	Müşteri ofisi
+229	Müşteri ziyareti
+230	Tırmanış salonu
+231	Tırmanış seansı
+232	Klip çok büyük
+233	Klip çok uzun
+234	Kapat
+235	Yaklaşık olsa da olur. Gerçek olsun yeter.
+236	Kulüp
+237	Kulüp buluşması
+238	Ödülleri topla
+239	Toplum merkezi
+240	Mahalle etkinliği
+241	Topluluk bahçesi
+242	Yolda okuma
+243	Yarış
+244	Meydan okuma başlığı
+245	Önce bir görevi tamamla.
+246	Kilidi açmak için Drift'te bir görev tamamla.
+247	Zamanını geri kazanmak için bir görev tamamla.
+248	Ekran süresi kazanmak için bugün bir görev tamamla.
+249	Görev tamamla, dakika kazan.\nGörev ne kadar zorsa o kadar çok kazanırsın.
+250	Erken tamamla
+251	Biraz dakika biriktirmek için ilk görevini tamamla. Odağa hoş geldin.
+252	Konser salonu
+253	Kongre merkezi
+254	Onayla
+255	Devam etmeden önce e-postanı veya telefon numaranı doğrula.
+256	Google Takvim'i bağla
+257	Kişilere erişim gerekli
+258	Devam
+259	Güncellemeden devam et (geliştirici)
+260	Yemek yap
+261	Kopyalandı
+262	Kullanıcı adının uygunluğu kontrol edilemedi. Tekrar dene.
+263	Hesap silinemedi
+264	E-posta tekrar gönderilemedi. Tekrar dene.
+265	Kaydedilemedi. Tekrar dene.
+266	Meydan okuma gönderilemedi.
+267	Profil fotoğrafı güncellenemedi.
+268	Kullanıcı adı güncellenemedi.
+269	E-posta doğrulanamadı
+270	Doğrulanamadı. Tekrar dene.
+271	Eklenemedi
+272	Şu an uygulanamadı
+273	Görev atanamadı. Tekrar dene.
+274	Uygulamalar engellenemedi
+275	İptal edilemedi
+276	PIN kontrol edilemedi. Tekrar dene.
+277	Klip yeterince sıkıştırılamadı. Daha kısa bir tane kaydet.
+278	Fotoğraf yeterince sıkıştırılamadı. Başka bir çekim dene.
+279	Silinemedi. Bağlantını kontrol edip tekrar dene.
+280	Giriş tamamlanamadı. Tekrar dene.
+281	Girişin tamamlanamadı
+282	Konum alınamadı
+283	Aileye katılınamadı. Tekrar dene.
+284	Oda haritalanamadı
+285	Yapay zekâ servisine ulaşılamadı. Halka açık bir Wi-Fi'daysan (spor salonu, kafe veya kampüs) Drift'i engelliyor olabilir — hücresel veri kullanmak için Wi-Fi'ı kapatıp tekrar dene.
+286	App Store'a ulaşılamadı
+287	Dün geceki hareket kaydı okunamadı. Bu sefer sana güveniyoruz.
+288	Bu klip okunamadı
+289	Bu etiket okunamadı
+290	Şu an kullanılamadı. Tekrar dene.
+291	Kaldırılamadı
+292	PIN kaydedilemedi. Tekrar dene.
+293	Planın kaydedilemedi
+294	Gönderilemedi
+295	Başlatılamadı
+296	Bir şey mi sayıyorsun — tekrar, tur, sayfa? Video çek. Tek bir fotoğraf sayıyı gösteremez.
+297	Ortak çalışma alanı
+298	Hesap oluştur
+299	Odağını arkadaşlarınla{{p}}paylaşmak için hesap oluştur.
+300	Bu görevi şu saatte oluştur
+301	Hesabını oluştur
+302	Görev süresine göre kredi.
+303	CrossFit salonu
+304	Özel
+305	Özel meydan okumaların gönderilebilmesi için Supabase SQL güncellemesi gerekli.
+306	Özel meydan okumalar normal gönderilir. İkiniz de Pro olunca YZ doğrulaması açılır.
+307	Özel günler
+308	İDDİA
+309	İDDİA TAMAM
+310	İDDİA KAYBEDİLDİ
+311	DERİN ODAK
+312	SİL
+313	GELİŞTİRİCİ atla — oturum yok
+314	GELİŞTİRİCİ · KAYIT SONRASI
+315	GELİŞTİRİCİ · KAYIT ÖNCESİ
+316	TAMAM
+317	BUGÜN TAMAM
+318	DRIFT
+319	Her gün
+320	Dans çalışması
+321	Dans stüdyosu
+322	İddia
+323	İddia başlığı
+324	Koyu
+325	Veri
+326	Kreş
+327	Reddedildi
+328	Derin çalışma
+329	Sil
+330	Hesabı sil
+331	Hesap silinsin mi?
+332	Bu planı sil
+333	Bu plan silinsin mi?
+334	{{name}} adlı kişinin verilerini sil
+335	{{name}} adlı kişinin verileri silinsin mi?
+336	{{title}} görevi silinsin mi?
+337	Silinsin mi?
+338	Reddedildi - açmak için dokun
+339	Diş randevusu
+340	Diş hekimi
+341	Reddet
+342	"{{title}}" görevini nasıl tamamladığını anlat...
+343	Cihaz
+344	Farklı etiket
+345	Kapat
+346	Doktor muayenehanesi
+347	Köpek parkı
+348	Dojo
+349	Serini bozma!
+350	Bitti
+351	Gece yarısından önce bitirirsen +{{xp}} XP
+352	Drift Bakiyesi
+353	Drift Family
+354	Drift In
+355	Drift Pro
+356	Drift Pro istediğin kadar uygulama, kategori ve web sitesini engeller.
+357	Drift, Drift'i zaten kullanan arkadaşlarını bulmak için kişilerini eşleştirebilir. Kişilerin e-postaları cihazında hash'lenir ve asla düz metin olarak yüklenmez.
+358	Drift bugünün etkinliklerini görev olarak önermek için takvimini okuyabilir. Takvimini asla değiştirmez ve hiçbir şey yüklenmez.
+359	Drift anımsatıcılarını görev olarak önermek için okuyabilir. Anımsatıcılarını asla değiştirmez ve hiçbir şey yüklenmez.
+360	Ayarlar → Ekran Süresi'nden erişimi yeniden açana kadar Drift uygulamaları engelleyemez.
+361	Drift, görev önerebilmek için kaydettiğin yerlere ne zaman vardığını kontrol eder. Arka planda çalışması için Her Zaman izni gerekir. Konumun cihazında kalır ve asla yüklenmez.
+362	Drift ses kaydetmez. Bu izin, poz algılamada kullanılan bir kamera bileşeni tarafından istenir.
+363	Drift geri bildirimi
+364	Drift'in konum izni yok (Ayarlar › Drift › Konum).
+365	Drift in
+366	Drift çocuk hesabı
+367	İlerlemeni paylaşmayı seçersen Drift fotoğraf arşivine bir ekran görüntüsü kaydedebilir.
+368	Bir yere vardığını fark etmesi için Drift'in "Her Zaman" konum iznine ihtiyacı var. Bunu Ayarlar → Drift → Konum'dan değiştirebilirsin.
+369	Göreve kanıt fotoğrafı eklemek veya profil fotoğrafını ayarlamak için Drift'in fotoğraflarına erişmesi gerekir.
+370	Drift ebeveyn hesabı
+371	Drift, Google Takvim'i iOS üzerinden okur. Ayarlar → Uygulamalar → Takvim → Hesaplar → Hesap Ekle → Google'ı aç, giriş yap ve Takvimler'i aç. Sonra geri dönüp yeniden kontrol et.
+372	Drift, uyumadan önce telefonunun orada olduğunu kanıtlayabilmen için başka bir odaya koyduğun NFC etiketini okur. Drift yalnızca etiketin kimliğini okur, ona asla yazmaz.
+373	Drift, telefonunun gece boyunca hareketsiz kaldığını Hareket ve Fitness ile kontrol eder. Ayarlar › Drift › Hareket ve Fitness'tan aç.
+374	Drift, antrenman meydan okumalarında egzersiz hareketlerini algılamak ve telefonunun Lockbox oturumunda veya geceleri telefon-başka-odada korumasıyla, ekran kapalıyken bile yerinde kaldığını kontrol etmek için hareket verilerini kullanır. Hareket verileri cihazında okunur ve asla yüklenmez.
+375	Drift kamerayı görevlerin için kanıt fotoğrafı çekmek, profil fotoğrafını ayarlamak ve artırılmış gerçeklikle Lockbox'ı gerçek bir yüzeye yerleştirmek için kullanır.
+376	Drift, seçtiğin yerleri kaydetmek ve vardığında görev önermek için konumunu kullanır. Konumun cihazında kalır.
+377	Drift etiketini unutacak ve gece hatırlatıcısını durduracak. Seri geçmişin korunur.
+378	İçki
+379	Masana bir kutu koy. Telefon içine girer ve içinde kalır.
+380	Geri dönüşümü bırak
+381	Kutuyu bırak
+382	Yere in · zıpla ve başının üstünde alkışla
+383	Kuru temizleme
+384	Kuru temizlemeye bırak
+385	KAZANILABİLİR
+386	KAZANILAN
+387	DRIFT'İ SEVDİN Mİ?
+388	KODU GİR
+389	TAHMİNİ KAZANÇ
+390	Her görevin tahmini bir süresi vardır ve tamamladığında ekran süresi kazandırır.
+391	Drift'te bir görev tamamlayarak ekran süresi kazan.
+392	Kilidi açmak için bunu geri kazan
+393	Zaman kazan.
+394	Görevleri tamamlayarak kendi ekran süreni kazan.
+395	Ekran süreni kazan
+396	Gerçek işler yaparak ekran süreni kazan. Sen yaptığında telefonun açılır.
+397	Zamanını kazan
+398	Kazanılan
+399	Türe göre kazanç
+400	Dirsek
+401	Aşağıda dirsekler 90° · yukarıda tam aç
+402	E-posta
+403	Drift'in kilidi açılmadan önce e-posta hesaplarının doğrulanması gerekir.
+404	E-posta veya şifre yanlış.
+405	E-posta gerekli.
+406	E-posta çok uzun.
+407	Bize {{FEEDBACK_EMAIL}} adresinden yaz
+408	Arkadaş bulmak için Ayarlar'dan Kişiler'i aç. Hash'lenmeden cihazından asla çıkmazlar.
+409	Drift'in uygulama engelleyebilmesi için Ayarlar > Ekran Süresi'nden Drift'i etkinleştir.
+410	Kamerayı aç
+411	Drift'in yer önerilerini kullanabilmesi için konum erişimini aç.
+412	Bitiş
+413	Erken bitir
+414	Bu oturum bitsin mi?
+415	Bir kod gir.
+416	Geçerli bir e-posta adresi gir.
+417	En az 4 rakam gir.
+418	Hangi uygulamaların engelleneceğini seçmek için gir.
+419	1 ile 600 arasında dakika gir.
+420	E-postandaki 8 haneli kodu gir.
+421	Drift Pro'yu açmak için programından veya Drift ekibinden aldığın kodu gir.
+422	Ebeveyninden aldığın aile kodunu gir.
+423	Kodunu gir
+424	Adını gir.
+425	Katılımcı kimliğini gir.
+426	Hata
+427	Ebedî
+428	Akşam
+429	Akşamları
+430	Etkinlik
+431	Her gün
+432	Bu ailedeki tüm yerler dolu. Ebeveyninden Drift'te bir yer eklemesini iste, sonra tekrar dene.
+433	{{name}} hesabı için saklanan her şey bu. Başka hiçbir şey tutulmaz.
+434	Drift'in davranışını değiştiren her şey.
+435	Egzersiz
+436	Keşfet
+437	Bir sergi gez
+438	AİLE KODU
+439	GERİ BİLDİRİM
+440	ODAK
+441	Aile kodu
+442	Aile evi
+443	Aile zamanı
+444	Çiftlik
+445	Çiftlik işleri
+446	Benzin al
+447	Kişilerden arkadaş bul
+448	Bitir
+449	Gece yarısından önce bitir → +{{xp}} XP
+450	Erken bitirilsin mi?
+451	Önce bitir. Bu burada olacak.
+452	Bitir. {{name}} orada olacak.
+453	İlk bitiren +{{xp}} XP kazanır
+454	İlk doğrulanan +{{xp}} XP kazanır
+455	Odak bloğu
+456	Odaklan.
+457	Odaklanılan süre?
+458	Odaklı çalışma bloğu
+459	Odaklı çalışma, spor salonu, yemek, ders
+460	Orman
+461	Ücretsiz plan en fazla {{FREE_BLOCK_LIMIT}} engeller
+462	Cum
+463	@{{username}} kişisine arkadaşlık isteği gönderildi
+464	@{{username}} kişisine arkadaşlık isteği gönderildi.
+465	Arkadaşın evi
+466	Arkadaşlar
+467	Drift'teki arkadaşlar
+468	Ön diz 90° · arka diz yere değecek kadar
+469	HEDEF
+470	KORU
+471	Oyun gecesi
+472	Oyun mağazası
+473	Bahçe yürüyüşü
+474	Bahçe işi
+475	Benzinlik
+476	Başla
+477	Her şeyi\nsenin için hazırlıyoruz
+478	Kazanılan dakikaları geri ver.
+479	Göreve bir ad ver.
+480	Kanıtlamadan önce bu göreve biraz daha zaman ver.
+481	Yürüyüşe çık
+482	Golf sahası
+483	İyi geceler
+484	İyi iş.
+485	İyi geceler
+486	Google
+487	Google ile giriş yapılandırılmamış.
+488	Google ile giriş başarısız
+489	Google ile giriş başarısız.
+490	Bu sürümde Google ile giriş yapılandırılmamış.
+491	Google ile giriş bir dev client sürümü gerektirir (Expo Go'da çalışmaz).
+492	Dün harika bir gündü!
+493	Market alışverişi
+494	Koru
+495	Büyüyor
+496	Büyüme
+497	Spor salonu
+498	EN ZOR ZAMAN
+499	KODUN VAR MI?
+500	NASIL ÇALIŞIR
+501	BU NASIL ÇALIŞIR
+502	Saç kesimi
+503	Takılmak
+504	Zor antrenman, sert sprint, uzun açık hava
+505	Nalbur
+506	Pro veya grup kodun var mı? Buradan aç
+507	Kodun var mı?
+508	Yükseklik
+509	Drift'in büyümesine yardım et
+510	Doğa yürüyüşü
+511	Kalça
+512	Kalça dizlerin altında · topuklardan it
+513	Geçmiş
+514	Merhaba{{p}}
+515	Kullanmak istediğin etikete telefonunun üst kısmını tut.
+516	Geceyi başlatmak için telefonunun üst kısmını etiketine tut.
+517	Telefonunun üst kısmını etiketine tut.
+518	Telefonu etikete sabit tutup tekrar dene.
+519	Bekletiliyor
+520	Ev
+521	Ev spor salonu
+522	Ev ofisi
+523	Otel
+524	Arkadaşların seni böyle bulur. Sonradan değiştirilemez.
+525	Ne kadar süre saklıyoruz
+526	Kaç çocuk?
+527	Ebeveyn olduğunu nasıl doğruluyoruz
+528	YAKLAŞIK HARCADIĞIM
+529	Kabul ediyorum
+530	Drift'te {{timeText}} boyunca "{{title}}" yaparak {{earnedText}} ekran süresi kazandım.
+531	Ekran süremi Drift ile kazanıyorum — {{code}} koduma katıl ve 15 dakika bonus al: {{link}}
+532	Sonra geleceğim
+533	Ben çocuğum
+534	Ben ebeveynim
+535	Bu aileye katılacak çocukların ebeveyni veya yasal vasisiyim ve Drift'in onların bilgilerini yukarıda açıklandığı şekilde toplamasını ve kullanmasını kabul ediyorum.
+536	Sonsuz kaydırma yerine Drift ile ekran süremi kazanıyorum — bana katıl: {{link}}
+537	KUTUDA
+538	BUNUN YERİNE
+539	Buz pisti
+540	Bu sürümde görüntü işleme yüklü değil. Metin veya video kanıtı kullan.
+541	Otomatik içe aktar
+542	Bugünün etkinliklerini içe aktar
+543	Yoğun
+544	Kişileri Drift'e davet et
+545	Şu an gerçekten bunu mu yapmalısın?
+546	Şu an gerçekten {{label}} mi?
+547	Şimdi {{name}} zamanı mı?
+548	Yaklaşık {{when}} sularında kaldırıldı. Bu sefer bonus yok.
+549	Şantiye
+550	Aileye katıl
+551	Drift'te ailemize katıl — uygulamayı aç, "Ben çocuğum"u seç ve şu kodu gir: {{code}}
+552	Ebeveyninden aldığın kodla ailene katıl.
+553	Ailene{{p}}katıl
+554	Günlük
+555	Ayakları açarak zıpla · kolları başının üstüne tam kaldır
+556	Jumping jack
+557	Siri'ye söylemen yeterli
+558	Sadece ben
+559	Sadece bir kez
+560	Hesabı tut
+561	Devam et
+562	5000 karakterin altında tut.
+563	{{VIDEO_MAX_SECONDS}} saniyenin altında tut — işi göstermek için yeterli.
+564	Serini koru
+565	Çocuk
+566	Diz
+567	UYGULAMAYI TANI
+568	BUGÜN EN AZ EKRAN SÜRESİ
+569	SÜRE
+570	SEVİYE
+571	SEVİYE ATLADIN
+572	CANLI
+573	CANLI KONTROL
+574	Laboratuvar
+575	Laboratuvar işi
+576	Göl
+577	Dil
+578	Dil pratiği
+579	Dil okulu
+580	Dün gece
+581	Geç
+582	Gece geç saat
+583	Sonra
+584	Çamaşırhane
+585	Çamaşır
+586	Öğrenme
+587	Telefonunun uyuyacağı odaya bırak. Geceyi başlatmak için yatarken dokun.
+588	Orada bırak
+589	Olduğu yerde bırak.
+590	Oturumdan çıkılsın mı?
+591	Telefonunu olduğu yerde bırak. Drift sabah kontrol edecek.
+592	Ders
+593	Amfi
+594	Görevler kendiliğinden\neklensin mi?
+595	Görevler kendiliğinden eklensin — takviminden veya bir yere vardığında.
+596	Seni hazırlayalım
+597	Yalnızca harf, rakam ve alt çizgi.
+598	Kütüphane
+599	Yaşam
+600	Hafif
+601	Canlı takip kullanılamıyor
+602	Canlı takip tam bir sürüm gerektirir
+603	Model yükleniyor…
+604	Konum Servisleri cihazın tamamında kapalı (Ayarlar › Gizlilik › Konum Servisleri).
+605	Konum Kullanırken olarak ayarlı. Varışlar için Her Zaman gerekli (Ayarlar › Drift › Konum › Her Zaman).
+606	Bu sürümde konum kullanılamıyor.
+607	Konum gerekli
+608	Kilitle
+609	Lockbox
+610	Lockbox bitti
+611	Lockbox oturumu kaybedildi
+612	Lockbox · Pro
+613	Kilitli
+614	Sorgulama başarısız
+615	Göğüs yere · tam hareket sayılır
+616	Lunge
+617	Mail ayarlı değil
+618	Bir şey üret
+619	Konum erişiminin açık olduğundan emin ol, sonra tekrar dene.
+620	Yatağını topla
+621	AVM
+622	Uygulama erişimini yönet
+623	Haritalar
+624	Marina
+625	Dövüş sanatları dersi
+626	Kişilerin gizlice eşleştiriliyor…{{p}}E-postalar cihazında hash'lenir.
+627	En fazla 20 karakter.
+628	Dışarıda yemek
+629	Meditasyon
+630	Meditasyon merkezi
+631	Mesajlar
+632	Dakika
+633	Süreyi kaçırırsan {{penaltyMins}} dakika ekran süresi kaybedersin.
+634	Süreyi kaçırmak {{penaltyMins}} dakika ekran süresine mal olur.
+635	Orta
+636	Pzt
+637	Arka planda 1 yer izleniyor.
+638	Arka planda {{placeCount}} yer izleniyor.
+639	Aylık
+640	Sabah
+641	Sabahları
+642	Hareket erişimi gerekli
+643	Hareket verileri şu an kullanılamıyor. Kısa süre sonra tekrar kontrol edeceğiz.
+644	Dağ
+645	Bir masanın üzerinde yavaşça hareket ettir
+646	Müze
+647	Müzik
+648	Müzik okulu
+649	YENİ GÖREV
+650	YENİ GÖREV · YZ DEĞERLENDİRDİ
+651	BU GÖREV İÇİN DENEME HAKKI KALMADI
+652	DOĞRULANMADI
+653	Tırnak salonu
+654	Ad
+655	Odaklanmak istediğin tek şeyi yaz ve bir süre seç. Drift In sırasında engellenen uygulamaların kilitli kalır ve Drift'i kapatsan bile zamanlayıcı çalışır. Oturumu bitir; odaklandığın sürenin yarısı ekran süresi olarak geri döner — en fazla 60 dakika — artı seviyen için sınırsız deneyim. Erken bırakırsan hiçbir şey kazanmazsın.
+656	Önce meydan okumana bir ad ver
+657	Önce görevine bir ad ver
+658	Tekrarlarını canlı saymak için gerekli
+659	Ağ hatası. Bağlantını kontrol et.
+660	Yeni arkadaşlık isteği
+661	{{display_name}} için yeni görev
+662	İleri
+663	Güzel iş. İlerlemen yeni bir seviyeye ulaştı.
+664	Güzel.
+665	Gece başladı. Uygulamaların sabaha kadar kilitli.
+666	Hayır
+667	Bu cihazda AR yok — telefonunu düz bırakman yeterli.
+668	Henüz Google takvimi yok
+669	Hesabın yok mu? Kaydol
+670	Engellenecek uygulama yok
+671	Gizlice kaydırma yok.
+672	Bakiye yok. Bir görev bunu değiştirir.
+673	Henüz engelli saat yok.
+674	Bu sefer bonus yok.
+675	Kamera bulunamadı
+676	Henüz tamamlanan görev yok.
+677	Henüz tamamlanan görev yok. Onaylanan görevler burada görünür.
+678	Henüz tamamlanan görev yok. Burada görmek için bir görev bitir.
+679	Kredi kazanılmayacak.
+680	E-posta gelmedi mi? Spam'e bak!
+681	E-posta, telefon numarası, şifre, fotoğraf, konum, kişiler veya doğum günü yok. Çocuk hesapları asla YZ Kontrolü kullanmaz, bu yüzden çocuğunun yaptığı hiçbir şey bir yapay zekâ servisine gönderilmez. Çocuk hesaplarında reklam, takip ve analiz yok. Hangi uygulamaları kullandıkları telefonlarında kalır — Apple, Drift'e yalnızca okunamaz jetonlar verir.
+682	E-posta, fotoğraf, konum, kişiler veya YZ kontrolü yok. Hangi uygulamaları açtıkları telefonlarında kalır.
+683	Hiç kare çıkmadı. Tekrar kaydet.
+684	Bu cihazda iPhone takvimi bulunamadı.
+685	Henüz çocuk yok. Yukarıdaki kodunu paylaş, katıldıklarında burada görünecekler.
+686	Bugünün takviminde yeni etkinlik yok.
+687	Geçmiş meydan okuma yok
+688	1 saat telefonsuz
+689	Henüz kayıtlı yer yok — oradayken bir tane kaydet.
+690	Henüz kayıtlı yer yok.
+691	Henüz bitki yok
+692	Henüz tekrarlanan görev yok.
+693	İstatistik yok
+694	Henüz etiket yok
+695	Görev yok
+696	Şu an görev yok. Ebeveynin bir görev verdiğinde burada görünecek.
+697	Henüz kazanılan süre yok
+698	Çıkarılacak süre yok.
+699	İrade gücüne gerek yok. Zor kısmı sistem halleder.
+700	Kişilerinden henüz kimse Drift'te değil — onları aşağıdan davet et.
+701	Henüz yok. Sık gittiğin bir yerde dur — spor salonu, kütüphane — ve aşağıdan kaydet.
+702	Kullanılamıyor
+703	Burada kullanılamıyor
+704	Etkin değil - izin vermek için dokun
+705	Bulunamadı
+706	Şimdi değil
+707	Şimdi değil.
+708	Henüz ayarlanmadı
+709	Giriş yapılmadı
+710	Henüz değil
+711	Henüz değil.
+712	Henüz arşivlenen bir şey yok.
+713	Burada bekleyemeyecek bir şey yok.
+714	Henüz seçili bir şey yok — kalkanın kilitleyecek bir şeyi yok.
+715	Bugün henüz harcama yok.
+716	İçe aktarılacak bir şey yok
+717	Geri yüklenecek bir şey yok
+718	Ayarlanacak bir şey yok — komutlar Drift yüklenir yüklenmez çalışır. Kestirmeler'de de görünürler.
+719	Bildirimler kapalı
+720	Bildirimler kapalı, bu yüzden varış sana ulaşamaz (Ayarlar › Drift › Bildirimler).
+721	Tamam
+722	BİR ŞEY DAHA
+723	HIZLI BİR KONTROL
+724	AÇ
+725	İSTEĞE BAĞLI
+726	Kapalı
+727	Kayıtlı bir yere vardığında görev öner.
+728	Ofis
+729	Kadim Orman
+730	Açık
+731	Bir kez
+732	Drift'te bir görev ve senin.
+733	Tek bir görev yeter.
+734	Tek görev, tam dikkat. Gerisi bekleyebilir.
+735	Atadıkların ve durumları
+736	Yalnızca kullandığın özellikleri çalıştırmak için: görev atamak, onaylamak ve çocuğunun telefonunda ekran süresini açmak.
+737	Şimdilik sadece {{minutes}} dakika. Bir gece için en az {{round}} saat gerekir.
+738	Kabul etmek veya reddetmek için Drift'i aç.
+739	Ayarlar'ı aç
+740	E-posta uygulamamı aç
+741	En son doğrulama e-postasını açıp tekrar dene.
+742	E-postanı aç
+743	E-posta uygulamanı aç ve 8 haneli Drift kodunu bul.
+744	Pro sayfasını herhangi bir hesapta açar. Yayın sürümlerinde yok.
+745	Açık hava
+746	KATILIMCI KİMLİĞİ
+747	TELEFON UZAKTA
+748	TELEFONU BIRAKMA SAATİ
+749	BİTKİ
+750	BİTKİLER
+751	PROFİL
+752	İLERLEME
+753	GERİ KOY
+754	Ebeveyn
+755	Ebeveyn PIN'i
+756	Park
+757	Şifre
+758	Şifre en az 12 karakter olmalı.
+759	Şifre gerekli.
+760	Şifre çok uzun (en fazla 72 karakter).
+761	Geçmiş meydan okumalar
+762	İzin reddedildi
+763	Eczane
+764	Telefon
+765	Telefon kutuda
+766	Fotoğraf başarısız
+767	Fotoğraf çok büyük
+768	Fiziksel
+769	Fizik tedavi kliniği
+770	Daha düşük bir hedef seç
+771	Bir kullanıcı adı seç.
+772	Başka bir kullanıcı adı seç.
+773	Engellenecek uygulamaları seç
+774	Bakiye sıfırlandığında engellenecek uygulamaları seç. iOS bunu Drift kapalıyken bile uygular, ama ~15 dk'ya kadar gecikebilir.
+775	Apple Ekran Süresi ile uygulama seç
+776	Devam etmek için en az bir uygulama veya kategori seç.
+777	Kutuyu tekrar görmek için telefonu kaldır
+778	Sana uyanı seç — sonradan değiştirilemez.
+779	Reçete al
+780	Malzeme al
+781	Günlük\ngörevlerini seç
+782	Kullanıcı adını seç
+783	Uygulama seçmek için Drift'in App Store veya TestFlight sürümü gerekir.
+784	Alma
+785	Pilates dersi
+786	Pilates stüdyosu
+787	Yer
+788	Yer sınırına ulaşıldı
+789	Yer önerileri
+790	Yer önerileri kapalı.
+791	Yer önerileri bildirim olarak gelir, bu yüzden bildirimler kapalıyken sana hiçbir şey ulaşmaz. Ayarlar › Drift › Bildirimler'den aç.
+792	Kutuyu yerleştir
+793	Plank
+794	Planlar şu an yüklenmiyor. Bağlantını kontrol edip tekrar dene.
+795	Dik
+796	Kullanıcı adıyla bir arkadaş dik.
+797	Arkadaş dik
+798	Bir tur oyna
+799	Lütfen daha sonra tekrar dene.
+800	Lütfen tekrar dene.
+801	Kutuyu bıraktığın yere doğrult
+802	Havuz
+803	Postane
+804	Postane işi
+805	Pratik
+806	Bir beceri çalış
+807	Fotoğraf hazırlanıyor…
+808	Ödeme duvarı önizleme (geliştirici)
+809	Gizlilik
+810	Gizlilik Politikası
+811	Gizlilik politikası
+812	Pro özelliği
+813	Pro, bitkini {{name}} seviyesinin ötesine taşır.
+814	Profil fotoğrafı depolaması henüz kurulmadı. Supabase'de supabase/profile_challenge_updates.sql dosyasını çalıştırıp tekrar dene.
+815	Profil fotoğrafları avatar_url veritabanı sütununu gerektirir. supabase/profile_challenge_updates.sql dosyasını çalıştır, sonra uygulamayı yeniden başlat.
+816	Hemen kanıtla — ama sağlam kanıt gerekecek.
+817	Bugünün etkinliklerini günde bir kez kendiliğinden al.
+818	Bugünün etkinliklerini günde bir kez kendiliğinden al. Kapalıysa aşağıdan elle içe aktarırsın.
+819	Satın alma başarısız
+820	Bu sürümde satın alma kullanılamıyor.
+821	Bu platformda satın alma henüz kurulmadı.
+822	Şınav
+823	Kutuya geri koy
+824	Telefonunu kutuya geri koy
+825	Telefonunu diğer odaya koy ve geceyi başlatmak için etikete dokun.
+826	Telefonunu diğer odaya koy ve etikete dokun. Şimdiye kadar üst üste 1 gece.
+827	Telefonunu diğer odaya koy ve etikete dokun. Şimdiye kadar üst üste {{streak}} gece.
+828	Hızlı görev, basit evrak, az efor
+829	HAZIR
+830	SON GECELER
+831	TEKRARLANAN GÖREVLER
+832	FOTOĞRAFI KALDIR
+833	VİDEOYU KALDIR
+834	TEKRARLA
+835	Yeniden etkinleştir
+836	Oku
+837	Bir bölüm oku
+838	Gizlilik politikasının tamamını oku
+839	Klibin okunuyor…
+840	Klibin okunuyor… {{done}}/{{total}}
+841	Okumak, antrenman, ders çalışmak, yemek yapmak.\nGerçekten yapacağın verimli her şey.
+842	Yatmaya hazır mısın?
+843	expo-video-thumbnails yüklü olarak yeniden derle.
+844	Yeniden kontrol et
+845	Toparlanma süresi
+846	Tekrarlanan görev zamanlamaları bir Pro özelliğidir.
+847	Tekrarlanan görevler
+848	Geri dönüşüm merkezi
+849	Kullan
+850	Kod kullan
+851	Yeniden yap
+852	Azalt
+853	Sekoya
+854	Bölgeler henüz izlenmiyor — Yeniden etkinleştir'e dokun.
+855	Etiket kaydet
+856	Korumayı açmak için bir etiket kaydet.
+857	Rehabilitasyon egzersizleri
+858	Kaldır
+859	@{{username}} kaldırılsın mı?
+860	Arkadaşı kaldır
+861	Süre çıkar
+862	{{label}} kaldırılsın mı?
+863	@{{username}} kaldırıldı
+864	Tekrarlar
+865	Her gün tekrarlar
+866	Turu tekrar izle
+867	İstek zaten gönderildi
+868	İstek gönderildi
+869	@{{username}} kişisine istek gönderildi
+870	Sana gönderilen istekler
+871	Kodu tekrar gönder
+872	Restoran
+873	Geri yükle
+874	Geri yükleme başarısız
+875	Sürüş
+876	Nehir
+877	Nehir kenarında yürüyüş
+878	Kural veya kanıt gerekli
+879	Çalıştır: npx expo install expo-image-picker
+880	Çalıştır: npx expo install expo-video-thumbnails, sonra uygulamayı yeniden derle. Fotoğraf ve yazılı kanıt çalışmaya devam eder.
+881	Azalıyor
+883	OLDUĞUN YERİ KAYDET
+884	KAYITLI YERLER
+885	EKRAN SÜRESİ
+886	KALAN EKRAN SÜRESİ
+887	EKRAN SÜRESİ ÖDÜLÜ (DAKİKA)
+888	BUGÜNKÜ EKRAN SÜRESİ
+889	TOHUMLAR - {{length}}
+890	MEYDAN OKU
+891	İDDİA GÖNDER
+892	CEVABI GÖNDER
+893	OTURUM TAMAMLANDI
+894	OTURUMLAR
+895	AYARLAR
+896	PAYLAŞ
+897	ADIM {{p}} / {{length}}
+898	DOĞRULAMAYA GÖNDER
+899	Fidan
+900	Cmt
+901	Kaydet
+902	PIN'i kaydet
+903	Spor salonun gibi yerleri kaydet, Drift\nvardığında görevi önersin. Bugünün takvim\netkinliklerini de alabilir.
+904	Bu yeri kaydet
+905	%{{annualSavingsPct}} tasarruf
+906	Kaydediliyor…
+907	Farklı bir etiket tara
+908	Planla
+909	Okul uygulamaları
+910	Okuldan alma
+911	Okula bırakma
+912	Bilim merkezi
+913	Ekran Süresi
+914	Ekran Süresi erişimi
+915	Ekran Süresi erişimi reddedildi
+916	Ekran Süresi erişimi gerekli
+917	Ekran süresi
+918	Ekran yukarıda. Tamamen hareketsiz kalınca oturum başlar.
+919	Hikâyelerde paylaşmak için bu kartın ekran görüntüsünü al
+920	Dil ara
+921	Pro'yu gör
+922	Bir gösteri izle
+923	Canlı müzik dinle
+924	Kazandığın ekran süresi bakiyesini bir bakışta gör.
+925	Tohum
+926	Düzenli yapacağın görevleri seç. Daha sonra istediğin zaman ekleyebilirsin.
+927	Gönder
+928	Meydan okumayı gönder
+929	İddiayı gönder
+930	Geri bildirim gönder
+931	Gönderiliyor…
+932	Gönderildi
+933	Sunucu: {{error}}{{p}}
+934	Hizmet
+935	Oturum tamamlandı
+936	Oturum erken bitti. Süre kazanılmadı.
+937	Oturum kaybedildi.
+938	Oturum notları
+939	Oturum hâlâ sürüyor. {{name}} bekleyebilir.
+940	.env dosyasında EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ve iOS/Android istemci kimliklerini ayarla.
+941	Bir PIN belirle. Hangi uygulamaların engelleneceğini seçmek için çocuğunun telefonuna gireceksin.
+942	Bir hedef koy. Drift onu plana çevirir.
+943	Bir ekran süresi hedefi koy ve somut bir plan al.
+944	Kur
+945	Ebeveyn PIN'i belirle (çocuğun uygulamalarını seçmek için)
+946	Çocuklarına görev ver ve ekran sürelerini onayla.
+947	Kur
+948	Telefonunu ekranı yukarı bakacak şekilde kutuya koy
+949	Telefonunu{{p}}bırak
+950	Kuruluyor…
+951	Paylaş ve davet et
+952	İstatistikleri paylaş
+953	Kodu paylaş
+954	İstatistiklerini paylaş, bonus süre kazan
+955	Başarını paylaş
+956	Vardiya görevleri
+957	Alışveriş
+958	Giriş yap
+959	Kaldığın yerden devam etmek için giriş yap.
+960	Koruyu görmek için giriş yap
+961	Google ile giriş yap
+962	Çıkış yap
+963	Çıkış yapılsın mı?
+964	Google ile kaydol
+965	Giriş başarısız. Tekrar dene.
+966	Giriş jetonu doğrulanamadı. Tekrar dene.
+967	Mekik
+968	Saha işi
+969	Kaykay
+970	Kaykay parkı
+971	Kaykay seansı
+972	Kayak inişi
+973	Kayak pisti
+974	Atla
+975	Şimdilik atla
+976	Zaten dokunduğun gecelerde atlanır.
+977	Daha erken yat
+978	Uyku koruması
+979	Telefonun başka odadayken uyu
+980	Hedefini şu anki kullanımının altına kaydır.
+981	Futbol
+982	Futbol sahası
+983	Sosyal
+984	Biri seni Drift'te eklemek istiyor.
+985	Bir şeyler ters gitti
+986	Bir şeyler ters gitti. Bağlantını kontrol edip tekrar dene.
+987	Spa
+988	~{{minutes}} dakika mı harcadın?
+989	Filiz
+990	Squat
+991	Stadyum
+992	Başlangıç
+993	Sekme çubuğundan bir odak oturumu başlat. Odaklanırken uygulamaların engelli kalır — ve bunun için süre kazanırsın.
+994	Kazanmaya başla
+995	Yatarak başla · dirsekler dizlere değene kadar kalk
+996	Şimdi başla
+997	Bu planı başlat
+998	{{trial}} günlük ücretsiz denemeyi başlat
+999	Durum: {{next}}. Erişim vermek için Ayarlar -> Ekran Süresi'ni aç.
+1000	Odakta kal
+1001	Başka bir odaya bir NFC etiketi yapıştır. Yatarken dokun, Drift sabaha kadar uygulamalarını engeller ve telefonunun gerçekten orada kaldığını kontrol eder.
+1002	Yan odaya bir NFC etiketi yapıştır. Yatarken dokun, Drift telefonunun bütün gece orada kaldığını kontrol eder.
+1003	Hâlâ yükleniyor
+1004	Durgunluk da verimliliktir.
+1005	Depoyu düzenle
+1006	Depo birimi
+1007	Esneme
+1008	Stüdyo
+1009	Stüdyo seansı
+1010	Ders çalış
+1011	Çalışma odası
+1012	Çalışma seansı
+1013	Kanıtını tekrar gönder.
+1014	Öneriler
+1015	Vardığında "{{title}}" ({{minutes}} dk) önerir — daha iyi uyum için yukarıdan bir öneri seç.
+1016	Vardığında "{{title}}" ({{minutes}} dk) önerir.
+1017	Paz
+1018	Süpermarket
+1019	Yüzme
+1020	Güncellemeler senkronize ediliyor
+1021	GÖREV
+1022	GÖREVLER
+1023	LABORATUVAR
+1024	BU HAFTA
+1025	AYARLA
+1026	BUGÜN
+1027	TEKRAR DENE
+1028	KİLİDİ AÇ
+1029	TÜR
+1030	Etiket okundu.
+1031	Etiket kaydedildi
+1032	Etiket kaydedildi
+1033	Etiket kaydedildi.
+1034	Onu diğer odaya götür ve geceyi başlatmak için etiketine dokun.
+1035	Zamanını almak için telefonunu çıkar ve Drift'i aç.
+1036	60 saniye sürer
+1037	Engellenenleri değiştirmek için istediğin zaman tekrar dokun. Yalnızca cihazında saklanır.
+1038	Yatarken başka bir odadaki NFC etiketine dokun. Uygulamalar sabaha kadar kilitli kalır.
+1039	İlk geceni başlatmak için yatarken dokun.
+1040	Yapmaya değer bir şey eklemek için +'ya dokun. Bitir ve onayla, ekran süresi kazan.
+1041	Etikete dokun
+1042	Mail'i şuna açmak için dokun:
+1043	Doğrulamak için dokun
+1044	Görev eklendi
+1045	Görev onaylandı
+1046	Görev kontrole hazır
+1047	Görevler
+1048	Görevler kendiliğinden\neklenebilir
+1049	Yapılan görevler
+1050	Otomatik geri gelen görevler.
+1051	Bir programa göre geri gelen görevler.
+1052	Kazanmak için görevler
+1053	Biraz daha anlat.
+1054	Koruya bakılıyor
+1055	Tenis
+1056	Tenis kortu
+1057	Koşullar
+1058	Kullanım Koşulları
+1059	Kullanım koşulları
+1060	Test
+1061	Test başarısız
+1062	Test gönderildi
+1063	Teşekkürler
+1064	Drift'te kaldığın için teşekkürler. Kaldığın her iki ayda Pro ucuzlar, {{price}} seviyesine kadar. Apple ile onayla, {{price2}} bir sonraki yenilemende başlar.
+1065	Bu PIN doğru değil.
+1066	Bu kod tamamen kullanıldı.
+1067	Bu kodun süresi doldu.
+1068	Bu kod yanlış veya süresi dolmuş. Kontrol et ya da yeni kod için Kodu tekrar gönder'e dokun.
+1069	Bu kod artık etkin değil.
+1070	Bu kod geçerli değil.
+1071	Bu, Drift'in kilidini açmadı. Ücret alındıysa Geri yükle'ye dokun.
+1072	Bu aile kodu yok. Ebeveyninle tekrar kontrol et.
+1073	Bu aile kodu artık etkin değil.
+1074	Bu aile boyutu henüz ayarlanmadı. Farklı bir sayı dene veya destekle iletişime geç.
+1075	Bu senin kurduğun etiket değil. Yatak odandakine dokun.
+1076	Bu katılımcı kimliği doğru görünmüyor. Çalışma ekibinle kontrol et.
+1077	Bu katılımcı kimliği zaten kullanılmış. Çalışma ekibinle kontrol et.
+1078	Bu kayıt çok büyük. Daha kısa bir klip kaydedip tekrar dene.
+1079	Bu göreve izin verilmiyor. Verimli bir şey dene!
+1080	Zaman aşımı
+1081	Bu kullanıcı adı alınmış.
+1082	Bu kullanıcı adı alınmış. Başka birini dene.
+1083	Bu kullanıcı adı az önce alındı. Şimdilik sana @{{username}} atandı —
+1084	Bu kutu değil — içine koy
+1085	Bugünün ücretsiz görevleri bu kadar
+1086	Bu sensin
+1087	Bu, kazandığın sürenin {{mins}} dakikası. Karar senin.
+1088	YZ kontrolü zaman aşımına uğradı. Bu genellikle kullandığın Wi-Fi'ın Drift'i engellediği anlamına gelir — hücresel veri için Wi-Fi'ı kapatıp yeniden dene.
+1089	Yapay zekâ servisi şu an sorun yaşıyor. Birazdan tekrar dene.
+1090	Yapay zekâ servisi sorun yaşıyor. Lütfen tekrar dene.
+1091	Yapay zekâ servisi isteği reddetti (hata {{status}}). Tekrar dene veya yalnızca metin kanıtı kullan.
+1092	Koru
+1093	Laboratuvar
+1094	Varış gerçekleşmedi ({{reason}}).
+1095	Arka plan görevi kaydolmadı. Drift'i tamamen kapatıp yeniden aç.
+1096	Kamera bir yüzey bulamadı.
+1097	Kamera tekrarlarını sayar — fotoğraf gerekmez
+1098	Seçtiğin kategoriler
+1099	@{{p}} kişisine yapılan meydan okuma geri çekilecek.
+1100	Katılırken yazdıkları ad veya takma ad. Atadığın görevler ve bitip bitmedikleri. Ekran süresi bakiyeleri ve izin verdiğin uygulama kategorileri. Bir uygulamaya izin vermen için sana gönderdikleri istekler. Telefonlarının uyarı alabilmesi için bir bildirim jetonu.
+1101	Ücretsiz plan en fazla {{FREE_BLOCK_LIMIT}} engeller
+1102	Ücretsiz plan günde {{freeDailyTasks}} görevden kazanır. Sınırsız görev için Pro'ya geç ya da yarın gel.
+1103	İlk açılıştaki rehberli tur.
+1104	Kaybeden {{penaltyMins}} dakika ekran süresinden vazgeçer.
+1105	Diğer kişi {{penaltyMins}} dakika ekran süresi kaybeder.
+1106	Diğer oyuncu zaten yanıt vermiş olabilir.
+1107	Abonelik şu an kullanılamıyor. Kısa süre sonra tekrar dene.
+1108	Tiyatro
+1109	Terapist
+1110	Terapi seansı
+1111	Bu kişiler Drift'te. Onları korna ekle.
+1112	{{display_name}} ekran süresi bitse bile bunlar açık kalır.
+1113	Korundan kaldırılacaklar. Daha sonra tekrar ekleyebilirsin.
+1114	Bu geri alınamaz.
+1115	Bu kod bir araştırma çalışması için. Çalışma ekibinin verdiği katılımcı kimliğini gir.
+1116	Bu, Drift hesabını siler ve çıkış yapmanı sağlar. Geri alınamaz.
+1117	Bu bir deneme sayılmaz — emin olmak için sadece bir ayrıntıya ihtiyacımız var.
+1118	Bu ailede zaten azami sayıda çocuk var.
+1119	Bu {{minutes}} dakikalık bir görev, bu yüzden kanıt eklendikten {{mmss}} sonra açılır. Git ve yap — biz buradayız.
+1120	Bu biriktirdiğin süre. Sıfıra ulaştığında seçtiğin uygulamalar sen daha fazla kazanana kadar kilitlenir.
+1121	Bu girişi atlar, bu yüzden tanıtım bitemez. Tüm akışı test etmek için normal şekilde giriş yap.
+1122	Bu an senin, telefonunun değil.
+1123	Bu, ailendeki tüm çocukların hesabını ve verilerini kalıcı olarak siler ve sen tekrar onay verene kadar hiçbir çocuk katılamaz. Geri alınamaz.
+1124	Bu, Drift hesabını ve ailendeki tüm çocuk hesaplarını tüm verileriyle kalıcı olarak siler. Geri alınamaz. Family aboneliğini iPhone Ayarları'ndan ayrıca iptal et.
+1125	Bu, {{name}} adlı kişinin hesabını, görevlerini, bakiyesini ve isteklerini kalıcı olarak siler ve telefonundan çıkış yapar. Geri alınamaz.
+1126	Bu, Drift hesabını kalıcı olarak kaldırır. Geri alınamaz.
+1127	Bu giriş yöntemi henüz etkin değil. Destekle iletişime geç.
+1128	Bu görev şu an doğrulanamıyor.
+1129	Drift'in bu sürümü güncel değil. Ekran süreni kazanmaya devam etmek için en son sürüme güncelle.
+1130	Gelişiyor
+1131	Per
+1132	Ebeveyn veya yasal vasi olduğunu onaylamak için kutuyu işaretle.
+1133	Bir şeyi topla
+1134	Toparla
+1135	Geri kazanılan süre
+1136	Önceden devreden süre.
+1137	Suda geçen zaman
+1138	Telefonunu uyutma zamanı
+1139	Drift'i güncelleme zamanı
+1140	Süre doldu
+1141	Zamanlayıcı
+1142	@{{toName}} kişisine
+1143	Bugün
+1144	Çok uzun
+1145	Çok fazla deneme. Birkaç dakika sonra tekrar dene.
+1146	Çok fazla deneme. Biraz sonra tekrar dene.
+1147	Çok fazla yeniden gönderme. Birkaç dakika sonra tekrar dene.
+1148	Çok fazla yeniden gönderme. Bir dakika bekleyip tekrar dene.
+1149	Çok kısa
+1150	Pist
+1151	Pist antrenmanı
+1152	Patika başı
+1153	Antrenman veya esneme
+1154	Tren istasyonu
+1155	Seyahat işleri
+1156	Takipte sorun mu var? Fotoğrafla doğrula
+1157	Tekrar dene
+1158	Tekrar dene.
+1159	Sal
+1160	Kapat
+1161	Uyku koruması kapatılsın mı?
+1162	Bunu kullanmak için Ayarlar'dan Drift için Hareket ve Fitness'ı aç.
+1163	Bildirimleri aç
+1164	Ayarlar › Drift › Bildirimler'den aç, sonra tekrar test et.
+1165	Bugünün etkinliklerini göreve çevir. Salt okunur.
+1166	Etüt merkezi
+1167	Özel ders
+1168	Adını ve ebeveyninin verdiği aile kodunu yaz. E-posta gerekmez.
+1169	{{mmss}} İÇİNDE AÇILIR
+1170	GÜNCELLEME GEREKLİ
+1171	YÜKSELT
+1172	ABD yasası (COPPA), bir uygulamanın 13 yaş altındaki çocuklardan bilgi toplamadan önce ebeveyn onayı almasını gerektirir. İşte Drift'in çocuklarının bilgileriyle tam olarak ne yaptığı. Onay verene kadar aile kodun çalışmaz.
+1173	KULLANILAN
+1174	KULLANICI ADI
+1175	Yapay zekâ servisinden beklenmeyen yanıt.
+1176	Sınırsız uygulama ve görev, Lockbox, meydan okumalar
+1177	{{toLocaleDateString}} tarihine kadar açık.
+1178	Sen silene kadar. Çocuğunu kaldırdığında, onayını geri çektiğinde veya hesabını sildiğinde silinir; 18 ay hareketsizlikten sonra da otomatik olarak silinir.
+1179	Rahatla
+1180	Ücretsiz planda en fazla {{FREE_BLOCK_LIMIT}} uygulama, kategori veya web alan adı.
+1181	YZ Kontrolü'nü kullanmak için Drift'i güncelle.
+1182	Planımı güncelle
+1183	Güncelleme gerekli
+1184	Şimdi güncelle
+1185	Pro'ya yükselt
+1186	Meydan okumak için yükselt
+1187	Daha az yaygın bir şifre kullan.
+1188	Cihaz dilini kullan
+1189	Yalnızca harf, rakam ve alt çizgi kullan.
+1190	Bunun yerine iPhone takvimimi kullan
+1191	22:00 ve 07:00 gibi saatler kullan.
+1192	Büyük harf, küçük harf, bir rakam ve bir simge kullan.
+1193	Kullanıcı adı
+1194	Kullanıcı adı en fazla 20 karakter olabilir.
+1195	Kullanıcı adı başarısız
+1196	Kullanıcı adı en az 3 karakter olmalı.
+1197	Kullanıcı adı alınmış
+1198	DOĞRULANDI
+1199	Doğrulama e-postası tekrar gönderildi.
+1200	Doğrulama başarısız
+1201	Doğrulandı
+1202	Canlı doğrulandı — kamera hareketi izler ve her tekrarı otomatik sayar.
+1203	Egzersiz bitince fotoğrafla doğrulanır.
+1204	Doğrula
+1205	Bunun yerine fotoğrafla doğrula
+1206	Fotoğrafla doğrula
+1207	Hesabını doğrula
+1208	Önce e-posta adresini doğrula, sonra kodu kullan.
+1209	Veteriner
+1210	Veteriner ziyareti
+1211	Video kanıtı için yeni bir sürüm gerekli
+1212	Gönüllü vardiyası
+1213	Gönüllülük yeri
+1214	ONAYINI BEKLİYOR
+1215	HOŞ GELDİN
+1216	NE ENGELLENİR
+1217	NE GÖRÜNÜR
+1218	EKSİK OLAN
+1219	WOD
+1220	Bekleniyor
+1221	Sonuç bekleniyor
+1222	Kabul etmeleri bekleniyor
+1223	Su kenarında yürü
+1224	Ormanda yürü
+1225	Dışarıda yürü
+1226	Köpeği gezdir
+1227	Depo
+1228	Arabayı yıka
+1229	Maçı izle
+1230	Bu Apple Kimliğinde abonelik bulamadık. Başka bir kimlikle abone olduysan Ayarlar'da o Apple Kimliğiyle giriş yapıp tekrar dene.
+1231	Doğrulama e-postanı şu an gönderemedik. Sorun bizde — lütfen birkaç dakika sonra tekrar dene.
+1232	{{verificationEmail}} adresine 8 haneli bir kod gönderdik. Aşağıya gir — ya da bu telefonda o e-postadaki bağlantıya dokun.
+1233	Seni özledik!
+1234	Drift'i bir sonraki açışında tekrar sunacağız.
+1235	Çocuklarının verilerini nasıl işlediğimizi güncelledik
+1236	Çar
+1237	Hafta içi
+1238	Hafta sonu
+1239	Tekrar hoş geldin
+1240	Eve hoş geldin
+1241	Drift'e\nhoş geldin
+1242	Drift'e hoş geldin
+1243	Drift'in {{name}} hakkında tuttukları
+1244	Ne için? (isteğe bağlı)
+1245	Burası neresi?
+1246	Ne yapılması gerekiyor? ör. "30 dk spor"
+1247	Dikkatini ne gerektiriyor?
+1248	Yapmaları gereken
+1249	Çocuğundan ne topluyoruz
+1250	Ne toplamıyoruz
+1251	Ne yapacaksın?
+1252	Aklında ne var?
+1253	Drift'i ayarladığın yer: hangi uygulamaların engelleneceği, nelerin tekrarlanacağı ve nelerin otomatik önerileceği.
+1254	Kimler görebilir
+1255	Drift'i{{p}}kim kullanıyor?
+1256	Neden
+1257	Soluyor
+1258	Bakiyen ne olursa olsun uygulamaların kilitli kaldığı aralıklar.
+1259	Geri çek
+1260	Onayı geri çek ve çocuk verilerini sil
+1261	Onay geri çekilsin mi?
+1262	Kutusuz
+1263	İş
+1264	Spor yap
+1265	Üzerinde çalışılıyor
+1266	Antrenman
+1267	Atölye
+1268	Değerlendirme yaz
+1269	Ne yaptığını yaz ya da fotoğraf veya video çek.
+1270	KAZANACAKSIN
+1271	AİLEN
+1272	ÇOCUKLARIN
+1273	ÇOCUKLARININ GİZLİLİĞİ
+1274	PLANIN
+1275	PLANIN HAZIR
+1276	KANITIN
+1277	ETİKETİN
+1278	GÖREVLERİN
+1279	Yıllık
+1280	Evet
+1281	Evet, kur
+1282	Yoga dersi
+1283	Yoga stüdyosu
+1284	Sen
+1285	Sen ve @{{username}} artık arkadaşsınız
+1286	Süreyi geçmeden bitirdin ve ödülü aldın.
+1287	{{name}} uygulamasını bir sebeple engelledin.
+1288	Ekranın kapanmasına izin verebilirsin. Geri sayım kilit ekranında.
+1289	En fazla {{MAX_PLACES}} yer kaydedebilirsin.
+1290	Kendini ekleyemezsin.
+1291	Hesap oluşturulduktan sonra hesap türü değiştirilemez.
+1292	Dağınıklık yerine derinliği seçtin.
+1293	{{name}} yerine derinliği seçtin.
+1294	Gerçek görevleri tamamlayarak ekran süreni kazanırsın. İşte 20 saniyelik tur.
+1295	1 dakika ekran süresi kazandın. Hızını koru!
+1296	{{mins}} dakika ekran süresi kazandın. Hızını koru!
+1297	{{m}} dakika daha ekran süresi kazandın.
+1298	{{date}} tarihinde onay verdin.
+1299	Bu oturum kaybolmadan önce yaklaşık {{max}} saniyen var.
+1300	Henüz uygulama seçmedin. Drift In yine çalışır ama dikkat dağıtan uygulamalar engellenmez. Seçmek için Profil → Engellenen uygulamalar'ı aç.
+1301	Süreyi kaçırdın, bu yüzden bahis uygulandı.
+1302	Kuralları sen koyarsın. Onlar ekran sürelerini gerçek görevlerle kazanır.
+1303	Bu sınırı bir sebeple koydun.
+1304	İlk sen doğrulandın ve ödülü aldın.
+1305	Kazandın
+1306	Şu ana kadarki süre için bir şey kazanmayacaksın.
+1307	Şu ana kadarki odaklı süre için kredi kazanacaksın.
+1308	Verilerine erişmek için tekrar giriş yapman gerekecek.
+1309	Orada artık görev önerisi almayacaksın.
+1310	Artık Pro'sun 🎉
+1311	Her şey hazır
+1312	{{label}} konumundasın
+1313	{{streak}} günlük serin var! Devam ettirmek için bir görev tamamla.
+1314	Kazandığın süre bitti. Uygulamalarının kilidini açmak için bir görev tamamla.
+1315	Koruda geriye düşüyorsun
+1316	{{mins}} dakika oldu. Yargı yok, sadece soruyoruz.
+1317	Bu kodu zaten kullandın — erişimin değişmedi.
+1318	Çok fazla YZ Kontrolü yaptın. Biraz sonra tekrar dene.
+1319	{{name}} için yeterince büyüdün.
+1320	Şimdilik YZ Kontrolü sınırına ulaştın. Biraz sonra tekrar dene.
+1321	Bugün kazandığın her şeyi kullandın.
+1322	Bugünün ücretsiz doğrulanmış görevlerini kullandın. Sınırsız görev için Pro'ya geç ya da yarın gel.
+1323	Sen ve çocuğun. Asla herkese açık olmaz, satılmaz veya reklam için kullanılmaz. Supabase (ABD'deki veritabanı sağlayıcımız) tarafından saklanır, bildirimler Apple üzerinden iletilir. İkisi de bunu gizli tutmak ve yalnızca Drift'i çalıştırmak için kullanmakla yükümlüdür.
+1324	Drift Family planın, hesap sahibine satın almayı bildiren Apple üzerinden alınır. Bu satın alma ve buradaki onayın, Drift'in onayı bir ebeveynin verdiğini doğrulama yoludur.
+1325	Erişimin süresiz.
+1326	Hesabın
+1327	Hesabın başarıyla silindi.
+1328	Cevabın…
+1329	Uygulamaların sabaha kadar kilitli.{{p}}Telefonunu olduğu yerde bırak.
+1330	Uygulamaların bekliyor. Ekran süresi kazanmak için kısa bir görev tamamla.
+1331	Engelli uygulamaları kullandıkça bakiyen azalır. Biterse kilitlenirler.
+1332	Engelli saatlerin ve hatırlatıcın aynen kalır. Sadece plan kaldırılır.
+1333	Sürümün veya kameran şu an poz algılayamıyor. Yine de fotoğrafla doğrulayabilirsin.
+1334	Takvimin ve yerlerin, görevlere dönüştü.
+1335	Kodun Drift Pro'yu açtı.
+1336	Kazandığın ekran süresi bitti. Tekrar açmak için bir görev tamamla.
+1337	Kazandığın süre
+1338	Kazandığın süre neredeyse bitti. Toparla ya da devam etmek için bir görev tamamla.
+1339	E-posta taslağın göndermeye hazır.
+1340	Arkadaşın önce doğrulandı, bu yüzden bahis uygulandı.
+1341	Çocuğun
+1342	Çocuğun "{{taskTitle}}" görevini bitirdi. Ekran süresi vermek için onayla.
+1343	Çocuğun bir görev bitirdi. Ekran süresi vermek için onayla.
+1344	Konumun ve takvimin bu cihazda kalır. Drift ikisini de asla yüklemez.
+1345	Adın
+1346	Önce ebeveyninin bir Drift Family planı seçmesi gerekiyor. Seçtiklerinde tekrar dene.
+1347	Ebeveyninin önce aileni Drift'te kurmayı bitirmesi gerekiyor. Drift'i açmalarını iste, sonra tekrar dene.
+1348	Önce iznin
+1349	Telefonun kutunun dışında çok uzun kaldı, bu yüzden bu oturum hiçbir şey kazandırmadı.
+1350	Telefonun kutudan çıktı. Bu oturumda süre kazanılmadı.
+1351	Telefonun kutudan çıktı. Bu sıfıra ulaşmadan geri koy, yoksa oturum kaybedilir.
+1352	Telefonun hareket etti
+1353	Telefonun {{toLocaleTimeString}} saatinde hareket etti. Bu sefer bonus yok.
+1354	Telefonun gece hareket etti. Bu sefer bonus yok.
+1355	Telefonun dün gece hareket etti
+1356	Telefonun kutuda kaldı. +{{max}} dakika kazanıldı.
+1357	Telefonun yerinde kaldı
+1358	Telefonun bütün gece yerinde kaldı. +{{rewardMinutes}} dakika kazanıldı.
+1359	Kaldığın her 2 ayda fiyatın düşer, {{loyaltyFloor}}/ay seviyesine kadar.
+1360	Fiyatın {{price}}/ay seviyesine düşüyor
+1361	Profilin, görevlerin, geçmişin, arkadaşlıkların, meydan okumaların ve fotoğrafın kalıcı olarak silinir. Drift Pro aboneysen iPhone Ayarları → Apple Kimliği → Abonelikler'den ayrıca iptal et.
+1362	İlerlemen cihazlar arasında kaydedilir.
+1363	Senin ilerlemen Sen altında, arkadaşların Arkadaşlar altında — seriler, seviyeler ve meydan okumalar tek yerde.
+1364	İlerlemen.
+1365	Hakların
+1366	Oturumun korunmadı. Lütfen tekrar giriş yap — kurduğun hiçbir şey kaybolmadı.
+1367	Oturumun hâlâ sürüyor. Devam et.
+1368	Hedefin başlangıç seviyenle aynı, bu yüzden henüz değiştirecek bir şey yok.
+1369	en iyi seri
+1370	takvim veya yerler
+1372	tamamlandı
+1373	günlük seri
+1374	reddedildi
+1376	deneyim
+1377	Bu sürümde expo-location veya expo-task-manager eksik.
+1378	gece yarısından önce bitir
+1379	ilk bitiren kazanır
+1380	iOS engellemeyi ~15 dakikalık aralıklarla uygular, bu yüzden zamanlama yaklaşıktır.
+1381	dk kazanıldı
+1382	bugün veri yok
+1383	süre yok
+1384	ayarlanmadı
+1385	{{fmtMins}} kazanılanın
+1386	veya
+1387	ya da Drift onları senin{{p}} üzerinden eklesin
+1388	kalan
+1389	ekran süresi
+1390	ekran süresi (en fazla)
+1391	görev yapıldı
+1392	görev yapıldı
+1393	geri koymak için
+1394	sen
+1395	bunu profilinden değiştirebilirsin.
+1397	{{total}} arkadaşından {{aheadCount}} kişi bugün senden daha az ekran süresinde. Sen {{spent}} seviyesindesin.
+1399	{{blockedCount}} {{p}} — bakiyen sıfırlanınca kilitlenir.
+1400	{{durationSec}} sn klip · incelemeye {{length}} kare gönderildi
+1401	Bugün {{floor}} sa {{p}} dk
+1402	{{floor}} dk {{padStart}} sn odak
+1403	{{fmtMins}} kazanıldı
+1404	Bugünkü kazancın {{fmtMins}} kadarı hâlâ birikmiş.
+1405	{{fmt}} kaldı
+1406	Günde {{formatDuration}}
+1407	Günde {{formatDuration}}, telefonu {{phoneDownLabel}} saatinde bırak.
+1408	Şimdikinden {{formatDuration}} az
+1409	{{length}} arkadaş bugün bildirmedi.
+1411	{{mins}} dk kaldı · bu hafta {{p}}{{p2}}
+1412	{{mins}} dakika geçti. Hâlâ değer mi?
+1413	{{mins}} dakika oldu. İstersen bekleyen bir görev var.
+1414	Günde {{minutesPerDay}} dakika
+1415	{{minutes}} dk · {{credits}} kredi ortada
+1416	Kutuda {{minutes}} dakika. +{{rewardMinutes}} dakika kazanıldı.
+1417	{{name}} bekleyebilir.
+1418	{{name}} engelli.
+1419	Drift'te bir görev tamamladığında {{name}} açılır.
+1420	{{name}} on dakika sonra da orada olacak.
+1421	{{n}} dk kaldı
+1422	{{price}}/ay
+1423	{{price}}/ay bir sonraki yenilemende başlar.
+1424	{{price}}/ay. Otomatik yenilenir — Ayarlar'dan istediğin zaman iptal et.
+1425	{{price}}/yıl. Otomatik yenilenir — Ayarlar'dan istediğin zaman iptal et.
+1426	{{price}}/yıl
+1427	{{p}}\n\nTekrar deneyebilir ya da oturumu kutusuz yapabilirsin — aynı şekilde çalışır.
+1428	@{{toUpperCase}} KİŞİSİNDEN {{p}}
+1429	{{p}} · +{{xp}} XP
+1430	{{p}}ve{{p}}
+1431	{{recurrenceLabel}} {{prettyTime}} - {{fmtMins}} ödül
+1432	{{FREE_BLOCK_LIMIT}} içinden {{selectionCount}} kaydedildi
+1433	Bugün {{spentMinutes}} dk
+1434	Üst üste {{streak}} gece.
+1435	{{streak}} günlük seri
+1436	{{target}}/{{target}} sayıldı
+1437	{{timeText}} {{toLowerCase}} · +{{earnedText}} kazanıldı
+1438	{{title}} · +{{minutes}} dk
+1439	{{toLocaleDateString}}: {{count}} görev
+1440	Sonraki seviyeye {{toNext}} XP
+1441	{{name}} için {{toNext}} XP.
+1442	Toplam {{totalXp}} XP
+1443	{{trial}} gün ücretsiz, sonra {{price}}/ay. Otomatik yenilenir — Ayarlar'dan istediğin zaman iptal et.
+1444	{{trial}} gün ücretsiz, sonra {{price}}/yıl. Otomatik yenilenir — Ayarlar'dan istediğin zaman iptal et.
+1445	{{who}} sana meydan okudu
+1446	"Hey Siri, Drift bakiyemi kontrol et"\n"Hey Siri, Drift'te görev oluştur"\n"Hey Siri, Drift In oturumu başlat"
+1447	1 DENEME HAKKI KALDI
+1448	{{attemptsLeft}} DENEME HAKKI KALDI
+1449	Family hesabını 18 yaşında veya daha büyük bir ebeveyn ya da vasi oluşturmalı.
+1450	Bir ebeveynden seni kurmasını iste
+1451	Ailemle kodla katıl
+1452	Ebeveyn hesapları yetişkinler içindir
+1453	Kişisel Drift hesapları 13 yaş ve üzeri içindir. Bir ebeveyn Drift Family'yi kurabilir, sonra sen onların koduyla katılırsın.
+1454	Bunu herkese soruyoruz. Kaydedilmez ve kimseye gösterilmez.
+1455	Ne zaman doğdun?

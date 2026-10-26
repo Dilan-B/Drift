@@ -15,13 +15,14 @@ import {
 import { FF, getTheme } from "./theme";
 import { LeafGlyph } from "./SproutArt";
 
+import { tr } from "./i18n";
 const CATS = {
-  work:     { c: "#3A7AB8", l: "Work" },
-  physical: { c: "#2FAB72", l: "Physical" },
-  outdoor:  { c: "#3DA870", l: "Outdoor" },
-  learning: { c: "#7B6EC8", l: "Learning" },
-  life:     { c: "#5AB4D4", l: "Life" },
-  social:   { c: "#3A9BB5", l: "Social" },
+  work:     { c: "#3A7AB8", get l() { return tr("Work"); } },
+  physical: { c: "#2FAB72", get l() { return tr("Physical"); } },
+  outdoor:  { c: "#3DA870", get l() { return tr("Outdoor"); } },
+  learning: { c: "#7B6EC8", get l() { return tr("Learning"); } },
+  life:     { c: "#5AB4D4", get l() { return tr("Life"); } },
+  social:   { c: "#3A9BB5", get l() { return tr("Social"); } },
 };
 
 const LENGTHS = [15, 30, 45, 60, 90];
@@ -81,10 +82,10 @@ export default function SuggestedTaskModal({ suggestion, dark = false, onConfirm
                 {kicker}
               </Text>
               <Text style={{ fontFamily: FF.display, fontSize: 30, color: ink.deep, letterSpacing: -0.4 }}>
-                Add this task?
+                {tr("Add this task?")}
               </Text>
               <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, marginTop: 6, lineHeight: 19 }}>
-                Change anything you like before confirming.
+                {tr("Change anything you like before confirming.")}
               </Text>
             </View>
 
@@ -100,12 +101,12 @@ export default function SuggestedTaskModal({ suggestion, dark = false, onConfirm
                 padding: 18,
               }}>
                 <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: ink.faint, letterSpacing: 2.4, marginBottom: 10 }}>
-                  TASK
+                  {tr("TASK")}
                 </Text>
                 <TextInput
                   value={title}
                   onChangeText={setTitle}
-                  placeholder="What will you do?"
+                  placeholder={tr("What will you do?")}
                   placeholderTextColor={ink.faint}
                   maxLength={80}
                   style={{
@@ -121,7 +122,7 @@ export default function SuggestedTaskModal({ suggestion, dark = false, onConfirm
                 <View style={{ height: 1, backgroundColor: ink.hairline, marginVertical: 18 }} />
 
                 <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: ink.faint, letterSpacing: 2.4, marginBottom: 10 }}>
-                  CATEGORY
+                  {tr("CATEGORY")}
                 </Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                   {Object.entries(CATS).map(([k, v]) => {
@@ -149,7 +150,7 @@ export default function SuggestedTaskModal({ suggestion, dark = false, onConfirm
                 <View style={{ height: 1, backgroundColor: ink.hairline, marginVertical: 18 }} />
 
                 <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: ink.faint, letterSpacing: 2.4, marginBottom: 10 }}>
-                  LENGTH
+                  {tr("LENGTH")}
                 </Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                   {LENGTHS.map(m => {
@@ -196,12 +197,12 @@ export default function SuggestedTaskModal({ suggestion, dark = false, onConfirm
                   fontFamily: FF.bodyMed, fontSize: 15, letterSpacing: 0.2,
                   color: ready ? onDeep : ink.faint,
                 }}>
-                  Add task
+                  {tr("Add task")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={onDismiss} style={{ height: 44, alignItems: "center", justifyContent: "center" }}>
                 <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid }}>
-                  Not now
+                  {tr("Not now")}
                 </Text>
               </TouchableOpacity>
             </View>

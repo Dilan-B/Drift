@@ -28,6 +28,7 @@ import {
   VIDEO_MAX_SECONDS,
 } from "./proofMedia";
 
+import { tr, getLanguage } from "./i18n";
 // Remapped onto the organic-editorial system — see theme.js FF.
 const FO  = FF.bodyBold;
 const FOM = FF.kicker;
@@ -45,7 +46,7 @@ try { ImagePicker = require("expo-image-picker"); } catch {}
 // connected, so cellular never takes over. Naming that beats "check your
 // connection", which is the one thing the user has already verified.
 const NO_REACH_MSG =
-  "Couldn't reach the AI service. If you're on public Wi-Fi (a gym, café or campus network), it may be blocking Drift — turn Wi-Fi off to use cellular and try again.";
+  tr("Couldn't reach the AI service. If you're on public Wi-Fi (a gym, café or campus network), it may be blocking Drift — turn Wi-Fi off to use cellular and try again.");
 
 // How long we'll wait for the edge function before giving up. The server aims
 // to answer within ~45s; past 55s the request is not going to land, and
@@ -157,22 +158,22 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
   // ── Media capture ────────────────────────────────────────────
   const needPicker = () => {
     if (!ImagePicker) {
-      Alert.alert("Not available", "Run: npx expo install expo-image-picker");
+      Alert.alert(tr("Not available"), tr("Run: npx expo install expo-image-picker"));
       return true;
     }
     return false;
   };
 
   const acceptPhoto = async (asset) => {
-    setPreparing("Preparing photo…");
+    setPreparing(tr("Preparing photo…"));
     try {
       const out = await preparePhoto(asset.uri);
       if (out.error === "unsupported") {
-        Alert.alert("Not available", "Image processing isn't installed in this build. Use text or video proof.");
+        Alert.alert(tr("Not available"), tr("Image processing isn't installed in this build. Use text or video proof."));
         return;
       }
       if (out.error) {
-        Alert.alert("Photo too large", "Couldn't compress that photo enough. Try another shot.");
+        Alert.alert(tr("Photo too large"), tr("Couldn't compress that photo enough. Try another shot."));
         return;
       }
       setVideo(null);
@@ -185,7 +186,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
   const pickPhoto = async () => {
     if (needPicker()) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") { Alert.alert("Permission denied", "Allow photo access in Settings."); return; }
+    if (status !== "granted") { Alert.alert(tr("Permission denied"), tr("Allow photo access in Settings.")); return; }
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: 0.6,
@@ -198,7 +199,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
   const takePhoto = async () => {
     if (needPicker()) return;
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") { Alert.alert("Permission denied", "Allow camera in Settings."); return; }
+    if (status !== "granted") { Alert.alert(tr("Permission denied"), tr("Allow camera in Settings.")); return; }
     const res = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.6, base64: false });
     if (!res.canceled && res.assets?.[0]) await acceptPhoto(res.assets[0]);
   };
@@ -207,13 +208,13 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
     if (needPicker()) return;
     if (!videoSupported()) {
       Alert.alert(
-        "Video proof needs a new build",
-        "Run: npx expo install expo-video-thumbnails, then rebuild the app. Photo and written proof still work."
+        tr("Video proof needs a new build"),
+        tr("Run: npx expo install expo-video-thumbnails, then rebuild the app. Photo and written proof still work.")
       );
       return;
     }
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") { Alert.alert("Permission denied", "Allow camera in Settings."); return; }
+    if (status !== "granted") { Alert.alert(tr("Permission denied"), tr("Allow camera in Settings.")); return; }
 
     const res = await ImagePicker.launchCameraAsync({
       mediaTypes: ["videos"],
@@ -227,29 +228,29 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
     if (res.canceled || !res.assets?.[0]) return;
     const asset = res.assets[0];
 
-    setPreparing("Reading your clip…");
+    setPreparing(tr("Reading your clip…"));
     try {
       const out = await prepareVideo(asset.uri, asset.duration, (done, total) =>
-        setPreparing(`Reading your clip… ${done}/${total}`)
+        setPreparing(tr("Reading your clip… {{done}}/{{total}}", { done, total }))
       );
       if (out.error === "unsupported") {
-        Alert.alert("Video proof needs a new build", "Rebuild with expo-video-thumbnails installed.");
+        Alert.alert(tr("Video proof needs a new build"), tr("Rebuild with expo-video-thumbnails installed."));
         return;
       }
       if (out.error === "too_long") {
-        Alert.alert("Clip too long", `Keep it under ${VIDEO_MAX_SECONDS} seconds — that's plenty to show the work.`);
+        Alert.alert(tr("Clip too long"), tr("Keep it under {{VIDEO_MAX_SECONDS}} seconds — that's plenty to show the work.", { VIDEO_MAX_SECONDS }));
         return;
       }
       if (out.error === "file_too_large") {
-        Alert.alert("Clip too heavy", "That recording is enormous. Record a shorter clip and try again.");
+        Alert.alert(tr("Clip too heavy"), tr("That recording is enormous. Record a shorter clip and try again."));
         return;
       }
       if (out.error === "no_frames") {
-        Alert.alert("Couldn't read that clip", "No frames came out of it. Try recording again.");
+        Alert.alert(tr("Couldn't read that clip"), tr("No frames came out of it. Try recording again."));
         return;
       }
       if (out.error) {
-        Alert.alert("Clip too heavy", "Couldn't compress that clip down far enough. Record a shorter one.");
+        Alert.alert(tr("Clip too heavy"), tr("Couldn't compress that clip down far enough. Record a shorter one."));
         return;
       }
       setPhoto(null);
@@ -266,11 +267,11 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
   const submit = async ({ answering = false } = {}) => {
     if (locked) return;
     if (answering && !answer.trim()) {
-      Alert.alert("Add an answer", "Answer the question to finish verifying.");
+      Alert.alert(tr("Add an answer"), tr("Answer the question to finish verifying."));
       return;
     }
     if (!answering && !proofText.trim() && !photo && !video) {
-      Alert.alert("Add proof", "Write what you did, or capture a photo or video.");
+      Alert.alert(tr("Add proof"), tr("Write what you did, or capture a photo or video."));
       return;
     }
     setLoading(true);
@@ -302,6 +303,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                 // nothing. Delete them once the new function is live everywhere.
                 taskTitle:    task.title,
                 durationMins: task.minutes,
+                locale:       getLanguage(),
                 proofText:   proofText.trim() || undefined,
                 // Answering a question resends NO media: the server rehydrates
                 // its own earlier reading of the image from proof_summary, so
@@ -355,12 +357,12 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
       // tomorrow — never a direct OpenAI fallback.
       if (body?.error === "free_limit" || body?.error === "subscription_required" || status === 402) {
         Alert.alert(
-          body?.error === "free_limit" ? "That's today's free tasks" : "Pro feature",
-          body?.message || "You've used today's free verified tasks. Go Pro for unlimited tasks, or come back tomorrow.",
+          body?.error === "free_limit" ? tr("That's today's free tasks") : tr("Pro feature"),
+          body?.message || tr("You've used today's free verified tasks. Go Pro for unlimited tasks, or come back tomorrow."),
           onUpgrade
-            ? [{ text: "Not now", style: "cancel", onPress: onCancel },
-               { text: "See Pro", onPress: () => { onCancel?.(); onUpgrade(); } }]
-            : [{ text: "OK", onPress: onCancel }]
+            ? [{ text: tr("Not now"), style: "cancel", onPress: onCancel },
+               { text: tr("See Pro"), onPress: () => { onCancel?.(); onUpgrade(); } }]
+            : [{ text: tr("OK"), onPress: onCancel }]
         );
         return;
       }
@@ -370,15 +372,15 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
       if (body?.error === "too_early" || status === 425) {
         const secs = Number(body?.secondsRemaining) || 0;
         if (secs > 0) setNowMs(Date.now() - Math.max(0, gateMs - secs * 1000));
-        Alert.alert("Not yet", body?.message || "Give this task a bit more time before proving it.");
+        Alert.alert(tr("Not yet"), body?.message || tr("Give this task a bit more time before proving it."));
         return;
       }
 
       // Already done, or burned through the per-task attempts.
       if (body?.error === "already_verified" || body?.error === "too_many_attempts" ||
           body?.error === "task_not_found" || body?.error === "task_untimed") {
-        Alert.alert("Can't verify this", body?.message || "This task can't be verified right now.", [
-          { text: "OK", onPress: onCancel },
+        Alert.alert(tr("Can't verify this"), body?.message || tr("This task can't be verified right now."), [
+          { text: tr("OK"), onPress: onCancel },
         ]);
         return;
       }
@@ -387,12 +389,12 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
       // update gate should have caught it — but say something useful if it does).
       if (body?.error === "question_expired") {
         setQuestion(""); setAnswer("");
-        Alert.alert("That timed out", body?.message || "Submit your proof again.");
+        Alert.alert(tr("That timed out"), body?.message || tr("Submit your proof again."));
         return;
       }
 
       if (body?.error === "task_id_required") {
-        Alert.alert("Update needed", body?.message || "Update Drift to use AI Check.");
+        Alert.alert(tr("Update needed"), body?.message || tr("Update Drift to use AI Check."));
         return;
       }
 
@@ -401,13 +403,13 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
       // that as a connection failure is what made a plain rate-limit look
       // like being offline.
       if (body?.error === "rate_limit" || status === 429) {
-        setRateLimitMsg(body?.message || "You've hit the AI Check limit for now. Try again a bit later.");
+        setRateLimitMsg(body?.message || tr("You've hit the AI Check limit for now. Try again a bit later."));
         return;
       }
 
       // OpenAI-side error (network, model down, image rejected)
       if (body?.error === "ai_error" || body?.error === "ai_unreachable" || body?.error === "task_lookup_failed") {
-        Alert.alert("Verification failed", body.message || "The AI service is having trouble. Please try again.");
+        Alert.alert(tr("Verification failed"), body.message || tr("The AI service is having trouble. Please try again."));
         return;
       }
 
@@ -430,7 +432,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
 
       // Edge function returned an unexpected response — surface it
       if (body?.error) {
-        Alert.alert("Verification failed", `Server: ${body.error}${body.message ? ` — ${body.message}` : ""}`);
+        Alert.alert(tr("Verification failed"), tr("Server: {{error}}{{p}}", { error: body.error, p: body.message ? ` — ${body.message}` : "" }));
         return;
       }
       if (invokeErr) {
@@ -441,33 +443,29 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
         // connection" for a 500 sends people to reboot their router over a
         // server-side fault, which is exactly the wrong place to look.
         Alert.alert(
-          "Verification failed",
-          status >= 500
-            ? "The AI service is having trouble right now. Try again in a moment."
-            : status > 0
-              ? `The AI service rejected the request (error ${status}). Try again, or use text-only proof.`
-              : NO_REACH_MSG
+          tr("Verification failed"),
+          status >= 500 ? tr("The AI service is having trouble right now. Try again in a moment.") : status > 0 ? tr("The AI service rejected the request (error {{status}}). Try again, or use text-only proof.", { status }) : NO_REACH_MSG
         );
         return;
       }
 
       // Truly empty response — surface a generic error (no direct call)
-      Alert.alert("Verification failed", "Unexpected response from the AI service.");
+      Alert.alert(tr("Verification failed"), tr("Unexpected response from the AI service."));
     } catch (e) {
       const raw = (e?.message || "").toLowerCase();
       // The client-side rate limiter throws with code "rate_limited" — surface
       // that as a rate limit, not a bogus "check your connection".
       if (e?.code === "rate_limited" || raw.includes("too many attempts")) {
-        setRateLimitMsg(e?.message || "You've done a lot of AI Checks. Try again in a little while.");
+        setRateLimitMsg(e?.message || tr("You've done a lot of AI Checks. Try again in a little while."));
         return;
       }
       let msg = NO_REACH_MSG;
       if (e?.name === "AbortError" || raw.includes("aborted") || raw.includes("timeout")) {
-        msg = "The AI check timed out. This often means the Wi-Fi you're on is blocking Drift — try turning Wi-Fi off to use cellular, then retry.";
+        msg = tr("The AI check timed out. This often means the Wi-Fi you're on is blocking Drift — try turning Wi-Fi off to use cellular, then retry.");
       } else if (raw.includes("network") || raw.includes("fetch") || raw.includes("failed to send")) {
         msg = NO_REACH_MSG;
       }
-      Alert.alert("Verification failed", msg);
+      Alert.alert(tr("Verification failed"), msg);
     } finally {
       setLoading(false);
     }
@@ -507,11 +505,11 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 24 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: FOM, fontSize: 9, color: GRN, letterSpacing: 2.5, marginBottom: 4 }}>
-                AI CHECK
+                {tr("AI CHECK")}
               </Text>
               <Text style={{ fontFamily: FK, fontSize: 20, color: TXT }}>{task.title}</Text>
               <Text style={{ fontFamily: FB, fontSize: 12, color: MID, marginTop: 2 }}>
-                {task.minutes} min · {task.credits} credits at stake
+                {tr("{{minutes}} min · {{credits}} credits at stake", { minutes: task.minutes, credits: task.credits })}
               </Text>
             </View>
             <TouchableOpacity
@@ -549,14 +547,13 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                 fontFamily: FO, fontSize: 12, color: TXT, letterSpacing: 2,
                 marginTop: 14, marginBottom: 6,
               }}>
-                UNLOCKS IN {mmss(remaining)}
+                {tr("UNLOCKS IN {{mmss}}", { mmss: mmss(remaining) })}
               </Text>
               <Text style={{ fontFamily: FB, fontSize: 13, color: MID, textAlign: "center", lineHeight: 20 }}>
-                This is a {task.minutes}-minute task, so proof opens {mmss(gateMs)} after you add it.
-                Go do it — we'll be here.
+                {tr("This is a {{minutes}}-minute task, so proof opens {{mmss}} after you add it. Go do it — we'll be here.", { minutes: task.minutes, mmss: mmss(gateMs) })}
               </Text>
               <TouchableOpacity onPress={onCancel} style={{ paddingVertical: 16, paddingHorizontal: 24 }}>
-                <Text style={{ fontFamily: FOM, fontSize: 10, color: MID, letterSpacing: 1.5 }}>CLOSE</Text>
+                <Text style={{ fontFamily: FOM, fontSize: 10, color: MID, letterSpacing: 1.5 }}>{tr("CLOSE")}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -565,7 +562,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
           {!result && !locked && !!question && (
             <>
               <Text style={{ fontFamily: FOM, fontSize: 9, color: GRN, letterSpacing: 2, marginBottom: 10 }}>
-                ONE QUICK CHECK
+                {tr("ONE QUICK CHECK")}
               </Text>
               <View style={{
                 backgroundColor: SURF, borderRadius: 14, padding: 16, marginBottom: 14,
@@ -579,7 +576,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
               <TextInput
                 value={answer}
                 onChangeText={setAnswer}
-                placeholder="Your answer…"
+                placeholder={tr("Your answer…")}
                 placeholderTextColor={dark ? "#5C7263" : "#A8BFB5"}
                 multiline
                 maxLength={1000}
@@ -605,13 +602,13 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                 {loading
                   ? <Spinner size={22} color={dark ? "#16261C" : "#fff"} />
                   : <Text style={{ fontFamily: FO, fontSize: 12, color: dark ? "#16261C" : "#fff", letterSpacing: 2 }}>
-                      SEND ANSWER
+                      {tr("SEND ANSWER")}
                     </Text>
                 }
               </TouchableOpacity>
 
               <Text style={{ fontFamily: FB, fontSize: 11, color: MID, textAlign: "center", marginTop: 10, lineHeight: 16 }}>
-                This doesn't count as an attempt — we just need one detail to be sure.
+                {tr("This doesn't count as an attempt — we just need one detail to be sure.")}
               </Text>
             </>
           )}
@@ -620,13 +617,13 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
           {!result && !locked && !question && (
             <>
               <Text style={{ fontFamily: FOM, fontSize: 9, color: MID, letterSpacing: 2, marginBottom: 10 }}>
-                YOUR PROOF
+                {tr("YOUR PROOF")}
               </Text>
 
               <TextInput
                 value={proofText}
                 onChangeText={setProofText}
-                placeholder={`Describe how you completed "${task.title}"...`}
+                placeholder={tr("Describe how you completed \"{{title}}\"...", { title: task.title })}
                 placeholderTextColor={dark ? "#5C7263" : "#A8BFB5"}
                 multiline
                 maxLength={1000}
@@ -647,7 +644,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                   />
                   <TouchableOpacity onPress={() => setPhoto(null)} style={{ alignItems: "center" }}>
                     <Text style={{ fontFamily: FOM, fontSize: 10, color: MID, letterSpacing: 1 }}>
-                      REMOVE PHOTO
+                      {tr("REMOVE PHOTO")}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -668,11 +665,11 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                     ))}
                   </View>
                   <Text style={{ fontFamily: FB, fontSize: 12, color: MID, textAlign: "center" }}>
-                    {video.durationSec}s clip · {video.frames.length} frames sent for review
+                    {tr("{{durationSec}}s clip · {{length}} frames sent for review", { durationSec: video.durationSec, length: video.frames.length })}
                   </Text>
                   <TouchableOpacity onPress={() => setVideo(null)} style={{ alignItems: "center", paddingTop: 8 }}>
                     <Text style={{ fontFamily: FOM, fontSize: 10, color: MID, letterSpacing: 1 }}>
-                      REMOVE VIDEO
+                      {tr("REMOVE VIDEO")}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -690,8 +687,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                     {/* Said plainly, because it changes what people capture:
                         a still can't count reps, and users otherwise submit one
                         and feel cheated by the rejection. */}
-                    Counting something — reps, laps, pages? Record a video. A single
-                    photo can't show a number.
+                    {tr("Counting something — reps, laps, pages? Record a video. A single photo can't show a number.")}
                   </Text>
                 </>
               )}
@@ -717,13 +713,13 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                 {loading
                   ? <Spinner size={22} color={dark ? "#16261C" : "#fff"} />
                   : <Text style={{ fontFamily: FO, fontSize: 12, color: dark ? "#16261C" : "#fff", letterSpacing: 2 }}>
-                      SUBMIT FOR VERIFICATION
+                      {tr("SUBMIT FOR VERIFICATION")}
                     </Text>
                 }
               </TouchableOpacity>
 
               <Text style={{ fontFamily: FOM, fontSize: 9, color: MID, textAlign: "center", marginTop: 10, letterSpacing: 1 }}>
-                5/HOUR · 20/DAY LIMIT
+                {tr("5/HOUR · 20/DAY LIMIT")}
               </Text>
             </>
           )}
@@ -748,7 +744,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                   textAlign: "center", marginBottom: 10,
                   color: result.verified ? GRN : RED,
                 }}>
-                  {result.verified ? "VERIFIED" : "NOT VERIFIED"}
+                  {result.verified ? tr("VERIFIED") : tr("NOT VERIFIED")}
                 </Text>
                 <Text style={{
                   fontFamily: FB, fontSize: 14, color: TXT,
@@ -764,7 +760,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                     borderTopWidth: 1, borderTopColor: "rgba(181,86,75,0.18)",
                   }}>
                     <Text style={{ fontFamily: FOM, fontSize: 9, color: MID, letterSpacing: 1.5, marginBottom: 4 }}>
-                      WHAT WAS MISSING
+                      {tr("WHAT WAS MISSING")}
                     </Text>
                     <Text style={{ fontFamily: FB, fontSize: 13, color: TXT, lineHeight: 19 }}>
                       {result.shortfall}
@@ -775,7 +771,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                   fontFamily: FOM, fontSize: 9, color: MID,
                   letterSpacing: 1.5, textAlign: "center", marginTop: 8,
                 }}>
-                  CONFIDENCE: {result.confidence?.toUpperCase()}
+                  {tr("CONFIDENCE: {{p}}", { p: result.confidence?.toUpperCase() })}
                 </Text>
                 {/* On a rejection, tell them how many tries are left. Finding
                     out you're locked out only when it happens reads as a bug. */}
@@ -784,9 +780,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                     fontFamily: FOM, fontSize: 9, color: MID,
                     letterSpacing: 1.5, textAlign: "center", marginTop: 4,
                   }}>
-                    {result.attemptsLeft > 0
-                      ? `${result.attemptsLeft} ATTEMPT${result.attemptsLeft === 1 ? "" : "S"} LEFT`
-                      : "NO ATTEMPTS LEFT ON THIS TASK"}
+                    {result.attemptsLeft > 0 ? (result.attemptsLeft === 1 ? tr("1 ATTEMPT LEFT") : tr("{{attemptsLeft}} ATTEMPTS LEFT", { attemptsLeft: result.attemptsLeft })) : tr("NO ATTEMPTS LEFT ON THIS TASK")}
                   </Text>
                 )}
               </View>
@@ -798,7 +792,7 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                 >
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Text style={{ fontFamily: FO, fontSize: 12, color: dark ? "#16261C" : "#fff", letterSpacing: 2 }}>
-                      CLAIM {task.credits}m CREDITS
+                      {tr("CLAIM {{credits}}m CREDITS", { credits: task.credits })}
                     </Text>
                     <CheckIcon size={14} color="#fff" />
                   </View>
@@ -812,13 +806,13 @@ export default function AICheckModal({ visible, task, onVerified, onCancel, onUp
                   }}
                 >
                   <Text style={{ fontFamily: FO, fontSize: 11, color: MID, letterSpacing: 1.5 }}>
-                    TRY AGAIN
+                    {tr("TRY AGAIN")}
                   </Text>
                 </TouchableOpacity>
               )}
 
               <TouchableOpacity onPress={onCancel} style={{ paddingVertical: 12, alignItems: "center" }}>
-                <Text style={{ fontFamily: FB, fontSize: 13, color: MID }}>Cancel</Text>
+                <Text style={{ fontFamily: FB, fontSize: 13, color: MID }}>{tr("Cancel")}</Text>
               </TouchableOpacity>
             </>
           )}

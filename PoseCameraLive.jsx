@@ -22,6 +22,7 @@ import Svg, { Circle, Line } from "react-native-svg";
 import { CameraIcon } from "./Icons";
 import { FF } from "./theme";
 
+import { tr } from "./i18n";
 // ── MoveNet keypoint indices ─────────────────────────────────
 const KP = {
   NOSE: 0, LEFT_EYE: 1, RIGHT_EYE: 2, LEFT_EAR: 3, RIGHT_EAR: 4,
@@ -75,32 +76,32 @@ const EXERCISE_CONFIGS = {
     getMetric: (kps) => jointAngle(kps, KP.LEFT_SHOULDER, KP.LEFT_ELBOW, KP.LEFT_WRIST),
     isDown: (v) => v < 90,
     isUp:   (v) => v > 150,
-    cue: "Lower chest to floor · full range of motion counts",
-    metricLabel: "Elbow",
+    cue: tr("Lower chest to floor · full range of motion counts"),
+    get metricLabel() { return tr("Elbow"); },
     unit: "°",
   },
   dips: {
     getMetric: (kps) => jointAngle(kps, KP.LEFT_SHOULDER, KP.LEFT_ELBOW, KP.LEFT_WRIST),
     isDown: (v) => v < 90,
     isUp:   (v) => v > 150,
-    cue: "Elbows at 90° down · lock out at the top",
-    metricLabel: "Elbow",
+    cue: tr("Elbows at 90° down · lock out at the top"),
+    get metricLabel() { return tr("Elbow"); },
     unit: "°",
   },
   squats: {
     getMetric: (kps) => jointAngle(kps, KP.LEFT_HIP, KP.LEFT_KNEE, KP.LEFT_ANKLE),
     isDown: (v) => v < 90,
     isUp:   (v) => v > 160,
-    cue: "Hips below knees · drive through heels",
-    metricLabel: "Knee",
+    cue: tr("Hips below knees · drive through heels"),
+    get metricLabel() { return tr("Knee"); },
     unit: "°",
   },
   lunges: {
     getMetric: (kps) => jointAngle(kps, KP.LEFT_HIP, KP.LEFT_KNEE, KP.LEFT_ANKLE),
     isDown: (v) => v < 95,
     isUp:   (v) => v > 155,
-    cue: "Front knee at 90° · back knee brushes floor",
-    metricLabel: "Knee",
+    cue: tr("Front knee at 90° · back knee brushes floor"),
+    get metricLabel() { return tr("Knee"); },
     unit: "°",
   },
   situps: {
@@ -108,8 +109,8 @@ const EXERCISE_CONFIGS = {
     getMetric: (kps) => jointAngle(kps, KP.LEFT_SHOULDER, KP.LEFT_HIP, KP.LEFT_KNEE),
     isDown: (v) => v < 80,   // crunched up
     isUp:   (v) => v > 140,  // lying back down
-    cue: "Start flat · curl until elbows reach knees",
-    metricLabel: "Hip",
+    cue: tr("Start flat · curl until elbows reach knees"),
+    get metricLabel() { return tr("Hip"); },
     unit: "°",
   },
   burpees: {
@@ -118,8 +119,8 @@ const EXERCISE_CONFIGS = {
     getMetric: (kps) => avgY(kps, KP.LEFT_SHOULDER, KP.RIGHT_SHOULDER),
     isDown: (v) => v > 0.55,  // shoulders low = pushup position
     isUp:   (v) => v < 0.35,  // shoulders high = standing / jumped
-    cue: "Drop to floor · jump up and clap overhead",
-    metricLabel: "Height",
+    cue: tr("Drop to floor · jump up and clap overhead"),
+    get metricLabel() { return tr("Height"); },
     unit: "%",
     displayFn: (v) => `${Math.round(v * 100)}`,
   },
@@ -128,8 +129,8 @@ const EXERCISE_CONFIGS = {
     getMetric: (kps) => avgY(kps, KP.LEFT_WRIST, KP.RIGHT_WRIST) - avgY(kps, KP.LEFT_SHOULDER, KP.RIGHT_SHOULDER),
     isDown: (v) => v > 0.08,   // arms at sides / below shoulders
     isUp:   (v) => v < -0.05,  // arms overhead
-    cue: "Jump feet wide · raise arms fully overhead",
-    metricLabel: "Arms",
+    cue: tr("Jump feet wide · raise arms fully overhead"),
+    get metricLabel() { return tr("Arms"); },
     unit: "",
     displayFn: (v) => v < 0 ? "up" : "down",
   },
@@ -207,16 +208,16 @@ export default function PoseCameraLive({ exerciseId, onRepCounted, width = 220, 
   if (!hasPermission) return (
     <TouchableOpacity onPress={requestPermission} style={[s.permBox, box, style]}>
       <View style={{ marginBottom: 8 }}><CameraIcon size={36} color="#A5E39B" /></View>
-      <Text style={{ color: "#F0F7EA", fontFamily: FF.bodyMed, fontSize: 13 }}>Enable camera</Text>
+      <Text style={{ color: "#F0F7EA", fontFamily: FF.bodyMed, fontSize: 13 }}>{tr("Enable camera")}</Text>
       <Text style={{ color: "#A9C4AB", fontFamily: FF.body, fontSize: 11, marginTop: 4, textAlign: "center" }}>
-        Needed to count your reps live
+        {tr("Needed to count your reps live")}
       </Text>
     </TouchableOpacity>
   );
 
   if (!device) return (
     <View style={[s.permBox, box, style]}>
-      <Text style={{ color: "#A9C4AB", fontFamily: FF.body, fontSize: 12 }}>No camera found</Text>
+      <Text style={{ color: "#A9C4AB", fontFamily: FF.body, fontSize: 12 }}>{tr("No camera found")}</Text>
     </View>
   );
 
@@ -246,7 +247,7 @@ export default function PoseCameraLive({ exerciseId, onRepCounted, width = 220, 
       {/* Loading indicator */}
       {!ready && (
         <View style={s.loadingOverlay}>
-          <Text style={s.loadingText}>Loading model…</Text>
+          <Text style={s.loadingText}>{tr("Loading model…")}</Text>
         </View>
       )}
 

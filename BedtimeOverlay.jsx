@@ -25,6 +25,7 @@ import {
 import { FF, LIGHT } from "./theme";
 import { notify } from "./haptics";
 
+import { tr } from "./i18n";
 const NIGHT   = "#0B1A11";           // ink.void — the ground goes to night
 const MOONLIT = LIGHT.paper.sand;    // warm off-white, not clinical white
 const HOLD_MS = 2600;                // long enough to read, short enough to leave
@@ -134,7 +135,7 @@ export default function BedtimeOverlay({ visible, rewardMinutes, onDone }) {
         <Pressable
           onPress={() => leave.current()}
           accessibilityRole="button"
-          accessibilityLabel="Dismiss"
+          accessibilityLabel={tr("Dismiss")}
           style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 40 }}
         >
           {/* Sky */}
@@ -183,7 +184,7 @@ export default function BedtimeOverlay({ visible, rewardMinutes, onDone }) {
               letterSpacing: -0.4, textAlign: "center", marginTop: 8,
             }, lift(title)]}
           >
-            Goodnight
+            {tr("Goodnight")}
           </Animated.Text>
 
           <Animated.Text
@@ -192,7 +193,7 @@ export default function BedtimeOverlay({ visible, rewardMinutes, onDone }) {
               color: "rgba(247,247,244,0.62)", textAlign: "center", marginTop: 12,
             }, lift(body)]}
           >
-            Your apps are locked until morning.{"\n"}Leave your phone where it is.
+            {tr("Your apps are locked until morning.{{p}}Leave your phone where it is.", { p: "\n" })}
           </Animated.Text>
 
           {rewardMinutes > 0 && (
@@ -207,7 +208,7 @@ export default function BedtimeOverlay({ visible, rewardMinutes, onDone }) {
                 fontFamily: FF.bodyMed, fontSize: 12.5,
                 color: "rgba(247,247,244,0.72)",
               }}>
-                {`+${rewardMinutes} min waiting if it stays put`}
+                {tr("+{{rewardMinutes}} min waiting if it stays put", { rewardMinutes })}
               </Text>
             </Animated.View>
           )}

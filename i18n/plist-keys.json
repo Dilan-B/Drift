@@ -1,0 +1,36 @@
+{
+ "Drift reads an NFC tag you place in another room, so you can prove your phone is there before you sleep. Drift only reads the tag's ID and never writes to it.": [
+  "NFCReaderUsageDescription"
+ ],
+ "Drift can read your calendar to offer today's events as tasks. It never changes your calendar and nothing is uploaded.": [
+  "NSCalendarsFullAccessUsageDescription",
+  "NSCalendarsUsageDescription"
+ ],
+ "Drift uses your camera to take proof photos for your tasks, to set your profile picture, and to place the Lockbox on a real surface using augmented reality.": [
+  "NSCameraUsageDescription"
+ ],
+ "Drift can match your contacts to find friends already on Drift. Contact emails are hashed on your device and never uploaded in plain text.": [
+  "NSContactsUsageDescription"
+ ],
+ "Drift checks when you arrive at places you've saved so it can suggest a task. This needs Always access to work in the background. Your location stays on your device and is never uploaded.": [
+  "NSLocationAlwaysAndWhenInUseUsageDescription"
+ ],
+ "Drift uses your location to save the places you choose, so it can suggest a task when you arrive. Your location stays on your device.": [
+  "NSLocationWhenInUseUsageDescription"
+ ],
+ "Drift does not record audio. This permission is required by a camera component used for pose detection.": [
+  "NSMicrophoneUsageDescription"
+ ],
+ "Drift uses motion data to detect exercise movement during workout challenges, and to check your phone stays put during a Lockbox session or overnight with the phone-in-another-room guard, including while the screen is off. Motion data is read on your device and never uploaded.": [
+  "NSMotionUsageDescription"
+ ],
+ "Drift may save a screenshot to your photo library if you choose to share your progress.": [
+  "NSPhotoLibraryAddUsageDescription"
+ ],
+ "Drift needs access to your photos to attach a proof image to a task or to set your profile avatar.": [
+  "NSPhotoLibraryUsageDescription"
+ ],
+ "Drift can read your reminders to offer them as tasks. It never changes your reminders and nothing is uploaded.": [
+  "NSRemindersFullAccessUsageDescription"
+ ]
+}

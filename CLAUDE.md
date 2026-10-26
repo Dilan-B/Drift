@@ -34,7 +34,18 @@ Expo / React Native productivity app. You earn screen-time by completing tasks; 
 ## Conventions
 - Secrets live in Supabase secrets or a gitignored `.env` (`EXPO_PUBLIC_*` only for non-sensitive keys). Never hardcode keys; never log tokens/bodies/PII.
 - All AI + subscription gating is enforced server-side in edge functions. Client checks are UX-only.
-- Data persistence is soft-delete only; never hard-delete user rows.
+- Data persistence is soft-delete only; never hard-delete user rows. The one
+  exception is erasure (account deletion, COPPA child deletion, retention purge):
+  `erase_account()` / `purge_expired_data()` (`schema_v23`) set
+  `drift.erasure = 'on'` for their transaction, which `prevent_hard_delete()`
+  honours. Route any new erasure path through those functions.
+- Strings are translated with English-as-key `tr("Text {{name}}", {name})`
+  (`i18n/`). After adding or changing a `tr()` string, run
+  `node tools/i18n/scan.js`, add the translations to `i18n/src/<code>.tsv`
+  (numbers come from `i18n/src/_source.tsv`), then `node tools/i18n/build.js`
+  (`--check` validates placeholders). It also emits the push texts, the Swift
+  extension tables and the InfoPlist.strings. A string at module scope must be
+  a getter, or it freezes in the language loaded first.
 - SQL changes live in two places. `supabase/admin/schema_v*.sql` is the annotated
   reference (safe to re-run, explains *why*); `supabase/migrations/*.sql` is the
   applied artifact, minus the trailing verification SELECTs. Apply with

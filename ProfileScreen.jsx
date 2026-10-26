@@ -19,6 +19,8 @@ import {
   CloseIcon, PhoneIcon, SparkleIcon, CheckIcon,
 } from "./Icons";
 
+import { tr } from "./i18n";
+import LanguagePicker from "./LanguagePicker";
 let ImagePicker = null;
 let ImageManipulator = null;
 try { ImagePicker = require("expo-image-picker"); } catch {}
@@ -36,9 +38,9 @@ const normalizeUsername = (raw) =>
 
 function validateUsername(raw) {
   const u = normalizeUsername(raw);
-  if (u.length < 3) return "Username must be at least 3 characters.";
-  if (u.length > 20) return "Username can be at most 20 characters.";
-  if (!/^[a-z0-9_]+$/.test(u)) return "Use letters, numbers, and underscores only.";
+  if (u.length < 3) return tr("Username must be at least 3 characters.");
+  if (u.length > 20) return tr("Username can be at most 20 characters.");
+  if (!/^[a-z0-9_]+$/.test(u)) return tr("Use letters, numbers, and underscores only.");
   return null;
 }
 
@@ -150,12 +152,12 @@ export default function ProfileScreen({
 
   const pickAvatar = async () => {
     if (!ImagePicker) {
-      Alert.alert("Not available", "Run: npx expo install expo-image-picker");
+      Alert.alert(tr("Not available"), tr("Run: npx expo install expo-image-picker"));
       return;
     }
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission denied", "Allow photo access in Settings.");
+      Alert.alert(tr("Permission denied"), tr("Allow photo access in Settings."));
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -181,12 +183,8 @@ export default function ProfileScreen({
     } catch (e) {
       const raw = e?.message || "";
       Alert.alert(
-        "Photo failed",
-        /avatar_url|schema cache/i.test(raw)
-          ? "Profile photos need the avatar_url database column. Run supabase/profile_challenge_updates.sql, then restart the app."
-          : /bucket|storage|avatars|not found/i.test(raw)
-            ? "Profile photo storage is not set up yet. Run supabase/profile_challenge_updates.sql in Supabase, then try again."
-          : (raw || "Could not update profile photo.")
+        tr("Photo failed"),
+        /avatar_url|schema cache/i.test(raw) ? tr("Profile photos need the avatar_url database column. Run supabase/profile_challenge_updates.sql, then restart the app.") : /bucket|storage|avatars|not found/i.test(raw) ? tr("Profile photo storage is not set up yet. Run supabase/profile_challenge_updates.sql in Supabase, then try again.") : raw || tr("Could not update profile photo.")
       );
     } finally {
       setSavingPhoto(false);
@@ -196,7 +194,7 @@ export default function ProfileScreen({
   const saveUsername = async () => {
     const clean = normalizeUsername(draftUsername);
     const err = validateUsername(clean);
-    if (err) { Alert.alert("Username", err); return; }
+    if (err) { Alert.alert(tr("Username"), err); return; }
     if (clean === currentUsername) return;
     setSavingName(true);
     try {
@@ -210,7 +208,7 @@ export default function ProfileScreen({
       );
       if (lookupErr) throw lookupErr;
       if (taken) {
-        Alert.alert("Username taken", "Pick another username.");
+        Alert.alert(tr("Username taken"), tr("Pick another username."));
         return;
       }
       const { data, error } = await rateLimited(`profile_update_${userId}`, { limit: 20, windowMs: 60_000 }, () => supabase
@@ -225,7 +223,7 @@ export default function ProfileScreen({
       setDraftUsername(data.username);
       onProfileChange?.(data);
     } catch (e) {
-      Alert.alert("Username failed", /duplicate|unique/i.test(e.message || "") ? "That username is taken." : (e.message || "Could not update username."));
+      Alert.alert(tr("Username failed"), /duplicate|unique/i.test(e.message || "") ? tr("That username is taken.") : e.message || tr("Could not update username."));
     } finally {
       setSavingName(false);
     }
@@ -266,28 +264,28 @@ export default function ProfileScreen({
       </View>
       {busy
         ? <ActivityIndicator color={accent} />
-        : <Text style={[s.rowCta, { color: accent }]}>{cta || "OPEN"}</Text>}
+        : <Text style={[s.rowCta, { color: accent }]}>{cta || tr("OPEN")}</Text>}
     </TouchableOpacity>
     );
   };
 
   const confirmDeleteAccount = () => {
     Alert.alert(
-      "Delete account?",
-      "This deletes your Drift account and signs you out. This cannot be undone.",
+      tr("Delete account?"),
+      tr("This deletes your Drift account and signs you out. This cannot be undone."),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: tr("Cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: tr("Delete"),
           style: "destructive",
           onPress: () => {
             Alert.alert(
-              "Are you sure?",
-              "Your username, profile details, tasks, friendships, and feedback will be disconnected from your identity.",
+              tr("Are you sure?"),
+              tr("Your profile, tasks, history, friendships, challenges and photo are permanently erased. If you subscribe to Drift Pro, cancel it separately in iPhone Settings → Apple ID → Subscriptions."),
               [
-                { text: "Keep account", style: "cancel" },
+                { text: tr("Keep account"), style: "cancel" },
                 {
-                  text: "Delete account",
+                  text: tr("Delete account"),
                   style: "destructive",
                   onPress: async () => {
                     setDeletingAccount(true);
@@ -327,7 +325,7 @@ export default function ProfileScreen({
         <TouchableOpacity onPress={onClose} style={[s.close, { backgroundColor: ink.ghost }]}>
           <CloseIcon size={16} color={ink.deep} />
         </TouchableOpacity>
-        <Text style={[s.topTitle, { color: ink.faint }]}>PROFILE</Text>
+        <Text style={[s.topTitle, { color: ink.faint }]}>{tr("PROFILE")}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -350,13 +348,13 @@ export default function ProfileScreen({
           <Text style={[s.username, { color: ink.deep }]}>
             <Text style={{ color: ink.faint }}>@</Text>{currentUsername}
           </Text>
-          <Text style={[s.email, { color: ink.mid }]}>{userEmail || "Not signed in"}</Text>
+          <Text style={[s.email, { color: ink.mid }]}>{userEmail || tr("Not signed in")}</Text>
           {/* Plan status pill removed while payments are off — no plan tiers are
               surfaced to the user, so the profile reads like a normal free app. */}
         </View>
 
         <View style={[s.section, { backgroundColor: paper.card, borderColor: ink.border }]}>
-          <Text style={[s.sectionLabel, { color: ink.faint }]}>ACCOUNT</Text>
+          <Text style={[s.sectionLabel, { color: ink.faint }]}>{tr("ACCOUNT")}</Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <TextInput
               value={draftUsername}
@@ -374,7 +372,7 @@ export default function ProfileScreen({
           </View>
         </View>
 
-        <Text style={[s.groupKicker, { color: ink.faint }]}>SETTINGS</Text>
+        <Text style={[s.groupKicker, { color: ink.faint }]}>{tr("SETTINGS")}</Text>
         <View style={{ gap: 10 }}>
           {/* Blocked apps / hours, recurring tasks and automatic tasks moved to
               The Lab tab — they configure behaviour, not the account, and
@@ -389,8 +387,8 @@ export default function ProfileScreen({
           {screenTimeStatus !== "approved" && screenTimeStatus !== "unavailable" && (
             <Row
               id="screenTime"
-              title="Screen Time access"
-              sub={screenTimeStatus === "denied" ? "Denied - tap to enable" : "Not enabled - tap to grant"}
+              title={tr("Screen Time access")}
+              sub={screenTimeStatus === "denied" ? tr("Denied - tap to enable") : tr("Not enabled - tap to grant")}
               accent={earn.terra}
               icon={(c) => <PhoneIcon size={20} color={c} />}
               onPress={onRequestScreenTime}
@@ -399,9 +397,9 @@ export default function ProfileScreen({
           {!subActive && (
             <Row
               id="upgrade"
-              title="Upgrade to Pro"
-              sub="Unlimited apps and tasks, Lockbox, challenges"
-              cta="UPGRADE"
+              title={tr("Upgrade to Pro")}
+              sub={tr("Unlimited apps and tasks, Lockbox, challenges")}
+              cta={tr("UPGRADE")}
               accent={earn.terra}
               icon={(c) => <SparkleIcon size={20} color={c} />}
               onPress={onUpgrade}
@@ -414,16 +412,16 @@ export default function ProfileScreen({
               grant has a real reason to come back and enter a second code. */}
           <Row
             id="redeemCode"
-            title="Redeem a code"
-            sub="Have a Pro or cohort code? Unlock it here"
+            title={tr("Redeem a code")}
+            sub={tr("Have a Pro or cohort code? Unlock it here")}
             icon={(c) => <SparkleIcon size={20} color={c} />}
             onPress={() => setRedeemOpen(true)}
           />
           <Row
             id="shareInvite"
-            title="Share & Invite"
-            sub="Share your stats, earn bonus time"
-            cta="SHARE"
+            title={tr("Share & Invite")}
+            sub={tr("Share your stats, earn bonus time")}
+            cta={tr("SHARE")}
             accent={earn.green}
             icon={(c) => (
               <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -436,34 +434,40 @@ export default function ProfileScreen({
 
         {/* Feedback + legal */}
         <View style={[s.legalGroup, { backgroundColor: ink.ghost }]}>
+          <LanguagePicker
+            dark={dark}
+            rowStyle={[s.legalRow, { borderColor: ink.hairline }]}
+            textStyle={[s.legalText, { color: ink.deep }]}
+            chevronStyle={[s.legalChevron, { color: ink.faint }]}
+          />
           <TouchableOpacity onPress={() => setFeedbackOpen(true)} style={[s.legalRow, { borderColor: ink.hairline }]}>
-            <Text style={[s.legalText, { color: ink.deep }]}>Send feedback</Text>
+            <Text style={[s.legalText, { color: ink.deep }]}>{tr("Send feedback")}</Text>
             <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => Linking.openURL("https://driftproductivity.com/privacy/")}
             style={[s.legalRow, { borderColor: ink.hairline }]}
           >
-            <Text style={[s.legalText, { color: ink.deep }]}>Privacy policy</Text>
+            <Text style={[s.legalText, { color: ink.deep }]}>{tr("Privacy policy")}</Text>
             <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => Linking.openURL("https://driftproductivity.com/terms/")}
             style={[s.legalRow, { borderColor: "transparent" }]}
           >
-            <Text style={[s.legalText, { color: ink.deep }]}>Terms of use</Text>
+            <Text style={[s.legalText, { color: ink.deep }]}>{tr("Terms of use")}</Text>
             <Text style={[s.legalChevron, { color: ink.faint }]}>›</Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
-          onPress={() => Alert.alert("Sign out?", "You'll need to sign back in to access your data.", [
-            { text: "Cancel", style: "cancel" },
-            { text: "Sign out", style: "destructive", onPress: onSignOut },
+          onPress={() => Alert.alert(tr("Sign out?"), tr("You'll need to sign back in to access your data."), [
+            { text: tr("Cancel"), style: "cancel" },
+            { text: tr("Sign out"), style: "destructive", onPress: onSignOut },
           ])}
           style={[s.signOut, { backgroundColor: theme.danger.bg }]}
         >
-          <Text style={[s.signOutText, { color: theme.danger.fg }]}>Sign out</Text>
+          <Text style={[s.signOutText, { color: theme.danger.fg }]}>{tr("Sign out")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -473,7 +477,7 @@ export default function ProfileScreen({
         >
           {deletingAccount
             ? <ActivityIndicator color={theme.danger.fg} />
-            : <Text style={[s.deleteAccountText, { color: theme.danger.fg }]}>Delete account</Text>}
+            : <Text style={[s.deleteAccountText, { color: theme.danger.fg }]}>{tr("Delete account")}</Text>}
         </TouchableOpacity>
       </ScrollView>
 

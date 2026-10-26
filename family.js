@@ -50,7 +50,7 @@ export async function fetchMyFamily(userId) {
   if (!userId) return null;
   const { data, error } = await supabase
     .from("families")
-    .select("id, code, active")
+    .select("id, code, active, consent_at, consent_version")
     .eq("parent_id", userId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -141,6 +141,24 @@ export function rejectChildTask(taskId) {
 export function setChildAppPolicy(childId, allow, mode = "categories") {
   return invokeFamilyFn("set-child-app-policy",
     { child_id: childId, app_policy: { mode, allow: allow || [] } });
+}
+
+// ── Parental consent + child data rights (COPPA) ──
+// Bump when the direct notice in ParentConsent.jsx changes materially: COPPA
+// needs fresh consent for a material change, and the parent shell asks again
+// whenever the stored version differs.
+export const CONSENT_NOTICE_VERSION = "2026-10-25";
+
+export function grantParentalConsent() {
+  return invokeFamilyFn("family-privacy", { action: "grant", notice_version: CONSENT_NOTICE_VERSION });
+}
+
+export function withdrawParentalConsent() {
+  return invokeFamilyFn("family-privacy", { action: "withdraw" });
+}
+
+export function deleteChildData(childId) {
+  return invokeFamilyFn("family-privacy", { action: "delete_child", child_id: childId });
 }
 
 // ── Parent PIN (gates the native app picker on the child device) ──

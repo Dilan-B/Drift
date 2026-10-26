@@ -23,15 +23,16 @@ import { FF } from "./theme";
 import { LeafGlyph } from "./SproutArt";
 import { POSE_EXERCISE_IDS } from "./PoseCamera";
 
+import { tr } from "./i18n";
 const CHALLENGE_OPTIONS = [
-  { id: "pushups", label: "Push-ups", Icon: DumbbellIcon, reps: 20, title: "20 push-ups", minutes: 5 },
-  { id: "squats", label: "Squats", Icon: DumbbellIcon, reps: 30, title: "30 squats", minutes: 5 },
-  { id: "jacks", label: "Jumping Jacks", Icon: BoltIcon, reps: 30, title: "30 jumping jacks", minutes: 4 },
-  { id: "situps", label: "Sit-ups", Icon: LegIcon, reps: 20, title: "20 sit-ups", minutes: 5 },
-  { id: "burpees", label: "Burpees", Icon: FireIcon, reps: 10, title: "10 burpees", minutes: 6 },
-  { id: "lunges", label: "Lunges", Icon: LegIcon, reps: 20, title: "20 lunges", minutes: 5 },
-  { id: "plank", label: "Plank", Icon: SurfIcon, secs: 60, title: "60 second plank", minutes: 2 },
-  { id: "run", label: "10 min jog", Icon: RunIcon, secs: 600, title: "10 minute jog", minutes: 10 },
+  { id: "pushups", get label() { return tr("Push-ups"); }, Icon: DumbbellIcon, reps: 20, get title() { return tr("20 push-ups"); }, minutes: 5 },
+  { id: "squats", get label() { return tr("Squats"); }, Icon: DumbbellIcon, reps: 30, get title() { return tr("30 squats"); }, minutes: 5 },
+  { id: "jacks", get label() { return tr("Jumping Jacks"); }, Icon: BoltIcon, reps: 30, get title() { return tr("30 jumping jacks"); }, minutes: 4 },
+  { id: "situps", get label() { return tr("Sit-ups"); }, Icon: LegIcon, reps: 20, get title() { return tr("20 sit-ups"); }, minutes: 5 },
+  { id: "burpees", get label() { return tr("Burpees"); }, Icon: FireIcon, reps: 10, get title() { return tr("10 burpees"); }, minutes: 6 },
+  { id: "lunges", get label() { return tr("Lunges"); }, Icon: LegIcon, reps: 20, get title() { return tr("20 lunges"); }, minutes: 5 },
+  { id: "plank", get label() { return tr("Plank"); }, Icon: SurfIcon, secs: 60, get title() { return tr("60 second plank"); }, minutes: 2 },
+  { id: "run", get label() { return tr("10 min jog"); }, Icon: RunIcon, secs: 600, get title() { return tr("10 minute jog"); }, minutes: 10 },
 ];
 
 // Mirrors getStake() in SocialScreen so the preview matches what's at stake.
@@ -181,9 +182,7 @@ export default function ChallengeSheet({
     setSending(false);
     if (error) {
       Vibration.vibrate([0, 30, 40, 30]);
-      setErrorMsg(/title|description|duration_mins|ai_required|schema cache/i.test(error.message || "")
-        ? "Custom challenges need the Supabase SQL update before they can be sent."
-        : (error.message || "Could not send challenge."));
+      setErrorMsg(/title|description|duration_mins|ai_required|schema cache/i.test(error.message || "") ? tr("Custom challenges need the Supabase SQL update before they can be sent.") : error.message || tr("Could not send challenge."));
       return;
     }
     Vibration.vibrate(18);
@@ -233,7 +232,7 @@ export default function ChallengeSheet({
             borderRadius: 16, paddingHorizontal: 16, paddingVertical: 9,
             backgroundColor: th.deep, transform: [{ scale: sentScale }],
           }}>
-            <Text style={{ color: th.onDeep, fontFamily: FF.bodyMed, fontSize: 13 }}>Sent</Text>
+            <Text style={{ color: th.onDeep, fontFamily: FF.bodyMed, fontSize: 13 }}>{tr("Sent")}</Text>
           </Animated.View>
         )}
 
@@ -250,7 +249,7 @@ export default function ChallengeSheet({
             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
               <View style={{ flex: 1 }}>
                 <Text style={fieldKicker}>
-                  {type === "dare" ? "SEND A DARE" : "SEND A CHALLENGE"}
+                  {type === "dare" ? tr("SEND A DARE") : tr("SEND A CHALLENGE")}
                 </Text>
                 <Text
                   numberOfLines={1}
@@ -289,11 +288,11 @@ export default function ChallengeSheet({
               overflow: "hidden",
             }}>
               {/* Type */}
-              <Text style={fieldKicker}>TYPE</Text>
+              <Text style={fieldKicker}>{tr("TYPE")}</Text>
               <View style={{ flexDirection: "row", gap: 10 }}>
                 {[
-                  { id: "compete", label: "Compete", sub: "first done wins" },
-                  { id: "dare", label: "Dare", sub: "finish before midnight" },
+                  { id: "compete", label: tr("Compete"), sub: tr("first done wins") },
+                  { id: "dare", label: tr("Dare"), sub: tr("finish before midnight") },
                 ].map(m => {
                   const active = type === m.id;
                   return (
@@ -320,8 +319,8 @@ export default function ChallengeSheet({
               {/* Exercise / Custom segment */}
               <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
                 {[
-                  ["exercise", "Exercise"],
-                  ["custom", "Custom"],
+                  ["exercise", tr("Exercise")],
+                  ["custom", tr("Custom")],
                 ].map(([id, label]) => {
                   const active = mode === id;
                   return (
@@ -372,7 +371,7 @@ export default function ChallengeSheet({
                             }}>
                               <CameraIcon size={9} color={th.sage} />
                               <Text style={{ fontFamily: FF.kicker, fontSize: 7, color: th.sage, letterSpacing: 1 }}>
-                                LIVE
+                                {tr("LIVE")}
                               </Text>
                             </View>
                           )}
@@ -401,7 +400,7 @@ export default function ChallengeSheet({
                     }}
                     value={title}
                     onChangeText={setTitle}
-                    placeholder={type === "dare" ? "Dare title" : "Competition title"}
+                    placeholder={type === "dare" ? tr("Dare title") : tr("Competition title")}
                     placeholderTextColor={th.faint}
                     maxLength={80}
                   />
@@ -415,7 +414,7 @@ export default function ChallengeSheet({
                       }}
                       value={minutes}
                       onChangeText={setMinutes}
-                      placeholder="Minutes"
+                      placeholder={tr("Minutes")}
                       placeholderTextColor={th.faint}
                       keyboardType="number-pad"
                       maxLength={4}
@@ -429,7 +428,7 @@ export default function ChallengeSheet({
                       }}
                       value={rules}
                       onChangeText={setRules}
-                      placeholder={type === "dare" ? "What they must do" : "Rules or proof needed"}
+                      placeholder={type === "dare" ? tr("What they must do") : tr("Rules or proof needed")}
                       placeholderTextColor={th.faint}
                       maxLength={140}
                     />
@@ -455,14 +454,10 @@ export default function ChallengeSheet({
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.ink }}>
-                  {type === "dare"
-                    ? `Done before midnight earns +${stake.xp} XP`
-                    : `First to finish wins +${stake.xp} XP`}
+                  {type === "dare" ? tr("Done before midnight earns +{{xp}} XP", { xp: stake.xp }) : tr("First to finish wins +{{xp}} XP", { xp: stake.xp })}
                 </Text>
                 <Text style={{ fontFamily: FF.body, fontSize: 12, color: th.mid, marginTop: 2, lineHeight: 17 }}>
-                  {type === "dare"
-                    ? `Missing the deadline costs ${stake.penaltyMins} minutes of screen time.`
-                    : `The loser gives up ${stake.penaltyMins} minutes of screen time.`}
+                  {type === "dare" ? tr("Missing the deadline costs {{penaltyMins}} minutes of screen time.", { penaltyMins: stake.penaltyMins }) : tr("The loser gives up {{penaltyMins}} minutes of screen time.", { penaltyMins: stake.penaltyMins })}
                 </Text>
               </View>
             </View>
@@ -489,13 +484,7 @@ export default function ChallengeSheet({
                       : <SpeakerIcon size={16} color={th.sage} />}
               </View>
               <Text style={{ flex: 1, fontFamily: FF.body, fontSize: 12, color: th.mid, lineHeight: 18 }}>
-                {mode === "exercise"
-                  ? POSE_EXERCISE_IDS.has(exercise?.id)
-                    ? "Verified live — the camera watches the movement and counts every rep automatically."
-                    : "Verified with a photo when the exercise is done."
-                  : bothPremium
-                    ? "Both accounts have Pro, so completion uses AI Check."
-                    : "Custom challenges send normally. AI verification turns on when both users have Pro."}
+                {mode === "exercise" ? POSE_EXERCISE_IDS.has(exercise?.id) ? tr("Verified live — the camera watches the movement and counts every rep automatically.") : tr("Verified with a photo when the exercise is done.") : bothPremium ? tr("Both accounts have Pro, so completion uses AI Check.") : tr("Custom challenges send normally. AI verification turns on when both users have Pro.")}
               </Text>
             </View>
 
@@ -537,11 +526,7 @@ export default function ChallengeSheet({
                 fontFamily: FF.bodyMed, fontSize: 15, letterSpacing: 0.2,
                 color: canSend ? th.onDeep : th.faint,
               }}>
-                {sending
-                  ? "Sending…"
-                  : canSend
-                    ? (type === "dare" ? "Send dare" : "Send challenge")
-                    : "Name your challenge first"}
+                {sending ? tr("Sending…") : canSend ? type === "dare" ? tr("Send dare") : tr("Send challenge") : tr("Name your challenge first")}
               </Text>
             </TouchableOpacity>
           </View>

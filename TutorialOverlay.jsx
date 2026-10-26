@@ -14,17 +14,18 @@ import React, { useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, Animated, StyleSheet, Platform, Dimensions } from "react-native";
 import { getTheme, FF } from "./theme";
 
+import { tr } from "./i18n";
 const { width: W, height: H } = Dimensions.get("window");
 const PAD = 10; // breathing room around the spotlighted element
 
 const STEPS = [
-  { target: null,      anchor: "center", kicker: "WELCOME", title: "Welcome to Drift", body: "You earn your screen time by completing real tasks. Here's the 20-second tour." },
-  { target: "balance", anchor: "top",    kicker: "TODAY",   title: "Your earned time", body: "This is the time you've banked. When it reaches zero, your chosen apps lock until you earn more." },
-  { target: "add",     anchor: "top",    kicker: "TASKS",   title: "Add a task", body: "Tap the + to add something worth doing. Finish and confirm it to earn screen time." },
-  { target: { tab: 1 }, anchor: "bottom", kicker: "FOCUS",  title: "Drift In", body: "Start a focus session from the tab bar. Your apps stay blocked while you focus — and you earn time for it." },
-  { target: { tab: 2 }, anchor: "bottom", kicker: "GROVE",  title: "The Grove", body: "Your progress under You, and your friends under Friends — streaks, levels and challenges in one place." },
-  { target: { tab: 3 }, anchor: "bottom", kicker: "THE LAB", title: "The Lab", body: "Where you tune Drift: which apps get blocked, what repeats, and what gets suggested automatically." },
-  { target: null,      anchor: "center", kicker: "READY",   title: "You're all set", body: "Complete your first task to bank some minutes. Welcome to focused." },
+  { target: null,      anchor: "center", get kicker() { return tr("WELCOME"); }, get title() { return tr("Welcome to Drift"); }, get body() { return tr("You earn your screen time by completing real tasks. Here's the 20-second tour."); } },
+  { target: "balance", anchor: "top",    get kicker() { return tr("TODAY"); },   get title() { return tr("Your earned time"); }, get body() { return tr("This is the time you've banked. When it reaches zero, your chosen apps lock until you earn more."); } },
+  { target: "add",     anchor: "top",    get kicker() { return tr("TASKS"); },   get title() { return tr("Add a task"); }, get body() { return tr("Tap the + to add something worth doing. Finish and confirm it to earn screen time."); } },
+  { target: { tab: 1 }, anchor: "bottom", get kicker() { return tr("FOCUS"); },  get title() { return tr("Drift In"); }, get body() { return tr("Start a focus session from the tab bar. Your apps stay blocked while you focus — and you earn time for it."); } },
+  { target: { tab: 2 }, anchor: "bottom", get kicker() { return tr("GROVE"); },  get title() { return tr("The Grove"); }, get body() { return tr("Your progress under You, and your friends under Friends — streaks, levels and challenges in one place."); } },
+  { target: { tab: 3 }, anchor: "bottom", get kicker() { return tr("THE LAB"); }, get title() { return tr("The Lab"); }, get body() { return tr("Where you tune Drift: which apps get blocked, what repeats, and what gets suggested automatically."); } },
+  { target: null,      anchor: "center", get kicker() { return tr("READY"); },   get title() { return tr("You're all set"); }, get body() { return tr("Complete your first task to bank some minutes. Welcome to focused."); } },
 ];
 
 // Resolve a step's target into a padded, on-screen rect (or null for full dim).
@@ -137,7 +138,7 @@ export default function TutorialOverlay({ dark = false, targets, onDone }) {
       />
 
       <TouchableOpacity onPress={onDone} activeOpacity={1} style={s.skip}>
-        <Text style={[s.skipText, { color: "#FAF6EE" }]}>Skip</Text>
+        <Text style={[s.skipText, { color: "#FAF6EE" }]}>{tr("Skip")}</Text>
       </TouchableOpacity>
 
       <View style={[s.cardWrap, cardPosition]} pointerEvents="box-none">
@@ -157,7 +158,7 @@ export default function TutorialOverlay({ dark = false, targets, onDone }) {
             </View>
             <TouchableOpacity onPress={next} activeOpacity={0.85} style={[s.nextBtn, { backgroundColor: earn.deep }, theme.fx.glow]}>
               <Text style={[s.nextText, { color: dark ? "#16261C" : "#FAF6EE" }]}>
-                {isLast ? "Done" : "Next"}
+                {isLast ? tr("Done") : tr("Next")}
               </Text>
             </TouchableOpacity>
           </View>

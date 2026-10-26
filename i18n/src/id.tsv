@@ -1,0 +1,1447 @@
+1	\n\nCatatan: lokasi diatur ke "Saat Menggunakan App", jadi kedatangan sungguhan tidak akan terpicu saat Drift ditutup.
+2	 Setiap harga yang lebih rendah ditawarkan di app untuk kamu terima.
+3	 Harga akhir sesuai yang ditampilkan App Store.
+4	 · dikembalikan, coba lagi
+5	 · beruntun {{streak}} hari
+6	"{{title}}" akan dihapus dari hari ini.
+7	"{{title}}" akan dihapus.
+8	"{{title}}" — buka Drift untuk menerima atau menolak.
+9	(OPSIONAL)
+11	+ Tugas
+12	+{{minutes}} mnt
+13	+{{minutes}} mnt{{p}}
+14	+{{p}} menit saat selesai
+15	+{{rewardMinutes}} mnt menunggu jika tetap di tempat
+16	+{{xp}} XP
+17	1 malam berturut-turut.
+18	10 burpee
+19	Joging 10 mnt
+20	10 mnt · Bernapas dan reset
+21	10 mnt · Tulis pikiranmu
+22	Joging 10 menit
+23	12+ karakter, angka, simbol
+24	15 mnt · Udara segar
+25	15 mnt · Rapikan ruanganmu
+26	2 mnt · Mulai hari dengan baik
+27	20 lunge
+28	20 mnt · Buku atau artikel
+29	20 mnt · Makan sesuatu yang layak
+30	20 mnt · Musik, seni, coding, dll.
+31	20 push-up
+32	20 sit-up
+33	30 jumping jack
+34	30 mnt · Olahraga atau gym
+35	30 mnt · PR atau belajar
+36	30 squat
+37	3–20 karakter, huruf/angka/_
+38	5 mnt · Lemaskan badan
+39	5/JAM · BATAS 20/HARI
+40	60 mnt · Detoks pagi
+41	Plank 60 detik
+42	9:00 Standup
+43	@namapengguna
+44	@{{fromUsername}} ingin tumbuh bersamamu di Drift.
+45	@{{leaderName}} punya waktu layar lebih sedikit darimu hari ini. Kamu di {{spent}}.
+46	@{{name}} menerima tantanganmu
+47	@{{name}} menolak tantanganmu
+48	@{{username}} tidak punya akun Drift.
+49	@{{username}} belum melapor hari ini.
+50	@{{username}} belum ada di Drift.
+51	Notifikasi "Kamu di {{label}}" seharusnya muncul sekarang. Ketuk — Drift akan terbuka dengan "{{title}}" siap dikonfirmasi.
+52	Semalaman di ruangan lain. +{{max}} menit didapat.
+53	Token notifikasi
+54	Orang tua harus mengatur PIN di app mereka dulu.
+56	AKUN
+57	TAMBAH ANAK
+58	AI
+59	CEK AI
+60	AI memeriksa buktimu sebelum kredit didapat. Dengan Pro, AI juga membaca tugasmu dan menentukan nilainya berdasarkan tingkat kesulitan.
+61	Fitur AI memerlukan langganan aktif.
+62	AI membaca tugasmu untuk menentukan nilai dan kategorinya, lalu memeriksa buktimu sebelum kredit didapat.
+63	SUDAH SELESAI
+64	TAMPILAN
+65	ARSIP
+66	TUGAS OTOMATIS
+67	Tinggalkan
+68	Tinggalkan sesi
+69	Tinggalkan sesi?
+70	Meninggalkan sesi tidak memberi kredit.
+71	Sisa sekitar {{m}} mnt waktu yang didapat.
+72	Terima
+73	Menerima…
+74	Akun dihapus
+75	Pengaturan akun ada di profilmu.
+76	Rencana aksi
+77	Tambah
+78	Tambah "{{title}}" ({{minutes}} mnt)? Ketuk untuk konfirmasi.
+79	Tambah tugas
+80	Tambah jawaban
+81	Tambahkan aku di Drift: {{link}}
+82	Tambahkan satu untuk mulai.
+83	Tambah bukti
+84	Tambah tugas nyata
+85	Tambah tugas
+86	Tambah tugas ini?
+87	Tambahkan akun Google di Pengaturan → App → Kalender → Akun, pastikan Kalender aktif, lalu ketuk Periksa Ulang.
+88	Ditambahkan ke hari ini — jika kamu konfirmasi
+89	Menambahkan…
+90	Menambahkan jam blokir ini. Milikmu tetap ada.
+91	Siang
+92	Setiap siang
+93	Lagi
+94	Arahkan ke tempatnya, lalu ketuk untuk menaruh kotak
+95	Bandara
+96	Budi
+97	Semua
+98	Semua beres
+99	Izinkan akses kalender untuk mengimpor acara sebagai tugas.
+100	Izinkan kamera di Pengaturan.
+101	Izinkan akses foto di Pengaturan.
+102	Diizinkan
+103	App yang diizinkan
+104	Waktu hampir habis
+105	Hampir selesai
+106	Sudah punya akun? Masuk
+107	Selalu izinkan untuk {{display_name}}
+108	Perlu lokasi "Selalu"
+109	Akun dengan email itu sudah ada — beralih ke Masuk.
+110	Akun dengan email itu sudah ada. Coba masuk.
+111	Purba
+112	Jawab pertanyaan untuk menyelesaikan verifikasi.
+113	Kode App Store hanya bisa ditukar di iPhone.
+114	Pemblokiran app butuh build Drift lengkap — kamu bisa mengaturnya nanti.
+115	Pemblokiran app lewat Durasi Layar Apple hanya untuk iOS.
+116	Permintaan app
+117	Pemblokiran Durasi Layar Apple butuh build Drift khusus.
+118	Pemblokiran Durasi Layar Apple butuh build Drift khusus. Perbarui Drift lalu coba lagi.
+119	Masuk dengan Apple gagal.
+120	Janji temu
+121	Setujui
+122	App
+123	App terkunci
+124	App terkunci\nsaat waktumu habis
+125	App, kategori, atau domain web.
+126	Arsipkan
+127	Yakin?
+128	Aktif pukul {{toLocaleTimeString}}. Biarkan ponselmu di tempat dan Drift akan memeriksanya pagi nanti.
+129	Lengan
+130	Kedatangan aktif
+131	Kedatangan tidak akan terpicu
+132	Tiba di tempat yang kamu simpan dan Drift menawarkan tugasnya.
+133	Tugaskan
+134	Kapan saja kamu bisa melihat data anakmu yang disimpan Drift (ketuk Data di samping namanya), menghapusnya, atau menarik persetujuan — semua data anak dihapus dan tidak ada lagi yang dikumpulkan. Pertanyaan: driftappcontact@gmail.com.
+135	Minimal 3 karakter.
+136	Di gym
+137	Tersedia sekarang
+138	SEBELUM ANAKMU BERGABUNG
+139	JAM BLOKIR
+140	RINCIAN
+141	Kembali
+142	Kembali ke masuk
+143	Saldo 0 selama jam-jam ini.
+144	Bank
+145	Urusan bank
+146	Bar
+147	Tukang cukur
+148	Basket
+149	Lapangan basket
+150	Spesifik! Jelaskan apa yang benar-benar akan kamu lakukan (mis. "Baca 20 halaman", bukan "macam-macam").
+151	Pantai
+152	Jalan di pantai
+153	Jalur sepeda
+154	Kesalahan blokir
+155	Blokir semua app, tugas tanpa batas, Lockbox, dan tanamanmu sepenuhnya.
+156	Diblokir
+157	App diblokir
+158	Jam blokir
+159	Diblokir.
+160	Toko buku
+161	Kebun raya
+162	Kedua akun punya Pro, jadi penyelesaian diperiksa dengan Cek AI.
+163	Keduanya opsional, mati sampai kamu menyalakannya, dan tetap di perangkatmu. Ada di Profil → Tugas otomatis.
+164	Bouldering
+165	Dinding bouldering
+166	Bowling
+167	Arena bowling
+168	Sasana tinju
+169	Latihan tinju
+170	Tarik napas.
+171	Masukkan acara hari ini sebagai tugas. Hanya baca — Drift tidak pernah mengubah kalendermu.
+172	Bug, ide, apa saja. Kami membaca setiap pesan.
+173	Sesi membuat
+174	Dibuat tim yang sangat kecil. Ulasan cuma butuh sepuluh detik dan sangat membantu.
+175	Burpee
+176	Halte bus
+177	Dengan membuat akun, kamu menyetujui{{p}}
+178	AKUN KALENDER
+179	KALENDER YANG DIPAKAI
+180	KATEGORI
+181	TANTANGAN
+182	TANTANGAN KALAH
+183	TANTANGAN MENANG
+184	TANTANGAN - {{length}}
+185	AMBIL NAMA PENGGUNA
+186	KLAIM {{credits}} MNT KREDIT
+187	TUTUP
+188	SELESAI
+189	KEYAKINAN: {{p}}
+190	KONTAK
+191	LANJUT
+192	TINGKAT SAAT INI
+193	Kafe
+194	Kalender
+195	Perlu akses kalender
+196	Sinkron kalender
+197	Kalender & tempat
+198	Telepon teman
+199	Kamera
+200	Tugas perkemahan
+201	Perkemahan
+202	Kampus
+203	Tidak bisa diverifikasi
+204	Batal
+205	Batalkan tantangan ini?
+206	Batalkan malam ini
+207	Kanopi
+208	Urusan mobil
+209	Bengkel
+210	Cuci mobil
+211	Mengejar ketinggalan
+212	Tantangan
+213	Tantangan
+214	Ubah apa pun sebelum konfirmasi.
+215	Ubah app diblokir
+216	Pastikan kamu masuk ke App Store dan terhubung internet, lalu coba lagi.
+217	Cek emailmu untuk verifikasi akun, lalu masuk lagi.
+218	Cek emailmu untuk verifikasi akun, lalu coba masuk lagi.
+219	Pilih paket Drift Family dulu. Begitulah Drift memastikan orang dewasa yang mengaturnya.
+220	Pilih app untuk diblokir
+221	Pilih waktu
+222	Pilih app yang diblokir.\nDrift menerapkannya walau ditutup.
+223	Pilih kalender yang dibaca dan kelola tempat tersimpan.
+224	Gereja
+225	Klaim kredit
+226	Bersihkan / rapikan
+227	Rapikan kamarmu
+228	Lokasi klien
+229	Kunjungan klien
+230	Gym panjat
+231	Sesi panjat
+232	Klip terlalu besar
+233	Klip terlalu panjang
+234	Tutup
+235	Kira-kira juga tidak apa. Yang penting nyata.
+236	Klub
+237	Kumpul klub
+238	Ambil hadiah
+239	Balai warga
+240	Acara warga
+241	Kebun komunitas
+242	Membaca di perjalanan
+243	Bertanding
+244	Judul tantangan
+245	Selesaikan satu tugas dulu.
+246	Selesaikan tugas di Drift untuk membuka.
+247	Selesaikan tugas untuk mendapatkan waktumu kembali.
+248	Selesaikan tugas hari ini untuk mendapat waktu layar.
+249	Selesaikan tugas, dapatkan menit.\nMakin berat tugasnya, makin banyak yang didapat.
+250	Selesai lebih awal
+251	Selesaikan tugas pertamamu untuk menabung menit. Selamat datang di fokus.
+252	Gedung konser
+253	Pusat konferensi
+254	Konfirmasi
+255	Verifikasi email atau nomor telepon sebelum lanjut.
+256	Hubungkan Google Kalender
+257	Perlu akses kontak
+258	Lanjut
+259	Lanjut tanpa update (dev)
+260	Masak
+261	Disalin
+262	Tidak bisa memeriksa ketersediaan nama pengguna. Coba lagi.
+263	Tidak bisa menghapus akun
+264	Tidak bisa mengirim ulang email. Coba lagi.
+265	Tidak bisa menyimpan. Coba lagi.
+266	Tidak bisa mengirim tantangan.
+267	Tidak bisa memperbarui foto profil.
+268	Tidak bisa memperbarui nama pengguna.
+269	Tidak bisa memverifikasi email
+270	Tidak bisa memverifikasi. Coba lagi.
+271	Tidak bisa menambah
+272	Tidak bisa diterapkan sekarang
+273	Tidak bisa menugaskan. Coba lagi.
+274	Tidak bisa memblokir app
+275	Tidak bisa membatalkan
+276	Tidak bisa memeriksa PIN. Coba lagi.
+277	Klip tidak bisa dikompres cukup kecil. Rekam yang lebih pendek.
+278	Foto tidak bisa dikompres cukup kecil. Coba foto lain.
+279	Tidak bisa menghapus. Periksa koneksi lalu coba lagi.
+280	Tidak bisa menyelesaikan masuk. Coba lagi.
+281	Tidak bisa menyelesaikan proses masukmu
+282	Tidak bisa mendapatkan lokasi
+283	Tidak bisa bergabung dengan keluarga. Coba lagi.
+284	Tidak bisa memetakan ruangan
+285	Tidak bisa menghubungi layanan AI. Jika kamu memakai Wi-Fi publik (gym, kafe, atau kampus), mungkin Drift diblokir — matikan Wi-Fi untuk memakai data seluler lalu coba lagi.
+286	Tidak bisa menghubungi App Store
+287	Tidak bisa membaca riwayat gerakan semalam. Kami beri kamu kepercayaan.
+288	Tidak bisa membaca klip itu
+289	Tidak bisa membaca tag itu
+290	Tidak bisa menukar sekarang. Coba lagi.
+291	Tidak bisa menghapus
+292	Tidak bisa menyimpan PIN. Coba lagi.
+293	Tidak bisa menyimpan rencanamu
+294	Tidak bisa mengirim
+295	Tidak bisa memulai
+296	Menghitung sesuatu — repetisi, putaran, halaman? Rekam video. Satu foto tidak bisa menunjukkan angka.
+297	Coworking space
+298	Buat akun
+299	Buat akun untuk berbagi fokusmu{{p}}dengan teman.
+300	Buat tugas ini pada
+301	Buat akunmu
+302	Kredit berdasarkan durasi tugas.
+303	Box CrossFit
+304	Kustom
+305	Tantangan kustom butuh update SQL Supabase sebelum bisa dikirim.
+306	Tantangan kustom terkirim seperti biasa. Verifikasi AI aktif jika keduanya punya Pro.
+307	Hari kustom
+308	TARUHAN
+309	TARUHAN SELESAI
+310	TARUHAN GAGAL
+311	FOKUS DALAM
+312	HAPUS
+313	DEV lewati — tanpa sesi
+314	DEV · SETELAH DAFTAR
+315	DEV · SEBELUM DAFTAR
+316	SELESAI
+317	SELESAI HARI INI
+318	DRIFT
+319	Harian
+320	Latihan menari
+321	Studio tari
+322	Taruhan
+323	Judul taruhan
+324	Gelap
+325	Data
+326	Penitipan anak
+327	Ditolak
+328	Kerja mendalam
+329	Hapus
+330	Hapus akun
+331	Hapus akun?
+332	Hapus rencana ini
+333	Hapus rencana ini?
+334	Hapus data {{name}}
+335	Hapus data {{name}}?
+336	Hapus tugas {{title}}?
+337	Hapus?
+338	Ditolak - ketuk untuk mengaktifkan
+339	Janji dokter gigi
+340	Dokter gigi
+341	Tolak
+342	Jelaskan bagaimana kamu menyelesaikan "{{title}}"...
+343	Perangkat
+344	Tag berbeda
+345	Tutup
+346	Klinik dokter
+347	Taman anjing
+348	Dojo
+349	Jangan putuskan beruntunmu!
+350	Selesai
+351	Selesai sebelum tengah malam dapat +{{xp}} XP
+352	Saldo Drift
+353	Drift Family
+354	Drift In
+355	Drift Pro
+356	Drift Pro memblokir app, kategori, dan situs sebanyak yang kamu mau.
+357	Drift dapat mencocokkan kontakmu untuk menemukan teman yang sudah memakai Drift. Email kontak di-hash di perangkatmu dan tidak pernah diunggah dalam teks biasa.
+358	Drift dapat membaca kalendermu untuk menawarkan acara hari ini sebagai tugas. Drift tidak pernah mengubah kalendermu dan tidak ada yang diunggah.
+359	Drift dapat membaca pengingatmu untuk menawarkannya sebagai tugas. Drift tidak pernah mengubah pengingatmu dan tidak ada yang diunggah.
+360	Drift tidak bisa memblokir app sampai kamu mengaktifkan lagi akses di Pengaturan → Durasi Layar.
+361	Drift memeriksa saat kamu tiba di tempat tersimpan agar bisa menyarankan tugas. Ini butuh akses Selalu agar berjalan di latar belakang. Lokasimu tetap di perangkat dan tidak pernah diunggah.
+362	Drift tidak merekam audio. Izin ini diwajibkan komponen kamera yang dipakai untuk deteksi pose.
+363	Masukan Drift
+364	Drift tidak punya izin lokasi (Pengaturan › Drift › Lokasi).
+365	Drift in
+366	Akun anak Drift
+367	Drift dapat menyimpan tangkapan layar ke galeri jika kamu memilih membagikan progresmu.
+368	Drift butuh akses lokasi "Selalu" untuk tahu saat kamu tiba di suatu tempat. Kamu bisa mengubahnya di Pengaturan → Drift → Lokasi.
+369	Drift butuh akses foto untuk melampirkan bukti ke tugas atau mengatur foto profil.
+370	Akun orang tua Drift
+371	Drift membaca Google Kalender melalui iOS. Buka Pengaturan → App → Kalender → Akun → Tambah Akun → Google, masuk, dan aktifkan Kalender. Lalu kembali dan periksa ulang.
+372	Drift membaca tag NFC yang kamu taruh di ruangan lain, untuk membuktikan ponselmu ada di sana sebelum tidur. Drift hanya membaca ID tag dan tidak pernah menulis ke tag itu.
+373	Drift memakai Gerak & Kebugaran untuk memeriksa ponselmu diam semalaman. Aktifkan di Pengaturan › Drift › Gerak & Kebugaran.
+374	Drift memakai data gerakan untuk mendeteksi gerakan olahraga dalam tantangan latihan, dan untuk memeriksa ponselmu tetap diam selama sesi Lockbox atau semalaman dengan penjaga ponsel-di-ruangan-lain, bahkan saat layar mati. Data gerakan dibaca di perangkatmu dan tidak pernah diunggah.
+375	Drift memakai kamera untuk memotret bukti tugas, mengatur foto profil, dan menaruh Lockbox di permukaan nyata dengan augmented reality.
+376	Drift memakai lokasimu untuk menyimpan tempat pilihanmu, agar bisa menyarankan tugas saat kamu tiba. Lokasimu tetap di perangkat.
+377	Drift akan melupakan tagmu dan menghentikan pengingat malam. Riwayat beruntunmu tetap ada.
+378	Minum
+379	Taruh kotak di mejamu. Ponsel masuk, dan tetap di dalam.
+380	Antar barang daur ulang
+381	Taruh kotak
+382	Turun ke lantai · lompat dan tepuk tangan di atas kepala
+383	Binatu
+384	Antar cucian kering
+385	BISA DIDAPAT
+386	DIDAPAT
+387	SUKA DRIFT?
+388	MASUKKAN KODE
+389	PEROLEHAN PERKIRAAN
+390	Setiap tugas punya perkiraan waktu dan memberi waktu layar saat diselesaikan.
+391	Dapatkan waktu layar dengan menyelesaikan tugas di Drift.
+392	Dapatkan ini lagi untuk membuka
+393	Dapatkan waktu.
+394	Dapatkan waktu layarmu sendiri dengan menyelesaikan tugas.
+395	Dapatkan waktu layarmu
+396	Dapatkan waktu layarmu dengan menyelesaikan hal nyata. Ponselmu terbuka saat kamu melakukannya.
+397	Dapatkan waktumu
+398	Didapat
+399	Perolehan per jenis
+400	Siku
+401	Siku 90° di bawah · kunci lurus di atas
+402	Email
+403	Akun email harus diverifikasi sebelum Drift terbuka.
+404	Email atau kata sandi salah.
+405	Email wajib diisi.
+406	Email terlalu panjang.
+407	Email kami di {{FEEDBACK_EMAIL}}
+408	Aktifkan Kontak di Pengaturan untuk menemukan teman. Kontak tidak pernah meninggalkan perangkatmu tanpa di-hash.
+409	Aktifkan Drift di Pengaturan > Durasi Layar agar Drift bisa memblokir app.
+410	Aktifkan kamera
+411	Aktifkan akses lokasi agar Drift bisa memakai saran tempat.
+412	Selesai
+413	Akhiri lebih awal
+414	Akhiri sesi ini?
+415	Masukkan kode.
+416	Masukkan alamat email yang valid.
+417	Masukkan minimal 4 angka.
+418	Masukkan untuk memilih app yang diblokir.
+419	Masukkan 1 sampai 600 menit.
+420	Masukkan kode 8 angka dari emailmu.
+421	Masukkan kode dari programmu atau tim Drift untuk membuka Drift Pro.
+422	Masukkan kode keluarga dari orang tuamu.
+423	Masukkan kodemu
+424	Masukkan namamu.
+425	Masukkan ID pesertamu.
+426	Kesalahan
+427	Abadi
+428	Malam
+429	Setiap malam
+430	Acara
+431	Setiap hari
+432	Semua kursi di keluarga ini sudah terisi. Minta orang tuamu menambah satu di Drift, lalu coba lagi.
+433	Semua yang disimpan untuk akun {{name}}. Tidak ada yang lain yang disimpan.
+434	Semua yang mengubah cara Drift bekerja.
+435	Olahraga
+436	Jelajahi
+437	Lihat pameran
+438	KODE KELUARGA
+439	MASUKAN
+440	FOKUS
+441	Kode keluarga
+442	Rumah keluarga
+443	Waktu keluarga
+444	Pertanian
+445	Kerja di kebun
+446	Isi bensin
+447	Cari teman dari kontak
+448	Selesaikan
+449	Selesai sebelum tengah malam → +{{xp}} XP
+450	Selesai lebih awal?
+451	Selesaikan dulu. Ini tetap di sini.
+452	Selesaikan. {{name}} masih akan ada.
+453	Yang pertama selesai dapat +{{xp}} XP
+454	Yang pertama terverifikasi dapat +{{xp}} XP
+455	Blok fokus
+456	Fokus.
+457	Waktu fokus?
+458	Blok kerja fokus
+459	Kerja fokus, gym, masak, belajar
+460	Hutan
+461	Paket gratis memblokir hingga {{FREE_BLOCK_LIMIT}}
+462	Jum
+463	Permintaan pertemanan dikirim ke @{{username}}
+464	Permintaan pertemanan dikirim ke @{{username}}.
+465	Rumah teman
+466	Teman
+467	Teman di Drift
+468	Lutut depan 90° · lutut belakang hampir menyentuh lantai
+469	TARGET
+470	HUTAN KECIL
+471	Malam main game
+472	Toko game
+473	Jalan di taman
+474	Berkebun
+475	SPBU
+476	Mulai
+477	Menyiapkan\nsemuanya untukmu
+478	Kembalikan menit yang didapat.
+479	Beri nama tugasnya.
+480	Beri tugas ini sedikit waktu lagi sebelum membuktikannya.
+481	Jalan-jalan
+482	Lapangan golf
+483	Selamat malam
+484	Kerja bagus.
+485	Selamat tidur
+486	Google
+487	Masuk dengan Google belum dikonfigurasi.
+488	Masuk dengan Google gagal
+489	Masuk dengan Google gagal.
+490	Masuk dengan Google belum dikonfigurasi di build ini.
+491	Masuk dengan Google butuh build dev client (tidak bisa di Expo Go).
+492	Kemarin hari yang hebat!
+493	Belanja dapur
+494	Hutan kecil
+495	Tumbuh
+496	Pertumbuhan
+497	Gym
+498	WAKTU TERSULIT
+499	PUNYA KODE?
+500	CARA KERJANYA
+501	CARA KERJANYA
+502	Potong rambut
+503	Nongkrong
+504	Latihan berat, sprint keras, aktivitas luar ruang panjang
+505	Toko bangunan
+506	Punya kode Pro atau kelompok? Buka di sini
+507	Punya kode?
+508	Tinggi
+509	Bantu Drift tumbuh
+510	Mendaki
+511	Pinggul
+512	Pinggul di bawah lutut · dorong lewat tumit
+513	Riwayat
+514	Hai{{p}}
+515	Tempelkan bagian atas ponsel ke tag yang ingin dipakai.
+516	Tempelkan bagian atas ponsel ke tagmu untuk memulai malam.
+517	Tempelkan bagian atas ponsel ke tagmu.
+518	Tahan ponsel diam di tag lalu coba lagi.
+519	Menahan
+520	Rumah
+521	Gym di rumah
+522	Kantor di rumah
+523	Hotel
+524	Begini cara teman menemukanmu. Tidak bisa diubah nanti.
+525	Berapa lama kami menyimpannya
+526	Berapa anak?
+527	Cara kami memastikan kamu orang tuanya
+528	SAYA MENGHABISKAN SEKITAR
+529	Saya setuju
+530	Aku baru dapat {{earnedText}} waktu layar dengan "{{title}}" selama {{timeText}} di Drift.
+531	Aku pakai Drift untuk mendapatkan waktu layar — gabung dengan kodeku {{code}} untuk bonus 15 menit: {{link}}
+532	Nanti saya kembali
+533	Saya anak-anak
+534	Saya orang tua
+535	Saya orang tua atau wali sah dari anak-anak yang akan bergabung ke keluarga ini, dan saya setuju Drift mengumpulkan dan memakai informasi mereka seperti dijelaskan di atas.
+536	Aku pakai Drift untuk mendapatkan waktu layar, bukan scroll tanpa henti — ayo gabung: {{link}}
+537	DI DALAM KOTAK
+538	SEBAGAI GANTINYA, AKU AKAN
+539	Arena es
+540	Pemrosesan gambar tidak terpasang di build ini. Pakai bukti teks atau video.
+541	Impor otomatis
+542	Impor acara hari ini
+543	Berat
+544	Undang kontak ke Drift
+545	Apakah ini benar-benar yang perlu sekarang?
+546	Apakah {{label}} benar-benar yang perlu sekarang?
+547	Apakah {{name}} yang perlu sekarang?
+548	Ponsel diangkat sekitar {{when}}. Tidak ada bonus kali ini.
+549	Lokasi kerja
+550	Gabung keluarga
+551	Gabung keluarga kita di Drift — buka app, pilih "Saya anak-anak", lalu masukkan kode ini: {{code}}
+552	Gabung keluargamu dengan kode dari orang tua.
+553	Gabung{{p}}keluargamu
+554	Jurnal
+555	Lompat buka kaki · angkat tangan sepenuhnya di atas kepala
+556	Jumping jack
+557	Cukup minta Siri
+558	Cuma saya
+559	Sekali saja
+560	Simpan akun
+561	Terus semangat
+562	Maksimal 5000 karakter.
+563	Maksimal {{VIDEO_MAX_SECONDS}} detik — itu cukup untuk menunjukkan hasilnya.
+564	Jaga beruntunmu
+565	Anak
+566	Lutut
+567	KENALI APP
+568	WAKTU LAYAR PALING SEDIKIT HARI INI
+569	DURASI
+570	LEVEL
+571	NAIK LEVEL
+572	LANGSUNG
+573	CEK LANGSUNG
+574	Lab
+575	Kerja lab
+576	Danau
+577	Bahasa
+578	Latihan bahasa
+579	Sekolah bahasa
+580	Semalam
+581	Larut
+582	Larut malam
+583	Nanti
+584	Laundry
+585	Cucian
+586	Belajar
+587	Taruh di ruangan tempat ponselmu tidur. Ketuk saat mau tidur untuk memulai malam.
+588	Biarkan di sana
+589	Biarkan di tempatnya.
+590	Tinggalkan sesi?
+591	Biarkan ponselmu di tempatnya. Drift akan memeriksa pagi nanti.
+592	Kuliah
+593	Ruang kuliah
+594	Biarkan tugas\nditambah otomatis?
+595	Biarkan tugas ditambah otomatis — dari kalendermu, atau saat kamu tiba di suatu tempat.
+596	Ayo kita siapkan
+597	Hanya huruf, angka, dan garis bawah.
+598	Perpustakaan
+599	Hidup
+600	Ringan
+601	Pelacakan langsung tidak tersedia
+602	Pelacakan langsung butuh build lengkap
+603	Memuat model…
+604	Layanan Lokasi mati untuk seluruh perangkat (Pengaturan › Privasi › Layanan Lokasi).
+605	Lokasi diatur ke Saat Menggunakan. Kedatangan butuh Selalu (Pengaturan › Drift › Lokasi › Selalu).
+606	Lokasi tidak tersedia di build ini.
+607	Perlu lokasi
+608	Kunci
+609	Lockbox
+610	Lockbox selesai
+611	Sesi Lockbox hilang
+612	Lockbox · Pro
+613	Terkunci
+614	Pencarian gagal
+615	Dada ke lantai · gerakan penuh yang dihitung
+616	Lunge
+617	Mail belum diatur
+618	Bikin sesuatu
+619	Pastikan akses lokasi aktif, lalu coba lagi.
+620	Rapikan tempat tidur
+621	Mal
+622	Kelola akses app
+623	Peta
+624	Marina
+625	Kelas bela diri
+626	Mencocokkan kontakmu secara privat…{{p}}Email di-hash di perangkatmu.
+627	Maks. 20 karakter.
+628	Makan di luar
+629	Meditasi
+630	Pusat meditasi
+631	Pesan
+632	Menit
+633	Lewat tenggat dan kamu kehilangan {{penaltyMins}} menit waktu layar.
+634	Melewatkan tenggat memotong {{penaltyMins}} menit waktu layar.
+635	Sedang
+636	Sen
+637	Memantau 1 tempat di latar belakang.
+638	Memantau {{placeCount}} tempat di latar belakang.
+639	Bulanan
+640	Pagi
+641	Setiap pagi
+642	Perlu akses gerakan
+643	Data gerakan sedang tidak tersedia. Kami akan memeriksa lagi sebentar.
+644	Gunung
+645	Gerakkan perlahan di atas meja
+646	Museum
+647	Musik
+648	Sekolah musik
+649	TUGAS BARU
+650	TUGAS BARU · DINILAI AI
+651	TIDAK ADA KESEMPATAN TERSISA UNTUK TUGAS INI
+652	TIDAK TERVERIFIKASI
+653	Salon kuku
+654	Nama
+655	Sebut satu hal yang ingin kamu fokuskan dan pilih durasi. Selama Drift In, app yang diblokir tetap terkunci dan timer terus berjalan meski kamu menutup Drift. Selesaikan sesi dan separuh waktu fokusmu kembali sebagai waktu layar — maksimal 60 menit — plus pengalaman untuk tingkatmu tanpa batas. Berhenti lebih awal tidak menghasilkan apa-apa.
+656	Beri nama tantanganmu dulu
+657	Beri nama tugasmu dulu
+658	Diperlukan untuk menghitung repetisi secara langsung
+659	Kesalahan jaringan. Periksa koneksimu.
+660	Permintaan pertemanan baru
+661	Tugas baru untuk {{display_name}}
+662	Berikutnya
+663	Kerja bagus. Progresmu naik ke tingkat baru.
+664	Mantap.
+665	Malam dimulai. App-mu terkunci sampai pagi.
+666	Tidak
+667	Perangkat ini tidak mendukung AR — cukup letakkan ponselmu mendatar.
+668	Belum ada Google Kalender
+669	Belum punya akun? Daftar
+670	Tidak ada app untuk diblokir
+671	Tidak ada scroll diam-diam.
+672	Saldo habis. Satu tugas mengubahnya.
+673	Belum ada jam blokir.
+674	Tidak ada bonus kali ini.
+675	Kamera tidak ditemukan
+676	Belum ada tugas selesai.
+677	Belum ada tugas selesai. Tugas yang disetujui muncul di sini.
+678	Belum ada tugas selesai. Selesaikan satu untuk melihatnya di sini.
+679	Tidak ada kredit yang didapat.
+680	Belum ada email? Cek Spam!
+681	Tanpa email, nomor telepon, kata sandi, foto, lokasi, kontak, atau tanggal lahir. Akun anak tidak pernah memakai Cek AI, jadi tidak ada aktivitas anakmu yang dikirim ke layanan AI. Tanpa iklan, tanpa pelacakan, tanpa analitik di akun anak. App yang mereka pakai tetap di ponsel mereka — Apple hanya memberi Drift token yang tidak terbaca.
+682	Tanpa email, foto, lokasi, kontak, atau Cek AI. App yang mereka buka tetap di ponsel mereka.
+683	Tidak ada frame yang keluar. Coba rekam lagi.
+684	Tidak ada kalender iPhone di perangkat ini.
+685	Belum ada anak. Bagikan kodemu di atas dan mereka akan muncul di sini setelah bergabung.
+686	Tidak ada acara baru di kalender hari ini.
+687	Belum ada tantangan sebelumnya
+688	1 jam tanpa ponsel
+689	Belum ada tempat tersimpan — simpan satu saat kamu berada di sana.
+690	Belum ada tempat tersimpan.
+691	Belum ada tanaman
+692	Belum ada tugas berulang.
+693	Tanpa statistik
+694	Belum ada tag
+695	Tidak ada tugas
+696	Belum ada tugas. Saat orang tuamu memberi satu, tugas itu muncul di sini.
+697	Belum ada waktu yang didapat
+698	Tidak ada waktu untuk dikurangi.
+699	Tidak perlu tekad baja. Sistem yang mengerjakan bagian sulitnya.
+700	Belum ada kontakmu di Drift — undang mereka di bawah.
+701	Belum ada. Berdiri di tempat yang sering kamu datangi — gym, perpustakaan — lalu simpan di bawah.
+702	Tidak tersedia
+703	Tidak tersedia di sini
+704	Belum aktif - ketuk untuk mengizinkan
+705	Tidak ditemukan
+706	Jangan sekarang
+707	Jangan sekarang.
+708	Belum diatur
+709	Belum masuk
+710	Belum
+711	Belum.
+712	Belum ada yang diarsipkan.
+713	Tidak ada di sini yang tidak bisa menunggu.
+714	Belum ada yang dipilih — perisai tidak punya apa pun untuk dikunci.
+715	Belum ada yang terpakai hari ini.
+716	Tidak ada yang diimpor
+717	Tidak ada yang dipulihkan
+718	Tidak perlu diatur — perintah langsung bekerja setelah Drift terpasang. Juga muncul di Pintasan.
+719	Notifikasi mati
+720	Notifikasi mati, jadi kedatangan tidak bisa memberitahumu (Pengaturan › Drift › Notifikasi).
+721	OK
+722	SATU LAGI
+723	CEK SINGKAT
+724	BUKA
+725	OPSIONAL
+726	Mati
+727	Tawarkan tugas saat kamu tiba di tempat tersimpan.
+728	Kantor
+729	Hutan Tua
+730	Nyala
+731	Sekali
+732	Satu tugas di Drift dan ini milikmu.
+733	Satu tugas sudah cukup.
+734	Satu tugas, perhatian penuh. Sisanya bisa menunggu.
+735	Yang kamu tugaskan, beserta statusnya
+736	Hanya untuk menjalankan fitur yang kamu pakai: memberi tugas, menyetujuinya, dan membuka waktu layar di ponsel anakmu.
+737	Baru {{minutes}} menit. Satu malam perlu minimal {{round}} jam.
+738	Buka Drift untuk menerima atau menolak.
+739	Buka Pengaturan
+740	Buka app email saya
+741	Buka email verifikasi terbaru lalu coba lagi.
+742	Buka emailmu
+743	Buka app email dan cari kode Drift 8 angkamu.
+744	Membuka lembar Pro di akun mana pun. Tidak ada di build rilis.
+745	Luar ruang
+746	ID PESERTA
+747	PONSEL JAUH
+748	PONSEL DITARUH JAM
+749	TANAMAN
+750	TANAMAN
+751	PROFIL
+752	PROGRES
+753	KEMBALIKAN
+754	Orang tua
+755	PIN orang tua
+756	Taman
+757	Kata sandi
+758	Kata sandi minimal 12 karakter.
+759	Kata sandi wajib diisi.
+760	Kata sandi terlalu panjang (maks. 72 karakter).
+761	Tantangan sebelumnya
+762	Izin ditolak
+763	Apotek
+764	Telepon
+765	Ponsel di kotak
+766	Foto gagal
+767	Foto terlalu besar
+768	Fisik
+769	Klinik fisioterapi
+770	Pilih target yang lebih rendah
+771	Pilih nama pengguna.
+772	Pilih nama pengguna lain.
+773	Pilih app untuk diblokir
+774	Pilih app yang diblokir saat saldomu nol. iOS menerapkannya walau Drift ditutup, dan bisa terlambat hingga ~15 mnt.
+775	Pilih app dengan Durasi Layar Apple
+776	Pilih minimal satu app atau kategori untuk lanjut.
+777	Angkat untuk melihat kotak lagi
+778	Pilih yang sesuai — tidak bisa diubah nanti.
+779	Ambil resep obat
+780	Ambil perlengkapan
+781	Pilih tugas\nharianmu
+782	Pilih nama penggunamu
+783	Memilih app butuh versi Drift dari App Store atau TestFlight.
+784	Jemput
+785	Kelas pilates
+786	Studio pilates
+787	Tempat
+788	Batas tempat tercapai
+789	Saran tempat
+790	Saran tempat dimatikan.
+791	Saran tempat datang sebagai notifikasi, jadi tanpa notifikasi tidak ada yang sampai. Aktifkan di Pengaturan › Drift › Notifikasi.
+792	Taruh kotak
+793	Plank
+794	Paket sedang tidak bisa dimuat. Periksa koneksi lalu coba lagi.
+795	Tanam
+796	Tanam teman lewat nama pengguna.
+797	Tanam teman
+798	Main satu ronde
+799	Coba lagi nanti.
+800	Coba lagi.
+801	Arahkan ke tempat kamu meninggalkan kotak
+802	Kolam renang
+803	Kantor pos
+804	Urusan kantor pos
+805	Latihan
+806	Latih keterampilan
+807	Menyiapkan foto…
+808	Pratinjau paywall (dev)
+809	Privasi
+810	Kebijakan Privasi
+811	Kebijakan privasi
+812	Fitur Pro
+813	Pro menumbuhkan tanamanmu melewati {{name}}.
+814	Penyimpanan foto profil belum diatur. Jalankan supabase/profile_challenge_updates.sql di Supabase, lalu coba lagi.
+815	Foto profil butuh kolom database avatar_url. Jalankan supabase/profile_challenge_updates.sql, lalu mulai ulang app.
+816	Buktikan sekarang juga — tapi butuh bukti yang kuat.
+817	Masukkan acara hari ini sekali sehari secara otomatis.
+818	Masukkan acara hari ini sekali sehari secara otomatis. Jika mati, impor manual di bawah.
+819	Pembelian gagal
+820	Pembelian tidak tersedia di build ini.
+821	Pembelian belum diatur di platform ini.
+822	Push-up
+823	Kembalikan ke kotak
+824	Kembalikan ponselmu ke kotak
+825	Taruh ponselmu di ruangan lain dan ketuk tag untuk memulai malam.
+826	Taruh ponselmu di ruangan lain dan ketuk tag. 1 malam berturut-turut sejauh ini.
+827	Taruh ponselmu di ruangan lain dan ketuk tag. {{streak}} malam berturut-turut sejauh ini.
+828	Tugas cepat, urusan ringan, tenaga sedikit
+829	SIAP
+830	MALAM TERAKHIR
+831	TUGAS BERULANG
+832	HAPUS FOTO
+833	HAPUS VIDEO
+834	ULANGI
+835	Aktifkan ulang
+836	Baca
+837	Baca satu bab
+838	Baca kebijakan privasi lengkap
+839	Membaca klipmu…
+840	Membaca klipmu… {{done}}/{{total}}
+841	Membaca, olahraga, belajar, memasak.\nApa pun yang produktif dan benar-benar kamu lakukan.
+842	Siap tidur?
+843	Build ulang dengan expo-video-thumbnails terpasang.
+844	Periksa ulang
+845	Waktu pemulihan
+846	Jadwal tugas berulang adalah fitur Pro.
+847	Tugas berulang
+848	Pusat daur ulang
+849	Tukar
+850	Tukar kode
+851	Ulangi
+852	Kurangi
+853	Redwood
+854	Area belum dipantau — ketuk Aktifkan ulang.
+855	Daftarkan tag
+856	Daftarkan tag untuk menyalakan penjaga.
+857	Latihan rehabilitasi
+858	Hapus
+859	Hapus @{{username}}?
+860	Hapus teman
+861	Kurangi waktu
+862	Hapus {{label}}?
+863	@{{username}} dihapus
+864	Berulang
+865	Berulang setiap hari
+866	Putar ulang tur
+867	Permintaan sudah dikirim
+868	Permintaan terkirim
+869	Permintaan terkirim ke @{{username}}
+870	Permintaan untukmu
+871	Kirim ulang kode
+872	Restoran
+873	Pulihkan
+874	Pemulihan gagal
+875	Bersepeda
+876	Sungai
+877	Jalan di tepi sungai
+878	Perlu aturan atau bukti
+879	Jalankan: npx expo install expo-image-picker
+880	Jalankan: npx expo install expo-video-thumbnails, lalu build ulang app. Bukti foto dan tulisan tetap berfungsi.
+881	Hampir habis
+883	SIMPAN LOKASI SEKARANG
+884	TEMPAT TERSIMPAN
+885	WAKTU LAYAR
+886	SISA WAKTU LAYAR
+887	HADIAH WAKTU LAYAR (MENIT)
+888	WAKTU LAYAR HARI INI
+889	BENIH - {{length}}
+890	KIRIM TANTANGAN
+891	KIRIM TARUHAN
+892	KIRIM JAWABAN
+893	SESI SELESAI
+894	SESI
+895	PENGATURAN
+896	BAGIKAN
+897	LANGKAH {{p}} DARI {{length}}
+898	KIRIM UNTUK VERIFIKASI
+899	Pohon muda
+900	Sab
+901	Simpan
+902	Simpan PIN
+903	Simpan tempat seperti gym-mu, dan Drift menawarkan\ntugas saat kamu tiba. Drift juga bisa memasukkan\nacara kalender hari ini.
+904	Simpan tempat ini
+905	Hemat {{annualSavingsPct}}%
+906	Menyimpan…
+907	Pindai tag lain
+908	Jadwalkan
+909	App sekolah
+910	Jemput sekolah
+911	Antar sekolah
+912	Pusat sains
+913	Durasi Layar
+914	Akses Durasi Layar
+915	Akses Durasi Layar ditolak
+916	Perlu akses Durasi Layar
+917	Waktu layar
+918	Layar menghadap atas. Sesi dimulai saat ponsel benar-benar diam.
+919	Screenshot kartu ini untuk dibagikan di Stories
+920	Cari bahasa
+921	Lihat Pro
+922	Nonton pertunjukan
+923	Nonton musik live
+924	Lihat saldo waktu layar yang kamu dapat dalam sekejap.
+925	Benih
+926	Pilih tugas yang akan rutin kamu lakukan. Kamu selalu bisa menambah lagi nanti.
+927	Kirim
+928	Kirim tantangan
+929	Kirim taruhan
+930	Kirim masukan
+931	Mengirim…
+932	Terkirim
+933	Server: {{error}}{{p}}
+934	Layanan
+935	Sesi selesai
+936	Sesi berakhir lebih awal. Tidak ada waktu didapat.
+937	Sesi hilang.
+938	Catatan sesi
+939	Sesi masih berjalan. {{name}} bisa menunggu.
+940	Atur EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID di .env dan ID klien iOS/Android.
+941	Atur PIN. Kamu akan memasukkannya di ponsel anakmu untuk memilih app yang diblokir.
+942	Tetapkan target. Drift mengubahnya jadi rencana.
+943	Tetapkan target waktu layar dan dapatkan rencana nyata.
+944	Atur
+945	Atur PIN orang tua (untuk memilih app anak)
+946	Beri tugas ke anak-anakmu dan setujui waktu layar mereka.
+947	Atur
+948	Taruh ponselmu di kotak, layar menghadap atas
+949	Taruh{{p}}ponselmu
+950	Menyiapkan…
+951	Bagikan & Undang
+952	Bagikan Statistik
+953	Bagikan kode
+954	Bagikan statistikmu, dapat waktu bonus
+955	Bagikan kemenanganmu
+956	Tugas shift
+957	Belanja
+958	Masuk
+959	Masuk untuk melanjutkan dari terakhir kali.
+960	Masuk untuk melihat hutan kecil
+961	Masuk dengan Google
+962	Keluar
+963	Keluar?
+964	Daftar dengan Google
+965	Gagal masuk. Coba lagi.
+966	Token masuk tidak bisa diverifikasi. Coba lagi.
+967	Sit-up
+968	Kerja lapangan
+969	Main skate
+970	Skate park
+971	Sesi skate
+972	Meluncur ski
+973	Lereng ski
+974	Lewati
+975	Lewati dulu
+976	Dilewati pada malam kamu sudah check-in.
+977	Tidur lebih awal
+978	Penjaga tidur
+979	Tidur dengan ponsel di ruangan lain
+980	Geser targetmu di bawah pemakaianmu sekarang.
+981	Sepak bola
+982	Lapangan sepak bola
+983	Sosial
+984	Seseorang ingin menambahkanmu di Drift.
+985	Terjadi kesalahan
+986	Terjadi kesalahan. Periksa koneksi lalu coba lagi.
+987	Spa
+988	Menghabiskan ~{{minutes}} menit?
+989	Tunas
+990	Squat
+991	Stadion
+992	Mulai
+993	Mulai sesi fokus dari bilah tab. App-mu tetap diblokir selama kamu fokus — dan kamu mendapat waktu karenanya.
+994	Mulai mendapatkan
+995	Mulai berbaring · naik sampai siku menyentuh lutut
+996	Mulai sekarang
+997	Mulai rencana ini
+998	Mulai uji coba gratis {{trial}} hari
+999	Status: {{next}}. Buka Pengaturan -> Durasi Layar untuk memberi akses.
+1000	Tetap fokus
+1001	Tempel tag NFC di ruangan lain. Ketuk saat mau tidur dan Drift memblokir app-mu sampai pagi, lalu memeriksa ponselmu benar-benar tetap di sana.
+1002	Tempel tag NFC di ruangan sebelah. Ketuk saat mau tidur dan Drift memeriksa ponselmu tetap di sana semalaman.
+1003	Masih memuat
+1004	Diam pun produktif.
+1005	Beresin gudang
+1006	Unit penyimpanan
+1007	Peregangan
+1008	Studio
+1009	Sesi studio
+1010	Belajar
+1011	Ruang belajar
+1012	Sesi belajar
+1013	Kirim buktimu lagi.
+1014	Saran
+1015	Menyarankan "{{title}}" ({{minutes}} mnt) saat kamu tiba — pilih saran di atas agar lebih pas.
+1016	Menyarankan "{{title}}" ({{minutes}} mnt) saat kamu tiba.
+1017	Min
+1018	Supermarket
+1019	Berenang
+1020	Menyinkronkan
+1021	TUGAS
+1022	TUGAS
+1023	THE LAB
+1024	MINGGU INI
+1025	OPREK
+1026	HARI INI
+1027	COBA LAGI
+1028	NYALAKAN KUNCI
+1029	JENIS
+1030	Tag terbaca.
+1031	Tag terdaftar
+1032	Tag disimpan
+1033	Tag disimpan.
+1034	Bawa ke ruangan lain dan ketuk tagmu untuk memulai malam.
+1035	Keluarkan ponselmu dan buka Drift untuk mengambil waktumu.
+1036	Butuh 60 detik
+1037	Ketuk lagi kapan saja untuk mengubah yang diblokir. Disimpan di perangkatmu saja.
+1038	Ketuk tag NFC di ruangan lain saat mau tidur. App tetap terkunci sampai pagi.
+1039	Ketuk saat mau tidur untuk memulai malam pertamamu.
+1040	Ketuk + untuk menambah sesuatu yang layak dikerjakan. Selesaikan dan konfirmasi untuk mendapat waktu layar.
+1041	Ketuk tag
+1042	Ketuk untuk membuka Mail ke
+1043	Ketuk untuk verifikasi
+1044	Tugas ditambahkan
+1045	Tugas disetujui
+1046	Tugas siap diperiksa
+1047	Tugas
+1048	Tugas bisa\nditambah otomatis
+1049	Tugas selesai
+1050	Tugas yang kembali otomatis.
+1051	Tugas yang kembali sesuai jadwal.
+1052	Tugas untuk mendapatkannya
+1053	Ceritakan sedikit lagi.
+1054	Merawat hutan kecil
+1055	Tenis
+1056	Lapangan tenis
+1057	Ketentuan
+1058	Ketentuan Penggunaan
+1059	Ketentuan penggunaan
+1060	Uji
+1061	Uji gagal
+1062	Uji terkirim
+1063	Terima kasih
+1064	Terima kasih sudah bertahan dengan Drift. Setiap dua bulan kamu bertahan, Pro jadi lebih murah, hingga {{price}}. Konfirmasi di Apple dan {{price2}} mulai pada perpanjangan berikutnya.
+1065	PIN itu salah.
+1066	Kode itu sudah habis ditukar.
+1067	Kode itu sudah kedaluwarsa.
+1068	Kode itu salah atau kedaluwarsa. Periksa lagi, atau ketuk Kirim ulang kode untuk kode baru.
+1069	Kode itu sudah tidak aktif.
+1070	Kode itu tidak valid.
+1071	Itu tidak membuka Drift. Jika kamu ditagih, ketuk Pulihkan.
+1072	Kode keluarga itu tidak ada. Periksa lagi dengan orang tuamu.
+1073	Kode keluarga itu sudah tidak aktif.
+1074	Ukuran keluarga itu belum diatur. Coba angka lain, atau hubungi dukungan.
+1075	Itu bukan tag yang kamu atur. Ketuk tag di kamar tidurmu.
+1076	ID peserta itu sepertinya salah. Periksa dengan tim studimu.
+1077	ID peserta itu sudah dipakai. Periksa dengan tim studimu.
+1078	Rekaman itu terlalu besar. Rekam klip lebih pendek lalu coba lagi.
+1079	Tugas itu tidak diizinkan. Coba sesuatu yang produktif!
+1080	Waktu habis
+1081	Nama pengguna itu sudah dipakai.
+1082	Nama pengguna itu sudah dipakai. Coba yang lain.
+1083	Nama pengguna itu baru saja diambil. Kamu diberi @{{username}} untuk sementara —
+1084	Itu bukan kotaknya — taruh di dalam
+1085	Itu tugas gratis hari ini
+1086	Itu kamu
+1087	Itu {{mins}} menit dari waktu yang kamu dapat. Terserah kamu.
+1088	Cek AI kehabisan waktu. Biasanya Wi-Fi yang kamu pakai memblokir Drift — matikan Wi-Fi untuk memakai data seluler, lalu coba lagi.
+1089	Layanan AI sedang bermasalah. Coba lagi sebentar lagi.
+1090	Layanan AI bermasalah. Coba lagi.
+1091	Layanan AI menolak permintaan (kesalahan {{status}}). Coba lagi, atau pakai bukti teks saja.
+1092	Hutan Kecil
+1093	The Lab
+1094	Kedatangan tidak berhasil ({{reason}}).
+1095	Tugas latar belakang tidak terdaftar. Tutup Drift sepenuhnya lalu buka lagi.
+1096	Kamera tidak menemukan permukaan.
+1097	Kamera menghitung repetisimu — tanpa perlu foto
+1098	Kategori yang kamu pilih
+1099	Tantangan untuk @{{p}} akan ditarik.
+1100	Nama depan atau julukan yang mereka ketik saat bergabung. Tugas yang kamu berikan dan apakah sudah selesai. Saldo waktu layar dan kategori app yang kamu izinkan. Permintaan izin app yang mereka kirim. Token notifikasi agar ponsel mereka bisa menerima peringatan.
+1101	Paket gratis memblokir hingga {{FREE_BLOCK_LIMIT}}
+1102	Paket gratis mendapat dari {{freeDailyTasks}} tugas sehari. Ambil Pro untuk tugas tanpa batas, atau kembali besok.
+1103	Panduan dari pertama kali kamu membuka app.
+1104	Yang kalah menyerahkan {{penaltyMins}} menit waktu layar.
+1105	Orang lain kehilangan {{penaltyMins}} menit waktu layar.
+1106	Pemain lain mungkin sudah merespons.
+1107	Langganan sedang tidak tersedia. Coba lagi sebentar lagi.
+1108	Teater
+1109	Terapis
+1110	Sesi terapi
+1111	Kontak ini ada di Drift. Tambahkan ke hutan kecilmu.
+1112	Ini tetap terbuka meski waktu layar {{display_name}} habis.
+1113	Mereka akan dihapus dari hutan kecilmu. Kamu bisa menambahkannya lagi nanti.
+1114	Ini tidak bisa dibatalkan.
+1115	Kode ini untuk studi penelitian. Masukkan ID peserta dari tim studimu.
+1116	Ini menghapus akun Drift-mu dan mengeluarkanmu. Tidak bisa dibatalkan.
+1117	Ini tidak dihitung sebagai percobaan — kami hanya butuh satu detail untuk memastikan.
+1118	Keluarga ini sudah mencapai jumlah anak maksimal.
+1119	Ini tugas {{minutes}} menit, jadi bukti dibuka {{mmss}} setelah ditambahkan. Kerjakan dulu — kami tunggu.
+1120	Ini waktu yang kamu tabung. Saat mencapai nol, app pilihanmu terkunci sampai kamu dapat lagi.
+1121	Ini melewati proses masuk, jadi onboarding tidak bisa selesai. Masuk seperti biasa untuk menguji alur lengkapnya.
+1122	Momen ini milikmu, bukan milik ponselmu.
+1123	Ini menghapus permanen akun dan data semua anak di keluargamu, dan tidak ada anak yang bisa bergabung sampai kamu setuju lagi. Tidak bisa dibatalkan.
+1124	Ini menghapus permanen akun Drift-mu dan semua akun anak di keluargamu, beserta semua datanya. Tidak bisa dibatalkan. Batalkan langganan Family secara terpisah di Pengaturan iPhone.
+1125	Ini menghapus permanen akun, tugas, saldo, dan permintaan {{name}}, serta mengeluarkan ponselnya. Tidak bisa dibatalkan.
+1126	Ini menghapus permanen akun Drift-mu. Tidak bisa dibatalkan.
+1127	Metode masuk ini belum diaktifkan. Hubungi dukungan.
+1128	Tugas ini tidak bisa diverifikasi sekarang.
+1129	Versi Drift ini sudah usang. Perbarui ke versi terbaru untuk terus mendapat waktu layar.
+1130	Subur
+1131	Kam
+1132	Centang kotak untuk mengonfirmasi bahwa kamu orang tua atau wali sah.
+1133	Rapikan satu hal
+1134	Merapikan
+1135	Waktu kembali
+1136	Sisa waktu dari sebelumnya.
+1137	Waktu di air
+1138	Saatnya menidurkan ponselmu
+1139	Saatnya memperbarui Drift
+1140	Waktu habis
+1141	Timer
+1142	Untuk @{{toName}}
+1143	Hari ini
+1144	Terlalu panjang
+1145	Terlalu banyak percobaan. Coba lagi beberapa menit lagi.
+1146	Terlalu banyak percobaan. Coba lagi sebentar lagi.
+1147	Terlalu sering kirim ulang. Coba lagi beberapa menit lagi.
+1148	Terlalu sering kirim ulang. Tunggu semenit lalu coba lagi.
+1149	Terlalu pendek
+1150	Lintasan
+1151	Latihan lintasan
+1152	Awal jalur
+1153	Latihan atau peregangan
+1154	Stasiun kereta
+1155	Urusan perjalanan
+1156	Pelacakan bermasalah? Verifikasi dengan foto
+1157	Coba lagi
+1158	Coba lagi.
+1159	Sel
+1160	Matikan
+1161	Matikan penjaga tidur?
+1162	Aktifkan Gerak & Kebugaran untuk Drift di Pengaturan agar bisa memakai ini.
+1163	Nyalakan notifikasi
+1164	Nyalakan di Pengaturan › Drift › Notifikasi, lalu uji lagi.
+1165	Ubah acara hari ini jadi tugas. Hanya baca.
+1166	Tempat les
+1167	Sesi les
+1168	Ketik namamu dan kode keluarga dari orang tuamu. Tidak perlu email.
+1169	TERBUKA DALAM {{mmss}}
+1170	PERLU PEMBARUAN
+1171	UPGRADE
+1172	Hukum AS (COPPA) mewajibkan persetujuan orang tua sebelum app mengumpulkan informasi anak di bawah 13 tahun. Inilah persisnya yang Drift lakukan dengan informasi anakmu. Kode keluargamu tidak akan berfungsi sampai kamu setuju.
+1173	TERPAKAI
+1174	NAMA PENGGUNA
+1175	Respons tak terduga dari layanan AI.
+1176	App dan tugas tanpa batas, Lockbox, tantangan
+1177	Terbuka sampai {{toLocaleDateString}}.
+1178	Sampai kamu menghapusnya. Data dihapus saat kamu mengeluarkan anakmu, menarik persetujuan, atau menghapus akunmu, dan otomatis setelah 18 bulan tanpa aktivitas.
+1179	Santai
+1180	Hingga {{FREE_BLOCK_LIMIT}} app, kategori, atau domain web di paket gratis.
+1181	Perbarui Drift untuk memakai Cek AI.
+1182	Perbarui rencanaku
+1183	Perlu pembaruan
+1184	Perbarui sekarang
+1185	Upgrade ke Pro
+1186	Upgrade untuk menantang
+1187	Pakai kata sandi yang kurang umum.
+1188	Pakai bahasa perangkat
+1189	Pakai huruf, angka, dan garis bawah saja.
+1190	Pakai kalender iPhone saja
+1191	Pakai waktu seperti 22.00 dan 07.00.
+1192	Pakai huruf besar, huruf kecil, angka, dan simbol.
+1193	Nama pengguna
+1194	Nama pengguna maksimal 20 karakter.
+1195	Nama pengguna gagal
+1196	Nama pengguna minimal 3 karakter.
+1197	Nama pengguna dipakai
+1198	TERVERIFIKASI
+1199	Email verifikasi dikirim ulang.
+1200	Verifikasi gagal
+1201	Terverifikasi
+1202	Diverifikasi langsung — kamera mengamati gerakan dan menghitung setiap repetisi otomatis.
+1203	Diverifikasi dengan foto setelah latihan selesai.
+1204	Verifikasi
+1205	Verifikasi dengan foto saja
+1206	Verifikasi dengan foto
+1207	Verifikasi akunmu
+1208	Verifikasi alamat emailmu dulu, lalu tukar.
+1209	Dokter hewan
+1210	Ke dokter hewan
+1211	Bukti video butuh build baru
+1212	Shift relawan
+1213	Lokasi relawan
+1214	MENUNGGU PERSETUJUANMU
+1215	SELAMAT DATANG
+1216	YANG DIBLOKIR
+1217	YANG MUNCUL
+1218	YANG KURANG
+1219	WOD
+1220	Menunggu
+1221	Menunggu hasil
+1222	Menunggu mereka menerima
+1223	Jalan di tepi air
+1224	Jalan di hutan
+1225	Jalan di luar
+1226	Ajak anjing jalan
+1227	Gudang
+1228	Cuci mobil
+1229	Nonton pertandingan
+1230	Kami tidak menemukan langganan di ID Apple ini. Jika kamu berlangganan dengan ID lain, masuk ke ID Apple itu di Pengaturan lalu coba lagi.
+1231	Kami belum bisa mengirim email verifikasimu sekarang. Ini masalah di pihak kami — coba lagi beberapa menit lagi.
+1232	Kami mengirim kode 8 angka ke {{verificationEmail}}. Masukkan di bawah — atau ketuk tautan di email itu di ponsel ini.
+1233	Kami kangen kamu!
+1234	Kami akan menawarkannya lagi saat kamu membuka Drift berikutnya.
+1235	Kami memperbarui cara kami menangani data anakmu
+1236	Rab
+1237	Hari kerja
+1238	Akhir pekan
+1239	Selamat datang kembali
+1240	Selamat datang di rumah
+1241	Selamat datang di\nDrift
+1242	Selamat datang di Drift
+1243	Yang disimpan Drift tentang {{name}}
+1244	Untuk apa? (opsional)
+1245	Tempat apa ini?
+1246	Apa yang perlu dikerjakan? mis. "30 mnt gym"
+1247	Apa yang butuh perhatianmu?
+1248	Yang harus mereka lakukan
+1249	Yang kami kumpulkan dari anakmu
+1250	Yang tidak kami kumpulkan
+1251	Apa yang akan kamu lakukan?
+1252	Lagi mikirin apa?
+1253	Tempat kamu mengatur Drift: app mana yang diblokir, apa yang berulang, dan apa yang disarankan otomatis.
+1254	Siapa yang bisa melihatnya
+1255	Siapa yang{{p}}memakai Drift?
+1256	Kenapa
+1257	Layu
+1258	Jam-jam saat app tetap terkunci berapa pun saldomu.
+1259	Tarik
+1260	Tarik persetujuan dan hapus data anak
+1261	Tarik persetujuan?
+1262	Tanpa kotak
+1263	Kerja
+1264	Olahraga
+1265	Sedang dikerjakan
+1266	Latihan
+1267	Bengkel kerja
+1268	Tulis ulasan
+1269	Tulis apa yang kamu lakukan, atau ambil foto atau video.
+1270	KAMU AKAN MENDAPAT
+1271	KELUARGAMU
+1272	ANAK-ANAKMU
+1273	PRIVASI ANAK-ANAKMU
+1274	RENCANAMU
+1275	RENCANAMU SIAP
+1276	BUKTIMU
+1277	TAG-MU
+1278	TUGASMU
+1279	Tahunan
+1280	Ya
+1281	Ya, atur sekarang
+1282	Kelas yoga
+1283	Studio yoga
+1284	Kamu
+1285	Kamu dan @{{username}} sekarang berteman
+1286	Kamu mengalahkan tenggat dan mengambil hadiahnya.
+1287	Kamu memblokir {{name}} karena suatu alasan.
+1288	Layar boleh mati. Hitung mundurnya ada di layar kunci.
+1289	Kamu bisa menyimpan hingga {{MAX_PLACES}} tempat.
+1290	Kamu tidak bisa menambahkan dirimu sendiri.
+1291	Jenis akun tidak bisa diubah setelah akun dibuat.
+1292	Kamu memilih kedalaman daripada distraksi.
+1293	Kamu memilih kedalaman daripada {{name}}.
+1294	Kamu mendapat waktu layar dengan menyelesaikan tugas nyata. Ini tur 20 detiknya.
+1295	Kamu dapat 1 menit waktu layar. Pertahankan momentumnya!
+1296	Kamu dapat {{mins}} menit waktu layar. Pertahankan momentumnya!
+1297	Kamu dapat {{m}} menit waktu layar lagi.
+1298	Kamu memberi persetujuan pada {{date}}.
+1299	Kamu punya sekitar {{max}} detik sebelum sesi ini hilang.
+1300	Kamu belum memilih app. Drift In tetap berjalan, tapi app pengganggu tidak akan diblokir. Buka Profil → App diblokir untuk memilih.
+1301	Kamu melewatkan tenggat, jadi taruhannya diterapkan.
+1302	Kamu yang membuat aturannya. Mereka mendapat waktu layar dengan tugas nyata.
+1303	Kamu menetapkan batas ini karena suatu alasan.
+1304	Kamu terverifikasi lebih dulu dan mengambil hadiahnya.
+1305	Kamu menang
+1306	Kamu tidak akan mendapat apa pun untuk waktu sejauh ini.
+1307	Kamu akan mendapat kredit untuk waktu fokus sejauh ini.
+1308	Kamu perlu masuk lagi untuk mengakses datamu.
+1309	Kamu tidak akan lagi mendapat saran tugas di sana.
+1310	Kamu Pro 🎉
+1311	Semua siap
+1312	Kamu di {{label}}
+1313	Kamu beruntun {{streak}} hari! Selesaikan tugas untuk menjaganya.
+1314	Waktu yang kamu dapat sudah habis. Selesaikan tugas untuk membuka app-mu.
+1315	Kamu merosot di hutan kecil
+1316	Sudah {{mins}} menit. Tanpa menghakimi, cuma mengecek.
+1317	Kamu sudah menukar kode ini — aksesmu tidak berubah.
+1318	Kamu sudah sering Cek AI. Coba lagi sebentar lagi.
+1319	Kamu sudah cukup tumbuh untuk {{name}}.
+1320	Kamu mencapai batas Cek AI untuk sekarang. Coba lagi nanti.
+1321	Kamu sudah memakai semua yang kamu dapat hari ini.
+1322	Kamu sudah memakai tugas terverifikasi gratis hari ini. Ambil Pro untuk tugas tanpa batas, atau kembali besok.
+1323	Kamu, dan anakmu. Data ini tidak pernah publik, dijual, atau dipakai untuk iklan. Disimpan oleh Supabase (penyedia database kami, di AS) dan notifikasi dikirim lewat Apple. Keduanya wajib menjaga kerahasiaannya dan memakainya hanya untuk menjalankan Drift.
+1324	Paket Drift Family-mu dibeli lewat Apple, yang memberi tahu pemilik akun tentang pembelian itu. Pembelian itu ditambah persetujuanmu di sini adalah cara Drift memverifikasi bahwa orang tua memberi persetujuan.
+1325	Aksesmu tidak kedaluwarsa.
+1326	Akunmu
+1327	Akunmu berhasil dihapus.
+1328	Jawabanmu…
+1329	App-mu terkunci sampai pagi.{{p}}Biarkan ponselmu di tempatnya.
+1330	App-mu menunggu. Selesaikan tugas singkat untuk mendapat waktu layar.
+1331	Saldomu berkurang saat kamu memakai app yang diblokir. Habis, app terkunci.
+1332	Jam blokir dan pengingatmu tetap. Hanya rencananya yang dihapus.
+1333	Build atau kameramu belum bisa mendeteksi pose. Kamu tetap bisa verifikasi dengan foto.
+1334	Kalender dan tempatmu, diubah jadi tugas.
+1335	Kodemu membuka Drift Pro.
+1336	Waktu layar yang kamu dapat sudah habis. Selesaikan tugas untuk membuka lagi.
+1337	Waktu yang kamu dapat
+1338	Waktu yang kamu dapat hampir habis. Selesaikan, atau kerjakan tugas untuk lanjut.
+1339	Draf emailmu siap dikirim.
+1340	Temanmu terverifikasi lebih dulu, jadi taruhannya diterapkan.
+1341	Anakmu
+1342	Anakmu menyelesaikan "{{taskTitle}}". Setujui untuk memberi waktu layar.
+1343	Anakmu menyelesaikan tugas. Setujui untuk memberi waktu layar.
+1344	Lokasi dan kalendermu tetap di perangkat ini. Drift tidak pernah mengunggah keduanya.
+1345	Namamu
+1346	Orang tuamu perlu memilih paket Drift Family dulu. Coba lagi setelah mereka memilih.
+1347	Orang tuamu perlu menyelesaikan pengaturan keluarga di Drift dulu. Minta mereka membuka Drift, lalu coba lagi.
+1348	Izinmu dulu
+1349	Ponselmu terlalu lama keluar dari kotak, jadi sesi ini tidak menghasilkan apa-apa.
+1350	Ponselmu keluar dari kotak. Tidak ada waktu didapat sesi ini.
+1351	Ponselmu keluar dari kotak. Kembalikan sebelum ini mencapai nol atau sesinya hangus.
+1352	Ponselmu bergerak
+1353	Ponselmu bergerak pukul {{toLocaleTimeString}}. Tidak ada bonus kali ini.
+1354	Ponselmu bergerak di malam hari. Tidak ada bonus kali ini.
+1355	Ponselmu bergerak semalam
+1356	Ponselmu tetap di kotak. +{{max}} menit didapat.
+1357	Ponselmu tetap diam
+1358	Ponselmu diam semalaman. +{{rewardMinutes}} menit didapat.
+1359	Hargamu turun setiap 2 bulan kamu bertahan, hingga {{loyaltyFloor}}/bln.
+1360	Hargamu turun ke {{price}}/bulan
+1361	Profil, tugas, riwayat, pertemanan, tantangan, dan fotomu dihapus permanen. Jika kamu berlangganan Drift Pro, batalkan terpisah di Pengaturan iPhone → ID Apple → Langganan.
+1362	Progresmu tersimpan di semua perangkat.
+1363	Progresmu di Kamu, dan temanmu di Teman — beruntun, level, dan tantangan di satu tempat.
+1364	Progresmu.
+1365	Hak-hakmu
+1366	Sesimu tidak tersimpan. Silakan masuk lagi — tidak ada pengaturanmu yang hilang.
+1367	Sesimu masih berjalan. Tetap fokus.
+1368	Targetmu sama dengan titik awalmu, jadi belum ada yang perlu diubah.
+1369	beruntun terbaik
+1370	kalender atau tempat
+1372	selesai
+1373	hari beruntun
+1374	ditolak
+1376	pengalaman
+1377	expo-location atau expo-task-manager tidak ada di build ini.
+1378	selesai sebelum tengah malam
+1379	yang pertama selesai menang
+1380	iOS menerapkan blokir dalam rentang ~15 menit, jadi waktunya perkiraan.
+1381	mnt didapat
+1382	tidak ada data hari ini
+1383	tidak ada waktu
+1384	belum diatur
+1385	dari {{fmtMins}} yang didapat
+1386	atau
+1387	atau biarkan Drift menambahkannya dari{{p}}
+1388	tersisa
+1389	waktu layar
+1390	waktu layar (maks)
+1391	tugas selesai
+1392	tugas selesai
+1393	untuk mengembalikannya
+1394	kamu
+1395	kamu bisa mengubahnya dari profilmu.
+1397	{{aheadCount}} dari {{total}} temanmu punya waktu layar lebih sedikit darimu hari ini. Kamu di {{spent}}.
+1399	{{blockedCount}} {{p}} — terkunci saat saldomu nol.
+1400	Klip {{durationSec}} dtk · {{length}} frame dikirim untuk ditinjau
+1401	{{floor}} j {{p}} m hari ini
+1402	{{floor}} m {{padStart}} d fokus
+1403	{{fmtMins}} didapat
+1404	{{fmtMins}} dari perolehan hari ini masih tersimpan.
+1405	{{fmt}} lagi
+1406	{{formatDuration}} sehari
+1407	{{formatDuration}} sehari, ponsel ditaruh pukul {{phoneDownLabel}}.
+1408	{{formatDuration}} lebih sedikit dari sekarang
+1409	{{length}} teman belum melapor hari ini.
+1411	sisa {{mins}} mnt · {{p}} minggu ini{{p2}}
+1412	{{mins}} menit berlalu. Masih sepadan?
+1413	Sudah {{mins}} menit. Ada tugas yang menunggu kalau kamu mau.
+1414	{{minutesPerDay}} menit sehari
+1415	{{minutes}} mnt · {{credits}} kredit dipertaruhkan
+1416	{{minutes}} menit di kotak. +{{rewardMinutes}} menit didapat.
+1417	{{name}} bisa menunggu.
+1418	{{name}} diblokir.
+1419	{{name}} terbuka saat kamu menyelesaikan tugas di Drift.
+1420	{{name}} masih ada sepuluh menit lagi.
+1421	sisa {{n}} mnt
+1422	{{price}}/bln
+1423	{{price}}/bulan mulai pada perpanjangan berikutnya.
+1424	{{price}}/bulan. Diperpanjang otomatis — batalkan kapan saja di Pengaturan.
+1425	{{price}}/tahun. Diperpanjang otomatis — batalkan kapan saja di Pengaturan.
+1426	{{price}}/thn
+1427	{{p}}\n\nKamu bisa coba lagi, atau jalankan sesi tanpa kotak — hasilnya sama saja.
+1428	{{p}} DARI @{{toUpperCase}}
+1429	{{p}} · +{{xp}} XP
+1430	{{p}}dan{{p}}
+1431	{{recurrenceLabel}} pukul {{prettyTime}} - hadiah {{fmtMins}}
+1432	{{selectionCount}} dari {{FREE_BLOCK_LIMIT}} disimpan
+1433	{{spentMinutes}} m hari ini
+1434	{{streak}} malam berturut-turut.
+1435	Beruntun {{streak}} hari
+1436	{{target}} dari {{target}} terhitung
+1437	{{timeText}} {{toLowerCase}} · +{{earnedText}} didapat
+1438	{{title}} · +{{minutes}} mnt
+1439	{{toLocaleDateString}}: {{count}} tugas
+1440	{{toNext}} XP ke tingkat berikutnya
+1441	{{toNext}} XP ke {{name}}.
+1442	Total {{totalXp}} XP
+1443	Gratis {{trial}} hari, lalu {{price}}/bulan. Diperpanjang otomatis — batalkan kapan saja di Pengaturan.
+1444	Gratis {{trial}} hari, lalu {{price}}/tahun. Diperpanjang otomatis — batalkan kapan saja di Pengaturan.
+1445	{{who}} menantangmu
+1446	"Hai Siri, cek saldo Drift-ku"\n"Hai Siri, buat tugas di Drift"\n"Hai Siri, mulai sesi Drift In"
+1447	SISA 1 KESEMPATAN
+1448	SISA {{attemptsLeft}} KESEMPATAN
+1449	Akun Family harus dibuat orang tua atau wali berusia 18 tahun ke atas.
+1450	Minta orang tua mengaturkanmu
+1451	Gabung keluarga dengan kode
+1452	Akun orang tua untuk orang dewasa
+1453	Akun pribadi Drift untuk usia 13 tahun ke atas. Orang tua bisa mengatur Drift Family, lalu kamu bergabung dengan kode mereka.
+1454	Kami menanyakan ini ke semua orang. Tidak disimpan dan tidak ditunjukkan ke siapa pun.
+1455	Kapan kamu lahir?

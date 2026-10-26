@@ -76,7 +76,7 @@ export function useGoogleSignIn(onSignedIn) {
         }
       })();
     } else if (response?.type === "error") {
-      onSignedIn?.({ error: new Error(response.error?.message || "Google sign-in failed") });
+      onSignedIn?.({ error: new Error(response.error?.message || tr("Google sign-in failed")) });
     }
   }, [response]);
 
@@ -91,11 +91,13 @@ export function useGoogleSignIn(onSignedIn) {
 export async function ensureGoogleConfigured() {
   if (!GOOGLE_WEB_CLIENT_ID) {
     throw new Error(
-      "Google Sign-In is not configured. " +
-      "Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in .env and the iOS/Android client IDs."
+      tr("Google Sign-In is not configured. ") +
+      tr("Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in .env and the iOS/Android client IDs.")
     );
   }
 }
 
 // React import lazy so this file works in non-component contexts too
 import React from "react";
+
+import { tr } from "./i18n";

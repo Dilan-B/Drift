@@ -8,9 +8,10 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import { getTheme, FF } from "./theme";
 
+import { tr } from "./i18n";
 const TABS = [
-  { id: "home", label: "Home" },
-  { id: "history", label: "History" },
+  { id: "home", get label() { return tr("Home"); } },
+  { id: "history", get label() { return tr("History"); } },
 ];
 
 export function FamilyDock({ tab, onTab, dark = false }) {
@@ -39,7 +40,7 @@ export function FamilyDock({ tab, onTab, dark = false }) {
 }
 
 // items: [{ id, title, minutes, subtitle }]
-export function HistoryList({ items, dark = false, emptyText = "No completed tasks yet." }) {
+export function HistoryList({ items, dark = false, emptyText = tr("No completed tasks yet.") }) {
   const t = getTheme(dark);
   if (!items || items.length === 0) {
     return (
@@ -60,7 +61,7 @@ export function HistoryList({ items, dark = false, emptyText = "No completed tas
               <Text style={{ fontFamily: FF.body, fontSize: 13, color: t.ink.mid, marginTop: 2 }}>{x.subtitle}</Text>
             ) : null}
           </View>
-          <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: t.earn.sage }}>+{x.minutes} min</Text>
+          <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: t.earn.sage }}>{tr("+{{minutes}} min", { minutes: x.minutes })}</Text>
         </View>
       ))}
     </View>
@@ -73,7 +74,7 @@ export function shortDate(iso) {
   try {
     const dt = new Date(iso);
     const now = new Date();
-    if (dt.toDateString() === now.toDateString()) return "Today";
+    if (dt.toDateString() === now.toDateString()) return tr("Today");
     return dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   } catch {
     return "";

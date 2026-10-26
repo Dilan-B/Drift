@@ -28,6 +28,7 @@ import { getTheme, FF } from "./theme";
 import { getAppConfig } from "./supabase";
 import Sprout from "./SproutArt";
 
+import { tr } from "./i18n";
 let StoreReview = null;
 try { StoreReview = require("expo-store-review"); } catch {}
 
@@ -123,10 +124,10 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
           <Sprout size={120} tone={dark ? "night" : "fresh"} />
         </View>
 
-        <Text style={[s.kicker, { color: earn.sage }]}>ENJOYING DRIFT?</Text>
+        <Text style={[s.kicker, { color: earn.sage }]}>{tr("ENJOYING DRIFT?")}</Text>
 
         <Text style={[s.headline, { color: ink.deep }]}>
-          Help Drift grow
+          {tr("Help Drift grow")}
         </Text>
 
         <View style={s.stars}>
@@ -144,7 +145,7 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
           {/* Never ask for a particular rating. Apple's guidelines allow asking
               for a review, not for five stars, and this app has already been
               rejected once over how it prompts (5.6.3). */}
-          Built by a tiny team. A review takes ten seconds and genuinely helps.
+          {tr("Built by a tiny team. A review takes ten seconds and genuinely helps.")}
         </Text>
       </Animated.View>
 
@@ -160,12 +161,12 @@ export default function ReviewPromptScreen({ dark = false, onDone }) {
               style={[s.continueBtn, { backgroundColor: earn.deep }, theme.fx.glow]}
             >
               <Text style={[s.continueText, { color: dark ? "#16261C" : "#FAF6EE" }]}>
-                Write a review
+                {tr("Write a review")}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={onDone} activeOpacity={0.7} style={s.storeLink}>
-              <Text style={[s.storeLinkText, { color: ink.mid }]}>Not now</Text>
+              <Text style={[s.storeLinkText, { color: ink.mid }]}>{tr("Not now")}</Text>
             </TouchableOpacity>
           </Animated.View>
         )}

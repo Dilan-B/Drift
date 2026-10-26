@@ -22,6 +22,7 @@ import { CloseIcon, CheckIcon, MicIcon } from "./Icons";
 import PlantSlider from "./PlantSlider";
 import * as SleepGuard from "./sleepGuard";
 
+import { tr } from "./i18n";
 // Sliders, not a menu of four arbitrary times. Reward keeps the old 15–60 min
 // bounds. The reminder runs 8 PM → 1 AM on a timeline that continues past
 // midnight (minutes after 00:00, +1440 once past it) so it is one straight line.
@@ -73,18 +74,18 @@ export default function SleepGuardModal({ visible, dark = false, onClose, onChan
       const motion = await SleepGuard.requestMotionAuth();
       if (motion !== "authorized") {
         Alert.alert(
-          "Motion access needed",
-          "Drift uses Motion & Fitness to check your phone stayed still overnight. Turn it on in Settings › Drift › Motion & Fitness.",
+          tr("Motion access needed"),
+          tr("Drift uses Motion & Fitness to check your phone stayed still overnight. Turn it on in Settings › Drift › Motion & Fitness."),
         );
         return;
       }
       const id = await SleepGuard.registerTag();
       setTag(id);
       onChanged?.();
-      Alert.alert("Tag saved", "Leave it in the room where your phone will sleep. Tap it at bedtime to start a night.");
+      Alert.alert(tr("Tag saved"), tr("Leave it in the room where your phone will sleep. Tap it at bedtime to start a night."));
     } catch (e) {
       if (e?.code !== "cancelled" && e?.message !== "cancelled") {
-        Alert.alert("Couldn't read that tag", "Hold your phone still against the tag and try again.");
+        Alert.alert(tr("Couldn't read that tag"), tr("Hold your phone still against the tag and try again."));
       }
     } finally { setBusy(false); }
   };
@@ -94,12 +95,12 @@ export default function SleepGuardModal({ visible, dark = false, onClose, onChan
   // user with their apps blocked and no way to settle it.
   const forget = () => {
     Alert.alert(
-      "Turn off sleep guard?",
-      "Drift will forget your tag and stop the nightly reminder. Your streak history is kept.",
+      tr("Turn off sleep guard?"),
+      tr("Drift will forget your tag and stop the nightly reminder. Your streak history is kept."),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: tr("Cancel"), style: "cancel" },
         {
-          text: "Turn off",
+          text: tr("Turn off"),
           style: "destructive",
           onPress: async () => {
             await SleepGuard.clearTag();
@@ -154,7 +155,7 @@ export default function SleepGuardModal({ visible, dark = false, onClose, onChan
           paddingHorizontal: 20, paddingTop: 18, paddingBottom: 10,
         }}>
           <Text style={{ fontFamily: FF.display, fontSize: 24, color: ink.deep, letterSpacing: -0.3 }}>
-            Sleep guard
+            {tr("Sleep guard")}
           </Text>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <CloseIcon size={22} color={ink.mid} />
@@ -163,15 +164,14 @@ export default function SleepGuardModal({ visible, dark = false, onClose, onChan
 
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48 }}>
           <Text style={{ fontFamily: FF.body, fontSize: 13.5, color: ink.mid, lineHeight: 20 }}>
-            Stick an NFC tag in another room. Tap it at bedtime and Drift blocks
-            your apps until morning, then checks your phone actually stayed there.
+            {tr("Stick an NFC tag in another room. Tap it at bedtime and Drift blocks your apps until morning, then checks your phone actually stayed there.")}
           </Text>
 
           {loading ? (
             <ActivityIndicator color={earn.sage} style={{ marginTop: 40 }} />
           ) : (
             <>
-              <Text style={kicker}>YOUR TAG</Text>
+              <Text style={kicker}>{tr("YOUR TAG")}</Text>
               <View style={{
                 borderRadius: 16, padding: 16,
                 backgroundColor: paper.card,
@@ -180,15 +180,11 @@ export default function SleepGuardModal({ visible, dark = false, onClose, onChan
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
                   <MicIcon size={18} color={tag ? earn.green : ink.faint} />
                   <Text style={{ fontFamily: FF.bodyBold, fontSize: 14.5, color: ink.deep }}>
-                    {tag ? "Tag registered" : "No tag yet"}
+                    {tag ? tr("Tag registered") : tr("No tag yet")}
                   </Text>
                 </View>
                 <Text style={{ fontFamily: FF.body, fontSize: 12.5, color: ink.mid, lineHeight: 18 }}>
-                  {tag
-                    ? (streak > 0
-                        ? `${streak} night${streak === 1 ? "" : "s"} in a row.`
-                        : "Tap it at bedtime to start your first night.")
-                    : "Register a tag to turn the guard on."}
+                  {tag ? streak > 0 ? (streak === 1 ? tr("1 night in a row.") : tr("{{streak}} nights in a row.", { streak })) : tr("Tap it at bedtime to start your first night.") : tr("Register a tag to turn the guard on.")}
                 </Text>
 
                 <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
@@ -203,7 +199,7 @@ export default function SleepGuardModal({ visible, dark = false, onClose, onChan
                     {busy
                       ? <ActivityIndicator size="small" color="#fff" />
                       : <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: "#fff" }}>
-                          {tag ? "Scan a different tag" : "Register a tag"}
+                          {tag ? tr("Scan a different tag") : tr("Register a tag")}
                         </Text>}
                   </TouchableOpacity>
                   {tag && (
@@ -214,7 +210,7 @@ export default function SleepGuardModal({ visible, dark = false, onClose, onChan
                         borderWidth: 1, borderColor: ink.hairline,
                       }}
                     >
-                      <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.mid }}>Turn off</Text>
+                      <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.mid }}>{tr("Turn off")}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -249,13 +245,13 @@ export default function SleepGuardModal({ visible, dark = false, onClose, onChan
                   leftLabel="8 PM" rightLabel="1 AM"
                 />
                 <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, marginTop: 10 }}>
-                  Skipped on nights you've already tapped in.
+                  {tr("Skipped on nights you've already tapped in.")}
                 </Text>
               </View>
 
               {history.length > 0 && (
                 <>
-                  <Text style={kicker}>RECENT NIGHTS</Text>
+                  <Text style={kicker}>{tr("RECENT NIGHTS")}</Text>
                   <View style={{
                     borderRadius: 16, overflow: "hidden",
                     borderWidth: 1, borderColor: dark ? "rgba(232,245,236,0.10)" : ink.hairline,

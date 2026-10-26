@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { track } from "./analytics";
 
+import { tr } from "./i18n";
 const CARD_W = 320;
 
 export default function ShareCard({
@@ -44,22 +45,22 @@ export default function ShareCard({
     <View style={styles.wrapper}>
       <View style={[styles.card, { backgroundColor: bg }]}>
         <View style={styles.inner}>
-          <Text style={[styles.brand, { color: accent }]}>DRIFT</Text>
+          <Text style={[styles.brand, { color: accent }]}>{tr("DRIFT")}</Text>
 
           <View style={styles.statRow}>
             <View style={styles.stat}>
               <Text style={[styles.statNum, { color: fg }]}>{streak}</Text>
-              <Text style={[styles.statLabel, { color: accent }]}>day streak</Text>
+              <Text style={[styles.statLabel, { color: accent }]}>{tr("day streak")}</Text>
             </View>
             <View style={[styles.divider, { backgroundColor: accent + "33" }]} />
             <View style={styles.stat}>
               <Text style={[styles.statNum, { color: fg }]}>{tasksCompleted}</Text>
-              <Text style={[styles.statLabel, { color: accent }]}>tasks done</Text>
+              <Text style={[styles.statLabel, { color: accent }]}>{tr("tasks done")}</Text>
             </View>
             <View style={[styles.divider, { backgroundColor: accent + "33" }]} />
             <View style={styles.stat}>
               <Text style={[styles.statNum, { color: fg }]}>{minutesEarned}</Text>
-              <Text style={[styles.statLabel, { color: accent }]}>min earned</Text>
+              <Text style={[styles.statLabel, { color: accent }]}>{tr("min earned")}</Text>
             </View>
           </View>
 
@@ -69,7 +70,7 @@ export default function ShareCard({
 
           <View style={[styles.footer, { borderTopColor: accent + "22" }]}>
             <Text style={[styles.tagline, { color: accent }]}>
-              Earn your screen time
+              {tr("Earn your screen time")}
             </Text>
             <Text style={[styles.url, { color: fg + "66" }]}>
               driftproductivity.com
@@ -79,7 +80,7 @@ export default function ShareCard({
       </View>
 
       <Text style={[styles.hint, { color: fg + "55" }]}>
-        Screenshot this card to share on Stories
+        {tr("Screenshot this card to share on Stories")}
       </Text>
 
       <View style={styles.buttons}>
@@ -88,14 +89,14 @@ export default function ShareCard({
           onPress={handleShare}
           activeOpacity={0.8}
         >
-          <Text style={styles.btnText}>Share Stats</Text>
+          <Text style={styles.btnText}>{tr("Share Stats")}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.btn, styles.btnSecondary]}
           onPress={onClose}
           activeOpacity={0.7}
         >
-          <Text style={[styles.btnSecText, { color: fg + "88" }]}>Close</Text>
+          <Text style={[styles.btnSecText, { color: fg + "88" }]}>{tr("Close")}</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -26,6 +26,7 @@ import {
 } from "./calendarSync";
 import { isSuggestionsEnabled, setSuggestionsEnabled } from "./places";
 
+import { tr } from "./i18n";
 /** A labelled switch. The unit this screen is mostly built from. */
 function ToggleRow({ title, sub, value, onValueChange, theme, dark, last }) {
   const { ink, earn } = theme;
@@ -180,32 +181,30 @@ export default function LabScreen({
         }}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={kicker}>TINKER</Text>
+        <Text style={kicker}>{tr("TINKER")}</Text>
         <Text style={{
           fontFamily: FF.display, fontSize: 34, color: ink.deep,
           letterSpacing: -0.4, marginBottom: 6,
         }}>
-          The Lab
+          {tr("The Lab")}
         </Text>
         <Text style={{
           fontFamily: FF.body, fontSize: 13, color: ink.mid,
           lineHeight: 19, marginBottom: 24,
         }}>
-          Everything that changes how Drift behaves.
+          {tr("Everything that changes how Drift behaves.")}
         </Text>
 
         {/* ── Blocking ── */}
-        <Text style={kicker}>WHAT GETS BLOCKED</Text>
+        <Text style={kicker}>{tr("WHAT GETS BLOCKED")}</Text>
         <View style={[card, { paddingVertical: 18 }]}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: ink.deep }}>
-                Blocked apps
+                {tr("Blocked apps")}
               </Text>
               <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid, marginTop: 3, lineHeight: 17 }}>
-                {blockedCount > 0
-                  ? `${blockedCount} ${blockedCount === 1 ? "selection" : "selections"} — locked when your balance hits zero.`
-                  : "Nothing selected yet — the shield has nothing to lock."}
+                {blockedCount > 0 ? tr("{{blockedCount}} {{p}} — locked when your balance hits zero.", { blockedCount, p: blockedCount === 1 ? "selection" : "selections" }) : tr("Nothing selected yet — the shield has nothing to lock.")}
               </Text>
             </View>
             <View style={{
@@ -231,7 +230,7 @@ export default function LabScreen({
             }}
           >
             <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: onDeep }}>
-              {blockedCount > 0 ? "Change blocked apps" : "Choose apps to block"}
+              {blockedCount > 0 ? tr("Change blocked apps") : tr("Choose apps to block")}
             </Text>
           </TouchableOpacity>
 
@@ -240,37 +239,37 @@ export default function LabScreen({
           <LinkRow
             theme={theme}
             Icon={LockIcon}
-            title="Blocked hours"
-            sub="Windows where apps stay locked no matter your balance."
+            title={tr("Blocked hours")}
+            sub={tr("Windows where apps stay locked no matter your balance.")}
             onPress={onOpenBlockedHours}
           />
           <LinkRow
             theme={theme}
             Icon={LockIcon}
-            title="Sleep guard"
-            sub="Tap an NFC tag in another room at bedtime. Apps stay locked until morning."
+            title={tr("Sleep guard")}
+            sub={tr("Tap an NFC tag in another room at bedtime. Apps stay locked until morning.")}
             onPress={onOpenSleepGuard}
           />
           <LinkRow
             theme={theme}
             Icon={TargetIcon}
-            title="Action plan"
-            sub={actionPlanSummary || "Set a screen-time goal and get a concrete plan for it."}
+            title={tr("Action plan")}
+            sub={actionPlanSummary || tr("Set a screen-time goal and get a concrete plan for it.")}
             onPress={onOpenActionPlan}
             last
           />
         </View>
 
         {/* ── Suggestions ── */}
-        <Text style={kicker}>WHAT SHOWS UP</Text>
+        <Text style={kicker}>{tr("WHAT SHOWS UP")}</Text>
         <View style={card}>
           {calendarAvailable() && (
             <>
               <ToggleRow
                 theme={theme}
                 dark={dark}
-                title="Calendar sync"
-                sub="Turn today's events into tasks. Read-only."
+                title={tr("Calendar sync")}
+                sub={tr("Turn today's events into tasks. Read-only.")}
                 value={calOn}
                 onValueChange={toggleCalendar}
               />
@@ -278,8 +277,8 @@ export default function LabScreen({
                 <ToggleRow
                   theme={theme}
                   dark={dark}
-                  title="Import automatically"
-                  sub="Pull today's events in once a day on their own."
+                  title={tr("Import automatically")}
+                  sub={tr("Pull today's events in once a day on their own.")}
                   value={calAuto}
                   onValueChange={toggleAutoImport}
                 />
@@ -289,41 +288,41 @@ export default function LabScreen({
           <ToggleRow
             theme={theme}
             dark={dark}
-            title="Place suggestions"
-            sub="Offer a task when you arrive somewhere you've saved."
+            title={tr("Place suggestions")}
+            sub={tr("Offer a task when you arrive somewhere you've saved.")}
             value={placesOn}
             onValueChange={togglePlaces}
           />
           <LinkRow
             theme={theme}
-            title="Calendars & places"
-            sub="Choose which calendars to read and manage saved places."
+            title={tr("Calendars & places")}
+            sub={tr("Choose which calendars to read and manage saved places.")}
             onPress={async () => { await onOpenAutoTasks?.(); refresh(); }}
             last
           />
         </View>
 
         {/* ── Tasks ── */}
-        <Text style={kicker}>TASKS</Text>
+        <Text style={kicker}>{tr("TASKS")}</Text>
         <View style={card}>
           <LinkRow
             theme={theme}
             Icon={ClipboardIcon}
-            title="Recurring tasks"
-            sub="Tasks that come back on a schedule."
+            title={tr("Recurring tasks")}
+            sub={tr("Tasks that come back on a schedule.")}
             onPress={onOpenRecurringTasks}
             last
           />
         </View>
 
         {/* ── Learn ── */}
-        <Text style={kicker}>LEARN THE APP</Text>
+        <Text style={kicker}>{tr("LEARN THE APP")}</Text>
         <View style={card}>
           <LinkRow
             theme={theme}
             Icon={SparkleIcon}
-            title="Replay the tour"
-            sub="The guided walkthrough from your first launch."
+            title={tr("Replay the tour")}
+            sub={tr("The guided walkthrough from your first launch.")}
             onPress={onReplayTour}
             last={!onPreviewPaywall}
           />
@@ -331,8 +330,8 @@ export default function LabScreen({
             <LinkRow
               theme={theme}
               Icon={SparkleIcon}
-              title="Preview paywall (dev)"
-              sub="Opens the Pro sheet on any account. Not in release builds."
+              title={tr("Preview paywall (dev)")}
+              sub={tr("Opens the Pro sheet on any account. Not in release builds.")}
               onPress={onPreviewPaywall}
               last
             />
@@ -342,7 +341,7 @@ export default function LabScreen({
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 8 }}>
           <LeafGlyph size={12} color={earn.sage} />
           <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.faint }}>
-            Account settings live in your profile.
+            {tr("Account settings live in your profile.")}
           </Text>
         </View>
       </ScrollView>

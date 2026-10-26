@@ -1,0 +1,1447 @@
+1	\n\nObservação: a localização está em "Durante o uso", então chegadas reais não vão disparar com o Drift fechado.
+2	 Cada preço menor é oferecido no app para você aceitar.
+3	 Preço final exibido pela App Store.
+4	 · devolvida, tente de novo
+5	 · sequência de {{streak}} dias
+6	"{{title}}" será removida de hoje.
+7	"{{title}}" será removida.
+8	"{{title}}" — abra o Drift para aceitar ou recusar.
+9	(OPCIONAL)
+11	+ Tarefa
+12	+{{minutes}} min
+13	+{{minutes}} min{{p}}
+14	+{{p}} minutos ao terminar
+15	+{{rewardMinutes}} min aguardando se ficar parado
+16	+{{xp}} XP
+17	1 noite seguida.
+18	10 burpees
+19	10 min de corrida leve
+20	10 min · Respirar e recomeçar
+21	10 min · Escrever o que pensa
+22	Corrida leve de 10 minutos
+23	12+ caracteres, número, símbolo
+24	15 min · Ar fresco
+25	15 min · Organizar seu espaço
+26	2 min · Começar bem o dia
+27	20 avanços
+28	20 min · Livros ou artigos
+29	20 min · Comer algo de verdade
+30	20 min · Música, arte, código etc.
+31	20 flexões
+32	20 abdominais
+33	30 polichinelos
+34	30 min · Exercício ou academia
+35	30 min · Lição de casa ou estudo
+36	30 agachamentos
+37	3–20 caracteres, letras/números/_
+38	5 min · Soltar o corpo
+39	5/HORA · LIMITE 20/DIA
+40	60 min · Detox matinal
+41	Prancha de 60 segundos
+42	9:00 Reunião diária
+43	@usuario
+44	@{{fromUsername}} quer crescer com você no Drift.
+45	@{{leaderName}} está com menos tempo de tela que você hoje. Você está em {{spent}}.
+46	@{{name}} aceitou seu desafio
+47	@{{name}} recusou seu desafio
+48	@{{username}} não tem conta no Drift.
+49	@{{username}} ainda não registrou hoje.
+50	@{{username}} ainda não está no Drift.
+51	Uma notificação "Você está em {{label}}" deve aparecer agora. Toque nela — ela deve abrir o Drift com "{{title}}" pronto para confirmar.
+52	Uma noite inteira no outro cômodo. +{{max}} minutos ganhos.
+53	Um token de notificação
+54	Um responsável precisa definir um PIN no app dele primeiro.
+56	CONTA
+57	ADICIONAR UM FILHO
+58	IA
+59	VERIFICAÇÃO COM IA
+60	A IA confere sua prova antes de você ganhar créditos. Com o Pro, ela também lê sua tarefa e define o valor dela pela dificuldade.
+61	Os recursos de IA exigem uma assinatura ativa.
+62	A IA lê sua tarefa para definir o valor e a categoria, e depois confere sua prova antes de você ganhar créditos.
+63	JÁ FEITA
+64	APARÊNCIA
+65	ARQUIVO
+66	TAREFAS AUTOMÁTICAS
+67	Abandonar
+68	Abandonar sessão
+69	Abandonar a sessão?
+70	Abandonar não rende créditos.
+71	Restam cerca de {{m}} min de tempo ganho.
+72	Aceitar
+73	Aceitando…
+74	Conta excluída
+75	As configurações da conta ficam no seu perfil.
+76	Plano de ação
+77	Adicionar
+78	Adicionar "{{title}}" ({{minutes}} min)? Toque para confirmar.
+79	Adicionar uma tarefa
+80	Adicionar uma resposta
+81	Me adicione no Drift: {{link}}
+82	Adicione uma para começar.
+83	Adicionar prova
+84	Adicionar tarefas reais
+85	Adicionar tarefa
+86	Adicionar esta tarefa?
+87	Adicione sua conta Google em Ajustes → Apps → Calendário → Contas, verifique se Calendários está ativado e toque em Verificar de novo.
+88	Entra em hoje — se você confirmar
+89	Adicionando…
+90	Adiciona estes horários bloqueados. Os seus continuam.
+91	Tarde
+92	Tardes
+93	De novo
+94	Mire no local e toque para soltar a caixa
+95	Aeroporto
+96	Alex
+97	Todas
+98	Tudo em dia
+99	Permita o acesso ao calendário para importar eventos como tarefas.
+100	Permita a câmera nos Ajustes.
+101	Permita o acesso às fotos nos Ajustes.
+102	Permitido
+103	Apps permitidos
+104	Quase sem tempo
+105	Quase lá
+106	Já tem conta? Entrar
+107	Sempre permitir para {{display_name}}
+108	É preciso localização "Sempre"
+109	Já existe uma conta com esse e-mail — mude para Entrar.
+110	Já existe uma conta com esse e-mail. Tente entrar.
+111	Ancestral
+112	Responda à pergunta para concluir a verificação.
+113	Códigos da App Store só podem ser resgatados no iPhone.
+114	O bloqueio de apps precisa de uma versão completa do Drift — você pode configurar depois.
+115	O bloqueio de apps pelo Tempo de Uso da Apple é só para iOS.
+116	Pedidos de apps
+117	O bloqueio pelo Tempo de Uso da Apple exige uma versão personalizada do Drift.
+118	O bloqueio pelo Tempo de Uso da Apple exige uma versão personalizada do Drift. Atualize o Drift e tente de novo.
+119	Falha ao entrar com a Apple.
+120	Compromisso
+121	Aprovar
+122	Apps
+123	Apps bloqueiam
+124	Os apps bloqueiam\nquando o tempo acaba
+125	Apps, categorias ou domínios da web.
+126	Arquivar
+127	Tem certeza?
+128	Ativado às {{toLocaleTimeString}}. Deixe o celular onde está e o Drift confere de manhã.
+129	Braços
+130	Chegadas ativadas
+131	Chegadas não vão disparar
+132	Chegue a um lugar salvo e o Drift oferece a tarefa.
+133	Atribuir
+134	A qualquer momento você pode ver o que o Drift guarda sobre seu filho (toque em Dados ao lado do nome), apagar ou retirar o consentimento, o que apaga os dados de todos os filhos e interrompe qualquer coleta. Dúvidas: driftappcontact@gmail.com.
+135	Pelo menos 3 caracteres.
+136	Na academia
+137	Disponível agora
+138	ANTES DE SEUS FILHOS ENTRAREM
+139	HORÁRIOS BLOQUEADOS
+140	DETALHES
+141	Voltar
+142	Voltar para entrar
+143	O saldo fica em 0 nesses horários.
+144	Banco
+145	Ir ao banco
+146	Bar
+147	Barbearia
+148	Basquete
+149	Quadra de basquete
+150	Seja específico! Descreva o que vai fazer de verdade (ex.: "Ler 20 páginas", não "coisas").
+151	Praia
+152	Caminhada na praia
+153	Trilha de bike
+154	Erro de bloqueio
+155	Bloqueie todos os apps, tarefas ilimitadas, Lockbox e sua planta completa.
+156	Bloqueado
+157	Apps bloqueados
+158	Horários bloqueados
+159	Bloqueado.
+160	Livraria
+161	Jardim botânico
+162	As duas contas têm Pro, então a conclusão usa a verificação com IA.
+163	Os dois são opcionais, ficam desligados até você ativar e ficam no seu aparelho. Estão em Perfil → Tarefas automáticas.
+164	Boulder
+165	Parede de boulder
+166	Boliche
+167	Boliche
+168	Academia de boxe
+169	Treino de boxe
+170	Respire.
+171	Traga os eventos de hoje como tarefas. Só leitura — o Drift nunca altera seu calendário.
+172	Bugs, ideias, qualquer coisa. Lemos todas as mensagens.
+173	Sessão de criação
+174	Feito por uma equipe minúscula. Uma avaliação leva dez segundos e ajuda de verdade.
+175	Burpees
+176	Ponto de ônibus
+177	Ao criar uma conta você concorda com nossos{{p}}
+178	CONTA DO CALENDÁRIO
+179	CALENDÁRIOS A USAR
+180	CATEGORIA
+181	DESAFIO
+182	DESAFIO PERDIDO
+183	DESAFIO VENCIDO
+184	DESAFIOS - {{length}}
+185	GARANTIR USUÁRIO
+186	RESGATAR {{credits}} MIN DE CRÉDITOS
+187	FECHAR
+188	CONCLUÍDAS
+189	CONFIANÇA: {{p}}
+190	CONTATOS
+191	CONTINUAR
+192	NÍVEL ATUAL
+193	Café
+194	Calendário
+195	É preciso acesso ao calendário
+196	Sincronizar calendário
+197	Calendários e lugares
+198	Ligar para um amigo
+199	Câmera
+200	Tarefas do acampamento
+201	Camping
+202	Campus
+203	Não dá para verificar
+204	Cancelar
+205	Cancelar este desafio?
+206	Cancelar hoje à noite
+207	Copa
+208	Resolver coisa do carro
+209	Oficina mecânica
+210	Lava-rápido
+211	Pôr em dia
+212	Desafio
+213	Desafios
+214	Mude o que quiser antes de confirmar.
+215	Mudar apps bloqueados
+216	Verifique se está conectado à App Store e à internet e tente de novo.
+217	Confira seu e-mail para verificar a conta e entre de novo.
+218	Confira seu e-mail para verificar a conta e tente entrar de novo.
+219	Escolha primeiro um plano Drift Family. É assim que o Drift confirma que um adulto está configurando.
+220	Escolher apps para bloquear
+221	Escolher horário
+222	Escolha quais apps bloquear.\nO Drift aplica mesmo fechado.
+223	Escolha quais calendários ler e gerencie os lugares salvos.
+224	Igreja
+225	Resgatar créditos
+226	Limpar / arrumar
+227	Arrume seu quarto
+228	Escritório do cliente
+229	Visita a cliente
+230	Academia de escalada
+231	Sessão de escalada
+232	Vídeo muito pesado
+233	Vídeo muito longo
+234	Fechar
+235	Aproximado já está bom. Seja realista.
+236	Clube
+237	Encontro do clube
+238	Coletar recompensas
+239	Centro comunitário
+240	Evento comunitário
+241	Horta comunitária
+242	Leitura no trajeto
+243	Competir
+244	Título do desafio
+245	Conclua uma tarefa primeiro.
+246	Conclua uma tarefa no Drift para desbloquear.
+247	Conclua uma tarefa para recuperar seu tempo.
+248	Conclua uma tarefa hoje para ganhar tempo de tela.
+249	Conclua uma tarefa, ganhe minutos.\nQuanto mais difícil, mais você ganha.
+250	Concluir antes
+251	Conclua sua primeira tarefa para guardar alguns minutos. Bem-vindo ao foco.
+252	Casa de shows
+253	Centro de convenções
+254	Confirmar
+255	Confirme seu e-mail ou telefone antes de continuar.
+256	Conectar o Google Agenda
+257	É preciso acesso aos contatos
+258	Continuar
+259	Continuar sem atualizar (dev)
+260	Cozinhar uma refeição
+261	Copiado
+262	Não foi possível verificar o nome de usuário. Tente de novo.
+263	Não foi possível excluir a conta
+264	Não foi possível reenviar o e-mail. Tente de novo.
+265	Não foi possível salvar. Tente de novo.
+266	Não foi possível enviar o desafio.
+267	Não foi possível atualizar a foto de perfil.
+268	Não foi possível atualizar o nome de usuário.
+269	Não foi possível verificar o e-mail
+270	Não foi possível verificar. Tente de novo.
+271	Não foi possível adicionar
+272	Não deu para aplicar agora
+273	Não foi possível atribuir a tarefa. Tente de novo.
+274	Não foi possível bloquear os apps
+275	Não foi possível cancelar
+276	Não foi possível verificar o PIN. Tente de novo.
+277	Não deu para comprimir o vídeo o suficiente. Grave um mais curto.
+278	Não deu para comprimir a foto o suficiente. Tente outra.
+279	Não foi possível apagar. Verifique sua conexão e tente de novo.
+280	Não foi possível concluir o login. Tente de novo.
+281	Não conseguimos concluir seu login
+282	Não foi possível obter a localização
+283	Não foi possível entrar na família. Tente de novo.
+284	Não foi possível mapear o ambiente
+285	Não foi possível acessar o serviço de IA. Se você está em um Wi-Fi público (academia, café ou campus), ele pode estar bloqueando o Drift — desligue o Wi-Fi para usar dados móveis e tente de novo.
+286	Não foi possível acessar a App Store
+287	Não deu para ler o histórico de movimento de ontem à noite. Vamos te dar o benefício da dúvida.
+288	Não foi possível ler esse vídeo
+289	Não foi possível ler essa etiqueta
+290	Não foi possível resgatar agora. Tente de novo.
+291	Não foi possível remover
+292	Não foi possível salvar o PIN. Tente de novo.
+293	Não foi possível salvar seu plano
+294	Não foi possível enviar
+295	Não foi possível iniciar
+296	Contando algo — repetições, voltas, páginas? Grave um vídeo. Uma foto só não mostra um número.
+297	Coworking
+298	Criar conta
+299	Crie uma conta para compartilhar seu foco{{p}}com amigos.
+300	Criar esta tarefa às
+301	Crie sua conta
+302	Créditos pela duração da tarefa.
+303	Box de CrossFit
+304	Personalizado
+305	Desafios personalizados precisam da atualização SQL do Supabase antes de serem enviados.
+306	Desafios personalizados são enviados normalmente. A verificação com IA liga quando os dois têm Pro.
+307	Dias personalizados
+308	APOSTA
+309	APOSTA CUMPRIDA
+310	APOSTA FALHOU
+311	FOCO PROFUNDO
+312	EXCLUIR
+313	DEV pular — sem sessão
+314	DEV · PÓS-CADASTRO
+315	DEV · PRÉ-CADASTRO
+316	FEITO
+317	FEITO HOJE
+318	DRIFT
+319	Diariamente
+320	Treino de dança
+321	Estúdio de dança
+322	Aposta
+323	Título da aposta
+324	Escuro
+325	Dados
+326	Creche
+327	Recusado
+328	Trabalho focado
+329	Excluir
+330	Excluir conta
+331	Excluir conta?
+332	Excluir este plano
+333	Excluir este plano?
+334	Apagar os dados de {{name}}
+335	Apagar os dados de {{name}}?
+336	Excluir a tarefa {{title}}?
+337	Excluir?
+338	Negado — toque para ativar
+339	Consulta no dentista
+340	Dentista
+341	Recusar
+342	Descreva como você concluiu "{{title}}"...
+343	Aparelho
+344	Etiqueta diferente
+345	Dispensar
+346	Consultório médico
+347	Parque para cães
+348	Dojô
+349	Não quebre sua sequência!
+350	OK
+351	Concluir antes da meia-noite dá +{{xp}} XP
+352	Saldo do Drift
+353	Drift Family
+354	Drift In
+355	Drift Pro
+356	O Drift Pro bloqueia quantos apps, categorias e sites você quiser.
+357	O Drift pode comparar seus contatos para encontrar amigos que já usam o Drift. Os e-mails dos contatos viram hash no seu aparelho e nunca são enviados em texto puro.
+358	O Drift pode ler seu calendário para oferecer os eventos de hoje como tarefas. Ele nunca altera seu calendário e nada é enviado.
+359	O Drift pode ler seus lembretes para oferecê-los como tarefas. Ele nunca altera seus lembretes e nada é enviado.
+360	O Drift não consegue bloquear apps até você reativar o acesso ao Tempo de Uso em Ajustes → Tempo de Uso.
+361	O Drift verifica quando você chega a lugares salvos para sugerir uma tarefa. Para funcionar em segundo plano, precisa do acesso "Sempre". Sua localização fica no aparelho e nunca é enviada.
+362	O Drift não grava áudio. Esta permissão é exigida por um componente de câmera usado para detectar postura.
+363	Feedback do Drift
+364	O Drift não tem permissão de localização (Ajustes › Drift › Localização).
+365	Drift in
+366	Conta infantil do Drift
+367	O Drift pode salvar uma captura na sua fototeca se você quiser compartilhar seu progresso.
+368	O Drift precisa da localização "Sempre" para notar quando você chega a algum lugar. Mude isso em Ajustes → Drift → Localização.
+369	O Drift precisa acessar suas fotos para anexar uma prova a uma tarefa ou definir sua foto de perfil.
+370	Conta de responsável do Drift
+371	O Drift lê o Google Agenda pelo iOS. Abra Ajustes → Apps → Calendário → Contas → Adicionar Conta → Google, entre e ative Calendários. Depois volte e verifique de novo.
+372	O Drift lê uma etiqueta NFC que você coloca em outro cômodo, para provar que o celular está lá antes de dormir. O Drift só lê o ID da etiqueta e nunca grava nela.
+373	O Drift usa Movimento e Condicionamento para confirmar que o celular ficou parado à noite. Ative em Ajustes › Drift › Movimento e Condicionamento.
+374	O Drift usa dados de movimento para detectar exercícios nos desafios de treino e para conferir se o celular fica parado durante uma sessão Lockbox ou à noite com o guarda de celular em outro cômodo, mesmo com a tela apagada. Os dados de movimento são lidos no aparelho e nunca enviados.
+375	O Drift usa sua câmera para tirar fotos de prova das tarefas, definir sua foto de perfil e posicionar a Lockbox em uma superfície real com realidade aumentada.
+376	O Drift usa sua localização para salvar os lugares que você escolhe e sugerir uma tarefa quando você chega. Sua localização fica no aparelho.
+377	O Drift vai esquecer sua etiqueta e parar o lembrete noturno. Seu histórico de sequências é mantido.
+378	Drinks
+379	Coloque uma caixa na mesa. O celular entra e fica lá dentro.
+380	Levar o reciclável
+381	Soltar a caixa
+382	Desça ao chão · pule e bata palmas acima da cabeça
+383	Lavanderia a seco
+384	Deixar roupa na lavanderia
+385	DÁ PARA GANHAR
+386	GANHO
+387	CURTINDO O DRIFT?
+388	DIGITE O CÓDIGO
+389	GANHO ESTIMADO
+390	Cada tarefa tem um tempo estimado e rende tempo de tela quando concluída.
+391	Ganhe tempo de tela concluindo uma tarefa no Drift.
+392	Recupere isto para desbloquear
+393	Ganhe tempo.
+394	Ganhe seu próprio tempo de tela concluindo tarefas.
+395	Ganhe seu tempo de tela
+396	Ganhe seu tempo de tela fazendo coisas de verdade. Seu celular desbloqueia quando você faz.
+397	Ganhe seu tempo
+398	Ganho
+399	Ganho por tipo
+400	Cotovelo
+401	Cotovelos a 90° embaixo · estique em cima
+402	E-mail
+403	Contas de e-mail precisam ser verificadas antes de o Drift desbloquear.
+404	E-mail ou senha incorretos.
+405	E-mail obrigatório.
+406	E-mail longo demais.
+407	Escreva para {{FEEDBACK_EMAIL}}
+408	Ative Contatos nos Ajustes para encontrar amigos. Eles nunca saem do aparelho sem hash.
+409	Ative o Drift em Ajustes > Tempo de Uso para que ele possa bloquear apps.
+410	Ativar câmera
+411	Ative a localização para o Drift usar sugestões por lugar.
+412	Fim
+413	Encerrar antes
+414	Encerrar esta sessão?
+415	Digite um código.
+416	Digite um e-mail válido.
+417	Digite pelo menos 4 dígitos.
+418	Digite para escolher quais apps são bloqueados.
+419	Digite entre 1 e 600 minutos.
+420	Digite o código de 8 dígitos do seu e-mail.
+421	Digite o código que você recebeu do seu programa ou da equipe do Drift para desbloquear o Drift Pro.
+422	Digite o código da família que seu responsável te deu.
+423	Digite seu código
+424	Digite seu nome.
+425	Digite seu ID de participante.
+426	Erro
+427	Eterno
+428	Noite
+429	Noites
+430	Evento
+431	Todo dia
+432	Todas as vagas desta família estão ocupadas. Peça ao seu responsável para adicionar uma no Drift e tente de novo.
+433	Tudo o que fica salvo na conta de {{name}}. Nada mais é guardado.
+434	Tudo o que muda o comportamento do Drift.
+435	Exercício
+436	Explorar
+437	Ver uma exposição
+438	CÓDIGO DA FAMÍLIA
+439	FEEDBACK
+440	FOCO
+441	Código da família
+442	Casa da família
+443	Tempo em família
+444	Fazenda
+445	Tarefas da fazenda
+446	Abastecer
+447	Encontrar amigos nos contatos
+448	Concluir
+449	Termine antes da meia-noite → +{{xp}} XP
+450	Concluir antes?
+451	Termine primeiro. Isto vai continuar aqui.
+452	Termine. {{name}} vai continuar aí.
+453	Quem terminar primeiro ganha +{{xp}} XP
+454	Quem verificar primeiro ganha +{{xp}} XP
+455	Bloco de foco
+456	Foco.
+457	Tempo de foco?
+458	Bloco de trabalho focado
+459	Trabalho focado, academia, cozinhar, estudar
+460	Floresta
+461	O plano grátis bloqueia até {{FREE_BLOCK_LIMIT}}
+462	Sex
+463	Pedido de amizade enviado para @{{username}}
+464	Pedido de amizade enviado para @{{username}}.
+465	Casa de amigo
+466	Amigos
+467	Amigos no Drift
+468	Joelho da frente a 90° · o de trás quase toca o chão
+469	META
+470	BOSQUE
+471	Noite de jogos
+472	Loja de jogos
+473	Passeio no jardim
+474	Jardinagem
+475	Posto de gasolina
+476	Começar
+477	Deixando tudo\npronto para você
+478	Devolver minutos ganhos.
+479	Dê um nome à tarefa.
+480	Dê um pouco mais de tempo a esta tarefa antes de provar.
+481	Sair para caminhar
+482	Campo de golfe
+483	Boa noite
+484	Bom trabalho.
+485	Boa noite
+486	Google
+487	O login com Google não está configurado.
+488	Falha no login com Google
+489	Falha no login com Google.
+490	O login com Google não está configurado nesta versão.
+491	O login com Google precisa de uma versão dev client (não funciona no Expo Go).
+492	Que dia bom ontem!
+493	Mercado
+494	Bosque
+495	Crescendo
+496	Crescimento
+497	Academia
+498	HORA MAIS DIFÍCIL
+499	TEM UM CÓDIGO?
+500	COMO FUNCIONA
+501	COMO ISSO FUNCIONA
+502	Corte de cabelo
+503	Encontrar a galera
+504	Treino pesado, sprint intenso, saída longa
+505	Loja de ferragens
+506	Tem um código Pro ou de grupo? Desbloqueie aqui
+507	Tem um código?
+508	Altura
+509	Ajude o Drift a crescer
+510	Trilha
+511	Quadril
+512	Quadril abaixo dos joelhos · empurre pelos calcanhares
+513	Histórico
+514	Oi{{p}}
+515	Encoste o topo do celular na etiqueta que quer usar.
+516	Encoste o topo do celular na sua etiqueta para começar a noite.
+517	Encoste o topo do celular na sua etiqueta.
+518	Segure o celular parado na etiqueta e tente de novo.
+519	Mantendo
+520	Casa
+521	Academia em casa
+522	Escritório em casa
+523	Hotel
+524	É como os amigos te encontram. Não dá para mudar depois.
+525	Por quanto tempo guardamos
+526	Quantos filhos?
+527	Como confirmamos que você é o responsável
+528	EU PASSO CERCA DE
+529	Concordo
+530	Acabei de ganhar {{earnedText}} de tempo de tela fazendo "{{title}}" por {{timeText}} no Drift.
+531	Uso o Drift para ganhar meu tempo de tela — entre com meu código {{code}} e ganhe 15 minutos de bônus: {{link}}
+532	Volto mais tarde
+533	Sou criança
+534	Sou responsável
+535	Sou o pai, a mãe ou o responsável legal das crianças que vão entrar nesta família e concordo que o Drift colete e use as informações delas como descrito acima.
+536	Uso o Drift para ganhar meu tempo de tela em vez de ficar rolando a tela — vem comigo: {{link}}
+537	NA CAIXA
+538	EM VEZ DISSO, VOU
+539	Rinque de patinação
+540	O processamento de imagem não está instalado nesta versão. Use prova por texto ou vídeo.
+541	Importar automaticamente
+542	Importar eventos de hoje
+543	Intensa
+544	Convidar contatos para o Drift
+545	É isso mesmo que importa agora?
+546	{{label}} é mesmo o que importa agora?
+547	{{name}} é o que importa agora?
+548	Ele foi pego por volta de {{when}}. Sem bônus desta vez.
+549	Obra
+550	Entrar na família
+551	Entre na nossa família no Drift — abra o app, escolha "Sou criança" e digite este código: {{code}}
+552	Entre na sua família com o código do seu responsável.
+553	Entre na sua{{p}}família
+554	Diário
+555	Pés afastados · braços totalmente acima da cabeça
+556	Polichinelos
+557	É só pedir à Siri
+558	Só eu
+559	Só uma vez
+560	Manter conta
+561	Continue
+562	Mantenha abaixo de 5000 caracteres.
+563	Mantenha abaixo de {{VIDEO_MAX_SECONDS}} segundos — é suficiente para mostrar o trabalho.
+564	Mantenha sua sequência
+565	Criança
+566	Joelho
+567	CONHEÇA O APP
+568	MENOS TEMPO DE TELA HOJE
+569	DURAÇÃO
+570	NÍVEL
+571	SUBIU DE NÍVEL
+572	AO VIVO
+573	CHECAGEM AO VIVO
+574	Laboratório
+575	Trabalho de laboratório
+576	Lago
+577	Idioma
+578	Prática de idioma
+579	Escola de idiomas
+580	Ontem à noite
+581	Tarde
+582	Madrugada
+583	Depois
+584	Lavanderia
+585	Lavar roupa
+586	Aprendizado
+587	Deixe no cômodo onde o celular vai dormir. Toque nela na hora de dormir para começar a noite.
+588	Deixe aí
+589	Deixe onde está.
+590	Sair da sessão?
+591	Deixe o celular onde está. O Drift confere de manhã.
+592	Aula
+593	Auditório
+594	Deixar as tarefas\nse adicionarem sozinhas?
+595	Deixe as tarefas se adicionarem sozinhas — pelo calendário ou quando você chega a algum lugar.
+596	Vamos te configurar
+597	Só letras, números e sublinhados.
+598	Biblioteca
+599	Vida
+600	Leve
+601	O rastreamento ao vivo não está disponível
+602	O rastreamento ao vivo precisa de uma versão completa
+603	Carregando modelo…
+604	Os Serviços de Localização estão desligados no aparelho (Ajustes › Privacidade › Serviços de Localização).
+605	A localização está em "Durante o uso". As chegadas precisam de "Sempre" (Ajustes › Drift › Localização › Sempre).
+606	A localização não está disponível nesta versão.
+607	Localização necessária
+608	Fechar o compromisso
+609	Lockbox
+610	Lockbox concluída
+611	Sessão Lockbox perdida
+612	Lockbox · Pro
+613	Bloqueado
+614	Falha na busca
+615	Desça o peito até o chão · o movimento completo conta
+616	Avanços
+617	Mail não configurado
+618	Criar algo
+619	Verifique se a localização está ativada e tente de novo.
+620	Arrumar a cama
+621	Shopping
+622	Gerenciar acesso aos apps
+623	Mapas
+624	Marina
+625	Aula de artes marciais
+626	Comparando seus contatos com privacidade…{{p}}Os e-mails viram hash no seu aparelho.
+627	No máximo 20 caracteres.
+628	Comer fora
+629	Meditar
+630	Centro de meditação
+631	Mensagens
+632	Minutos
+633	Perca o prazo e você perde {{penaltyMins}} minutos de tempo de tela.
+634	Perder o prazo custa {{penaltyMins}} minutos de tempo de tela.
+635	Moderada
+636	Seg
+637	Monitorando 1 lugar em segundo plano.
+638	Monitorando {{placeCount}} lugares em segundo plano.
+639	Mensal
+640	Manhã
+641	Manhãs
+642	É preciso acesso ao movimento
+643	Os dados de movimento não estão disponíveis agora. Vamos verificar de novo em breve.
+644	Montanha
+645	Mova devagar sobre uma mesa
+646	Museu
+647	Música
+648	Escola de música
+649	NOVA TAREFA
+650	NOVA TAREFA · AVALIADA POR IA
+651	SEM TENTATIVAS RESTANTES NESTA TAREFA
+652	NÃO VERIFICADA
+653	Manicure
+654	Nome
+655	Dê nome à única coisa em que quer focar e escolha uma duração. Durante o Drift In, seus apps bloqueados continuam bloqueados e o cronômetro segue mesmo se você fechar o Drift. Termine a sessão e metade do seu tempo de foco volta como tempo de tela — até 60 minutos — além de experiência para o seu nível, que não tem limite. Abandonar antes não rende nada.
+656	Dê um nome ao seu desafio primeiro
+657	Dê um nome à sua tarefa primeiro
+658	Necessário para contar suas repetições ao vivo
+659	Erro de rede. Verifique sua conexão.
+660	Novo pedido de amizade
+661	Nova tarefa para {{display_name}}
+662	Próximo
+663	Muito bem. Seu progresso chegou a um novo nível.
+664	Boa.
+665	A noite começou. Seus apps estão bloqueados até de manhã.
+666	Não
+667	Sem RA neste aparelho — é só deixar o celular deitado.
+668	Ainda sem Google Agenda
+669	Não tem conta? Cadastre-se
+670	Nenhum app para bloquear
+671	Nada de rolar a tela escondido.
+672	Sem saldo. Uma tarefa muda isso.
+673	Nenhum horário bloqueado ainda.
+674	Sem bônus desta vez.
+675	Nenhuma câmera encontrada
+676	Nenhuma tarefa concluída ainda.
+677	Nenhuma tarefa concluída ainda. As tarefas aprovadas aparecem aqui.
+678	Nenhuma tarefa concluída ainda. Conclua uma para vê-la aqui.
+679	Nenhum crédito será ganho.
+680	Não chegou o e-mail? Veja o spam!
+681	Nada de e-mail, telefone, senha, fotos, localização, contatos ou data de nascimento. Contas infantis nunca usam a verificação com IA, então nada do que seu filho faz é enviado a um serviço de IA. Sem anúncios, sem rastreamento e sem análises em contas infantis. Quais apps ele usa fica no celular dele — a Apple só dá ao Drift tokens ilegíveis.
+682	Nada de e-mail, fotos, localização, contatos ou verificações com IA. Quais apps ele abre fica no celular dele.
+683	Nenhum quadro saiu. Grave de novo.
+684	Nenhum calendário do iPhone encontrado neste aparelho.
+685	Ainda não há filhos. Compartilhe seu código acima e eles aparecem aqui quando entrarem.
+686	Nenhum evento novo no calendário de hoje.
+687	Nenhum desafio anterior
+688	Sem celular por 1 hora
+689	Nenhum lugar salvo — salve um quando estiver nele.
+690	Nenhum lugar salvo ainda.
+691	Ainda sem plantas
+692	Nenhuma tarefa recorrente ainda.
+693	Sem estatísticas
+694	Ainda sem etiqueta
+695	Sem tarefas
+696	Nenhuma tarefa agora. Quando seu responsável te der uma, ela aparece aqui.
+697	Nenhum tempo ganho ainda
+698	Não há tempo para remover.
+699	Sem precisar de força de vontade. O sistema faz a parte difícil.
+700	Nenhum dos seus contatos está no Drift ainda — convide-os abaixo.
+701	Nenhum ainda. Vá a um lugar que frequenta — sua academia, a biblioteca — e salve abaixo.
+702	Indisponível
+703	Indisponível aqui
+704	Não ativado — toque para permitir
+705	Não encontrado
+706	Agora não
+707	Agora não.
+708	Ainda não configurado
+709	Sem login
+710	Ainda não
+711	Ainda não.
+712	Nada arquivado ainda.
+713	Nada aqui que não possa esperar.
+714	Nada selecionado ainda — o bloqueio não tem o que travar.
+715	Nada gasto hoje ainda.
+716	Nada para importar
+717	Nada para restaurar
+718	Nada para configurar — os comandos funcionam assim que o Drift é instalado. Também aparecem nos Atalhos.
+719	As notificações estão desligadas
+720	As notificações estão desligadas, então uma chegada não tem como te avisar (Ajustes › Drift › Notificações).
+721	OK
+722	MAIS UMA COISA
+723	UMA CHECAGEM RÁPIDA
+724	ABRIR
+725	OPCIONAL
+726	Desligado
+727	Oferecer uma tarefa quando você chega a um lugar salvo.
+728	Escritório
+729	Mata antiga
+730	Ligado
+731	Uma vez
+732	Uma tarefa no Drift e é seu.
+733	Uma tarefa já basta.
+734	Uma tarefa, atenção total. O resto pode esperar.
+735	As que você atribuiu e o status delas
+736	Só para fazer funcionar o que você usa: atribuir tarefas, aprová-las e liberar tempo de tela no celular do seu filho.
+737	Só {{minutes}} minutos até agora. Uma noite precisa de pelo menos {{round}} horas.
+738	Abra o Drift para aceitar ou recusar.
+739	Abrir Ajustes
+740	Abrir meu app de e-mail
+741	Abra o e-mail de verificação mais recente e tente de novo.
+742	Abra seu e-mail
+743	Abra seu app de e-mail e procure seu código Drift de 8 dígitos.
+744	Abre a tela Pro em qualquer conta. Não aparece nas versões públicas.
+745	Ao ar livre
+746	ID DE PARTICIPANTE
+747	CELULAR LONGE
+748	CELULAR DE LADO ÀS
+749	PLANTA
+750	PLANTAS
+751	PERFIL
+752	PROGRESSO
+753	COLOQUE DE VOLTA
+754	Responsável
+755	PIN do responsável
+756	Parque
+757	Senha
+758	A senha precisa ter pelo menos 12 caracteres.
+759	Senha obrigatória.
+760	Senha longa demais (máx. 72 caracteres).
+761	Desafios anteriores
+762	Permissão negada
+763	Farmácia
+764	Telefone
+765	Celular na caixa
+766	Falha na foto
+767	Foto grande demais
+768	Físico
+769	Clínica de fisioterapia
+770	Escolha uma meta menor
+771	Escolha um nome de usuário.
+772	Escolha outro nome de usuário.
+773	Escolher apps para bloquear
+774	Escolha apps para bloquear quando seu saldo zerar. O iOS aplica mesmo com o Drift fechado e pode demorar até ~15 min.
+775	Escolher apps com o Tempo de Uso da Apple
+776	Escolha pelo menos um app ou categoria para continuar.
+777	Pegue para ver a caixa de novo
+778	Escolha a que combina — não dá para mudar depois.
+779	Buscar receita na farmácia
+780	Buscar materiais
+781	Escolha suas tarefas\ndiárias
+782	Escolha seu nome de usuário
+783	Escolher apps exige a versão do Drift da App Store ou do TestFlight.
+784	Retirada
+785	Aula de pilates
+786	Estúdio de pilates
+787	Lugar
+788	Limite de lugares atingido
+789	Sugestões por lugar
+790	As sugestões por lugar estão desligadas.
+791	As sugestões por lugar chegam como notificação, então com as notificações desligadas nada vai chegar. Ative em Ajustes › Drift › Notificações.
+792	Posicione a caixa
+793	Prancha
+794	Os planos não estão carregando agora. Verifique sua conexão e tente de novo.
+795	Plantar
+796	Plante um amigo pelo nome de usuário.
+797	Plantar amigo
+798	Jogar uma partida
+799	Tente de novo mais tarde.
+800	Tente de novo.
+801	Mire onde você deixou a caixa
+802	Piscina
+803	Correios
+804	Ir aos Correios
+805	Prática
+806	Praticar uma habilidade
+807	Preparando a foto…
+808	Prévia do paywall (dev)
+809	Privacidade
+810	Política de Privacidade
+811	Política de privacidade
+812	Recurso Pro
+813	O Pro faz sua planta crescer além de {{name}}.
+814	O armazenamento de fotos de perfil ainda não está configurado. Rode supabase/profile_challenge_updates.sql no Supabase e tente de novo.
+815	Fotos de perfil precisam da coluna avatar_url no banco. Rode supabase/profile_challenge_updates.sql e reinicie o app.
+816	Prove já — mas vai precisar de uma prova sólida.
+817	Traz os eventos de hoje uma vez por dia, sozinho.
+818	Traz os eventos de hoje uma vez por dia, sozinho. Desligado, você importa à mão abaixo.
+819	Falha na compra
+820	As compras não estão disponíveis nesta versão.
+821	As compras ainda não estão configuradas nesta plataforma.
+822	Flexões
+823	Coloque de volta na caixa
+824	Coloque o celular de volta na caixa
+825	Deixe o celular no outro cômodo e toque na etiqueta para começar a noite.
+826	Deixe o celular no outro cômodo e toque na etiqueta. 1 noite seguida até agora.
+827	Deixe o celular no outro cômodo e toque na etiqueta. {{streak}} noites seguidas até agora.
+828	Tarefa rápida, burocracia leve, pouco esforço
+829	PRONTO
+830	NOITES RECENTES
+831	TAREFAS RECORRENTES
+832	REMOVER FOTO
+833	REMOVER VÍDEO
+834	REPETIR
+835	Reativar
+836	Ler
+837	Ler um capítulo
+838	Ler a política de privacidade completa
+839	Lendo seu vídeo…
+840	Lendo seu vídeo… {{done}}/{{total}}
+841	Ler, treinar, estudar, cozinhar.\nQualquer coisa produtiva que você faria de verdade.
+842	Pronto para dormir?
+843	Recompile com o expo-video-thumbnails instalado.
+844	Verificar de novo
+845	Recuperação
+846	Agendar tarefas recorrentes é um recurso Pro.
+847	Tarefas recorrentes
+848	Ecoponto
+849	Resgatar
+850	Resgatar um código
+851	Refazer
+852	Reduzir
+853	Sequoia
+854	As regiões ainda não estão sendo monitoradas — toque em Reativar.
+855	Registrar uma etiqueta
+856	Registre uma etiqueta para ativar o guarda.
+857	Exercícios de reabilitação
+858	Remover
+859	Remover @{{username}}?
+860	Remover amigo
+861	Remover tempo
+862	Remover {{label}}?
+863	@{{username}} removido
+864	Repete
+865	Repete todo dia
+866	Rever o tour
+867	Pedido já enviado
+868	Pedido enviado
+869	Pedido enviado para @{{username}}
+870	Pedidos enviados a você
+871	Reenviar código
+872	Restaurante
+873	Restaurar
+874	Falha ao restaurar
+875	Pedalar
+876	Rio
+877	Caminhada à beira do rio
+878	Precisa de regras ou prova
+879	Rode: npx expo install expo-image-picker
+880	Rode: npx expo install expo-video-thumbnails e recompile o app. Provas por foto e texto continuam funcionando.
+881	Acabando
+883	SALVAR ONDE VOCÊ ESTÁ
+884	LUGARES SALVOS
+885	TEMPO DE TELA
+886	TEMPO DE TELA RESTANTE
+887	RECOMPENSA EM TEMPO DE TELA (MINUTOS)
+888	TEMPO DE TELA HOJE
+889	SEMENTES - {{length}}
+890	ENVIAR UM DESAFIO
+891	ENVIAR UMA APOSTA
+892	ENVIAR RESPOSTA
+893	SESSÃO CONCLUÍDA
+894	SESSÕES
+895	AJUSTES
+896	COMPARTILHAR
+897	PASSO {{p}} DE {{length}}
+898	ENVIAR PARA VERIFICAÇÃO
+899	Muda
+900	Sáb
+901	Salvar
+902	Salvar PIN
+903	Salve lugares como sua academia e o Drift oferece\na tarefa quando você chega. Ele também pode trazer\nos eventos de hoje do calendário.
+904	Salvar este lugar
+905	Economize {{annualSavingsPct}}%
+906	Salvando…
+907	Ler outra etiqueta
+908	Agendar
+909	Apps da escola
+910	Buscar na escola
+911	Levar à escola
+912	Museu de ciências
+913	Tempo de Uso
+914	Acesso ao Tempo de Uso
+915	Acesso ao Tempo de Uso negado
+916	É preciso acesso ao Tempo de Uso
+917	Tempo de tela
+918	Tela para cima. A sessão começa quando estiver totalmente parado.
+919	Faça uma captura deste cartão para compartilhar nos Stories
+920	Buscar idiomas
+921	Ver o Pro
+922	Ver um espetáculo
+923	Ver música ao vivo
+924	Veja seu saldo de tempo de tela ganho num relance.
+925	Semente
+926	Selecione tarefas que você faria com regularidade. Dá para adicionar mais depois.
+927	Enviar
+928	Enviar desafio
+929	Enviar aposta
+930	Enviar feedback
+931	Enviando…
+932	Enviado
+933	Servidor: {{error}}{{p}}
+934	Serviço
+935	Sessão concluída
+936	Sessão encerrada antes. Nenhum tempo ganho.
+937	Sessão perdida.
+938	Notas da sessão
+939	A sessão continua. {{name}} pode esperar.
+940	Defina EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID no .env e os IDs de cliente iOS/Android.
+941	Defina um PIN. Você vai digitá-lo no celular do seu filho para escolher quais apps são bloqueados.
+942	Defina uma meta. O Drift transforma em um plano.
+943	Defina uma meta de tempo de tela e receba um plano concreto.
+944	Configurar
+945	Definir PIN do responsável (para escolher os apps de um filho)
+946	Passe tarefas para seus filhos e aprove o tempo de tela deles.
+947	Configurar
+948	Coloque o celular na caixa, com a tela para cima
+949	Deixe o celular{{p}}de lado
+950	Configurando…
+951	Compartilhar e convidar
+952	Compartilhar estatísticas
+953	Compartilhar código
+954	Compartilhe suas estatísticas e ganhe tempo bônus
+955	Compartilhe sua conquista
+956	Tarefas do turno
+957	Ir às compras
+958	Entrar
+959	Entre para continuar de onde parou.
+960	Entre para ver o bosque
+961	Entrar com Google
+962	Sair
+963	Sair?
+964	Cadastrar com Google
+965	Falha ao entrar. Tente de novo.
+966	O token de login não pôde ser verificado. Tente de novo.
+967	Abdominais
+968	Trabalho na obra
+969	Andar de skate
+970	Pista de skate
+971	Sessão de skate
+972	Descida de esqui
+973	Pista de esqui
+974	Pular
+975	Pular por agora
+976	Ignorado nas noites em que você já registrou.
+977	Dormir mais cedo
+978	Guarda do sono
+979	Durma com o celular em outro cômodo
+980	Deslize sua meta abaixo do que você gasta hoje.
+981	Futebol
+982	Campo de futebol
+983	Social
+984	Alguém quer te adicionar no Drift.
+985	Algo deu errado
+986	Algo deu errado. Verifique sua conexão e tente de novo.
+987	Spa
+988	Gastou uns {{minutes}} minutos?
+989	Broto
+990	Agachamentos
+991	Estádio
+992	Início
+993	Comece uma sessão de foco pela barra de abas. Seus apps ficam bloqueados enquanto você foca — e você ganha tempo por isso.
+994	Começar a ganhar
+995	Comece deitado · suba até os cotovelos tocarem os joelhos
+996	Começar agora
+997	Começar este plano
+998	Começar teste grátis de {{trial}} dias
+999	Status: {{next}}. Abra Ajustes -> Tempo de Uso para permitir o acesso.
+1000	Mantenha o foco
+1001	Cole uma etiqueta NFC em outro cômodo. Toque nela na hora de dormir e o Drift bloqueia seus apps até de manhã, depois confere se o celular ficou mesmo lá.
+1002	Cole uma etiqueta NFC no cômodo ao lado. Toque nela na hora de dormir e o Drift confere se o celular ficou lá a noite toda.
+1003	Ainda carregando
+1004	Ficar parado também é produtivo.
+1005	Organizar o depósito
+1006	Box de armazenagem
+1007	Alongar
+1008	Estúdio
+1009	Sessão de estúdio
+1010	Estudar
+1011	Sala de estudos
+1012	Sessão de estudos
+1013	Envie sua prova de novo.
+1014	Sugestões
+1015	Sugere "{{title}}" ({{minutes}} min) quando você chega — escolha uma sugestão acima para encaixar melhor.
+1016	Sugere "{{title}}" ({{minutes}} min) quando você chega.
+1017	Dom
+1018	Supermercado
+1019	Nadar
+1020	Sincronizando
+1021	TAREFA
+1022	TAREFAS
+1023	O LAB
+1024	ESTA SEMANA
+1025	AJUSTAR
+1026	HOJE
+1027	TENTAR DE NOVO
+1028	ATIVE O BLOQUEIO
+1029	TIPO
+1030	Etiqueta lida.
+1031	Etiqueta registrada
+1032	Etiqueta salva
+1033	Etiqueta salva.
+1034	Leve-o ao outro cômodo e toque na sua etiqueta para começar a noite.
+1035	Tire o celular e abra o Drift para pegar seu tempo.
+1036	Leva 60 segundos
+1037	Toque de novo quando quiser para mudar o que é bloqueado. Fica salvo só no seu aparelho.
+1038	Toque numa etiqueta NFC em outro cômodo na hora de dormir. Os apps ficam bloqueados até de manhã.
+1039	Toque nela na hora de dormir para começar sua primeira noite.
+1040	Toque no + para adicionar algo que valha a pena. Conclua e confirme para ganhar tempo de tela.
+1041	Toque na etiqueta
+1042	Toque para abrir o Mail para
+1043	Toque para verificar
+1044	Tarefa adicionada
+1045	Tarefa aprovada
+1046	Tarefa pronta para conferir
+1047	Tarefas
+1048	As tarefas podem\nse adicionar sozinhas
+1049	Tarefas feitas
+1050	Tarefas que voltam sozinhas.
+1051	Tarefas que voltam em um horário.
+1052	Tarefas para ganhar
+1053	Conte um pouco mais.
+1054	Cuidando do bosque
+1055	Tênis
+1056	Quadra de tênis
+1057	Termos
+1058	Termos de Uso
+1059	Termos de uso
+1060	Testar
+1061	O teste falhou
+1062	Teste enviado
+1063	Obrigado
+1064	Obrigado por continuar com o Drift. A cada dois meses que você fica, o Pro fica mais barato, até {{price}}. Confirme com a Apple e {{price2}} começa na próxima renovação.
+1065	Esse PIN não está certo.
+1066	Esse código já foi totalmente resgatado.
+1067	Esse código expirou.
+1068	Esse código está errado ou expirou. Confira ou toque em Reenviar código para receber outro.
+1069	Esse código não está mais ativo.
+1070	Esse código não é válido.
+1071	Isso não desbloqueou o Drift. Se houve cobrança, toque em Restaurar.
+1072	Esse código da família não existe. Confira com seu responsável.
+1073	Esse código da família não está mais ativo.
+1074	Esse tamanho de família ainda não está configurado. Tente outro número ou fale com o suporte.
+1075	Essa não é a etiqueta que você configurou. Toque na do seu quarto.
+1076	Esse ID de participante não parece certo. Confira com a equipe do estudo.
+1077	Esse ID de participante já foi usado. Confira com a equipe do estudo.
+1078	Essa gravação é enorme. Grave um vídeo mais curto e tente de novo.
+1079	Essa tarefa não é permitida. Tente algo produtivo!
+1080	O tempo esgotou
+1081	Esse nome de usuário já existe.
+1082	Esse nome de usuário já existe. Tente outro.
+1083	Esse nome de usuário acabou de ser pego. Você ficou com @{{username}} por enquanto —
+1084	Essa não é a caixa — coloque dentro
+1085	Essas foram as tarefas grátis de hoje
+1086	É você
+1087	São {{mins}} minutos do seu tempo ganho. Você decide.
+1088	A verificação com IA demorou demais. Isso costuma significar que o Wi-Fi está bloqueando o Drift — desligue o Wi-Fi para usar dados móveis e tente de novo.
+1089	O serviço de IA está com problemas agora. Tente de novo daqui a pouco.
+1090	O serviço de IA está com problemas. Tente de novo.
+1091	O serviço de IA recusou o pedido (erro {{status}}). Tente de novo ou use só prova por texto.
+1092	O Bosque
+1093	O Lab
+1094	A chegada não foi registrada ({{reason}}).
+1095	A tarefa em segundo plano não foi registrada. Feche o Drift totalmente e abra de novo.
+1096	A câmera não encontrou uma superfície.
+1097	A câmera conta suas repetições — sem precisar de foto
+1098	As categorias que você escolheu
+1099	O desafio para @{{p}} será retirado.
+1100	O nome ou apelido que ele digita ao entrar. As tarefas que você atribui e se foram feitas. O saldo de tempo de tela e as categorias de apps que você permite. Pedidos que ele te manda para liberar um app. Um token de notificação para o celular receber alertas.
+1101	O plano grátis bloqueia até {{FREE_BLOCK_LIMIT}}
+1102	O plano grátis rende com {{freeDailyTasks}} tarefas por dia. Assine o Pro para tarefas ilimitadas ou volte amanhã.
+1103	O passo a passo do seu primeiro acesso.
+1104	Quem perde cede {{penaltyMins}} minutos de tempo de tela.
+1105	A outra pessoa perde {{penaltyMins}} minutos de tempo de tela.
+1106	O outro jogador pode já ter respondido.
+1107	A assinatura não está disponível agora. Tente de novo em breve.
+1108	Teatro
+1109	Terapeuta
+1110	Sessão de terapia
+1111	Esses contatos estão no Drift. Adicione ao seu bosque.
+1112	Estes ficam abertos mesmo quando {{display_name}} fica sem tempo de tela.
+1113	A pessoa sai do seu bosque. Você pode adicioná-la de novo depois.
+1114	Isso não pode ser desfeito.
+1115	Este código é de um estudo de pesquisa. Digite o ID de participante que a equipe do estudo te deu.
+1116	Isso exclui sua conta do Drift e encerra sua sessão. Não pode ser desfeito.
+1117	Isso não conta como tentativa — só precisamos de um detalhe para ter certeza.
+1118	Esta família já tem o número máximo de filhos.
+1119	É uma tarefa de {{minutes}} minutos, então a prova abre {{mmss}} depois que você a adiciona. Vai lá fazer — a gente espera.
+1120	Este é o tempo que você guardou. Quando chegar a zero, os apps escolhidos bloqueiam até você ganhar mais.
+1121	Isso pula o login, então o onboarding não vai conseguir terminar. Entre normalmente para testar o fluxo completo.
+1122	Este momento é seu, não do seu celular.
+1123	Isso apaga para sempre a conta e os dados de todas as crianças da sua família, e nenhuma criança poderá entrar até você concordar de novo. Não pode ser desfeito.
+1124	Isso apaga para sempre sua conta do Drift e todas as contas infantis da sua família, com todos os dados. Não pode ser desfeito. Cancele sua assinatura Family separadamente nos Ajustes do iPhone.
+1125	Isso apaga para sempre a conta, as tarefas, o saldo e os pedidos de {{name}}, e desconecta o celular dele. Não pode ser desfeito.
+1126	Isso remove para sempre sua conta do Drift. Não pode ser desfeito.
+1127	Este método de login ainda não está ativado. Fale com o suporte.
+1128	Esta tarefa não pode ser verificada agora.
+1129	Esta versão do Drift está desatualizada. Atualize para a versão mais recente para continuar ganhando tempo de tela.
+1130	Florescendo
+1131	Qui
+1132	Marque a caixa para confirmar que você é o pai, a mãe ou o responsável legal.
+1133	Arrumar uma coisa
+1134	Arrumar
+1135	Tempo de volta
+1136	Tempo que sobrou de antes.
+1137	Tempo na água
+1138	Hora de pôr o celular para dormir
+1139	Hora de atualizar o Drift
+1140	Acabou o tempo
+1141	Cronômetro
+1142	Para @{{toName}}
+1143	Hoje
+1144	Longo demais
+1145	Tentativas demais. Tente de novo em alguns minutos.
+1146	Tentativas demais. Tente de novo daqui a pouco.
+1147	Reenvios demais. Tente de novo em alguns minutos.
+1148	Reenvios demais. Espere um minuto e tente de novo.
+1149	Curto demais
+1150	Pista
+1151	Treino na pista
+1152	Início da trilha
+1153	Treinar ou alongar
+1154	Estação de trem
+1155	Organizar viagem
+1156	Problema no rastreamento? Verifique com uma foto
+1157	Tentar de novo
+1158	Tente de novo.
+1159	Ter
+1160	Desligar
+1161	Desligar o guarda do sono?
+1162	Ative Movimento e Condicionamento para o Drift nos Ajustes para usar isto.
+1163	Ativar notificações
+1164	Ative em Ajustes › Drift › Notificações e teste de novo.
+1165	Transforme os eventos de hoje em tarefas. Só leitura.
+1166	Centro de reforço escolar
+1167	Aula particular
+1168	Digite seu nome e o código da família que seu responsável te passa. Sem precisar de e-mail.
+1169	DESBLOQUEIA EM {{mmss}}
+1170	ATUALIZAÇÃO OBRIGATÓRIA
+1171	ASSINAR
+1172	A lei dos EUA (COPPA) exige o consentimento de um responsável antes de um app coletar informações de crianças menores de 13 anos. Aqui está exatamente o que o Drift faz com as informações dos seus filhos. Seu código da família só funciona depois que você concordar.
+1173	USADO
+1174	NOME DE USUÁRIO
+1175	Resposta inesperada do serviço de IA.
+1176	Apps e tarefas ilimitados, Lockbox, desafios
+1177	Desbloqueado até {{toLocaleDateString}}.
+1178	Até você apagar. Os dados são apagados quando você remove seu filho, retira o consentimento ou exclui sua conta, e automaticamente após 18 meses sem atividade.
+1179	Relaxar
+1180	Até {{FREE_BLOCK_LIMIT}} apps, categorias ou domínios no plano grátis.
+1181	Atualize o Drift para usar a verificação com IA.
+1182	Atualizar meu plano
+1183	Atualização necessária
+1184	Atualizar agora
+1185	Assinar o Pro
+1186	Assine para desafiar
+1187	Use uma senha menos comum.
+1188	Usar o idioma do aparelho
+1189	Use só letras, números e sublinhados.
+1190	Usar o calendário do iPhone
+1191	Use horários como 22:00 e 7:00.
+1192	Use maiúsculas, minúsculas, um número e um símbolo.
+1193	Nome de usuário
+1194	O nome de usuário pode ter no máximo 20 caracteres.
+1195	Falha no nome de usuário
+1196	O nome de usuário precisa ter pelo menos 3 caracteres.
+1197	Nome de usuário já existe
+1198	VERIFICADA
+1199	E-mail de verificação reenviado.
+1200	Falha na verificação
+1201	Verificada
+1202	Verificado ao vivo — a câmera acompanha o movimento e conta cada repetição automaticamente.
+1203	Verificado com uma foto quando o exercício termina.
+1204	Verificar
+1205	Verificar com uma foto
+1206	Verificar com foto
+1207	Verifique sua conta
+1208	Verifique seu e-mail primeiro e depois resgate.
+1209	Veterinário
+1210	Ida ao veterinário
+1211	A prova em vídeo precisa de uma nova versão
+1212	Turno voluntário
+1213	Local de voluntariado
+1214	AGUARDANDO SEU OK
+1215	BEM-VINDO
+1216	O QUE É BLOQUEADO
+1217	O QUE APARECE
+1218	O QUE FALTOU
+1219	WOD
+1220	Aguardando
+1221	Aguardando resultado
+1222	Aguardando aceitarem
+1223	Caminhar perto da água
+1224	Caminhar no mato
+1225	Caminhar ao ar livre
+1226	Passear com o cachorro
+1227	Galpão
+1228	Lavar o carro
+1229	Ver o jogo
+1230	Não encontramos assinatura neste ID Apple. Se você assinou com outro, entre com esse ID Apple nos Ajustes e tente de novo.
+1231	Não conseguimos enviar seu e-mail de verificação agora. O problema é nosso — tente de novo em alguns minutos.
+1232	Enviamos um código de 8 dígitos para {{verificationEmail}}. Digite abaixo — ou toque no link do e-mail neste celular.
+1233	Sentimos sua falta!
+1234	Vamos oferecer de novo na próxima vez que você abrir o Drift.
+1235	Atualizamos como tratamos os dados dos seus filhos
+1236	Qua
+1237	Dias úteis
+1238	Fins de semana
+1239	Bem-vindo de volta
+1240	Bem-vindo ao lar
+1241	Bem-vindo ao\nDrift
+1242	Bem-vindo ao Drift
+1243	O que o Drift guarda sobre {{name}}
+1244	Para quê? (opcional)
+1245	Que lugar é este?
+1246	O que precisa ser feito? ex.: "30 min de academia"
+1247	O que precisa da sua atenção?
+1248	O que eles precisam fazer
+1249	O que coletamos do seu filho
+1250	O que não coletamos
+1251	O que você vai fazer?
+1252	O que está na sua cabeça?
+1253	Onde você ajusta o Drift: quais apps são bloqueados, o que se repete e o que é sugerido automaticamente.
+1254	Quem pode ver
+1255	Quem vai usar{{p}}o Drift?
+1256	Por quê
+1257	Murchando
+1258	Horários em que os apps ficam bloqueados, seja qual for seu saldo.
+1259	Retirar
+1260	Retirar o consentimento e apagar os dados das crianças
+1261	Retirar o consentimento?
+1262	Sem a caixa
+1263	Trabalho
+1264	Treinar
+1265	Trabalhando nisso
+1266	Treino
+1267	Oficina
+1268	Escrever uma avaliação
+1269	Escreva o que você fez ou tire uma foto ou grave um vídeo.
+1270	VOCÊ VAI GANHAR
+1271	SUA FAMÍLIA
+1272	SEUS FILHOS
+1273	PRIVACIDADE DOS SEUS FILHOS
+1274	SEU PLANO
+1275	SEU PLANO ESTÁ PRONTO
+1276	SUA PROVA
+1277	SUA ETIQUETA
+1278	SUAS TAREFAS
+1279	Anual
+1280	Sim
+1281	Sim, configurar
+1282	Aula de ioga
+1283	Estúdio de ioga
+1284	Você
+1285	Você e @{{username}} agora são amigos
+1286	Você bateu o prazo e levou a recompensa.
+1287	Você bloqueou {{name}} por um motivo.
+1288	Pode deixar a tela apagar. A contagem regressiva está na tela de bloqueio.
+1289	Você pode salvar até {{MAX_PLACES}} lugares.
+1290	Você não pode adicionar a si mesmo.
+1291	Não dá para trocar o tipo de conta depois de criada.
+1292	Você escolheu profundidade em vez de distração.
+1293	Você escolheu profundidade em vez de {{name}}.
+1294	Você ganha seu tempo de tela concluindo tarefas reais. Aqui vai o tour de 20 segundos.
+1295	Você ganhou 1 minuto de tempo de tela. Continue no embalo!
+1296	Você ganhou {{mins}} minutos de tempo de tela. Continue no embalo!
+1297	Você ganhou mais {{m}} minutos de tempo de tela.
+1298	Você deu o consentimento em {{date}}.
+1299	Você tem uns {{max}} segundos antes de perder esta sessão.
+1300	Você ainda não escolheu nenhum app. O Drift In vai rodar mesmo assim, mas os apps que distraem não serão bloqueados. Abra Perfil → Apps bloqueados para escolher alguns.
+1301	Você perdeu o prazo, então a aposta foi aplicada.
+1302	Você faz as regras. Eles ganham o tempo de tela com tarefas reais.
+1303	Você definiu este limite por um motivo.
+1304	Você verificou primeiro e levou a recompensa.
+1305	Você venceu
+1306	Você não vai ganhar nada pelo tempo até agora.
+1307	Você vai ganhar créditos pelo tempo de foco até agora.
+1308	Você vai precisar entrar de novo para acessar seus dados.
+1309	Você não vai mais receber sugestões de tarefas lá.
+1310	Você é Pro 🎉
+1311	Tudo pronto
+1312	Você está em {{label}}
+1313	Você está numa sequência de {{streak}} dias! Conclua uma tarefa para mantê-la.
+1314	Seu tempo ganho acabou. Conclua uma tarefa para desbloquear seus apps.
+1315	Você está caindo no bosque
+1316	Já são {{mins}} minutos. Sem julgamento, só checando.
+1317	Você já resgatou este código — seu acesso não muda.
+1318	Você fez muitas verificações com IA. Tente de novo daqui a pouco.
+1319	Você cresceu o suficiente para {{name}}.
+1320	Você atingiu o limite de verificações com IA por agora. Tente um pouco mais tarde.
+1321	Você usou tudo o que ganhou hoje.
+1322	Você usou as tarefas verificadas grátis de hoje. Assine o Pro para tarefas ilimitadas ou volte amanhã.
+1323	Você e seu filho. Nunca é público, vendido nem usado para anúncios. Fica armazenado no Supabase (nosso provedor de banco de dados, nos EUA) e as notificações são entregues pela Apple. Os dois são obrigados a manter tudo confidencial e usar só para o Drift funcionar.
+1324	Seu plano Drift Family é comprado pela Apple, que avisa o titular da conta sobre a compra. Essa compra, mais sua concordância aqui, é como o Drift confirma que um responsável está dando consentimento.
+1325	Seu acesso não expira.
+1326	Sua conta
+1327	Sua conta foi excluída.
+1328	Sua resposta…
+1329	Seus apps estão bloqueados até de manhã.{{p}}Deixe o celular onde está.
+1330	Seus apps estão esperando. Conclua uma tarefa rápida para ganhar tempo de tela.
+1331	Seu saldo diminui enquanto você usa apps bloqueados. Se acabar, eles bloqueiam.
+1332	Seus horários bloqueados e o lembrete continuam como estão. Só o plano é removido.
+1333	Sua versão ou câmera não consegue detectar postura agora. Você ainda pode verificar com uma foto.
+1334	Seu calendário e seus lugares, virando tarefas.
+1335	Seu código desbloqueou o Drift Pro.
+1336	Seu tempo de tela ganho acabou. Conclua uma tarefa para desbloquear de novo.
+1337	Seu tempo ganho
+1338	Seu tempo ganho está quase acabando. Finalize, ou conclua uma tarefa para continuar.
+1339	Seu rascunho de e-mail está pronto para enviar.
+1340	Seu amigo verificou primeiro, então a aposta foi aplicada.
+1341	Seu filho
+1342	Seu filho concluiu "{{taskTitle}}". Aprove para liberar tempo de tela.
+1343	Seu filho concluiu uma tarefa. Aprove para liberar tempo de tela.
+1344	Sua localização e seu calendário ficam neste aparelho. O Drift nunca envia nenhum dos dois.
+1345	Seu nome
+1346	Seu responsável precisa escolher um plano Drift Family primeiro. Tente de novo quando ele tiver feito isso.
+1347	Seu responsável precisa terminar de configurar sua família no Drift. Peça para ele abrir o Drift e tente de novo.
+1348	Primeiro, sua permissão
+1349	Seu celular ficou fora da caixa por tempo demais, então esta não rendeu nada.
+1350	Seu celular saiu da caixa. Nenhum tempo ganho nesta sessão.
+1351	Seu celular saiu da caixa. Coloque de volta antes que isto chegue a zero ou a sessão será perdida.
+1352	Seu celular se mexeu
+1353	Seu celular se mexeu às {{toLocaleTimeString}}. Sem bônus desta vez.
+1354	Seu celular se mexeu durante a noite. Sem bônus desta vez.
+1355	Seu celular se mexeu ontem à noite
+1356	Seu celular ficou na caixa. +{{max}} minutos ganhos.
+1357	Seu celular ficou parado
+1358	Seu celular ficou parado a noite toda. +{{rewardMinutes}} minutos ganhos.
+1359	Seu preço cai a cada 2 meses que você fica, até {{loyaltyFloor}}/mês.
+1360	Seu preço cai para {{price}}/mês
+1361	Seu perfil, tarefas, histórico, amizades, desafios e foto são apagados para sempre. Se você assina o Drift Pro, cancele separadamente em Ajustes do iPhone → ID Apple → Assinaturas.
+1362	Seu progresso é salvo em todos os aparelhos.
+1363	Seu progresso em Você e seus amigos em Amigos — sequências, níveis e desafios num só lugar.
+1364	Seu progresso.
+1365	Seus direitos
+1366	Sua sessão não se manteve. Entre de novo — nada do que você configurou foi perdido.
+1367	Sua sessão continua. Fique nela.
+1368	Sua meta é igual ao seu ponto de partida, então ainda não há nada a mudar.
+1369	melhor sequência
+1370	calendário ou lugares
+1372	concluído
+1373	dias de sequência
+1374	recusado
+1376	experiência
+1377	Faltam expo-location ou expo-task-manager nesta versão.
+1378	terminar antes da meia-noite
+1379	quem terminar primeiro vence
+1380	O iOS aplica o bloqueio em janelas de ~15 minutos, então os horários são aproximados.
+1381	min ganhos
+1382	sem dados hoje
+1383	sem tempo
+1384	não definido
+1385	de {{fmtMins}} ganhos
+1386	ou
+1387	ou deixe o Drift adicioná-las do seu{{p}}
+1388	restante
+1389	tempo de tela
+1390	tempo de tela (máx.)
+1391	tarefa feita
+1392	tarefas feitas
+1393	para colocar de volta
+1394	você
+1395	você pode mudar isso no seu perfil.
+1397	{{aheadCount}} dos seus {{total}} amigos estão com menos tempo de tela que você hoje. Você está em {{spent}}.
+1399	{{blockedCount}} {{p}} — bloqueados quando seu saldo zera.
+1400	Vídeo de {{durationSec}} s · {{length}} quadros enviados para análise
+1401	{{floor}} h {{p}} min hoje
+1402	{{floor}} min {{padStart}} s de foco
+1403	{{fmtMins}} ganhos
+1404	{{fmtMins}} do ganho de hoje ainda guardados.
+1405	Faltam {{fmt}}
+1406	{{formatDuration}} por dia
+1407	{{formatDuration}} por dia, celular de lado às {{phoneDownLabel}}.
+1408	{{formatDuration}} a menos que agora
+1409	{{length}} amigos ainda não registraram hoje.
+1411	{{mins}} min restantes · {{p}} nesta semana{{p2}}
+1412	{{mins}} minutos se foram. Ainda vale a pena?
+1413	Já são {{mins}} minutos. Tem uma tarefa esperando, se preferir.
+1414	{{minutesPerDay}} minutos por dia
+1415	{{minutes}} min · {{credits}} créditos em jogo
+1416	{{minutes}} minutos na caixa. +{{rewardMinutes}} minutos ganhos.
+1417	{{name}} pode esperar.
+1418	{{name}} está bloqueado.
+1419	{{name}} desbloqueia quando você conclui uma tarefa no Drift.
+1420	{{name}} vai continuar aí daqui a dez minutos.
+1421	{{n}} min restantes
+1422	{{price}}/mês
+1423	{{price}}/mês começa na sua próxima renovação.
+1424	{{price}}/mês. Renova automaticamente — cancele quando quiser nos Ajustes.
+1425	{{price}}/ano. Renova automaticamente — cancele quando quiser nos Ajustes.
+1426	{{price}}/ano
+1427	{{p}}\n\nVocê pode tentar de novo ou fazer a sessão sem a caixa — funciona do mesmo jeito.
+1428	{{p}} DE @{{toUpperCase}}
+1429	{{p}} · +{{xp}} XP
+1430	{{p}}e{{p}}
+1431	{{recurrenceLabel}} às {{prettyTime}} - recompensa de {{fmtMins}}
+1432	{{selectionCount}} de {{FREE_BLOCK_LIMIT}} salvos
+1433	{{spentMinutes}} min hoje
+1434	{{streak}} noites seguidas.
+1435	Sequência de {{streak}} dias
+1436	{{target}} de {{target}} contadas
+1437	{{timeText}} {{toLowerCase}} · +{{earnedText}} ganhos
+1438	{{title}} · +{{minutes}} min
+1439	{{toLocaleDateString}}: {{count}} tarefas
+1440	{{toNext}} XP para o próximo nível
+1441	{{toNext}} XP para {{name}}.
+1442	{{totalXp}} XP no total
+1443	{{trial}} dias grátis, depois {{price}}/mês. Renova automaticamente — cancele quando quiser nos Ajustes.
+1444	{{trial}} dias grátis, depois {{price}}/ano. Renova automaticamente — cancele quando quiser nos Ajustes.
+1445	{{who}} te desafiou
+1446	"E aí Siri, veja meu saldo do Drift"\n"E aí Siri, crie uma tarefa no Drift"\n"E aí Siri, comece uma sessão Drift In"
+1447	1 TENTATIVA RESTANTE
+1448	{{attemptsLeft}} TENTATIVAS RESTANTES
+1449	Um pai, mãe ou responsável com 18 anos ou mais precisa criar a conta Family.
+1450	Peça a um responsável para te cadastrar
+1451	Entrar na minha família com um código
+1452	Contas de responsável são para adultos
+1453	Contas pessoais do Drift são para quem tem 13 anos ou mais. Um responsável pode configurar o Drift Family e aí você entra com o código dele.
+1454	Perguntamos para todo mundo. Não fica salvo nem é mostrado a ninguém.
+1455	Quando você nasceu?

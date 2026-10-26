@@ -19,6 +19,7 @@ import {
 import { FF, getTheme } from "./theme";
 import { FREE_BLOCK_LIMIT } from "./freeTier";
 
+import { tr } from "./i18n";
 // Remapped onto the organic-editorial system — see theme.js FF.
 const FO  = FF.bodyBold;
 const FOM = FF.kicker;
@@ -54,18 +55,16 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
 
   const ensureAccess = async () => {
     if (!isNativeBlockingAvailable()) {
-      Alert.alert("Not available",
-        Platform.OS === "ios"
-          ? "Apple Screen Time blocking requires a custom build of Drift. Update Drift and try again."
-          : "App blocking via Apple Screen Time is iOS-only.");
+      Alert.alert(tr("Not available"),
+        Platform.OS === "ios" ? tr("Apple Screen Time blocking requires a custom build of Drift. Update Drift and try again.") : tr("App blocking via Apple Screen Time is iOS-only."));
       return false;
     }
     const status = await getScreenTimeAuthStatus();
     if (status !== "approved") {
       const next = await requestScreenTimeAuth();
       if (next !== "approved") {
-        Alert.alert("Screen Time access denied",
-          "Enable Drift in Settings > Screen Time so Drift can block apps.");
+        Alert.alert(tr("Screen Time access denied"),
+          tr("Enable Drift in Settings > Screen Time so Drift can block apps."));
         return false;
       }
     }
@@ -81,9 +80,9 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
     // tier exists to remove. The cap line below still says what happened.
     if (res?.hitLimit && !isPro && !firstTime && onUpgrade) {
       Alert.alert(
-        `Free plan blocks up to ${FREE_BLOCK_LIMIT}`,
-        "Drift Pro blocks as many apps, categories and websites as you like.",
-        [{ text: "Not now", style: "cancel" }, { text: "See Pro", onPress: onUpgrade }],
+        tr("Free plan blocks up to {{FREE_BLOCK_LIMIT}}", { FREE_BLOCK_LIMIT }),
+        tr("Drift Pro blocks as many apps, categories and websites as you like."),
+        [{ text: tr("Not now"), style: "cancel" }, { text: tr("See Pro"), onPress: onUpgrade }],
       );
     }
   };
@@ -112,7 +111,7 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
             </TouchableOpacity>
           )}
           <Text style={{ fontFamily: FK, fontSize: 17, color: ink.deep, flex: 1 }}>
-            {firstTime ? "Pick apps to block" : "Blocked apps"}
+            {firstTime ? tr("Pick apps to block") : tr("Blocked apps")}
           </Text>
         </View>
 
@@ -123,11 +122,10 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
             borderWidth: 1, borderColor: "rgba(90,180,212,0.2)",
           }}>
             <Text style={{ fontFamily: FOM, fontSize: 9, color: "#2A7FA0", letterSpacing: 1.5, marginBottom: 6 }}>
-              HOW THIS WORKS
+              {tr("HOW THIS WORKS")}
             </Text>
             <Text style={{ fontFamily: FB, fontSize: 12, color: "#2A7FA0", lineHeight: 18 }}>
-              Pick apps to block when your balance hits zero. iOS enforces it even when Drift is
-              closed, and may kick in up to ~15 min late.
+              {tr("Pick apps to block when your balance hits zero. iOS enforces it even when Drift is closed, and may kick in up to ~15 min late.")}
             </Text>
           </View>
 
@@ -144,12 +142,10 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
             }}
           >
             <Text style={{ fontFamily: FK, fontSize: 16, color: earn.green }}>
-              {selectionCount > 0 ? "Change blocked apps" : "Pick apps with Apple Screen Time"}
+              {selectionCount > 0 ? tr("Change blocked apps") : tr("Pick apps with Apple Screen Time")}
             </Text>
             <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid, marginTop: 4, textAlign: "center" }}>
-              {isPro
-                ? "Apps, categories, or web domains."
-                : `Up to ${FREE_BLOCK_LIMIT} apps, categories, or web domains on the free plan.`}
+              {isPro ? tr("Apps, categories, or web domains.") : tr("Up to {{FREE_BLOCK_LIMIT}} apps, categories, or web domains on the free plan.", { FREE_BLOCK_LIMIT })}
             </Text>
           </TouchableOpacity>
 
@@ -160,15 +156,13 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
             }}>
               <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: earn.green }} />
               <Text style={{ fontFamily: FB, fontSize: 12, color: ink.mid }}>
-                {isPro
-                  ? `${selectionCount} ${selectionCount === 1 ? "selection" : "selections"} saved`
-                  : `${selectionCount} of ${FREE_BLOCK_LIMIT} saved`}
+                {isPro ? `${selectionCount} ${selectionCount === 1 ? "selection" : "selections"} saved` : tr("{{selectionCount}} of {{FREE_BLOCK_LIMIT}} saved", { selectionCount, FREE_BLOCK_LIMIT })}
               </Text>
             </View>
           )}
 
           <Text style={{ fontFamily: FB, fontSize: 11, color: ink.faint, textAlign: "center", marginBottom: 24, lineHeight: 16 }}>
-            Tap again anytime to change what's blocked. Stored on your device only.
+            {tr("Tap again anytime to change what's blocked. Stored on your device only.")}
           </Text>
 
           {/* Done — first-time onboarding only. Gated on an actual selection:
@@ -189,7 +183,7 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
                   fontFamily: FO, fontSize: 12, letterSpacing: 2,
                   color: canFinish ? (dark ? "#16261C" : "#fff") : ink.faint,
                 }}>
-                  {canBlock ? "DONE" : "CONTINUE"}
+                  {canBlock ? tr("DONE") : tr("CONTINUE")}
                 </Text>
               </TouchableOpacity>
               {!canFinish && (
@@ -197,7 +191,7 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
                   fontFamily: FB, fontSize: 12, color: ink.mid,
                   textAlign: "center", marginTop: 10, lineHeight: 18,
                 }}>
-                  Pick at least one app or category to continue.
+                  {tr("Pick at least one app or category to continue.")}
                 </Text>
               )}
               {!canBlock && (
@@ -205,7 +199,7 @@ export default function BlockedAppsModal({ visible, onClose, dark = false, first
                   fontFamily: FB, fontSize: 12, color: ink.faint,
                   textAlign: "center", marginTop: 10, lineHeight: 18,
                 }}>
-                  App blocking needs a full build of Drift — you can set this up later.
+                  {tr("App blocking needs a full build of Drift — you can set this up later.")}
                 </Text>
               )}
             </>

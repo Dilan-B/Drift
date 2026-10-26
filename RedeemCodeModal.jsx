@@ -19,27 +19,28 @@ import {
 import { getTheme, FF } from "./theme";
 import { redeemProCode } from "./supabase";
 
+import { tr } from "./i18n";
 const REASON_MSG = {
-  empty: "Enter a code.",
-  invalid: "That code isn't valid.",
-  inactive: "That code is no longer active.",
-  expired: "That code has expired.",
-  used_up: "That code has been fully redeemed.",
-  rate_limit: "Too many attempts. Try again in a little while.",
-  email_not_verified: "Verify your email address first, then redeem.",
-  failed: "Couldn't redeem right now. Try again.",
-  participant_id_invalid: "That participant ID doesn't look right. Check it with your study team.",
-  participant_id_taken: "That participant ID has already been used. Check it with your study team.",
+  get empty() { return tr("Enter a code."); },
+  invalid: tr("That code isn't valid."),
+  inactive: tr("That code is no longer active."),
+  expired: tr("That code has expired."),
+  used_up: tr("That code has been fully redeemed."),
+  rate_limit: tr("Too many attempts. Try again in a little while."),
+  email_not_verified: tr("Verify your email address first, then redeem."),
+  failed: tr("Couldn't redeem right now. Try again."),
+  participant_id_invalid: tr("That participant ID doesn't look right. Check it with your study team."),
+  participant_id_taken: tr("That participant ID has already been used. Check it with your study team."),
 };
 
 /** "permanent" or "until 6 Mar 2027" — what they actually got. */
 function grantedFor(expiresAt) {
-  if (!expiresAt) return "Your access doesn't expire.";
+  if (!expiresAt) return tr("Your access doesn't expire.");
   const d = new Date(expiresAt);
-  if (isNaN(d)) return "Your code unlocked Drift Pro.";
-  return `Unlocked until ${d.toLocaleDateString(undefined, {
+  if (isNaN(d)) return tr("Your code unlocked Drift Pro.");
+  return tr("Unlocked until {{toLocaleDateString}}.", { toLocaleDateString: d.toLocaleDateString(undefined, {
     day: "numeric", month: "short", year: "numeric",
-  })}.`;
+  }) });
 }
 
 export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = false }) {
@@ -90,7 +91,7 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
     const clean = code.trim().toUpperCase();
     if (!clean) { setError(REASON_MSG.empty); return; }
     const pid = participantId.trim();
-    if (needsId && !pid) { setError("Enter your participant ID."); return; }
+    if (needsId && !pid) { setError(tr("Enter your participant ID.")); return; }
     setBusy(true); setError("");
     const res = await redeemProCode(clean, needsId ? pid : null);
     setBusy(false);
@@ -124,16 +125,14 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
           {done ? (
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ fontFamily: FF.display, fontSize: 30, color: ink.deep, marginBottom: 8 }}>
-                You're Pro 🎉
+                {tr("You're Pro 🎉")}
               </Text>
               <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, textAlign: "center" }}>
                 {/* already_redeemed carries no expiry — the server only knows
                     this user holds the code, not the grant's current date — and
                     grantedFor(null) means PERMANENT. Saying "doesn't expire" to
                     someone on a 50-day study grant would be false. */}
-                {granted?.already
-                  ? "You've already redeemed this code — your access is unchanged."
-                  : grantedFor(granted?.expiresAt)}
+                {granted?.already ? tr("You've already redeemed this code — your access is unchanged.") : grantedFor(granted?.expiresAt)}
               </Text>
               {!!granted?.cohort && (
                 <Text style={{
@@ -147,15 +146,13 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
           ) : (
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: FF.kicker, fontSize: 10, color: earn.sage, letterSpacing: 2.4, marginBottom: 8 }}>
-                HAVE A CODE?
+                {tr("HAVE A CODE?")}
               </Text>
               <Text style={{ fontFamily: FF.display, fontSize: 28, color: ink.deep, marginBottom: 8 }}>
-                Redeem a code
+                {tr("Redeem a code")}
               </Text>
               <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, marginBottom: 28, lineHeight: 20 }}>
-                {needsId
-                  ? "This code is for a research study. Enter the participant ID your study team gave you."
-                  : "Enter the code you were given by your programme or by the Drift team to unlock Drift Pro."}
+                {needsId ? tr("This code is for a research study. Enter the participant ID your study team gave you.") : tr("Enter the code you were given by your programme or by the Drift team to unlock Drift Pro.")}
               </Text>
 
               <TextInput
@@ -165,7 +162,7 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
                   // A different code may not be a study code.
                   if (needsId) { setNeedsId(false); setParticipantId(""); }
                 }}
-                placeholder="ENTER CODE"
+                placeholder={tr("ENTER CODE")}
                 placeholderTextColor={ink.faint}
                 autoCapitalize="characters"
                 autoCorrect={false}
@@ -184,7 +181,7 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
                 <TextInput
                   value={participantId}
                   onChangeText={(t) => setParticipantId(t.replace(/\s/g, "").slice(0, 32))}
-                  placeholder="PARTICIPANT ID"
+                  placeholder={tr("PARTICIPANT ID")}
                   placeholderTextColor={ink.faint}
                   autoCapitalize="characters"
                   autoCorrect={false}
@@ -216,7 +213,7 @@ export default function RedeemCodeModal({ visible, onClose, onRedeemed, dark = f
               >
                 {busy
                   ? <ActivityIndicator color="#FAF6EE" />
-                  : <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: dark ? "#16261C" : "#FAF6EE" }}>Redeem</Text>}
+                  : <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: dark ? "#16261C" : "#FAF6EE" }}>{tr("Redeem")}</Text>}
               </TouchableOpacity>
             </View>
           )}

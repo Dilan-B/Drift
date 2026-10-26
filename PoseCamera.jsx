@@ -17,6 +17,7 @@ import { View, Text } from "react-native";
 import { CameraIcon } from "./Icons";
 import { FF } from "./theme";
 
+import { tr } from "./i18n";
 // Exercises with a live rep-detection config (mirror of EXERCISE_CONFIGS in
 // PoseCameraLive — kept literal here so this module stays import-safe).
 export const POSE_EXERCISE_IDS = new Set([
@@ -43,10 +44,10 @@ export default function PoseCamera(props) {
     }, style]}>
       <View style={{ marginBottom: 8 }}><CameraIcon size={28} color="#A5E39B" /></View>
       <Text style={{ color: "#F0F7EA", fontFamily: FF.bodyMed, fontSize: 12, textAlign: "center" }}>
-        Live tracking needs a full build
+        {tr("Live tracking needs a full build")}
       </Text>
       <Text style={{ color: "#A9C4AB", fontFamily: FF.body, fontSize: 10, marginTop: 4, textAlign: "center" }}>
-        Verify with a photo instead
+        {tr("Verify with a photo instead")}
       </Text>
     </View>
   );

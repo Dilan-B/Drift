@@ -28,6 +28,7 @@ import PlantSlider from "./PlantSlider";
 import { selectionTick } from "./haptics";
 import * as Plan from "./actionPlan";
 
+import { tr } from "./i18n";
 // Slider ranges, in minutes. Baseline tops out at 10 hours — above that the
 // slider's precision near the common 2–5h range gets too coarse to use.
 const BASELINE_MIN = 30;
@@ -110,8 +111,8 @@ export default function ActionPlanModal({
   const apply = async () => {
     if (d.savedPerDay <= 0) {
       Alert.alert(
-        "Pick a lower target",
-        "Your target is the same as your baseline, so there's nothing to change yet.",
+        tr("Pick a lower target"),
+        tr("Your target is the same as your baseline, so there's nothing to change yet."),
       );
       return;
     }
@@ -121,18 +122,18 @@ export default function ActionPlanModal({
       await onApply?.(saved, Plan.suggestedRules(saved));
       onClose?.();
     } catch (e) {
-      Alert.alert("Couldn't save your plan", e?.message || "Try again.");
+      Alert.alert(tr("Couldn't save your plan"), e?.message || tr("Try again."));
     } finally { setSaving(false); }
   };
 
   const remove = () => {
     Alert.alert(
-      "Delete this plan?",
-      "Your blocked hours and reminder stay as they are. Only the plan is removed.",
+      tr("Delete this plan?"),
+      tr("Your blocked hours and reminder stay as they are. Only the plan is removed."),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: tr("Cancel"), style: "cancel" },
         {
-          text: "Delete", style: "destructive",
+          text: tr("Delete"), style: "destructive",
           onPress: async () => { await Plan.clearPlan(userId); onApply?.(null, null); onClose?.(); },
         },
       ],
@@ -162,7 +163,7 @@ export default function ActionPlanModal({
           paddingHorizontal: 20, paddingTop: 18, paddingBottom: 4,
         }}>
           <Text style={{ fontFamily: FF.display, fontSize: 28, color: ink.deep, letterSpacing: -0.3 }}>
-            Action plan
+            {tr("Action plan")}
           </Text>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <CloseIcon size={22} color={ink.mid} />
@@ -171,7 +172,7 @@ export default function ActionPlanModal({
 
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48 }}>
           <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, lineHeight: 20 }}>
-            Set a goal. Drift turns it into a plan.
+            {tr("Set a goal. Drift turns it into a plan.")}
           </Text>
 
           {loading ? (
@@ -180,7 +181,7 @@ export default function ActionPlanModal({
             <>
               {/* ── The numbers ── */}
               <View style={card}>
-                <Field theme={theme} label="I SPEND ABOUT" value={`${Plan.formatDuration(plan.baselineMinutes)}/day`} />
+                <Field theme={theme} label={tr("I SPEND ABOUT")} value={`${Plan.formatDuration(plan.baselineMinutes)}/day`} />
                 <PlantSlider
                   minimumValue={BASELINE_MIN}
                   maximumValue={BASELINE_MAX}
@@ -195,7 +196,7 @@ export default function ActionPlanModal({
 
                 <Field
                   theme={theme}
-                  label="GOAL"
+                  label={tr("GOAL")}
                   value={Plan.formatDuration(d.target)}
                   badge={d.reductionPct > 0 ? `−${d.reductionPct}%` : null}
                 />
@@ -211,7 +212,7 @@ export default function ActionPlanModal({
 
                 <View style={divider} />
 
-                <Field theme={theme} label="PHONE DOWN BY" value={d.phoneDownLabel} />
+                <Field theme={theme} label={tr("PHONE DOWN BY")} value={d.phoneDownLabel} />
                 <PlantSlider
                   minimumValue={DOWN_MIN}
                   maximumValue={DOWN_MAX}
@@ -224,7 +225,7 @@ export default function ActionPlanModal({
               </View>
 
               {/* ── Hardest stretch: one segmented row, single choice ── */}
-              <Text style={kickerStyle(ink)}>HARDEST TIME</Text>
+              <Text style={kickerStyle(ink)}>{tr("HARDEST TIME")}</Text>
               <View style={{
                 flexDirection: "row", gap: 4, padding: 4, borderRadius: 13,
                 backgroundColor: dark ? "rgba(232,245,236,0.06)" : paper.sand,
@@ -249,7 +250,7 @@ export default function ActionPlanModal({
               </View>
 
               {/* ── Swaps: multi-select, so these stay as pills ── */}
-              <Text style={kickerStyle(ink)}>INSTEAD, I'LL  <Text style={{ opacity: 0.6 }}>(OPTIONAL)</Text></Text>
+              <Text style={kickerStyle(ink)}>{tr("INSTEAD, I'LL")}{" "}  <Text style={{ opacity: 0.6 }}>{tr("(OPTIONAL)")}</Text></Text>
               <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
                 {Plan.SWAPS.map(s => {
                   const active = (plan.swaps || []).includes(s.key);
@@ -264,28 +265,28 @@ export default function ActionPlanModal({
               {/* ── The plan itself ── */}
               <View style={card}>
                 <Text style={{ fontFamily: FF.kicker, fontSize: 9, letterSpacing: 2.4, color: ink.faint }}>
-                  YOUR PLAN
+                  {tr("YOUR PLAN")}
                 </Text>
                 {d.savedPerDay > 0 ? (
                   <>
                     <Text style={{ fontFamily: FF.display, fontSize: 26, color: ink.deep, letterSpacing: -0.4, marginTop: 8 }}>
-                      {Plan.formatDuration(d.target)} a day
+                      {tr("{{formatDuration}} a day", { formatDuration: Plan.formatDuration(d.target) })}
                     </Text>
                     <Text style={{ fontFamily: FF.body, fontSize: 13, color: earn.sage, marginTop: 2 }}>
-                      {Plan.formatDuration(d.savedPerDay)} less than now
+                      {tr("{{formatDuration}} less than now", { formatDuration: Plan.formatDuration(d.savedPerDay) })}
                     </Text>
                     <View style={divider} />
-                    <PlanLine theme={theme} label="Tasks to earn it" value={`${Plan.formatDuration(d.dailyTaskMinutes)}/day`} />
+                    <PlanLine theme={theme} label={tr("Tasks to earn it")} value={`${Plan.formatDuration(d.dailyTaskMinutes)}/day`} />
                     <PlanLine
                       theme={theme}
-                      label="Apps lock"
+                      label={tr("Apps lock")}
                       value={`${d.phoneDownLabel} – 6 AM${hardest?.window ? ` + ${hardest.label.toLowerCase()}` : ""}`}
                     />
-                    <PlanLine theme={theme} label="Time back" value={`${d.weeklyHoursSaved} hrs/week`} />
+                    <PlanLine theme={theme} label={tr("Time back")} value={`${d.weeklyHoursSaved} hrs/week`} />
                   </>
                 ) : (
                   <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, marginTop: 8 }}>
-                    Slide your goal below what you spend now.
+                    {tr("Slide your goal below what you spend now.")}
                   </Text>
                 )}
               </View>
@@ -307,19 +308,19 @@ export default function ActionPlanModal({
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                       <CheckIcon size={16} color={onDeep} />
                       <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: onDeep }}>
-                        {existed ? "Update my plan" : "Start this plan"}
+                        {existed ? tr("Update my plan") : tr("Start this plan")}
                       </Text>
                     </View>
                   )}
               </TouchableOpacity>
               <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, marginTop: 10, textAlign: "center" }}>
-                Adds these blocked hours. Your own are kept.
+                {tr("Adds these blocked hours. Your own are kept.")}
               </Text>
 
               {existed && (
                 <TouchableOpacity onPress={remove} style={{ marginTop: 18, alignItems: "center" }}>
                   <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.faint }}>
-                    Delete this plan
+                    {tr("Delete this plan")}
                   </Text>
                 </TouchableOpacity>
               )}

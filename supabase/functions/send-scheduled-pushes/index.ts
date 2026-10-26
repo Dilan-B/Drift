@@ -8,6 +8,7 @@
 //   3. Daily motivation  — users who earned time yesterday
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { pushText } from "../_shared/push_i18n.ts";
 
 const PUSH_SECRET = Deno.env.get("PUSH_SECRET")!;
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
@@ -56,17 +57,19 @@ async function sendPushBatched(messages: PushMessage[]) {
 async function getTokens(
   supabase: ReturnType<typeof createClient>,
   userIds: string[],
-): Promise<Map<string, string[]>> {
+): Promise<Map<string, { token: string; locale: string }[]>> {
   if (!userIds.length) return new Map();
+  // locale = the app language on that device when it registered (schema_v23),
+  // so each phone gets the push in the language it's using.
   const { data } = await supabase
     .from("push_tokens")
-    .select("user_id, expo_push_token")
+    .select("user_id, expo_push_token, locale")
     .in("user_id", userIds);
 
-  const map = new Map<string, string[]>();
+  const map = new Map<string, { token: string; locale: string }[]>();
   for (const row of data || []) {
     const arr = map.get(row.user_id) || [];
-    arr.push(row.expo_push_token);
+    arr.push({ token: row.expo_push_token, locale: row.locale || "en" });
     map.set(row.user_id, arr);
   }
   return map;
@@ -122,12 +125,12 @@ serve(async (req: Request) => {
 
       for (const user of needsReminder) {
         const tokens = tokenMap.get(user.id) || [];
-        for (const token of tokens) {
+        for (const { token, locale } of tokens) {
           messages.push({
             to: token,
             sound: "default",
-            title: "Don't break your streak!",
-            body: `You're on a ${user.streak}-day streak! Complete a task to keep it going.`,
+            title: pushText(locale, "Don't break your streak!"),
+            body: pushText(locale, "You're on a {{streak}}-day streak! Complete a task to keep it going.", { streak: user.streak }),
             data: { type: "streak_reminder" },
           });
         }
@@ -148,12 +151,12 @@ serve(async (req: Request) => {
       );
       for (const user of inactiveUsers) {
         const tokens = tokenMap.get(user.id) || [];
-        for (const token of tokens) {
+        for (const { token, locale } of tokens) {
           messages.push({
             to: token,
             sound: "default",
-            title: "We miss you!",
-            body: "Your apps are waiting. Complete a quick task to earn screen time.",
+            title: pushText(locale, "We miss you!"),
+            body: pushText(locale, "Your apps are waiting. Complete a quick task to earn screen time."),
             data: { type: "inactivity_nudge" },
           });
         }
@@ -186,12 +189,14 @@ serve(async (req: Request) => {
       for (const [userId, totalCredits] of creditsByUser) {
         const tokens = tokenMap.get(userId) || [];
         const mins = Math.round(totalCredits);
-        for (const token of tokens) {
+        for (const { token, locale } of tokens) {
           messages.push({
             to: token,
             sound: "default",
-            title: "Great day yesterday!",
-            body: `You earned ${mins} minute${mins === 1 ? "" : "s"} of screen time. Keep the momentum going!`,
+            title: pushText(locale, "Great day yesterday!"),
+            body: mins === 1
+              ? pushText(locale, "You earned 1 minute of screen time. Keep the momentum going!")
+              : pushText(locale, "You earned {{mins}} minutes of screen time. Keep the momentum going!", { mins }),
             data: { type: "daily_motivation" },
           });
         }

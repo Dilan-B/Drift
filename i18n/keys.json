@@ -1,0 +1,4552 @@
+{
+ "\n\nNote: location is set to While Using, so real arrivals won't fire while Drift is closed.": [
+  "AutoTasksModal.jsx:128"
+ ],
+ " Each lower price is offered in the app for you to accept.": [
+  "PaywallScreen.jsx:548"
+ ],
+ " Final price shown by the App Store.": [
+  "PaywallScreen.jsx:547"
+ ],
+ " · sent back, try again": [
+  "ChildShell.jsx:157"
+ ],
+ " · {{streak}}-day streak": [
+  "ParentShell.jsx:336"
+ ],
+ "\"{{title}}\" will be removed from today.": [
+  "Drift.jsx:1895"
+ ],
+ "\"{{title}}\" will be removed.": [
+  "Drift.jsx:2330"
+ ],
+ "\"{{title}}\" — open Drift to accept or decline.": [
+  "notifications.js:378"
+ ],
+ "(OPTIONAL)": [
+  "ActionPlanModal.jsx:253"
+ ],
+ "+ Task": [
+  "ParentShell.jsx:346"
+ ],
+ "+{{minutes}} min": [
+  "FamilyUI.jsx:64"
+ ],
+ "+{{minutes}} min{{p}}": [
+  "ChildShell.jsx:157"
+ ],
+ "+{{p}} minutes when this finishes": [
+  "LockboxScreen.jsx:733"
+ ],
+ "+{{rewardMinutes}} min waiting if it stays put": [
+  "BedtimeOverlay.jsx:211"
+ ],
+ "+{{xp}} XP": [
+  "Drift.jsx:1557",
+  "SocialScreen.jsx:465",
+  "SocialScreen.jsx:641"
+ ],
+ "1 ATTEMPT LEFT": [
+  "AICheckModal.jsx:783"
+ ],
+ "1 night in a row.": [
+  "SleepGuardModal.jsx:187"
+ ],
+ "10 burpees": [
+  "ChallengeModal.jsx:32"
+ ],
+ "10 min jog": [
+  "ChallengeModal.jsx:35"
+ ],
+ "10 min · Breathe and reset": [
+  "OnboardingScreen.jsx:112"
+ ],
+ "10 min · Write your thoughts": [
+  "OnboardingScreen.jsx:113"
+ ],
+ "10 minute jog": [
+  "ChallengeModal.jsx:35"
+ ],
+ "12+ chars, number, symbol": [
+  "OnboardingScreen.jsx:1136"
+ ],
+ "15 min · Fresh air": [
+  "OnboardingScreen.jsx:114"
+ ],
+ "15 min · Organize your space": [
+  "OnboardingScreen.jsx:115"
+ ],
+ "2 min · Start the day right": [
+  "OnboardingScreen.jsx:109"
+ ],
+ "20 lunges": [
+  "ChallengeModal.jsx:33"
+ ],
+ "20 min · Books or articles": [
+  "OnboardingScreen.jsx:111"
+ ],
+ "20 min · Eat something real": [
+  "OnboardingScreen.jsx:117"
+ ],
+ "20 min · Music, art, code, etc.": [
+  "OnboardingScreen.jsx:120"
+ ],
+ "20 push-ups": [
+  "ChallengeModal.jsx:28"
+ ],
+ "20 sit-ups": [
+  "ChallengeModal.jsx:31"
+ ],
+ "30 jumping jacks": [
+  "ChallengeModal.jsx:30"
+ ],
+ "30 min · Exercise or gym": [
+  "OnboardingScreen.jsx:110"
+ ],
+ "30 min · Homework or learning": [
+  "OnboardingScreen.jsx:116"
+ ],
+ "30 squats": [
+  "ChallengeModal.jsx:29"
+ ],
+ "3–20 chars, letters/numbers/_": [
+  "OnboardingScreen.jsx:1106",
+  "UsernameSetupModal.jsx:106"
+ ],
+ "5 min · Loosen up": [
+  "OnboardingScreen.jsx:118"
+ ],
+ "5/HOUR · 20/DAY LIMIT": [
+  "AICheckModal.jsx:722"
+ ],
+ "60 min · Morning detox": [
+  "OnboardingScreen.jsx:119"
+ ],
+ "60 second plank": [
+  "ChallengeModal.jsx:34"
+ ],
+ "9:00 Standup": [
+  "OnboardingScreen.jsx:337"
+ ],
+ "@username": [
+  "SocialScreen.jsx:1347"
+ ],
+ "@{{fromUsername}} wants to grow with you on Drift.": [
+  "notifications.js:332"
+ ],
+ "@{{leaderName}} is on less screen time than you today. You're at {{spent}}.": [
+  "notifications.js:429"
+ ],
+ "@{{name}} accepted your challenge": [
+  "SocialScreen.jsx:1155"
+ ],
+ "@{{name}} denied your challenge": [
+  "SocialScreen.jsx:1157"
+ ],
+ "@{{username}} doesn't have a Drift account.": [
+  "SocialScreen.jsx:978"
+ ],
+ "@{{username}} hasn't reported today.": [
+  "SocialScreen.jsx:1611"
+ ],
+ "@{{username}} isn't on Drift yet.": [
+  "Drift.jsx:4708"
+ ],
+ "A \"You're at {{label}}\" notification should appear now. Tap it — it should open Drift with \"{{title}}\" ready to confirm.": [
+  "AutoTasksModal.jsx:126"
+ ],
+ "A full night in the other room. +{{max}} minutes earned.": [
+  "notifications.js:164"
+ ],
+ "A notification token": [
+  "ParentConsent.jsx:142"
+ ],
+ "A parent needs to set a PIN in their app first.": [
+  "ParentPinPad.jsx:62"
+ ],
+ "A parent or guardian aged 18 or over needs to create the Family account.": [
+  "OnboardingScreen.jsx:1287"
+ ],
+ "ACCOUNT": [
+  "FamilyProfile.jsx:80",
+  "ProfileScreen.jsx:357"
+ ],
+ "ADD A KID": [
+  "ParentShell.jsx:439"
+ ],
+ "AI": [
+  "Drift.jsx:2415"
+ ],
+ "AI CHECK": [
+  "AICheckModal.jsx:508"
+ ],
+ "AI checks your proof before credits are earned. With Pro it also reads your task and sets its value by how hard it is.": [
+  "Drift.jsx:1196"
+ ],
+ "AI features require an active subscription.": [
+  "aiEvaluate.js:41"
+ ],
+ "AI reads your task to set its value and sort it into a category for you, then checks your proof before credits are earned.": [
+  "Drift.jsx:1191"
+ ],
+ "ALREADY DONE": [
+  "Drift.jsx:971"
+ ],
+ "APPEARANCE": [
+  "FamilyProfile.jsx:57"
+ ],
+ "ARCHIVE": [
+  "SocialScreen.jsx:1932"
+ ],
+ "AUTOMATIC TASKS": [
+  "AutoTasksModal.jsx:286"
+ ],
+ "Abandon": [
+  "DriftInScreen.jsx:198",
+  "DriftInScreen.jsx:614"
+ ],
+ "Abandon session": [
+  "DriftInScreen.jsx:619"
+ ],
+ "Abandon session?": [
+  "DriftInScreen.jsx:610"
+ ],
+ "Abandoning won't earn any credits.": [
+  "DriftInScreen.jsx:195"
+ ],
+ "About {{m}} min of earned time left.": [
+  "notifications.js:142"
+ ],
+ "Accept": [
+  "SocialScreen.jsx:581"
+ ],
+ "Accepting…": [
+  "SocialScreen.jsx:581"
+ ],
+ "Account deleted": [
+  "Drift.jsx:6249"
+ ],
+ "Account settings live in your profile.": [
+  "LabScreen.jsx:344"
+ ],
+ "Action plan": [
+  "ActionPlanModal.jsx:166",
+  "LabScreen.jsx:256"
+ ],
+ "Add": [
+  "Drift.jsx:3013",
+  "SocialScreen.jsx:1896"
+ ],
+ "Add \"{{title}}\" ({{minutes}}m)? Tap to confirm.": [
+  "places.js:409"
+ ],
+ "Add a task": [
+  "Drift.jsx:870",
+  "TutorialOverlay.jsx:24"
+ ],
+ "Add an answer": [
+  "AICheckModal.jsx:270"
+ ],
+ "Add me on Drift: {{link}}": [
+  "SocialScreen.jsx:1448"
+ ],
+ "Add one to begin.": [
+  "Drift.jsx:2295"
+ ],
+ "Add proof": [
+  "AICheckModal.jsx:274"
+ ],
+ "Add real tasks": [
+  "OnboardingScreen.jsx:188"
+ ],
+ "Add task": [
+  "Drift.jsx:1288",
+  "Drift.jsx:2212",
+  "Drift.jsx:2308"
+ ],
+ "Add this task?": [
+  "SuggestedTaskModal.jsx:85"
+ ],
+ "Add your Google account in Settings → Apps → Calendar → Accounts, make sure Calendars is switched on for it, then tap Recheck again.": [
+  "AutoTasksModal.jsx:246"
+ ],
+ "Added to today — if you confirm": [
+  "OnboardingScreen.jsx:360"
+ ],
+ "Adding…": [
+  "Drift.jsx:1288"
+ ],
+ "Adds these blocked hours. Your own are kept.": [
+  "ActionPlanModal.jsx:317"
+ ],
+ "Afternoon": [
+  "actionPlan.js:42"
+ ],
+ "Afternoons": [
+  "actionPlan.js:42"
+ ],
+ "Again": [
+  "LockboxScreen.jsx:762"
+ ],
+ "Aim at the spot, then tap to drop the box": [
+  "LockboxScreen.jsx:587"
+ ],
+ "Airport": [
+  "places.js:161"
+ ],
+ "Alex": [
+  "OnboardingScreen.jsx:1441"
+ ],
+ "All": [
+  "Drift.jsx:1433"
+ ],
+ "All caught up": [
+  "ChildShell.jsx:143"
+ ],
+ "Allow calendar access to import events as tasks.": [
+  "AutoTasksModal.jsx:198"
+ ],
+ "Allow camera in Settings.": [
+  "AICheckModal.jsx:202",
+  "AICheckModal.jsx:217"
+ ],
+ "Allow photo access in Settings.": [
+  "AICheckModal.jsx:189",
+  "ProfileScreen.jsx:160"
+ ],
+ "Allowed": [
+  "ParentShell.jsx:403"
+ ],
+ "Allowed apps": [
+  "ParentConsent.jsx:140"
+ ],
+ "Almost out of time": [
+  "ios/DriftMonitor"
+ ],
+ "Almost there": [
+  "SocialScreen.jsx:142"
+ ],
+ "Already have an account? Sign in": [
+  "OnboardingScreen.jsx:1204"
+ ],
+ "Always allow for {{display_name}}": [
+  "ParentShell.jsx:392"
+ ],
+ "Always-on location needed": [
+  "AutoTasksModal.jsx:108"
+ ],
+ "An account with that email already exists — switch to Sign in to log in.": [
+  "OnboardingScreen.jsx:910"
+ ],
+ "An account with that email already exists. Try signing in.": [
+  "OnboardingScreen.jsx:979"
+ ],
+ "Ancient": [
+  "Drift.jsx:176",
+  "levels.js:15"
+ ],
+ "Answer the question to finish verifying.": [
+  "AICheckModal.jsx:270"
+ ],
+ "App Store codes can only be redeemed on iPhone.": [
+  "PaywallScreen.jsx:223"
+ ],
+ "App blocking needs a full build of Drift — you can set this up later.": [
+  "BlockedAppsModal.jsx:202"
+ ],
+ "App blocking via Apple Screen Time is iOS-only.": [
+  "BlockedAppsModal.jsx:59"
+ ],
+ "App requests": [
+  "ParentConsent.jsx:141"
+ ],
+ "Apple Screen Time blocking requires a custom build of Drift.": [
+  "Drift.jsx:5863"
+ ],
+ "Apple Screen Time blocking requires a custom build of Drift. Update Drift and try again.": [
+  "BlockedAppsModal.jsx:59"
+ ],
+ "Apple sign-in failed.": [
+  "OnboardingScreen.jsx:662"
+ ],
+ "Appointment": [
+  "places.js:151",
+  "places.js:166"
+ ],
+ "Approve": [
+  "ParentShell.jsx:312"
+ ],
+ "Apps": [
+  "ParentShell.jsx:343"
+ ],
+ "Apps lock": [
+  "ActionPlanModal.jsx:282"
+ ],
+ "Apps lock when\nyou're out": [
+  "OnboardingScreen.jsx:202"
+ ],
+ "Apps, categories, or web domains.": [
+  "BlockedAppsModal.jsx:148"
+ ],
+ "Archive": [
+  "SocialScreen.jsx:1665"
+ ],
+ "Are you sure?": [
+  "ProfileScreen.jsx:283"
+ ],
+ "Armed at {{toLocaleTimeString}}. Leave your phone where it is and Drift will check in the morning.": [
+  "Drift.jsx:1787"
+ ],
+ "Arms": [
+  "PoseCameraLive.jsx:133"
+ ],
+ "Arrivals are armed": [
+  "AutoTasksModal.jsx:342"
+ ],
+ "Arrivals won't fire": [
+  "AutoTasksModal.jsx:342"
+ ],
+ "Arrive somewhere you've saved and Drift offers the task.": [
+  "AutoTasksModal.jsx:316"
+ ],
+ "Ask a parent to set you up": [
+  "OnboardingScreen.jsx:1284"
+ ],
+ "Assign": [
+  "ParentShell.jsx:381"
+ ],
+ "At any time you can review what Drift holds about your child (tap Data next to their name), delete it, or withdraw consent, which deletes every child's data and stops any more being collected. Questions: driftappcontact@gmail.com.": [
+  "ParentConsent.jsx:71"
+ ],
+ "At least 3 characters.": [
+  "UsernameSetupModal.jsx:28"
+ ],
+ "At the gym": [
+  "OnboardingScreen.jsx:341"
+ ],
+ "Available now": [
+  "Drift.jsx:2006"
+ ],
+ "BEFORE YOUR KIDS JOIN": [
+  "ParentConsent.jsx:60"
+ ],
+ "BLOCKED HOURS": [
+  "Drift.jsx:2916"
+ ],
+ "BREAKDOWN": [
+  "Drift.jsx:2839"
+ ],
+ "Back": [
+  "LockboxScreen.jsx:562",
+  "OnboardingScreen.jsx:1294",
+  "OnboardingScreen.jsx:1313"
+ ],
+ "Back to sign in": [
+  "OnboardingScreen.jsx:1071"
+ ],
+ "Balance is 0 during these windows.": [
+  "Drift.jsx:2919"
+ ],
+ "Bank": [
+  "places.js:144"
+ ],
+ "Bank errand": [
+  "places.js:144"
+ ],
+ "Bar": [
+  "places.js:127"
+ ],
+ "Barber": [
+  "places.js:150"
+ ],
+ "Basketball": [
+  "places.js:75"
+ ],
+ "Basketball court": [
+  "places.js:75"
+ ],
+ "Be specific! Describe what you'll actually do (e.g. \"Read 20 pages\" not \"stuff\").": [
+  "Drift.jsx:754"
+ ],
+ "Beach": [
+  "places.js:111"
+ ],
+ "Beach walk": [
+  "places.js:111"
+ ],
+ "Bike trail": [
+  "places.js:119"
+ ],
+ "Block error": [
+  "Drift.jsx:6055"
+ ],
+ "Block every app, unlimited tasks, Lockbox and your full plant.": [
+  "PaywallScreen.jsx:394"
+ ],
+ "Blocked": [
+  "ParentShell.jsx:403"
+ ],
+ "Blocked apps": [
+  "BlockedAppsModal.jsx:114",
+  "LabScreen.jsx:204"
+ ],
+ "Blocked hours": [
+  "Drift.jsx:2898",
+  "Drift.jsx:2917",
+  "LabScreen.jsx:242"
+ ],
+ "Blocked.": [
+  "ios/DriftShield"
+ ],
+ "Bookstore": [
+  "places.js:101"
+ ],
+ "Botanical garden": [
+  "places.js:116"
+ ],
+ "Both accounts have Pro, so completion uses AI Check.": [
+  "ChallengeModal.jsx:487"
+ ],
+ "Both are optional, off until you turn them on, and stay on your device. Find them in Profile → Automatic tasks.": [
+  "OnboardingScreen.jsx:211"
+ ],
+ "Bouldering": [
+  "places.js:81"
+ ],
+ "Bouldering wall": [
+  "places.js:81"
+ ],
+ "Bowling": [
+  "places.js:136"
+ ],
+ "Bowling alley": [
+  "places.js:136"
+ ],
+ "Boxing gym": [
+  "places.js:69"
+ ],
+ "Boxing training": [
+  "places.js:69"
+ ],
+ "Breathe.": [
+  "ios/DriftShield"
+ ],
+ "Bring today's events in as tasks. Read-only — Drift never changes your calendar.": [
+  "AutoTasksModal.jsx:481"
+ ],
+ "Bugs, ideas, anything. We read every message.": [
+  "FeedbackModal.jsx:71"
+ ],
+ "Build session": [
+  "places.js:90"
+ ],
+ "Built by a tiny team. A review takes ten seconds and genuinely helps.": [
+  "ReviewPromptScreen.jsx:148"
+ ],
+ "Burpees": [
+  "ChallengeModal.jsx:32"
+ ],
+ "Bus stop": [
+  "places.js:163"
+ ],
+ "By creating an account you agree to our{{p}}": [
+  "OnboardingScreen.jsx:1180"
+ ],
+ "CALENDAR ACCOUNT": [
+  "AutoTasksModal.jsx:497"
+ ],
+ "CALENDARS TO USE": [
+  "AutoTasksModal.jsx:529"
+ ],
+ "CATEGORY": [
+  "SuggestedTaskModal.jsx:125"
+ ],
+ "CHALLENGE": [
+  "SocialScreen.jsx:511"
+ ],
+ "CHALLENGE LOST": [
+  "SocialScreen.jsx:635"
+ ],
+ "CHALLENGE WON": [
+  "SocialScreen.jsx:635"
+ ],
+ "CHALLENGES - {{length}}": [
+  "SocialScreen.jsx:1523"
+ ],
+ "CLAIM USERNAME": [
+  "UsernameSetupModal.jsx:135"
+ ],
+ "CLAIM {{credits}}m CREDITS": [
+  "AICheckModal.jsx:795"
+ ],
+ "CLOSE": [
+  "AICheckModal.jsx:556"
+ ],
+ "COMPLETED": [
+  "ChildShell.jsx:182",
+  "ParentShell.jsx:283"
+ ],
+ "CONFIDENCE: {{p}}": [
+  "AICheckModal.jsx:774"
+ ],
+ "CONTACTS": [
+  "SocialScreen.jsx:1833"
+ ],
+ "CONTINUE": [
+  "BlockedAppsModal.jsx:186"
+ ],
+ "CURRENT TIER": [
+  "Drift.jsx:2664"
+ ],
+ "Cafe": [
+  "places.js:125"
+ ],
+ "Calendar": [
+  "calendarSync.js:132"
+ ],
+ "Calendar access needed": [
+  "AutoTasksModal.jsx:198"
+ ],
+ "Calendar sync": [
+  "AutoTasksModal.jsx:478",
+  "LabScreen.jsx:271"
+ ],
+ "Calendars & places": [
+  "LabScreen.jsx:298"
+ ],
+ "Call a friend": [
+  "actionPlan.js:51"
+ ],
+ "Camera": [
+  "ParentShell.jsx:36"
+ ],
+ "Camp chores": [
+  "places.js:118"
+ ],
+ "Campground": [
+  "places.js:118"
+ ],
+ "Campus": [
+  "places.js:98"
+ ],
+ "Can't verify this": [
+  "AICheckModal.jsx:382"
+ ],
+ "Cancel": [
+  "AICheckModal.jsx:815",
+  "ActionPlanModal.jsx:134",
+  "AutoTasksModal.jsx:179"
+ ],
+ "Cancel this challenge?": [
+  "SocialScreen.jsx:1543"
+ ],
+ "Cancel tonight": [
+  "Drift.jsx:1788"
+ ],
+ "Canopy": [
+  "Drift.jsx:172",
+  "levels.js:11"
+ ],
+ "Car errand": [
+  "places.js:154"
+ ],
+ "Car repair shop": [
+  "places.js:154"
+ ],
+ "Car wash": [
+  "places.js:156"
+ ],
+ "Catch up": [
+  "places.js:125"
+ ],
+ "Challenge": [
+  "SocialScreen.jsx:382",
+  "SocialScreen.jsx:416",
+  "SocialScreen.jsx:480"
+ ],
+ "Challenges": [
+  "SocialScreen.jsx:1638"
+ ],
+ "Change anything you like before confirming.": [
+  "SuggestedTaskModal.jsx:88"
+ ],
+ "Change blocked apps": [
+  "BlockedAppsModal.jsx:145",
+  "LabScreen.jsx:233"
+ ],
+ "Check you're signed in to the App Store and connected, then try again.": [
+  "PaywallScreen.jsx:270"
+ ],
+ "Check your email to verify your account, then sign in again.": [
+  "OnboardingScreen.jsx:950",
+  "OnboardingScreen.jsx:970"
+ ],
+ "Check your email to verify your account, then try signing in again.": [
+  "OnboardingScreen.jsx:992"
+ ],
+ "Choose a Drift Family plan first. It's how Drift confirms an adult is setting this up.": [
+  "ParentConsent.jsx:52"
+ ],
+ "Choose apps to block": [
+  "LabScreen.jsx:233"
+ ],
+ "Choose time": [
+  "Drift.jsx:374"
+ ],
+ "Choose which apps to block.\nDrift enforces it even when closed.": [
+  "OnboardingScreen.jsx:203"
+ ],
+ "Choose which calendars to read and manage saved places.": [
+  "LabScreen.jsx:299"
+ ],
+ "Church": [
+  "places.js:131"
+ ],
+ "Claim credits": [
+  "Drift.jsx:1366"
+ ],
+ "Clean / tidy up": [
+  "Drift.jsx:4342",
+  "OnboardingScreen.jsx:115"
+ ],
+ "Clean your room": [
+  "ParentShell.jsx:365"
+ ],
+ "Client site": [
+  "places.js:88"
+ ],
+ "Client visit": [
+  "places.js:88"
+ ],
+ "Climbing gym": [
+  "places.js:65"
+ ],
+ "Climbing session": [
+  "places.js:65"
+ ],
+ "Clip too heavy": [
+  "AICheckModal.jsx:245",
+  "AICheckModal.jsx:253"
+ ],
+ "Clip too long": [
+  "AICheckModal.jsx:241"
+ ],
+ "Close": [
+  "PaywallScreen.jsx:444",
+  "ShareCard.jsx:99",
+  "SocialScreen.jsx:597"
+ ],
+ "Close enough is fine. Make it real.": [
+  "Drift.jsx:1311"
+ ],
+ "Club": [
+  "places.js:132"
+ ],
+ "Club meetup": [
+  "places.js:132"
+ ],
+ "Collect rewards": [
+  "DriftInScreen.jsx:675"
+ ],
+ "Community center": [
+  "places.js:130"
+ ],
+ "Community event": [
+  "places.js:130"
+ ],
+ "Community garden": [
+  "places.js:117"
+ ],
+ "Commute reading": [
+  "places.js:162",
+  "places.js:163"
+ ],
+ "Compete": [
+  "ChallengeModal.jsx:294"
+ ],
+ "Competition title": [
+  "ChallengeModal.jsx:403"
+ ],
+ "Complete a task first.": [
+  "Drift.jsx:2602"
+ ],
+ "Complete a task in Drift to unlock.": [
+  "ios/DriftShield"
+ ],
+ "Complete a task to earn your time back.": [
+  "ios/DriftShield"
+ ],
+ "Complete a task today to earn screen time.": [
+  "notifications.js:287"
+ ],
+ "Complete a task, earn minutes.\nThe harder the task, the more you earn.": [
+  "OnboardingScreen.jsx:196"
+ ],
+ "Complete early": [
+  "DriftInScreen.jsx:606"
+ ],
+ "Complete your first task to bank some minutes. Welcome to focused.": [
+  "TutorialOverlay.jsx:28"
+ ],
+ "Concert venue": [
+  "places.js:135"
+ ],
+ "Conference center": [
+  "places.js:94"
+ ],
+ "Confirm": [
+  "ParentPinPad.jsx:124"
+ ],
+ "Confirm your email or phone number before continuing.": [
+  "Drift.jsx:4472"
+ ],
+ "Connect Google Calendar": [
+  "AutoTasksModal.jsx:538"
+ ],
+ "Contacts access needed": [
+  "SocialScreen.jsx:1857"
+ ],
+ "Continue": [
+  "Drift.jsx:1735",
+  "OnboardingScreen.jsx:522",
+  "OnboardingScreen.jsx:1310"
+ ],
+ "Continue without updating (dev)": [
+  "ForceUpdateModal.jsx:79"
+ ],
+ "Cook a meal": [
+  "Drift.jsx:4344",
+  "OnboardingScreen.jsx:117"
+ ],
+ "Copied": [
+  "SocialScreen.jsx:1442"
+ ],
+ "Could not check username availability. Try again.": [
+  "OnboardingScreen.jsx:881"
+ ],
+ "Could not delete account": [
+  "Drift.jsx:6251"
+ ],
+ "Could not resend the email. Try again.": [
+  "OnboardingScreen.jsx:839"
+ ],
+ "Could not save. Try again.": [
+  "UsernameSetupModal.jsx:74"
+ ],
+ "Could not send challenge.": [
+  "ChallengeModal.jsx:185"
+ ],
+ "Could not update profile photo.": [
+  "ProfileScreen.jsx:187"
+ ],
+ "Could not update username.": [
+  "ProfileScreen.jsx:226"
+ ],
+ "Could not verify email": [
+  "Drift.jsx:4678"
+ ],
+ "Could not verify. Try again.": [
+  "OnboardingScreen.jsx:797"
+ ],
+ "Couldn't add": [
+  "SocialScreen.jsx:1036"
+ ],
+ "Couldn't apply it right now": [
+  "Drift.jsx:4658"
+ ],
+ "Couldn't assign the task. Try again.": [
+  "ParentShell.jsx:189"
+ ],
+ "Couldn't block apps": [
+  "Drift.jsx:6051"
+ ],
+ "Couldn't cancel": [
+  "SocialScreen.jsx:1223"
+ ],
+ "Couldn't check the PIN. Try again.": [
+  "ParentPinPad.jsx:63"
+ ],
+ "Couldn't compress that clip down far enough. Record a shorter one.": [
+  "AICheckModal.jsx:253"
+ ],
+ "Couldn't compress that photo enough. Try another shot.": [
+  "AICheckModal.jsx:176"
+ ],
+ "Couldn't delete it. Check your connection and try again.": [
+  "ParentConsent.jsx:121"
+ ],
+ "Couldn't finish signing in. Try again.": [
+  "OnboardingScreen.jsx:1419"
+ ],
+ "Couldn't finish signing you in": [
+  "Drift.jsx:4458"
+ ],
+ "Couldn't get location": [
+  "AutoTasksModal.jsx:153"
+ ],
+ "Couldn't join the family. Try again.": [
+  "OnboardingScreen.jsx:1421"
+ ],
+ "Couldn't map the room": [
+  "LockboxScreen.jsx:557"
+ ],
+ "Couldn't reach the AI service. If you're on public Wi-Fi (a gym, café or campus network), it may be blocking Drift — turn Wi-Fi off to use cellular and try again.": [
+  "AICheckModal.jsx:49"
+ ],
+ "Couldn't reach the App Store": [
+  "PaywallScreen.jsx:269"
+ ],
+ "Couldn't read motion history for last night. Giving you the benefit of the doubt.": [
+  "sleepGuard.js:301"
+ ],
+ "Couldn't read that clip": [
+  "AICheckModal.jsx:249"
+ ],
+ "Couldn't read that tag": [
+  "Drift.jsx:5537",
+  "Drift.jsx:5568",
+  "SleepGuardModal.jsx:88"
+ ],
+ "Couldn't redeem right now. Try again.": [
+  "RedeemCodeModal.jsx:31"
+ ],
+ "Couldn't remove": [
+  "SocialScreen.jsx:1093"
+ ],
+ "Couldn't save the PIN. Try again.": [
+  "ParentShell.jsx:177"
+ ],
+ "Couldn't save your plan": [
+  "ActionPlanModal.jsx:125"
+ ],
+ "Couldn't send": [
+  "Drift.jsx:4716"
+ ],
+ "Couldn't start": [
+  "LockboxScreen.jsx:344",
+  "LockboxScreen.jsx:507"
+ ],
+ "Counting something — reps, laps, pages? Record a video. A single photo can't show a number.": [
+  "AICheckModal.jsx:690"
+ ],
+ "Coworking space": [
+  "places.js:87"
+ ],
+ "Create account": [
+  "OnboardingScreen.jsx:1163"
+ ],
+ "Create an account to share your focus{{p}}with friends.": [
+  "SocialScreen.jsx:1237"
+ ],
+ "Create this task at": [
+  "Drift.jsx:1078"
+ ],
+ "Create your account": [
+  "OnboardingScreen.jsx:1096"
+ ],
+ "Credits based on task duration.": [
+  "Drift.jsx:638"
+ ],
+ "CrossFit box": [
+  "places.js:68"
+ ],
+ "Custom": [
+  "ChallengeModal.jsx:323",
+  "Drift.jsx:416"
+ ],
+ "Custom challenges need the Supabase SQL update before they can be sent.": [
+  "ChallengeModal.jsx:185"
+ ],
+ "Custom challenges send normally. AI verification turns on when both users have Pro.": [
+  "ChallengeModal.jsx:487"
+ ],
+ "Custom days": [
+  "Drift.jsx:648"
+ ],
+ "DARE": [
+  "SocialScreen.jsx:511"
+ ],
+ "DARE DONE": [
+  "SocialScreen.jsx:635"
+ ],
+ "DARE FAILED": [
+  "SocialScreen.jsx:635"
+ ],
+ "DEEP FOCUS": [
+  "DriftInScreen.jsx:363",
+  "DriftInScreen.jsx:560"
+ ],
+ "DELETE": [
+  "Swipeable.jsx:136"
+ ],
+ "DEV skip — no session": [
+  "OnboardingScreen.jsx:1566"
+ ],
+ "DEV · POST-SIGNUP": [
+  "OnboardingScreen.jsx:175"
+ ],
+ "DEV · PRE-SIGNUP": [
+  "OnboardingScreen.jsx:174"
+ ],
+ "DONE": [
+  "BlockedAppsModal.jsx:186"
+ ],
+ "DONE TODAY": [
+  "Drift.jsx:2461"
+ ],
+ "DRIFT": [
+  "Drift.jsx:137",
+  "Drift.jsx:6433",
+  "OnboardingScreen.jsx:153"
+ ],
+ "Daily": [
+  "Drift.jsx:411"
+ ],
+ "Dance practice": [
+  "places.js:71"
+ ],
+ "Dance studio": [
+  "places.js:71"
+ ],
+ "Dare": [
+  "ChallengeModal.jsx:295",
+  "SocialScreen.jsx:416",
+  "SocialScreen.jsx:480"
+ ],
+ "Dare title": [
+  "ChallengeModal.jsx:403"
+ ],
+ "Dark": [
+  "FamilyProfile.jsx:59"
+ ],
+ "Data": [
+  "ParentShell.jsx:340"
+ ],
+ "Daycare": [
+  "places.js:159"
+ ],
+ "Declined": [
+  "SocialScreen.jsx:701"
+ ],
+ "Deep work": [
+  "places.js:87"
+ ],
+ "Delete": [
+  "ActionPlanModal.jsx:136",
+  "Drift.jsx:1897",
+  "FamilyProfile.jsx:31"
+ ],
+ "Delete account": [
+  "FamilyProfile.jsx:85",
+  "ProfileScreen.jsx:288",
+  "ProfileScreen.jsx:480"
+ ],
+ "Delete account?": [
+  "FamilyProfile.jsx:27",
+  "ProfileScreen.jsx:274"
+ ],
+ "Delete this plan": [
+  "ActionPlanModal.jsx:323"
+ ],
+ "Delete this plan?": [
+  "ActionPlanModal.jsx:131"
+ ],
+ "Delete {{name}}'s data": [
+  "ParentConsent.jsx:151"
+ ],
+ "Delete {{name}}'s data?": [
+  "ParentConsent.jsx:110"
+ ],
+ "Delete {{title}} task?": [
+  "Drift.jsx:1895",
+  "Drift.jsx:2329"
+ ],
+ "Delete?": [
+  "Swipeable.jsx:26"
+ ],
+ "Denied - tap to enable": [
+  "ProfileScreen.jsx:391"
+ ],
+ "Dental appointment": [
+  "places.js:152"
+ ],
+ "Dentist": [
+  "places.js:152"
+ ],
+ "Deny": [
+  "SocialScreen.jsx:566"
+ ],
+ "Describe how you completed \"{{title}}\"...": [
+  "AICheckModal.jsx:626"
+ ],
+ "Device": [
+  "ParentConsent.jsx:142"
+ ],
+ "Different tag": [
+  "Drift.jsx:5559"
+ ],
+ "Dismiss": [
+  "BedtimeOverlay.jsx:138"
+ ],
+ "Doctor's office": [
+  "places.js:151"
+ ],
+ "Dog park": [
+  "places.js:120"
+ ],
+ "Dojo": [
+  "places.js:70"
+ ],
+ "Don't break your streak!": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "Done": [
+  "ChildShell.jsx:172",
+  "Drift.jsx:376",
+  "FamilyProfile.jsx:42"
+ ],
+ "Done before midnight earns +{{xp}} XP": [
+  "ChallengeModal.jsx:457"
+ ],
+ "Drift Balance": [
+  "ios/DriftWidgets"
+ ],
+ "Drift Family": [
+  "PaywallScreen.jsx:466"
+ ],
+ "Drift In": [
+  "Drift.jsx:3416",
+  "Drift.jsx:6014",
+  "Drift.jsx:6014"
+ ],
+ "Drift Pro": [
+  "PaywallScreen.jsx:466"
+ ],
+ "Drift Pro blocks as many apps, categories and websites as you like.": [
+  "BlockedAppsModal.jsx:84",
+  "Drift.jsx:5852"
+ ],
+ "Drift can match your contacts to find friends already on Drift. Contact emails are hashed on your device and never uploaded in plain text.": [
+  "NSContactsUsageDescription"
+ ],
+ "Drift can read your calendar to offer today's events as tasks. It never changes your calendar and nothing is uploaded.": [
+  "NSCalendarsFullAccessUsageDescription"
+ ],
+ "Drift can read your reminders to offer them as tasks. It never changes your reminders and nothing is uploaded.": [
+  "NSRemindersFullAccessUsageDescription"
+ ],
+ "Drift can't block apps until you re-enable Screen Time access in Settings → Screen Time.": [
+  "Drift.jsx:4078"
+ ],
+ "Drift checks when you arrive at places you've saved so it can suggest a task. This needs Always access to work in the background. Your location stays on your device and is never uploaded.": [
+  "NSLocationAlwaysAndWhenInUseUsageDescription"
+ ],
+ "Drift does not record audio. This permission is required by a camera component used for pose detection.": [
+  "NSMicrophoneUsageDescription"
+ ],
+ "Drift feedback": [
+  "FeedbackModal.jsx:25"
+ ],
+ "Drift has no location permission (Settings › Drift › Location).": [
+  "places.js:526"
+ ],
+ "Drift in": [
+  "DriftInScreen.jsx:366",
+  "DriftInScreen.jsx:530",
+  "DriftInScreen.jsx:561"
+ ],
+ "Drift kid account": [
+  "ChildShell.jsx:196"
+ ],
+ "Drift may save a screenshot to your photo library if you choose to share your progress.": [
+  "NSPhotoLibraryAddUsageDescription"
+ ],
+ "Drift needs \"Always\" location access to notice when you arrive somewhere. You can change this in Settings → Drift → Location.": [
+  "AutoTasksModal.jsx:109"
+ ],
+ "Drift needs access to your photos to attach a proof image to a task or to set your profile avatar.": [
+  "NSPhotoLibraryUsageDescription"
+ ],
+ "Drift parent account": [
+  "ParentShell.jsx:430"
+ ],
+ "Drift reads Google Calendar through iOS. Open Settings → Apps → Calendar → Accounts → Add Account → Google, sign in, and turn Calendars on. Then come back and recheck.": [
+  "AutoTasksModal.jsx:541"
+ ],
+ "Drift reads an NFC tag you place in another room, so you can prove your phone is there before you sleep. Drift only reads the tag's ID and never writes to it.": [
+  "NFCReaderUsageDescription"
+ ],
+ "Drift uses Motion & Fitness to check your phone stayed still overnight. Turn it on in Settings › Drift › Motion & Fitness.": [
+  "Drift.jsx:5527",
+  "SleepGuardModal.jsx:78"
+ ],
+ "Drift uses motion data to detect exercise movement during workout challenges, and to check your phone stays put during a Lockbox session or overnight with the phone-in-another-room guard, including while the screen is off. Motion data is read on your device and never uploaded.": [
+  "NSMotionUsageDescription"
+ ],
+ "Drift uses your camera to take proof photos for your tasks, to set your profile picture, and to place the Lockbox on a real surface using augmented reality.": [
+  "NSCameraUsageDescription"
+ ],
+ "Drift uses your location to save the places you choose, so it can suggest a task when you arrive. Your location stays on your device.": [
+  "NSLocationWhenInUseUsageDescription"
+ ],
+ "Drift will forget your tag and stop the nightly reminder. Your streak history is kept.": [
+  "SleepGuardModal.jsx:99"
+ ],
+ "Drinks": [
+  "places.js:127"
+ ],
+ "Drop a box on your desk. Phone goes in, and stays in.": [
+  "LockboxScreen.jsx:815"
+ ],
+ "Drop off recycling": [
+  "places.js:158"
+ ],
+ "Drop the box": [
+  "LockboxScreen.jsx:622"
+ ],
+ "Drop to floor · jump up and clap overhead": [
+  "PoseCameraLive.jsx:122"
+ ],
+ "Dry cleaner": [
+  "places.js:147"
+ ],
+ "Dry cleaning drop-off": [
+  "places.js:147"
+ ],
+ "EARNABLE": [
+  "Drift.jsx:2091"
+ ],
+ "EARNED": [
+  "Drift.jsx:2078"
+ ],
+ "ENJOYING DRIFT?": [
+  "ReviewPromptScreen.jsx:127"
+ ],
+ "ENTER CODE": [
+  "RedeemCodeModal.jsx:165"
+ ],
+ "ESTIMATED EARNINGS": [
+  "Drift.jsx:1141"
+ ],
+ "Each task has a time estimate and earns you screen time when you complete it.": [
+  "OnboardingScreen.jsx:190"
+ ],
+ "Earn screen time by completing a task in Drift.": [
+  "ios/DriftShield"
+ ],
+ "Earn this back to unlock": [
+  "Drift.jsx:2006"
+ ],
+ "Earn time.": [
+  "Drift.jsx:2317"
+ ],
+ "Earn your own screen time by completing tasks.": [
+  "OnboardingScreen.jsx:1215"
+ ],
+ "Earn your screen time": [
+  "ShareCard.jsx:73"
+ ],
+ "Earn your screen time by getting real things done. Your phone unlocks when you do.": [
+  "OnboardingScreen.jsx:164"
+ ],
+ "Earn your time": [
+  "OnboardingScreen.jsx:195"
+ ],
+ "Earned": [
+  "Drift.jsx:2807"
+ ],
+ "Earned by type": [
+  "Drift.jsx:2842"
+ ],
+ "Elbow": [
+  "PoseCameraLive.jsx:80",
+  "PoseCameraLive.jsx:88"
+ ],
+ "Elbows at 90° down · lock out at the top": [
+  "PoseCameraLive.jsx:87"
+ ],
+ "Email": [
+  "OnboardingScreen.jsx:1119"
+ ],
+ "Email accounts must be verified before Drift unlocks.": [
+  "OnboardingScreen.jsx:1148"
+ ],
+ "Email or password is incorrect.": [
+  "OnboardingScreen.jsx:983"
+ ],
+ "Email required.": [
+  "OnboardingScreen.jsx:557"
+ ],
+ "Email too long.": [
+  "OnboardingScreen.jsx:558"
+ ],
+ "Email us at {{FEEDBACK_EMAIL}}": [
+  "FeedbackModal.jsx:34"
+ ],
+ "Enable Contacts in Settings to find friends. They never leave your device unhashed.": [
+  "SocialScreen.jsx:1860"
+ ],
+ "Enable Drift in Settings > Screen Time so Drift can block apps.": [
+  "BlockedAppsModal.jsx:67",
+  "Drift.jsx:5860"
+ ],
+ "Enable camera": [
+  "PoseCameraLive.jsx:211"
+ ],
+ "Enable location access for Drift to use place suggestions.": [
+  "AutoTasksModal.jsx:109"
+ ],
+ "End": [
+  "Drift.jsx:2976",
+  "LockboxScreen.jsx:517"
+ ],
+ "End early": [
+  "LockboxScreen.jsx:742"
+ ],
+ "End this session?": [
+  "LockboxScreen.jsx:513"
+ ],
+ "Enter a code.": [
+  "RedeemCodeModal.jsx:24"
+ ],
+ "Enter a valid email address.": [
+  "OnboardingScreen.jsx:559"
+ ],
+ "Enter at least 4 digits.": [
+  "ParentShell.jsx:173"
+ ],
+ "Enter it to choose which apps are blocked.": [
+  "ParentPinPad.jsx:90"
+ ],
+ "Enter minutes between 1 and 600.": [
+  "ParentShell.jsx:185"
+ ],
+ "Enter the 8-digit code from your email.": [
+  "OnboardingScreen.jsx:776"
+ ],
+ "Enter the code you were given by your programme or by the Drift team to unlock Drift Pro.": [
+  "RedeemCodeModal.jsx:155"
+ ],
+ "Enter the family code from your parent.": [
+  "OnboardingScreen.jsx:1402"
+ ],
+ "Enter your code": [
+  "OnboardingScreen.jsx:1017"
+ ],
+ "Enter your name.": [
+  "OnboardingScreen.jsx:1401",
+  "OnboardingScreen.jsx:1417"
+ ],
+ "Enter your participant ID.": [
+  "RedeemCodeModal.jsx:94"
+ ],
+ "Error": [
+  "Drift.jsx:4720",
+  "SocialScreen.jsx:1005"
+ ],
+ "Eternal": [
+  "Drift.jsx:177",
+  "levels.js:16"
+ ],
+ "Evening": [
+  "actionPlan.js:43"
+ ],
+ "Evenings": [
+  "actionPlan.js:43"
+ ],
+ "Event": [
+  "calendarSync.js:271"
+ ],
+ "Every day": [
+  "Drift.jsx:645"
+ ],
+ "Every seat in this family is taken. Ask your parent to add one in Drift, then try again.": [
+  "OnboardingScreen.jsx:1414"
+ ],
+ "Everything stored for {{name}}'s account. Nothing else is kept.": [
+  "ParentConsent.jsx:135"
+ ],
+ "Everything that changes how Drift behaves.": [
+  "LabScreen.jsx:195"
+ ],
+ "Exercise": [
+  "ChallengeModal.jsx:322"
+ ],
+ "Explore": [
+  "places.js:106"
+ ],
+ "Explore an exhibit": [
+  "places.js:105"
+ ],
+ "FAMILY CODE": [
+  "ParentShell.jsx:223"
+ ],
+ "FEEDBACK": [
+  "FeedbackModal.jsx:68"
+ ],
+ "FOCUS": [
+  "TutorialOverlay.jsx:25"
+ ],
+ "Family code": [
+  "OnboardingScreen.jsx:1450"
+ ],
+ "Family home": [
+  "places.js:129"
+ ],
+ "Family time": [
+  "places.js:129"
+ ],
+ "Farm": [
+  "places.js:122"
+ ],
+ "Farm chores": [
+  "places.js:122"
+ ],
+ "Fill up": [
+  "places.js:155"
+ ],
+ "Find friends from contacts": [
+  "SocialScreen.jsx:1394"
+ ],
+ "Finish": [
+  "DriftInScreen.jsx:233"
+ ],
+ "Finish before midnight → +{{xp}} XP": [
+  "SocialScreen.jsx:532"
+ ],
+ "Finish early?": [
+  "DriftInScreen.jsx:229"
+ ],
+ "Finish first. This will still be here.": [
+  "ios/DriftShield"
+ ],
+ "Finish up. {{name}} will still be there.": [
+  "ios/DriftShield"
+ ],
+ "First to finish wins +{{xp}} XP": [
+  "ChallengeModal.jsx:457"
+ ],
+ "First verified wins +{{xp}} XP": [
+  "SocialScreen.jsx:532"
+ ],
+ "Focus block": [
+  "places.js:59"
+ ],
+ "Focus.": [
+  "ios/DriftShield"
+ ],
+ "Focused time?": [
+  "Drift.jsx:1320"
+ ],
+ "Focused work block": [
+  "places.js:85",
+  "places.js:86"
+ ],
+ "Focused work, gym, cooking, studying": [
+  "Drift.jsx:162"
+ ],
+ "Forest": [
+  "Drift.jsx:173",
+  "levels.js:12",
+  "places.js:115"
+ ],
+ "Free plan blocks up to {{FREE_BLOCK_LIMIT}}": [
+  "BlockedAppsModal.jsx:83"
+ ],
+ "Fri": [
+  "Drift.jsx:401"
+ ],
+ "Friend request sent to @{{username}}": [
+  "SocialScreen.jsx:1009"
+ ],
+ "Friend request sent to @{{username}}.": [
+  "Drift.jsx:4718"
+ ],
+ "Friend's place": [
+  "places.js:128"
+ ],
+ "Friends": [
+  "Drift.jsx:3371"
+ ],
+ "Friends on Drift": [
+  "SocialScreen.jsx:1836"
+ ],
+ "Front knee at 90° · back knee brushes floor": [
+  "PoseCameraLive.jsx:103"
+ ],
+ "GOAL": [
+  "ActionPlanModal.jsx:199"
+ ],
+ "GROVE": [
+  "TutorialOverlay.jsx:26"
+ ],
+ "Game night": [
+  "places.js:137"
+ ],
+ "Game store": [
+  "places.js:137"
+ ],
+ "Garden walk": [
+  "places.js:116"
+ ],
+ "Garden work": [
+  "places.js:117"
+ ],
+ "Gas station": [
+  "places.js:155"
+ ],
+ "Get Started": [
+  "OnboardingScreen.jsx:168"
+ ],
+ "Getting it all\nset up for you": [
+  "OnboardingScreen.jsx:418"
+ ],
+ "Give back earned minutes.": [
+  "Drift.jsx:1405"
+ ],
+ "Give the task a name.": [
+  "ParentShell.jsx:184"
+ ],
+ "Give this task a bit more time before proving it.": [
+  "AICheckModal.jsx:375"
+ ],
+ "Go for a walk": [
+  "Drift.jsx:4341",
+  "OnboardingScreen.jsx:114",
+  "actionPlan.js:48"
+ ],
+ "Golf course": [
+  "places.js:77"
+ ],
+ "Good night": [
+  "Drift.jsx:1786"
+ ],
+ "Good work.": [
+  "DriftInScreen.jsx:647"
+ ],
+ "Goodnight": [
+  "BedtimeOverlay.jsx:187"
+ ],
+ "Google": [
+  "AutoTasksModal.jsx:503"
+ ],
+ "Google Sign-In is not configured. ": [
+  "oauthSignIn.js:94"
+ ],
+ "Google sign-in failed": [
+  "oauthSignIn.js:79"
+ ],
+ "Google sign-in failed.": [
+  "OnboardingScreen.jsx:621",
+  "OnboardingScreen.jsx:651"
+ ],
+ "Google sign-in isn't configured for this build.": [
+  "OnboardingScreen.jsx:633"
+ ],
+ "Google sign-in requires a dev client build (won't work in Expo Go).": [
+  "OnboardingScreen.jsx:642"
+ ],
+ "Great day yesterday!": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "Groceries": [
+  "places.js:142"
+ ],
+ "Grove": [
+  "Drift.jsx:171",
+  "SocialScreen.jsx:1311",
+  "levels.js:10"
+ ],
+ "Growing": [
+  "SocialScreen.jsx:88"
+ ],
+ "Growth": [
+  "Drift.jsx:2637"
+ ],
+ "Gym": [
+  "places.js:63"
+ ],
+ "HARDEST TIME": [
+  "ActionPlanModal.jsx:228"
+ ],
+ "HAVE A CODE?": [
+  "RedeemCodeModal.jsx:149"
+ ],
+ "HOW IT WORKS": [
+  "DriftInScreen.jsx:400"
+ ],
+ "HOW THIS WORKS": [
+  "BlockedAppsModal.jsx:125"
+ ],
+ "Haircut": [
+  "places.js:150"
+ ],
+ "Hang out": [
+  "places.js:128"
+ ],
+ "Hard workout, deep sprint, long outdoor": [
+  "Drift.jsx:163"
+ ],
+ "Hardware store": [
+  "places.js:148"
+ ],
+ "Have a Pro or cohort code? Unlock it here": [
+  "ProfileScreen.jsx:416"
+ ],
+ "Have a code?": [
+  "PaywallScreen.jsx:569"
+ ],
+ "Height": [
+  "PoseCameraLive.jsx:123"
+ ],
+ "Help Drift grow": [
+  "ReviewPromptScreen.jsx:130"
+ ],
+ "Hike": [
+  "places.js:110",
+  "places.js:114"
+ ],
+ "Hip": [
+  "PoseCameraLive.jsx:113"
+ ],
+ "Hips below knees · drive through heels": [
+  "PoseCameraLive.jsx:95"
+ ],
+ "History": [
+  "FamilyUI.jsx:14"
+ ],
+ "Hi{{p}}": [
+  "ChildShell.jsx:112"
+ ],
+ "Hold the top of your phone against the tag you want to use.": [
+  "sleepGuard.js:100"
+ ],
+ "Hold the top of your phone against your tag to start the night.": [
+  "sleepGuard.js:154"
+ ],
+ "Hold the top of your phone against your tag.": [
+  "sleepGuard.js:84"
+ ],
+ "Hold your phone still against the tag and try again.": [
+  "Drift.jsx:5537",
+  "Drift.jsx:5568",
+  "SleepGuardModal.jsx:88"
+ ],
+ "Holding": [
+  "SocialScreen.jsx:89"
+ ],
+ "Home": [
+  "FamilyUI.jsx:13",
+  "places.js:141"
+ ],
+ "Home gym": [
+  "places.js:64"
+ ],
+ "Home office": [
+  "places.js:86"
+ ],
+ "Hotel": [
+  "places.js:164"
+ ],
+ "How friends find you. Can't be changed later.": [
+  "UsernameSetupModal.jsx:97"
+ ],
+ "How long we keep it": [
+  "ParentConsent.jsx:70"
+ ],
+ "How many kids?": [
+  "PaywallScreen.jsx:477"
+ ],
+ "How we confirm you're the parent": [
+  "ParentConsent.jsx:72"
+ ],
+ "I SPEND ABOUT": [
+  "ActionPlanModal.jsx:184"
+ ],
+ "I agree": [
+  "ParentConsent.jsx:97"
+ ],
+ "I just earned {{earnedText}} of screen time by doing \"{{title}}\" for {{timeText}} on Drift.": [
+  "Drift.jsx:1586"
+ ],
+ "I use Drift to earn my screen time — join with my code {{code}} for 15 bonus minutes: {{link}}": [
+  "contacts.js:103",
+  "referrals.js:43",
+  "referrals.js:43"
+ ],
+ "I'll come back later": [
+  "ios/DriftShield"
+ ],
+ "I'm a kid": [
+  "OnboardingScreen.jsx:1217"
+ ],
+ "I'm a parent": [
+  "OnboardingScreen.jsx:1216"
+ ],
+ "I'm the parent or legal guardian of the children who will join this family, and I agree to Drift collecting and using their information as described above.": [
+  "ParentConsent.jsx:87"
+ ],
+ "I'm using Drift to earn my screen time instead of doom-scrolling — join me: {{link}}": [
+  "contacts.js:104"
+ ],
+ "IN THE BOX": [
+  "LockboxScreen.jsx:720"
+ ],
+ "INSTEAD, I'LL": [
+  "ActionPlanModal.jsx:253"
+ ],
+ "Ice rink": [
+  "places.js:78"
+ ],
+ "Image processing isn't installed in this build. Use text or video proof.": [
+  "AICheckModal.jsx:172"
+ ],
+ "Import automatically": [
+  "AutoTasksModal.jsx:612",
+  "LabScreen.jsx:280"
+ ],
+ "Import today's events": [
+  "AutoTasksModal.jsx:640"
+ ],
+ "Intense": [
+  "Drift.jsx:163"
+ ],
+ "Invite contacts to Drift": [
+  "SocialScreen.jsx:1913"
+ ],
+ "Is this really the move right now?": [
+  "ios/DriftMonitor"
+ ],
+ "Is {{label}} really the move right now?": [
+  "ios/DriftMonitor"
+ ],
+ "Is {{name}} the move right now?": [
+  "ios/DriftShield"
+ ],
+ "It was picked up around {{when}}. No bonus this time.": [
+  "notifications.js:175"
+ ],
+ "Job site": [
+  "places.js:93"
+ ],
+ "Join family": [
+  "OnboardingScreen.jsx:1469"
+ ],
+ "Join my family with a code": [
+  "OnboardingScreen.jsx:1291"
+ ],
+ "Join our family on Drift — open the app, pick \"I'm a kid\", and enter this code: {{code}}": [
+  "ParentShell.jsx:147"
+ ],
+ "Join your family with a code from your parent.": [
+  "OnboardingScreen.jsx:1217"
+ ],
+ "Join your{{p}}family": [
+  "OnboardingScreen.jsx:1434"
+ ],
+ "Journal": [
+  "Drift.jsx:4340",
+  "OnboardingScreen.jsx:113"
+ ],
+ "Jump feet wide · raise arms fully overhead": [
+  "PoseCameraLive.jsx:132"
+ ],
+ "Jumping Jacks": [
+  "ChallengeModal.jsx:30"
+ ],
+ "Just ask Siri": [
+  "OnboardingScreen.jsx:216"
+ ],
+ "Just me": [
+  "OnboardingScreen.jsx:1215"
+ ],
+ "Just once": [
+  "Drift.jsx:644"
+ ],
+ "Keep account": [
+  "ProfileScreen.jsx:286"
+ ],
+ "Keep going": [
+  "DriftInScreen.jsx:232",
+  "LockboxScreen.jsx:516"
+ ],
+ "Keep it under 5000 characters.": [
+  "FeedbackModal.jsx:42"
+ ],
+ "Keep it under {{VIDEO_MAX_SECONDS}} seconds — that's plenty to show the work.": [
+  "AICheckModal.jsx:241"
+ ],
+ "Keep your streak": [
+  "notifications.js:286"
+ ],
+ "Kid": [
+  "ParentShell.jsx:334"
+ ],
+ "Knee": [
+  "PoseCameraLive.jsx:96",
+  "PoseCameraLive.jsx:104"
+ ],
+ "LEARN THE APP": [
+  "LabScreen.jsx:319"
+ ],
+ "LEAST SCREEN TIME TODAY": [
+  "SocialScreen.jsx:1568"
+ ],
+ "LENGTH": [
+  "Drift.jsx:911",
+  "DriftInScreen.jsx:427",
+  "LockboxScreen.jsx:835"
+ ],
+ "LEVEL": [
+  "SocialScreen.jsx:310"
+ ],
+ "LEVEL UP": [
+  "Drift.jsx:1727"
+ ],
+ "LIVE": [
+  "ChallengeModal.jsx:374"
+ ],
+ "LIVE CHECK": [
+  "RepChallengeModal.jsx:151"
+ ],
+ "Lab": [
+  "places.js:92"
+ ],
+ "Lab work": [
+  "places.js:92"
+ ],
+ "Lake": [
+  "places.js:112"
+ ],
+ "Language": [
+  "LanguagePicker.jsx:44",
+  "LanguagePicker.jsx:56"
+ ],
+ "Language practice": [
+  "places.js:103"
+ ],
+ "Language school": [
+  "places.js:103"
+ ],
+ "Last night": [
+  "Drift.jsx:1793"
+ ],
+ "Late": [
+  "actionPlan.js:44"
+ ],
+ "Late night": [
+  "actionPlan.js:44"
+ ],
+ "Later": [
+  "Drift.jsx:4080"
+ ],
+ "Laundromat": [
+  "places.js:146"
+ ],
+ "Laundry": [
+  "places.js:146"
+ ],
+ "Learning": [
+  "Drift.jsx:155",
+  "SuggestedTaskModal.jsx:23"
+ ],
+ "Leave it in the room where your phone will sleep. Tap it at bedtime to start a night.": [
+  "Drift.jsx:5534",
+  "SleepGuardModal.jsx:85"
+ ],
+ "Leave it there": [
+  "LockboxScreen.jsx:641"
+ ],
+ "Leave it where it is.": [
+  "LockboxScreen.jsx:1078"
+ ],
+ "Leave session?": [
+  "DriftInScreen.jsx:194"
+ ],
+ "Leave your phone where it is. Drift will check in the morning.": [
+  "Drift.jsx:1787"
+ ],
+ "Lecture": [
+  "places.js:99"
+ ],
+ "Lecture hall": [
+  "places.js:99"
+ ],
+ "Let tasks add\nthemselves?": [
+  "OnboardingScreen.jsx:443"
+ ],
+ "Let tasks add themselves — from your calendar, or when you arrive somewhere.": [
+  "Drift.jsx:2238"
+ ],
+ "Let's set you up": [
+  "OnboardingScreen.jsx:307"
+ ],
+ "Letters, numbers, underscores only.": [
+  "UsernameSetupModal.jsx:30"
+ ],
+ "Library": [
+  "places.js:97"
+ ],
+ "Life": [
+  "Drift.jsx:156",
+  "SuggestedTaskModal.jsx:24"
+ ],
+ "Light": [
+  "Drift.jsx:161",
+  "FamilyProfile.jsx:59"
+ ],
+ "Live tracking isn't available": [
+  "RepChallengeModal.jsx:104"
+ ],
+ "Live tracking needs a full build": [
+  "PoseCamera.jsx:47"
+ ],
+ "Loading model…": [
+  "PoseCameraLive.jsx:250"
+ ],
+ "Location Services is off for the whole device (Settings › Privacy › Location Services).": [
+  "places.js:525"
+ ],
+ "Location is set to While Using. Arrivals need Always (Settings › Drift › Location › Always).": [
+  "places.js:527"
+ ],
+ "Location isn't available in this build.": [
+  "AutoTasksModal.jsx:109"
+ ],
+ "Location needed": [
+  "AutoTasksModal.jsx:108"
+ ],
+ "Lock it in": [
+  "Drift.jsx:4650"
+ ],
+ "Lockbox": [
+  "DriftInScreen.jsx:272",
+  "DriftInScreen.jsx:310",
+  "LockboxScreen.jsx:812"
+ ],
+ "Lockbox finished": [
+  "notifications.js:243"
+ ],
+ "Lockbox session lost": [
+  "notifications.js:200",
+  "notifications.js:219"
+ ],
+ "Lockbox · Pro": [
+  "DriftInScreen.jsx:272"
+ ],
+ "Locked": [
+  "LockboxScreen.jsx:1072"
+ ],
+ "Lookup failed": [
+  "SocialScreen.jsx:977"
+ ],
+ "Lower chest to floor · full range of motion counts": [
+  "PoseCameraLive.jsx:79"
+ ],
+ "Lunges": [
+  "ChallengeModal.jsx:33"
+ ],
+ "Mail not set up": [
+  "FeedbackModal.jsx:34"
+ ],
+ "Make something": [
+  "actionPlan.js:54"
+ ],
+ "Make sure location access is on, then try again.": [
+  "AutoTasksModal.jsx:153"
+ ],
+ "Make your bed": [
+  "Drift.jsx:4336",
+  "OnboardingScreen.jsx:109"
+ ],
+ "Mall": [
+  "places.js:149"
+ ],
+ "Manage app access": [
+  "ChildShell.jsx:134"
+ ],
+ "Maps": [
+  "ParentShell.jsx:34"
+ ],
+ "Marina": [
+  "places.js:121"
+ ],
+ "Martial arts class": [
+  "places.js:70"
+ ],
+ "Matching your contacts privately…{{p}}Emails are hashed on your device.": [
+  "SocialScreen.jsx:1851"
+ ],
+ "Max 20 characters.": [
+  "UsernameSetupModal.jsx:29"
+ ],
+ "Meal out": [
+  "places.js:126"
+ ],
+ "Meditate": [
+  "Drift.jsx:4339",
+  "OnboardingScreen.jsx:112",
+  "places.js:168"
+ ],
+ "Meditation center": [
+  "places.js:168"
+ ],
+ "Messages": [
+  "ParentShell.jsx:32"
+ ],
+ "Minutes": [
+  "ChallengeModal.jsx:417"
+ ],
+ "Miss the deadline and you lose {{penaltyMins}} minutes of screen time.": [
+  "SocialScreen.jsx:535"
+ ],
+ "Missing the deadline costs {{penaltyMins}} minutes of screen time.": [
+  "ChallengeModal.jsx:460"
+ ],
+ "Moderate": [
+  "Drift.jsx:162"
+ ],
+ "Mon": [
+  "Drift.jsx:400"
+ ],
+ "Monitoring 1 place in the background.": [
+  "AutoTasksModal.jsx:348"
+ ],
+ "Monitoring {{placeCount}} places in the background.": [
+  "AutoTasksModal.jsx:348"
+ ],
+ "Monthly": [
+  "PaywallScreen.jsx:512",
+  "PaywallScreen.jsx:517"
+ ],
+ "Morning": [
+  "actionPlan.js:41"
+ ],
+ "Mornings": [
+  "actionPlan.js:41"
+ ],
+ "Motion access needed": [
+  "Drift.jsx:5526",
+  "Drift.jsx:5562",
+  "SleepGuardModal.jsx:77"
+ ],
+ "Motion data isn't available right now. We'll check again shortly.": [
+  "sleepGuard.js:303"
+ ],
+ "Mountain": [
+  "places.js:114"
+ ],
+ "Move slowly over a table or desk": [
+  "LockboxScreen.jsx:587"
+ ],
+ "Museum": [
+  "places.js:105"
+ ],
+ "Music": [
+  "ParentShell.jsx:35"
+ ],
+ "Music school": [
+  "places.js:102"
+ ],
+ "NEW TASK": [
+  "Drift.jsx:867"
+ ],
+ "NEW TASK · AI VALUED": [
+  "Drift.jsx:867"
+ ],
+ "NO ATTEMPTS LEFT ON THIS TASK": [
+  "AICheckModal.jsx:783"
+ ],
+ "NOT VERIFIED": [
+  "AICheckModal.jsx:747"
+ ],
+ "Nail salon": [
+  "places.js:166"
+ ],
+ "Name": [
+  "ParentConsent.jsx:137"
+ ],
+ "Name the one thing you want to focus on and choose a length. While you're drifted in, your blocked apps stay locked and the timer keeps running even if you close Drift. Finish the session and half of your focused time comes back as screen time — up to a maximum of 60 minutes — plus experience toward your tier, which isn't capped. Abandoning early earns nothing.": [
+  "DriftInScreen.jsx:402"
+ ],
+ "Name your challenge first": [
+  "ChallengeModal.jsx:529"
+ ],
+ "Name your task first": [
+  "Drift.jsx:1288",
+  "DriftInScreen.jsx:530"
+ ],
+ "Needed to count your reps live": [
+  "PoseCameraLive.jsx:213"
+ ],
+ "Network error. Check your connection.": [
+  "OnboardingScreen.jsx:730",
+  "OnboardingScreen.jsx:795",
+  "OnboardingScreen.jsx:837"
+ ],
+ "New friend request": [
+  "notifications.js:331"
+ ],
+ "New task for {{display_name}}": [
+  "ParentShell.jsx:361"
+ ],
+ "Next": [
+  "OnboardingScreen.jsx:307",
+  "TutorialOverlay.jsx:161"
+ ],
+ "Nice work. Your progress grew into a new tier.": [
+  "Drift.jsx:1732"
+ ],
+ "Nice.": [
+  "LockboxScreen.jsx:755"
+ ],
+ "Night started. Your apps are locked until morning.": [
+  "sleepGuard.js:155"
+ ],
+ "No": [
+  "Drift.jsx:1372"
+ ],
+ "No AR on this device — just set your phone down flat.": [
+  "LockboxScreen.jsx:880"
+ ],
+ "No Google calendar yet": [
+  "AutoTasksModal.jsx:245"
+ ],
+ "No account yet? Sign up": [
+  "OnboardingScreen.jsx:1204"
+ ],
+ "No apps to block": [
+  "Drift.jsx:6037"
+ ],
+ "No background scrolling.": [
+  "Drift.jsx:1321"
+ ],
+ "No balance. One task changes that.": [
+  "ios/DriftShield"
+ ],
+ "No blocked hours yet.": [
+  "Drift.jsx:2924"
+ ],
+ "No bonus this time.": [
+  "notifications.js:175"
+ ],
+ "No camera found": [
+  "PoseCameraLive.jsx:220"
+ ],
+ "No completed tasks yet.": [
+  "FamilyUI.jsx:43"
+ ],
+ "No completed tasks yet. Approved tasks show up here.": [
+  "ParentShell.jsx:290"
+ ],
+ "No completed tasks yet. Finish a task to see it here.": [
+  "ChildShell.jsx:183"
+ ],
+ "No credits will be earned.": [
+  "DriftInScreen.jsx:611"
+ ],
+ "No email yet? Check Spam!": [
+  "OnboardingScreen.jsx:1043"
+ ],
+ "No email, phone number, password, photos, location, contacts or birthday. Kids' accounts never use AI Check, so nothing your child does is sent to an AI service. No ads, no tracking, no analytics on kids' accounts. Which apps they use stays on their phone — Apple only gives Drift unreadable tokens.": [
+  "ParentConsent.jsx:67"
+ ],
+ "No email, photos, location, contacts or AI checks. Which apps they open stays on their phone.": [
+  "ParentConsent.jsx:149"
+ ],
+ "No frames came out of it. Try recording again.": [
+  "AICheckModal.jsx:249"
+ ],
+ "No iPhone calendars found on this device.": [
+  "AutoTasksModal.jsx:568"
+ ],
+ "No kids yet. Share your code above and they'll show up here once they join.": [
+  "ParentShell.jsx:324"
+ ],
+ "No new events on today's calendar.": [
+  "Drift.jsx:5877"
+ ],
+ "No past challenges": [
+  "SocialScreen.jsx:1967"
+ ],
+ "No phone for 1 hour": [
+  "Drift.jsx:4346",
+  "OnboardingScreen.jsx:119"
+ ],
+ "No places saved yet — save one while you're standing at it.": [
+  "places.js:524"
+ ],
+ "No places saved yet.": [
+  "places.js:559"
+ ],
+ "No plants yet": [
+  "SocialScreen.jsx:1721"
+ ],
+ "No recurring tasks yet.": [
+  "Drift.jsx:3057"
+ ],
+ "No stats": [
+  "Drift.jsx:2596"
+ ],
+ "No tag yet": [
+  "SleepGuardModal.jsx:183"
+ ],
+ "No tasks": [
+  "Drift.jsx:2286"
+ ],
+ "No tasks right now. When a parent gives you one, it'll show up here.": [
+  "ChildShell.jsx:145"
+ ],
+ "No time earned yet": [
+  "Drift.jsx:2006"
+ ],
+ "No time to remove.": [
+  "Drift.jsx:1408"
+ ],
+ "No willpower needed. The system does the hard part.": [
+  "OnboardingScreen.jsx:204"
+ ],
+ "None of your contacts are on Drift yet — invite them below.": [
+  "SocialScreen.jsx:1870"
+ ],
+ "None yet. Stand at a place you go often — your gym, the library — and save it below.": [
+  "AutoTasksModal.jsx:361"
+ ],
+ "Not available": [
+  "AICheckModal.jsx:161",
+  "AICheckModal.jsx:172",
+  "BlockedAppsModal.jsx:58"
+ ],
+ "Not available here": [
+  "ParentPinPad.jsx:70"
+ ],
+ "Not enabled - tap to grant": [
+  "ProfileScreen.jsx:391"
+ ],
+ "Not found": [
+  "Drift.jsx:4708",
+  "SocialScreen.jsx:978"
+ ],
+ "Not now": [
+  "AICheckModal.jsx:363",
+  "BlockedAppsModal.jsx:85",
+  "Drift.jsx:1643"
+ ],
+ "Not now.": [
+  "ios/DriftShield"
+ ],
+ "Not set up yet": [
+  "AutoTasksModal.jsx:132"
+ ],
+ "Not signed in": [
+  "ProfileScreen.jsx:351"
+ ],
+ "Not yet": [
+  "AICheckModal.jsx:375",
+  "ParentShell.jsx:309"
+ ],
+ "Not yet.": [
+  "ios/DriftShield"
+ ],
+ "Nothing archived yet.": [
+  "SocialScreen.jsx:1970"
+ ],
+ "Nothing here that can't wait.": [
+  "ios/DriftShield"
+ ],
+ "Nothing selected yet — the shield has nothing to lock.": [
+  "LabScreen.jsx:207"
+ ],
+ "Nothing spent yet today.": [
+  "Drift.jsx:2800"
+ ],
+ "Nothing to import": [
+  "Drift.jsx:5877"
+ ],
+ "Nothing to restore": [
+  "PaywallScreen.jsx:274"
+ ],
+ "Nothing to set up — the commands work as soon as Drift is installed. They show up in Shortcuts too.": [
+  "OnboardingScreen.jsx:218"
+ ],
+ "Notifications are off": [
+  "AutoTasksModal.jsx:134"
+ ],
+ "Notifications are off, so an arrival has no way to reach you (Settings › Drift › Notifications).": [
+  "places.js:528"
+ ],
+ "OK": [
+  "AICheckModal.jsx:365",
+  "AICheckModal.jsx:383",
+  "Drift.jsx:1883"
+ ],
+ "ONE MORE THING": [
+  "UsernameSetupModal.jsx:91"
+ ],
+ "ONE QUICK CHECK": [
+  "AICheckModal.jsx:565"
+ ],
+ "OPEN": [
+  "ProfileScreen.jsx:267"
+ ],
+ "OPTIONAL": [
+  "OnboardingScreen.jsx:431"
+ ],
+ "Off": [
+  "Drift.jsx:2957",
+  "Drift.jsx:3090"
+ ],
+ "Offer a task when you arrive somewhere you've saved.": [
+  "LabScreen.jsx:292"
+ ],
+ "Office": [
+  "places.js:85"
+ ],
+ "Old Growth": [
+  "Drift.jsx:174",
+  "levels.js:13"
+ ],
+ "On": [
+  "Drift.jsx:2957",
+  "Drift.jsx:3090"
+ ],
+ "Once": [
+  "Drift.jsx:1004"
+ ],
+ "One task in Drift and it's yours.": [
+  "ios/DriftShield"
+ ],
+ "One task is all it takes.": [
+  "ios/DriftShield"
+ ],
+ "One task, full attention. The rest can wait.": [
+  "DriftInScreen.jsx:370"
+ ],
+ "Ones you assigned, and their status": [
+  "ParentConsent.jsx:138"
+ ],
+ "Only to run the features you use: assigning tasks, approving them, and unlocking screen time on your child's phone.": [
+  "ParentConsent.jsx:68"
+ ],
+ "Only {{minutes}} minutes so far. A night needs at least {{round}} hours.": [
+  "sleepGuard.js:299"
+ ],
+ "Open Drift to accept or decline.": [
+  "notifications.js:378"
+ ],
+ "Open Settings": [
+  "Drift.jsx:4081"
+ ],
+ "Open my email app": [
+  "OnboardingScreen.jsx:1038"
+ ],
+ "Open the latest verification email and try again.": [
+  "Drift.jsx:4678"
+ ],
+ "Open your email": [
+  "OnboardingScreen.jsx:769"
+ ],
+ "Open your email app and find your 8-digit Drift code.": [
+  "OnboardingScreen.jsx:769"
+ ],
+ "Opens the Pro sheet on any account. Not in release builds.": [
+  "LabScreen.jsx:334"
+ ],
+ "Outdoor": [
+  "Drift.jsx:154",
+  "SuggestedTaskModal.jsx:22"
+ ],
+ "PARTICIPANT ID": [
+  "RedeemCodeModal.jsx:184"
+ ],
+ "PHONE AWAY": [
+  "LockboxScreen.jsx:809"
+ ],
+ "PHONE DOWN BY": [
+  "ActionPlanModal.jsx:215"
+ ],
+ "PLANT": [
+  "SocialScreen.jsx:1305"
+ ],
+ "PLANTS": [
+  "SocialScreen.jsx:1305"
+ ],
+ "PROFILE": [
+  "ProfileScreen.jsx:328"
+ ],
+ "PROGRESS": [
+  "Drift.jsx:2695"
+ ],
+ "PUT IT BACK": [
+  "LockboxScreen.jsx:695"
+ ],
+ "Parent": [
+  "ParentShell.jsx:429"
+ ],
+ "Parent PIN": [
+  "ParentPinPad.jsx:89"
+ ],
+ "Parent accounts are for adults": [
+  "OnboardingScreen.jsx:1284"
+ ],
+ "Park": [
+  "places.js:109"
+ ],
+ "Password": [
+  "OnboardingScreen.jsx:1134"
+ ],
+ "Password must be at least 12 characters.": [
+  "OnboardingScreen.jsx:546"
+ ],
+ "Password required.": [
+  "OnboardingScreen.jsx:858"
+ ],
+ "Password too long (max 72 characters).": [
+  "OnboardingScreen.jsx:547"
+ ],
+ "Past challenges": [
+  "SocialScreen.jsx:1937"
+ ],
+ "Permission denied": [
+  "AICheckModal.jsx:189",
+  "AICheckModal.jsx:202",
+  "AICheckModal.jsx:217"
+ ],
+ "Personal Drift accounts are for people 13 and older. A parent can set up Drift Family, then you join with their code.": [
+  "OnboardingScreen.jsx:1288"
+ ],
+ "Pharmacy": [
+  "places.js:143"
+ ],
+ "Phone": [
+  "ParentShell.jsx:33"
+ ],
+ "Phone in the box": [
+  "DriftInScreen.jsx:311"
+ ],
+ "Photo failed": [
+  "ProfileScreen.jsx:186"
+ ],
+ "Photo too large": [
+  "AICheckModal.jsx:176"
+ ],
+ "Physical": [
+  "Drift.jsx:153",
+  "SuggestedTaskModal.jsx:21"
+ ],
+ "Physio clinic": [
+  "places.js:82"
+ ],
+ "Pick a lower target": [
+  "ActionPlanModal.jsx:114"
+ ],
+ "Pick a username.": [
+  "OnboardingScreen.jsx:575",
+  "UsernameSetupModal.jsx:27"
+ ],
+ "Pick another username.": [
+  "ProfileScreen.jsx:211"
+ ],
+ "Pick apps to block": [
+  "BlockedAppsModal.jsx:114"
+ ],
+ "Pick apps to block when your balance hits zero. iOS enforces it even when Drift is closed, and may kick in up to ~15 min late.": [
+  "BlockedAppsModal.jsx:128"
+ ],
+ "Pick apps with Apple Screen Time": [
+  "BlockedAppsModal.jsx:145"
+ ],
+ "Pick at least one app or category to continue.": [
+  "BlockedAppsModal.jsx:194"
+ ],
+ "Pick it up to see the box again": [
+  "LockboxScreen.jsx:642"
+ ],
+ "Pick the one that fits — this can't be changed later.": [
+  "OnboardingScreen.jsx:1347"
+ ],
+ "Pick up prescription": [
+  "places.js:143"
+ ],
+ "Pick up supplies": [
+  "places.js:148"
+ ],
+ "Pick your daily\ntasks": [
+  "OnboardingScreen.jsx:105"
+ ],
+ "Pick your username": [
+  "UsernameSetupModal.jsx:94"
+ ],
+ "Picking apps needs the App Store or TestFlight version of Drift.": [
+  "ParentPinPad.jsx:70"
+ ],
+ "Pickup": [
+  "places.js:159"
+ ],
+ "Pilates class": [
+  "places.js:67"
+ ],
+ "Pilates studio": [
+  "places.js:67"
+ ],
+ "Place": [
+  "AutoTasksModal.jsx:157"
+ ],
+ "Place limit reached": [
+  "AutoTasksModal.jsx:165"
+ ],
+ "Place suggestions": [
+  "AutoTasksModal.jsx:313",
+  "LabScreen.jsx:291"
+ ],
+ "Place suggestions are switched off.": [
+  "places.js:523"
+ ],
+ "Place suggestions arrive as a notification, so with notifications off nothing will reach you. Enable them in Settings › Drift › Notifications.": [
+  "AutoTasksModal.jsx:102"
+ ],
+ "Place the box": [
+  "LockboxScreen.jsx:932"
+ ],
+ "Plank": [
+  "ChallengeModal.jsx:34"
+ ],
+ "Plans aren't loading right now. Check your connection and try again.": [
+  "PaywallScreen.jsx:216"
+ ],
+ "Plant": [
+  "SocialScreen.jsx:1508"
+ ],
+ "Plant a friend by username.": [
+  "SocialScreen.jsx:1727"
+ ],
+ "Plant friend": [
+  "SocialScreen.jsx:1748"
+ ],
+ "Play a round": [
+  "places.js:77"
+ ],
+ "Please try again later.": [
+  "Drift.jsx:6251"
+ ],
+ "Please try again.": [
+  "PaywallScreen.jsx:254",
+  "PaywallScreen.jsx:279",
+  "SocialScreen.jsx:977"
+ ],
+ "Point at where you left the box": [
+  "LockboxScreen.jsx:585",
+  "LockboxScreen.jsx:677"
+ ],
+ "Pool": [
+  "places.js:72"
+ ],
+ "Post office": [
+  "places.js:145"
+ ],
+ "Post office errand": [
+  "places.js:145"
+ ],
+ "Practice": [
+  "places.js:102"
+ ],
+ "Practice a skill": [
+  "Drift.jsx:4347",
+  "OnboardingScreen.jsx:120"
+ ],
+ "Preparing photo…": [
+  "AICheckModal.jsx:168"
+ ],
+ "Preview paywall (dev)": [
+  "LabScreen.jsx:333"
+ ],
+ "Privacy": [
+  "PaywallScreen.jsx:565"
+ ],
+ "Privacy Policy": [
+  "OnboardingScreen.jsx:1187"
+ ],
+ "Privacy policy": [
+  "ProfileScreen.jsx:451"
+ ],
+ "Pro feature": [
+  "AICheckModal.jsx:360"
+ ],
+ "Pro grows your plant past {{name}}.": [
+  "Drift.jsx:2686"
+ ],
+ "Profile photo storage is not set up yet. Run supabase/profile_challenge_updates.sql in Supabase, then try again.": [
+  "ProfileScreen.jsx:187"
+ ],
+ "Profile photos need the avatar_url database column. Run supabase/profile_challenge_updates.sql, then restart the app.": [
+  "ProfileScreen.jsx:187"
+ ],
+ "Prove it right away — but you'll need solid evidence.": [
+  "Drift.jsx:974"
+ ],
+ "Pull today's events in once a day on their own.": [
+  "LabScreen.jsx:281"
+ ],
+ "Pull today's events in once a day on their own. Off means you import by hand below.": [
+  "AutoTasksModal.jsx:615"
+ ],
+ "Purchase failed": [
+  "PaywallScreen.jsx:251"
+ ],
+ "Purchases aren't available in this build.": [
+  "PaywallScreen.jsx:225"
+ ],
+ "Purchases aren't set up on this platform yet.": [
+  "PaywallScreen.jsx:224"
+ ],
+ "Push-ups": [
+  "ChallengeModal.jsx:28"
+ ],
+ "Put it back in the box": [
+  "LockboxScreen.jsx:677"
+ ],
+ "Put your phone back in the box": [
+  "notifications.js:192"
+ ],
+ "Put your phone in the other room and tap the tag to start the night.": [
+  "Drift.jsx:1781"
+ ],
+ "Put your phone in the other room and tap the tag. 1 night in a row so far.": [
+  "Drift.jsx:1781"
+ ],
+ "Put your phone in the other room and tap the tag. {{streak}} nights in a row so far.": [
+  "Drift.jsx:1781"
+ ],
+ "Quick task, easy admin, low exertion": [
+  "Drift.jsx:161"
+ ],
+ "READY": [
+  "TutorialOverlay.jsx:28"
+ ],
+ "RECENT NIGHTS": [
+  "SleepGuardModal.jsx:254"
+ ],
+ "RECURRING TASKS": [
+  "Drift.jsx:3049"
+ ],
+ "REMOVE PHOTO": [
+  "AICheckModal.jsx:647"
+ ],
+ "REMOVE VIDEO": [
+  "AICheckModal.jsx:672"
+ ],
+ "REPEAT": [
+  "Drift.jsx:1001"
+ ],
+ "Re-arm": [
+  "AutoTasksModal.jsx:352"
+ ],
+ "Read": [
+  "Drift.jsx:4338",
+  "OnboardingScreen.jsx:111",
+  "actionPlan.js:49"
+ ],
+ "Read a chapter": [
+  "places.js:101"
+ ],
+ "Read the full privacy policy": [
+  "ParentConsent.jsx:75",
+  "ParentConsent.jsx:196"
+ ],
+ "Reading your clip…": [
+  "AICheckModal.jsx:231"
+ ],
+ "Reading your clip… {{done}}/{{total}}": [
+  "AICheckModal.jsx:234"
+ ],
+ "Reading, working out, studying, cooking.\nAnything productive you'd actually do.": [
+  "OnboardingScreen.jsx:189"
+ ],
+ "Ready for bed?": [
+  "Drift.jsx:1780"
+ ],
+ "Rebuild with expo-video-thumbnails installed.": [
+  "AICheckModal.jsx:237"
+ ],
+ "Recheck": [
+  "AutoTasksModal.jsx:553"
+ ],
+ "Recovery time": [
+  "places.js:165"
+ ],
+ "Recurring task schedules are a Pro feature.": [
+  "Drift.jsx:1063"
+ ],
+ "Recurring tasks": [
+  "LabScreen.jsx:311"
+ ],
+ "Recycling center": [
+  "places.js:158"
+ ],
+ "Redeem": [
+  "RedeemCodeModal.jsx:216"
+ ],
+ "Redeem a code": [
+  "ProfileScreen.jsx:415",
+  "RedeemCodeModal.jsx:152"
+ ],
+ "Redo": [
+  "LockboxScreen.jsx:611"
+ ],
+ "Reduce": [
+  "Drift.jsx:1443"
+ ],
+ "Redwood": [
+  "Drift.jsx:175",
+  "levels.js:14"
+ ],
+ "Regions aren't being monitored yet — tap Re-arm.": [
+  "places.js:530"
+ ],
+ "Register a tag": [
+  "SleepGuardModal.jsx:202"
+ ],
+ "Register a tag to turn the guard on.": [
+  "SleepGuardModal.jsx:187"
+ ],
+ "Rehab exercises": [
+  "places.js:82"
+ ],
+ "Remove": [
+  "AutoTasksModal.jsx:181",
+  "AutoTasksModal.jsx:389",
+  "SocialScreen.jsx:393"
+ ],
+ "Remove @{{username}}?": [
+  "SocialScreen.jsx:389"
+ ],
+ "Remove friend": [
+  "SocialScreen.jsx:401"
+ ],
+ "Remove time": [
+  "Drift.jsx:1403",
+  "Drift.jsx:2157"
+ ],
+ "Remove {{label}}?": [
+  "AutoTasksModal.jsx:178"
+ ],
+ "Removed @{{username}}": [
+  "SocialScreen.jsx:1068"
+ ],
+ "Repeats": [
+  "Drift.jsx:418"
+ ],
+ "Repeats every day": [
+  "Drift.jsx:2944"
+ ],
+ "Replay the tour": [
+  "LabScreen.jsx:324"
+ ],
+ "Request already sent": [
+  "SocialScreen.jsx:1009"
+ ],
+ "Request sent": [
+  "Drift.jsx:4718"
+ ],
+ "Request sent to @{{username}}": [
+  "SocialScreen.jsx:1038"
+ ],
+ "Requests sent to you": [
+  "ParentConsent.jsx:141"
+ ],
+ "Resend code": [
+  "OnboardingScreen.jsx:1063"
+ ],
+ "Restaurant": [
+  "places.js:126"
+ ],
+ "Restore": [
+  "PaywallScreen.jsx:559"
+ ],
+ "Restore failed": [
+  "PaywallScreen.jsx:279"
+ ],
+ "Ride": [
+  "places.js:119"
+ ],
+ "River": [
+  "places.js:113"
+ ],
+ "Riverside walk": [
+  "places.js:113"
+ ],
+ "Rules or proof needed": [
+  "ChallengeModal.jsx:431"
+ ],
+ "Run: npx expo install expo-image-picker": [
+  "AICheckModal.jsx:161",
+  "ProfileScreen.jsx:155"
+ ],
+ "Run: npx expo install expo-video-thumbnails, then rebuild the app. Photo and written proof still work.": [
+  "AICheckModal.jsx:212"
+ ],
+ "Running low": [
+  "notifications.js:141"
+ ],
+ "SAVE WHERE YOU ARE": [
+  "AutoTasksModal.jsx:396"
+ ],
+ "SAVED PLACES": [
+  "AutoTasksModal.jsx:358"
+ ],
+ "SCREEN TIME": [
+  "Drift.jsx:1402",
+  "SocialScreen.jsx:339"
+ ],
+ "SCREEN TIME LEFT": [
+  "ChildShell.jsx:123"
+ ],
+ "SCREEN TIME REWARD (MINUTES)": [
+  "ParentShell.jsx:368"
+ ],
+ "SCREEN TIME TODAY": [
+  "Drift.jsx:2775"
+ ],
+ "SEEDS - {{length}}": [
+  "SocialScreen.jsx:1472"
+ ],
+ "SEND A CHALLENGE": [
+  "ChallengeModal.jsx:252"
+ ],
+ "SEND A DARE": [
+  "ChallengeModal.jsx:252"
+ ],
+ "SEND ANSWER": [
+  "AICheckModal.jsx:605"
+ ],
+ "SESSION COMPLETE": [
+  "DriftInScreen.jsx:646"
+ ],
+ "SESSIONS": [
+  "SocialScreen.jsx:351"
+ ],
+ "SETTINGS": [
+  "ProfileScreen.jsx:375"
+ ],
+ "SHARE": [
+  "ProfileScreen.jsx:424"
+ ],
+ "STEP {{p}} OF {{length}}": [
+  "OnboardingScreen.jsx:250"
+ ],
+ "SUBMIT FOR VERIFICATION": [
+  "AICheckModal.jsx:716"
+ ],
+ "Sapling": [
+  "Drift.jsx:170",
+  "levels.js:9"
+ ],
+ "Sat": [
+  "Drift.jsx:402"
+ ],
+ "Save": [
+  "Drift.jsx:3022",
+  "Drift.jsx:3108"
+ ],
+ "Save PIN": [
+  "ParentShell.jsx:247"
+ ],
+ "Save places like your gym, and Drift offers\nthe task when you arrive. It can pull in\ntoday's calendar events too.": [
+  "OnboardingScreen.jsx:210"
+ ],
+ "Save this place": [
+  "AutoTasksModal.jsx:465"
+ ],
+ "Save {{annualSavingsPct}}%": [
+  "PaywallScreen.jsx:511"
+ ],
+ "Saving…": [
+  "AutoTasksModal.jsx:465"
+ ],
+ "Scan a different tag": [
+  "SleepGuardModal.jsx:202"
+ ],
+ "Schedule": [
+  "Drift.jsx:3050"
+ ],
+ "School apps": [
+  "ParentShell.jsx:37"
+ ],
+ "School pickup": [
+  "places.js:160"
+ ],
+ "School run": [
+  "places.js:160"
+ ],
+ "Science center": [
+  "places.js:106"
+ ],
+ "Screen Time": [
+  "Drift.jsx:6510"
+ ],
+ "Screen Time access": [
+  "ProfileScreen.jsx:390"
+ ],
+ "Screen Time access denied": [
+  "BlockedAppsModal.jsx:66"
+ ],
+ "Screen Time access needed": [
+  "Drift.jsx:4077",
+  "Drift.jsx:5859"
+ ],
+ "Screen time": [
+  "ParentConsent.jsx:139"
+ ],
+ "Screen up. The session starts once it's completely still.": [
+  "LockboxScreen.jsx:659"
+ ],
+ "Screenshot this card to share on Stories": [
+  "ShareCard.jsx:83"
+ ],
+ "Search languages": [
+  "LanguagePicker.jsx:64"
+ ],
+ "See Pro": [
+  "AICheckModal.jsx:364",
+  "BlockedAppsModal.jsx:85",
+  "Drift.jsx:1200"
+ ],
+ "See a show": [
+  "places.js:134"
+ ],
+ "See live music": [
+  "places.js:135"
+ ],
+ "See your earned screen-time balance at a glance.": [
+  "ios/DriftWidgets"
+ ],
+ "Seedling": [
+  "Drift.jsx:168",
+  "levels.js:7"
+ ],
+ "Select tasks you'd do regularly. You can always add more later.": [
+  "OnboardingScreen.jsx:106"
+ ],
+ "Send": [
+  "FeedbackModal.jsx:62",
+  "SocialScreen.jsx:1373"
+ ],
+ "Send challenge": [
+  "ChallengeModal.jsx:529"
+ ],
+ "Send dare": [
+  "ChallengeModal.jsx:529"
+ ],
+ "Send feedback": [
+  "FeedbackModal.jsx:60",
+  "ProfileScreen.jsx:444"
+ ],
+ "Sending…": [
+  "ChallengeModal.jsx:529"
+ ],
+ "Sent": [
+  "ChallengeModal.jsx:235",
+  "SocialScreen.jsx:1896"
+ ],
+ "Server: {{error}}{{p}}": [
+  "AICheckModal.jsx:435"
+ ],
+ "Service": [
+  "places.js:131"
+ ],
+ "Session complete": [
+  "notifications.js:258"
+ ],
+ "Session ended early. No time earned.": [
+  "lockbox.js:281"
+ ],
+ "Session lost.": [
+  "LockboxScreen.jsx:755"
+ ],
+ "Session notes": [
+  "places.js:94"
+ ],
+ "Session's still running. {{name}} can wait.": [
+  "ios/DriftShield"
+ ],
+ "Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in .env and the iOS/Android client IDs.": [
+  "oauthSignIn.js:95"
+ ],
+ "Set a PIN. You'll enter it on your kid's phone to pick which apps get blocked.": [
+  "ParentShell.jsx:234"
+ ],
+ "Set a goal. Drift turns it into a plan.": [
+  "ActionPlanModal.jsx:175"
+ ],
+ "Set a screen-time goal and get a concrete plan for it.": [
+  "LabScreen.jsx:257",
+  "actionPlan.js:199"
+ ],
+ "Set it up": [
+  "Drift.jsx:1776"
+ ],
+ "Set parent PIN (for picking a kid's apps)": [
+  "ParentShell.jsx:253"
+ ],
+ "Set tasks for your kids and approve their screen time.": [
+  "OnboardingScreen.jsx:1216"
+ ],
+ "Set up": [
+  "Drift.jsx:2238"
+ ],
+ "Set your phone in the box, screen up": [
+  "LockboxScreen.jsx:586"
+ ],
+ "Set your phone{{p}}down": [
+  "LockboxScreen.jsx:657"
+ ],
+ "Setting up…": [
+  "OnboardingScreen.jsx:458"
+ ],
+ "Share & Invite": [
+  "ProfileScreen.jsx:422"
+ ],
+ "Share Stats": [
+  "ShareCard.jsx:92"
+ ],
+ "Share code": [
+  "ParentShell.jsx:227"
+ ],
+ "Share your stats, earn bonus time": [
+  "ProfileScreen.jsx:423"
+ ],
+ "Share your win": [
+  "Drift.jsx:1639"
+ ],
+ "Shift tasks": [
+  "places.js:89"
+ ],
+ "Shopping trip": [
+  "places.js:149"
+ ],
+ "Sign in": [
+  "OnboardingScreen.jsx:1163"
+ ],
+ "Sign in to pick up where you left off.": [
+  "OnboardingScreen.jsx:1099"
+ ],
+ "Sign in to see the grove": [
+  "SocialScreen.jsx:1234"
+ ],
+ "Sign in with Google": [
+  "OnboardingScreen.jsx:702"
+ ],
+ "Sign out": [
+  "FamilyProfile.jsx:82",
+  "PaywallScreen.jsx:576",
+  "ProfileScreen.jsx:466"
+ ],
+ "Sign out?": [
+  "ProfileScreen.jsx:464"
+ ],
+ "Sign up with Google": [
+  "OnboardingScreen.jsx:702"
+ ],
+ "Sign-in failed. Try again.": [
+  "OnboardingScreen.jsx:998"
+ ],
+ "Sign-in token couldn't be verified. Try again.": [
+  "OnboardingScreen.jsx:728"
+ ],
+ "Sit-ups": [
+  "ChallengeModal.jsx:31"
+ ],
+ "Site work": [
+  "places.js:93"
+ ],
+ "Skate": [
+  "places.js:78"
+ ],
+ "Skate park": [
+  "places.js:80"
+ ],
+ "Skate session": [
+  "places.js:80"
+ ],
+ "Ski run": [
+  "places.js:79"
+ ],
+ "Ski slope": [
+  "places.js:79"
+ ],
+ "Skip": [
+  "LockboxScreen.jsx:611",
+  "TutorialOverlay.jsx:141"
+ ],
+ "Skip for now": [
+  "OnboardingScreen.jsx:527"
+ ],
+ "Skipped on nights you've already tapped in.": [
+  "SleepGuardModal.jsx:248"
+ ],
+ "Sleep earlier": [
+  "actionPlan.js:50"
+ ],
+ "Sleep guard": [
+  "LabScreen.jsx:249",
+  "SleepGuardModal.jsx:158"
+ ],
+ "Sleep with your phone in another room": [
+  "Drift.jsx:1774"
+ ],
+ "Slide your goal below what you spend now.": [
+  "ActionPlanModal.jsx:289"
+ ],
+ "Soccer": [
+  "places.js:76"
+ ],
+ "Soccer field": [
+  "places.js:76"
+ ],
+ "Social": [
+  "Drift.jsx:157",
+  "SuggestedTaskModal.jsx:25"
+ ],
+ "Someone wants to add you on Drift.": [
+  "notifications.js:332"
+ ],
+ "Something went wrong": [
+  "PaywallScreen.jsx:254"
+ ],
+ "Something went wrong. Check your connection and try again.": [
+  "ParentConsent.jsx:52",
+  "ParentConsent.jsx:181"
+ ],
+ "Spa": [
+  "places.js:165"
+ ],
+ "Spent ~{{minutes}} minutes?": [
+  "Drift.jsx:1310"
+ ],
+ "Sprout": [
+  "Drift.jsx:169",
+  "levels.js:8"
+ ],
+ "Squats": [
+  "ChallengeModal.jsx:29"
+ ],
+ "Stadium": [
+  "places.js:133"
+ ],
+ "Start": [
+  "Drift.jsx:2976",
+  "LockboxScreen.jsx:932"
+ ],
+ "Start a focus session from the tab bar. Your apps stay blocked while you focus — and you earn time for it.": [
+  "TutorialOverlay.jsx:25"
+ ],
+ "Start earning": [
+  "Drift.jsx:2129"
+ ],
+ "Start flat · curl until elbows reach knees": [
+  "PoseCameraLive.jsx:112"
+ ],
+ "Start now": [
+  "LockboxScreen.jsx:622",
+  "LockboxScreen.jsx:630"
+ ],
+ "Start this plan": [
+  "ActionPlanModal.jsx:311"
+ ],
+ "Start {{trial}}-day free trial": [
+  "PaywallScreen.jsx:538"
+ ],
+ "Status: {{next}}. Open Settings -> Screen Time to grant access.": [
+  "Drift.jsx:6510"
+ ],
+ "Stay focused": [
+  "DriftInScreen.jsx:197",
+  "DriftInScreen.jsx:613"
+ ],
+ "Stick an NFC tag in another room. Tap it at bedtime and Drift blocks your apps until morning, then checks your phone actually stayed there.": [
+  "SleepGuardModal.jsx:167"
+ ],
+ "Stick an NFC tag in the next room. Tap it at bedtime and Drift checks that your phone stayed there all night.": [
+  "Drift.jsx:1775"
+ ],
+ "Still loading": [
+  "SocialScreen.jsx:142"
+ ],
+ "Stillness is productive too.": [
+  "ios/DriftShield"
+ ],
+ "Storage sort-out": [
+  "places.js:157"
+ ],
+ "Storage unit": [
+  "places.js:157"
+ ],
+ "Stretch": [
+  "Drift.jsx:4345",
+  "OnboardingScreen.jsx:118"
+ ],
+ "Studio": [
+  "places.js:91"
+ ],
+ "Studio session": [
+  "places.js:91"
+ ],
+ "Study": [
+  "Drift.jsx:4343",
+  "OnboardingScreen.jsx:116"
+ ],
+ "Study room": [
+  "places.js:100"
+ ],
+ "Study session": [
+  "places.js:97",
+  "places.js:98",
+  "places.js:100"
+ ],
+ "Submit your proof again.": [
+  "AICheckModal.jsx:392"
+ ],
+ "Suggestions": [
+  "AutoTasksModal.jsx:288"
+ ],
+ "Suggests \"{{title}}\" ({{minutes}}m) when you arrive — pick a suggestion above for a better fit.": [
+  "AutoTasksModal.jsx:448"
+ ],
+ "Suggests \"{{title}}\" ({{minutes}}m) when you arrive.": [
+  "AutoTasksModal.jsx:448"
+ ],
+ "Sun": [
+  "Drift.jsx:400"
+ ],
+ "Supermarket": [
+  "places.js:142"
+ ],
+ "Swim": [
+  "places.js:72"
+ ],
+ "Syncing updates": [
+  "SocialScreen.jsx:142"
+ ],
+ "TASK": [
+  "ParentShell.jsx:362",
+  "SuggestedTaskModal.jsx:104"
+ ],
+ "TASKS": [
+  "LabScreen.jsx:306",
+  "TutorialOverlay.jsx:24"
+ ],
+ "THE LAB": [
+  "TutorialOverlay.jsx:27"
+ ],
+ "THIS WEEK": [
+  "Drift.jsx:2718",
+  "FamilyStats.jsx:77"
+ ],
+ "TINKER": [
+  "LabScreen.jsx:184"
+ ],
+ "TODAY": [
+  "Drift.jsx:2177",
+  "TutorialOverlay.jsx:23"
+ ],
+ "TRY AGAIN": [
+  "AICheckModal.jsx:809"
+ ],
+ "TURN THE LOCK ON": [
+  "PaywallScreen.jsx:366"
+ ],
+ "TYPE": [
+  "ChallengeModal.jsx:291"
+ ],
+ "Tag read.": [
+  "sleepGuard.js:85"
+ ],
+ "Tag registered": [
+  "SleepGuardModal.jsx:183"
+ ],
+ "Tag saved": [
+  "Drift.jsx:5534",
+  "SleepGuardModal.jsx:85"
+ ],
+ "Tag saved.": [
+  "sleepGuard.js:101"
+ ],
+ "Take it to the other room and tap your tag to start the night.": [
+  "notifications.js:314"
+ ],
+ "Take your phone out and open Drift to collect your time.": [
+  "notifications.js:244"
+ ],
+ "Takes 60 seconds": [
+  "OnboardingScreen.jsx:170"
+ ],
+ "Tap again anytime to change what's blocked. Stored on your device only.": [
+  "BlockedAppsModal.jsx:165"
+ ],
+ "Tap an NFC tag in another room at bedtime. Apps stay locked until morning.": [
+  "LabScreen.jsx:250"
+ ],
+ "Tap it at bedtime to start your first night.": [
+  "SleepGuardModal.jsx:187"
+ ],
+ "Tap the + to add something worth doing. Finish and confirm it to earn screen time.": [
+  "TutorialOverlay.jsx:24"
+ ],
+ "Tap the tag": [
+  "Drift.jsx:1782"
+ ],
+ "Tap to open Mail to": [
+  "FeedbackModal.jsx:92"
+ ],
+ "Tap to verify": [
+  "SocialScreen.jsx:456"
+ ],
+ "Task added": [
+  "Drift.jsx:848"
+ ],
+ "Task approved": [
+  "notifications.js:359"
+ ],
+ "Task ready to check": [
+  "notifications.js:348"
+ ],
+ "Tasks": [
+  "ParentConsent.jsx:138"
+ ],
+ "Tasks can add\nthemselves": [
+  "OnboardingScreen.jsx:209"
+ ],
+ "Tasks done": [
+  "Drift.jsx:2808"
+ ],
+ "Tasks that come back automatically.": [
+  "Drift.jsx:3052"
+ ],
+ "Tasks that come back on a schedule.": [
+  "LabScreen.jsx:312"
+ ],
+ "Tasks to earn it": [
+  "ActionPlanModal.jsx:279"
+ ],
+ "Tell us a bit more.": [
+  "FeedbackModal.jsx:41"
+ ],
+ "Tending the grove": [
+  "SocialScreen.jsx:255"
+ ],
+ "Tennis": [
+  "places.js:74"
+ ],
+ "Tennis court": [
+  "places.js:74"
+ ],
+ "Terms": [
+  "PaywallScreen.jsx:562"
+ ],
+ "Terms of Use": [
+  "OnboardingScreen.jsx:1183"
+ ],
+ "Terms of use": [
+  "ProfileScreen.jsx:458"
+ ],
+ "Test": [
+  "AutoTasksModal.jsx:385"
+ ],
+ "Test failed": [
+  "AutoTasksModal.jsx:136"
+ ],
+ "Test sent": [
+  "AutoTasksModal.jsx:125"
+ ],
+ "Thanks": [
+  "FeedbackModal.jsx:48"
+ ],
+ "Thanks for sticking with Drift. Every two months you stay, Pro gets cheaper, down to {{price}}. Confirm with Apple and {{price2}} starts at your next renewal.": [
+  "Drift.jsx:4646"
+ ],
+ "That PIN isn't right.": [
+  "ParentPinPad.jsx:64"
+ ],
+ "That code has been fully redeemed.": [
+  "RedeemCodeModal.jsx:28"
+ ],
+ "That code has expired.": [
+  "RedeemCodeModal.jsx:27"
+ ],
+ "That code is incorrect or expired. Double-check it, or tap Resend code for a new one.": [
+  "OnboardingScreen.jsx:793"
+ ],
+ "That code is no longer active.": [
+  "RedeemCodeModal.jsx:26"
+ ],
+ "That code isn't valid.": [
+  "RedeemCodeModal.jsx:25"
+ ],
+ "That didn't unlock Drift. If you were charged, tap Restore.": [
+  "PaywallScreen.jsx:219"
+ ],
+ "That family code doesn't exist. Double-check it with your parent.": [
+  "OnboardingScreen.jsx:1408"
+ ],
+ "That family code isn't active anymore.": [
+  "OnboardingScreen.jsx:1409"
+ ],
+ "That family size isn't set up yet. Try a different number, or contact support.": [
+  "PaywallScreen.jsx:218"
+ ],
+ "That isn't the tag you set up. Tap the one in your sleep room.": [
+  "Drift.jsx:5559"
+ ],
+ "That participant ID doesn't look right. Check it with your study team.": [
+  "RedeemCodeModal.jsx:32"
+ ],
+ "That participant ID has already been used. Check it with your study team.": [
+  "RedeemCodeModal.jsx:33"
+ ],
+ "That recording is enormous. Record a shorter clip and try again.": [
+  "AICheckModal.jsx:245"
+ ],
+ "That task isn't allowed. Try something productive!": [
+  "Drift.jsx:750"
+ ],
+ "That timed out": [
+  "AICheckModal.jsx:392"
+ ],
+ "That username is taken.": [
+  "ProfileScreen.jsx:226"
+ ],
+ "That username is taken. Try another.": [
+  "OnboardingScreen.jsx:879",
+  "OnboardingScreen.jsx:981",
+  "UsernameSetupModal.jsx:54"
+ ],
+ "That username was just taken. You've been assigned @{{username}} for now — ": [
+  "OnboardingScreen.jsx:929"
+ ],
+ "That's not the box — set it inside": [
+  "LockboxScreen.jsx:586",
+  "LockboxScreen.jsx:677"
+ ],
+ "That's today's free tasks": [
+  "AICheckModal.jsx:360",
+  "Drift.jsx:1879",
+  "Drift.jsx:5656"
+ ],
+ "That's you": [
+  "Drift.jsx:4709",
+  "SocialScreen.jsx:979"
+ ],
+ "That's {{mins}} minutes of your earned time. Your call.": [
+  "ios/DriftMonitor"
+ ],
+ "The AI check timed out. This often means the Wi-Fi you're on is blocking Drift — try turning Wi-Fi off to use cellular, then retry.": [
+  "AICheckModal.jsx:464"
+ ],
+ "The AI service is having trouble right now. Try again in a moment.": [
+  "AICheckModal.jsx:447"
+ ],
+ "The AI service is having trouble. Please try again.": [
+  "AICheckModal.jsx:412"
+ ],
+ "The AI service rejected the request (error {{status}}). Try again, or use text-only proof.": [
+  "AICheckModal.jsx:447"
+ ],
+ "The Grove": [
+  "Drift.jsx:3417",
+  "TutorialOverlay.jsx:26"
+ ],
+ "The Lab": [
+  "Drift.jsx:3418",
+  "LabScreen.jsx:189",
+  "TutorialOverlay.jsx:27"
+ ],
+ "The arrival didn't go through ({{reason}}).": [
+  "AutoTasksModal.jsx:136"
+ ],
+ "The background task didn't register. Fully quit and reopen Drift.": [
+  "places.js:529"
+ ],
+ "The camera couldn't find a surface.": [
+  "LockboxScreen.jsx:558"
+ ],
+ "The camera counts your reps — no photo needed": [
+  "RepChallengeModal.jsx:171"
+ ],
+ "The categories you chose": [
+  "ParentConsent.jsx:140"
+ ],
+ "The challenge to @{{p}} will be withdrawn.": [
+  "SocialScreen.jsx:1544"
+ ],
+ "The first name or nickname they type when joining. The tasks you assign and whether they're done. Their screen-time balance and the app categories you allow. Requests they send you to allow an app. A notification token so their phone can get alerts.": [
+  "ParentConsent.jsx:66"
+ ],
+ "The free plan blocks up to {{FREE_BLOCK_LIMIT}}": [
+  "Drift.jsx:5851"
+ ],
+ "The free plan earns from {{freeDailyTasks}} tasks a day. Go Pro for unlimited tasks, or come back tomorrow.": [
+  "Drift.jsx:1880",
+  "Drift.jsx:5657"
+ ],
+ "The guided walkthrough from your first launch.": [
+  "LabScreen.jsx:325"
+ ],
+ "The loser gives up {{penaltyMins}} minutes of screen time.": [
+  "ChallengeModal.jsx:460"
+ ],
+ "The other person loses {{penaltyMins}} minutes of screen time.": [
+  "SocialScreen.jsx:535"
+ ],
+ "The other player may have already responded.": [
+  "SocialScreen.jsx:1223"
+ ],
+ "The subscription isn't available right now. Please try again shortly.": [
+  "PaywallScreen.jsx:217"
+ ],
+ "Theater": [
+  "places.js:134"
+ ],
+ "Therapist": [
+  "places.js:167"
+ ],
+ "Therapy session": [
+  "places.js:167"
+ ],
+ "These contacts are on Drift. Add them to your grove.": [
+  "SocialScreen.jsx:1870"
+ ],
+ "These stay open even when {{display_name}} runs out of screen time.": [
+  "ParentShell.jsx:394"
+ ],
+ "They'll be removed from your grove. You can add them again later.": [
+  "SocialScreen.jsx:390"
+ ],
+ "This can't be undone.": [
+  "Swipeable.jsx:27"
+ ],
+ "This code is for a research study. Enter the participant ID your study team gave you.": [
+  "RedeemCodeModal.jsx:155"
+ ],
+ "This deletes your Drift account and signs you out. This cannot be undone.": [
+  "ProfileScreen.jsx:275"
+ ],
+ "This doesn't count as an attempt — we just need one detail to be sure.": [
+  "AICheckModal.jsx:611"
+ ],
+ "This family already has the maximum number of kids.": [
+  "OnboardingScreen.jsx:1410"
+ ],
+ "This is a {{minutes}}-minute task, so proof opens {{mmss}} after you add it. Go do it — we'll be here.": [
+  "AICheckModal.jsx:553"
+ ],
+ "This is the time you've banked. When it reaches zero, your chosen apps lock until you earn more.": [
+  "TutorialOverlay.jsx:23"
+ ],
+ "This jumps past sign-in, so onboarding won't be able to finish. Sign in normally to test the full flow.": [
+  "OnboardingScreen.jsx:1567"
+ ],
+ "This moment is yours, not your phone's.": [
+  "ios/DriftShield"
+ ],
+ "This permanently deletes every child's account and data in your family, and no child can join until you agree again. This can't be undone.": [
+  "ParentConsent.jsx:171"
+ ],
+ "This permanently deletes your Drift account and every child account in your family, with all their data. This can't be undone. Cancel your Family subscription separately in iPhone Settings.": [
+  "ParentShell.jsx:434"
+ ],
+ "This permanently deletes {{name}}'s account, tasks, balance and requests, and signs out their phone. This can't be undone.": [
+  "ParentConsent.jsx:111"
+ ],
+ "This permanently removes your Drift account. This can't be undone.": [
+  "FamilyProfile.jsx:28"
+ ],
+ "This sign-in method isn't enabled yet. Contact support.": [
+  "OnboardingScreen.jsx:732"
+ ],
+ "This task can't be verified right now.": [
+  "AICheckModal.jsx:382"
+ ],
+ "This version of Drift is out of date. Update to the latest version to keep earning your screen time.": [
+  "ForceUpdateModal.jsx:60"
+ ],
+ "Thriving": [
+  "SocialScreen.jsx:87"
+ ],
+ "Thu": [
+  "Drift.jsx:401"
+ ],
+ "Tick the box to confirm you're the parent or legal guardian.": [
+  "ParentConsent.jsx:47"
+ ],
+ "Tidy one thing": [
+  "actionPlan.js:53"
+ ],
+ "Tidy up": [
+  "places.js:141"
+ ],
+ "Time back": [
+  "ActionPlanModal.jsx:285"
+ ],
+ "Time carried over from earlier.": [
+  "Drift.jsx:2800"
+ ],
+ "Time on the water": [
+  "places.js:121"
+ ],
+ "Time to put your phone to bed": [
+  "notifications.js:313"
+ ],
+ "Time to update Drift": [
+  "ForceUpdateModal.jsx:57"
+ ],
+ "Time's up": [
+  "notifications.js:127",
+  "ios/DriftMonitor"
+ ],
+ "Timer": [
+  "DriftInScreen.jsx:271"
+ ],
+ "To @{{toName}}": [
+  "SocialScreen.jsx:450"
+ ],
+ "Today": [
+  "Drift.jsx:3415",
+  "FamilyUI.jsx:77"
+ ],
+ "Too long": [
+  "FeedbackModal.jsx:42"
+ ],
+ "Too many attempts. Try again in a few minutes.": [
+  "OnboardingScreen.jsx:996"
+ ],
+ "Too many attempts. Try again in a little while.": [
+  "RedeemCodeModal.jsx:29"
+ ],
+ "Too many resend attempts. Try again in a few minutes.": [
+  "OnboardingScreen.jsx:835"
+ ],
+ "Too many resend attempts. Wait a minute and try again.": [
+  "OnboardingScreen.jsx:813"
+ ],
+ "Too short": [
+  "FeedbackModal.jsx:41"
+ ],
+ "Track": [
+  "places.js:73"
+ ],
+ "Track workout": [
+  "places.js:73"
+ ],
+ "Trailhead": [
+  "places.js:110"
+ ],
+ "Train or stretch": [
+  "actionPlan.js:52"
+ ],
+ "Train station": [
+  "places.js:162"
+ ],
+ "Travel admin": [
+  "places.js:161"
+ ],
+ "Trouble tracking? Verify with a photo instead": [
+  "RepChallengeModal.jsx:240"
+ ],
+ "Try again": [
+  "LockboxScreen.jsx:560"
+ ],
+ "Try again.": [
+  "ActionPlanModal.jsx:125",
+  "Drift.jsx:4720",
+  "LockboxScreen.jsx:344"
+ ],
+ "Tue": [
+  "Drift.jsx:400"
+ ],
+ "Turn off": [
+  "SleepGuardModal.jsx:103",
+  "SleepGuardModal.jsx:213"
+ ],
+ "Turn off sleep guard?": [
+  "SleepGuardModal.jsx:98"
+ ],
+ "Turn on Motion & Fitness for Drift in Settings to use this.": [
+  "Drift.jsx:5562"
+ ],
+ "Turn on notifications": [
+  "AutoTasksModal.jsx:101"
+ ],
+ "Turn them on in Settings › Drift › Notifications, then test again.": [
+  "AutoTasksModal.jsx:134"
+ ],
+ "Turn today's events into tasks. Read-only.": [
+  "LabScreen.jsx:272"
+ ],
+ "Tutoring center": [
+  "places.js:104"
+ ],
+ "Tutoring session": [
+  "places.js:104"
+ ],
+ "Type your name and the family code your parent gives you. No email needed.": [
+  "OnboardingScreen.jsx:1436"
+ ],
+ "UNLOCKS IN {{mmss}}": [
+  "AICheckModal.jsx:550"
+ ],
+ "UPDATE REQUIRED": [
+  "ForceUpdateModal.jsx:54"
+ ],
+ "UPGRADE": [
+  "Drift.jsx:1065",
+  "ProfileScreen.jsx:402"
+ ],
+ "US law (COPPA) requires a parent's consent before an app collects information from children under 13. Here is exactly what Drift does with your kids' information. Your family code won't work until you agree.": [
+  "ParentConsent.jsx:64"
+ ],
+ "USED": [
+  "Drift.jsx:2084"
+ ],
+ "USERNAME": [
+  "UsernameSetupModal.jsx:101"
+ ],
+ "Unexpected response from the AI service.": [
+  "AICheckModal.jsx:453"
+ ],
+ "Unlimited apps and tasks, Lockbox, challenges": [
+  "ProfileScreen.jsx:401"
+ ],
+ "Unlocked until {{toLocaleDateString}}.": [
+  "RedeemCodeModal.jsx:41"
+ ],
+ "Until you delete it. It's erased when you remove your child, withdraw consent or delete your account, and automatically after 18 months with no activity.": [
+  "ParentConsent.jsx:70"
+ ],
+ "Unwind": [
+  "places.js:164"
+ ],
+ "Up to {{FREE_BLOCK_LIMIT}} apps, categories, or web domains on the free plan.": [
+  "BlockedAppsModal.jsx:148"
+ ],
+ "Update Drift to use AI Check.": [
+  "AICheckModal.jsx:397"
+ ],
+ "Update my plan": [
+  "ActionPlanModal.jsx:311"
+ ],
+ "Update needed": [
+  "AICheckModal.jsx:397"
+ ],
+ "Update now": [
+  "ForceUpdateModal.jsx:68"
+ ],
+ "Upgrade to Pro": [
+  "ProfileScreen.jsx:400"
+ ],
+ "Upgrade to challenge": [
+  "SocialScreen.jsx:382"
+ ],
+ "Use a less common password.": [
+  "OnboardingScreen.jsx:551"
+ ],
+ "Use device language": [
+  "LanguagePicker.jsx:31"
+ ],
+ "Use letters, numbers, and underscores only.": [
+  "OnboardingScreen.jsx:578",
+  "ProfileScreen.jsx:43"
+ ],
+ "Use my iPhone calendar instead": [
+  "AutoTasksModal.jsx:562"
+ ],
+ "Use times like 10:00 PM and 7:00 AM.": [
+  "Drift.jsx:2898"
+ ],
+ "Use uppercase, lowercase, a number, and a symbol.": [
+  "OnboardingScreen.jsx:549"
+ ],
+ "Username": [
+  "OnboardingScreen.jsx:1105",
+  "ProfileScreen.jsx:197"
+ ],
+ "Username can be at most 20 characters.": [
+  "OnboardingScreen.jsx:577",
+  "ProfileScreen.jsx:42"
+ ],
+ "Username failed": [
+  "ProfileScreen.jsx:226"
+ ],
+ "Username must be at least 3 characters.": [
+  "OnboardingScreen.jsx:576",
+  "ProfileScreen.jsx:41"
+ ],
+ "Username taken": [
+  "ProfileScreen.jsx:211"
+ ],
+ "VERIFIED": [
+  "AICheckModal.jsx:747"
+ ],
+ "Verification email sent again.": [
+  "OnboardingScreen.jsx:831"
+ ],
+ "Verification failed": [
+  "AICheckModal.jsx:412",
+  "AICheckModal.jsx:435",
+  "AICheckModal.jsx:446"
+ ],
+ "Verified": [
+  "RepChallengeModal.jsx:194"
+ ],
+ "Verified live — the camera watches the movement and counts every rep automatically.": [
+  "ChallengeModal.jsx:487"
+ ],
+ "Verified with a photo when the exercise is done.": [
+  "ChallengeModal.jsx:487"
+ ],
+ "Verify": [
+  "OnboardingScreen.jsx:1052"
+ ],
+ "Verify with a photo instead": [
+  "PoseCamera.jsx:50"
+ ],
+ "Verify with photo": [
+  "RepChallengeModal.jsx:121"
+ ],
+ "Verify your account": [
+  "Drift.jsx:4472"
+ ],
+ "Verify your email address first, then redeem.": [
+  "RedeemCodeModal.jsx:30"
+ ],
+ "Vet": [
+  "places.js:153"
+ ],
+ "Vet visit": [
+  "places.js:153"
+ ],
+ "Video proof needs a new build": [
+  "AICheckModal.jsx:211",
+  "AICheckModal.jsx:237"
+ ],
+ "Volunteer shift": [
+  "places.js:138"
+ ],
+ "Volunteer site": [
+  "places.js:138"
+ ],
+ "WAITING FOR YOUR OK": [
+  "ParentShell.jsx:301"
+ ],
+ "WELCOME": [
+  "TutorialOverlay.jsx:22"
+ ],
+ "WHAT GETS BLOCKED": [
+  "LabScreen.jsx:199"
+ ],
+ "WHAT SHOWS UP": [
+  "LabScreen.jsx:264"
+ ],
+ "WHAT WAS MISSING": [
+  "AICheckModal.jsx:763"
+ ],
+ "WOD": [
+  "places.js:68"
+ ],
+ "Waiting": [
+  "ChildShell.jsx:162"
+ ],
+ "Waiting for result": [
+  "SocialScreen.jsx:456"
+ ],
+ "Waiting for them to accept": [
+  "SocialScreen.jsx:456"
+ ],
+ "Walk by the water": [
+  "places.js:112"
+ ],
+ "Walk in the woods": [
+  "places.js:115"
+ ],
+ "Walk outside": [
+  "places.js:109"
+ ],
+ "Walk the dog": [
+  "places.js:120"
+ ],
+ "Warehouse": [
+  "places.js:89"
+ ],
+ "Wash the car": [
+  "places.js:156"
+ ],
+ "Watch the game": [
+  "places.js:133"
+ ],
+ "We ask everyone. It isn't saved or shown to anyone.": [
+  "OnboardingScreen.jsx:1300"
+ ],
+ "We couldn't find a subscription on this Apple ID. If you subscribed with a different one, sign in to that Apple ID in Settings and try again.": [
+  "PaywallScreen.jsx:275"
+ ],
+ "We couldn't send your verification email right now. This is on our end — please try again in a few minutes.": [
+  "OnboardingScreen.jsx:990"
+ ],
+ "We emailed an 8-digit code to {{verificationEmail}}. Enter it below — or tap the link in that email on this phone.": [
+  "OnboardingScreen.jsx:1019"
+ ],
+ "We miss you!": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "We'll offer it again next time you open Drift.": [
+  "Drift.jsx:4658"
+ ],
+ "We've updated how we handle your kids' data": [
+  "ParentConsent.jsx:62"
+ ],
+ "Wed": [
+  "Drift.jsx:401"
+ ],
+ "Weekdays": [
+  "Drift.jsx:412",
+  "Drift.jsx:646"
+ ],
+ "Weekends": [
+  "Drift.jsx:413",
+  "Drift.jsx:647"
+ ],
+ "Welcome back": [
+  "OnboardingScreen.jsx:1096"
+ ],
+ "Welcome home": [
+  "ParentShell.jsx:274"
+ ],
+ "Welcome to\nDrift": [
+  "OnboardingScreen.jsx:162"
+ ],
+ "Welcome to Drift": [
+  "TutorialOverlay.jsx:22"
+ ],
+ "What Drift holds about {{name}}": [
+  "ParentConsent.jsx:134"
+ ],
+ "What for? (optional)": [
+  "LockboxScreen.jsx:900"
+ ],
+ "What is this place?": [
+  "AutoTasksModal.jsx:407"
+ ],
+ "What needs doing? e.g. \"30 min gym\"": [
+  "Drift.jsx:1247"
+ ],
+ "What needs your attention?": [
+  "DriftInScreen.jsx:488"
+ ],
+ "What they must do": [
+  "ChallengeModal.jsx:431"
+ ],
+ "What we collect from your child": [
+  "ParentConsent.jsx:66"
+ ],
+ "What we don't collect": [
+  "ParentConsent.jsx:67"
+ ],
+ "What will you do?": [
+  "SuggestedTaskModal.jsx:109"
+ ],
+ "What's on your mind?": [
+  "FeedbackModal.jsx:76"
+ ],
+ "When were you born?": [
+  "OnboardingScreen.jsx:1299"
+ ],
+ "Where you tune Drift: which apps get blocked, what repeats, and what gets suggested automatically.": [
+  "TutorialOverlay.jsx:27"
+ ],
+ "Who can see it": [
+  "ParentConsent.jsx:69"
+ ],
+ "Who's using{{p}}Drift?": [
+  "OnboardingScreen.jsx:1346"
+ ],
+ "Why": [
+  "ParentConsent.jsx:68"
+ ],
+ "Wilting": [
+  "SocialScreen.jsx:90"
+ ],
+ "Windows where apps stay locked no matter your balance.": [
+  "LabScreen.jsx:243"
+ ],
+ "Withdraw": [
+  "ParentConsent.jsx:175"
+ ],
+ "Withdraw consent and delete kids' data": [
+  "ParentConsent.jsx:199"
+ ],
+ "Withdraw consent?": [
+  "ParentConsent.jsx:170"
+ ],
+ "Without the box": [
+  "LockboxScreen.jsx:561"
+ ],
+ "Work": [
+  "Drift.jsx:152",
+  "SuggestedTaskModal.jsx:20"
+ ],
+ "Work out": [
+  "Drift.jsx:4337",
+  "OnboardingScreen.jsx:110"
+ ],
+ "Working on it": [
+  "SocialScreen.jsx:142"
+ ],
+ "Workout": [
+  "places.js:63",
+  "places.js:64"
+ ],
+ "Workshop": [
+  "places.js:90"
+ ],
+ "Write a review": [
+  "ReviewPromptScreen.jsx:164"
+ ],
+ "Write what you did, or capture a photo or video.": [
+  "AICheckModal.jsx:274"
+ ],
+ "YOU'LL EARN": [
+  "DriftInScreen.jsx:449",
+  "LockboxScreen.jsx:856"
+ ],
+ "YOUR FAMILY": [
+  "ParentShell.jsx:273"
+ ],
+ "YOUR KIDS": [
+  "ParentShell.jsx:320"
+ ],
+ "YOUR KIDS' PRIVACY": [
+  "ParentConsent.jsx:191"
+ ],
+ "YOUR PLAN": [
+  "ActionPlanModal.jsx:268"
+ ],
+ "YOUR PLAN IS READY": [
+  "PaywallScreen.jsx:319"
+ ],
+ "YOUR PROOF": [
+  "AICheckModal.jsx:620"
+ ],
+ "YOUR TAG": [
+  "SleepGuardModal.jsx:174"
+ ],
+ "YOUR TASKS": [
+  "ChildShell.jsx:138"
+ ],
+ "Yearly": [
+  "PaywallScreen.jsx:509"
+ ],
+ "Yes": [
+  "Drift.jsx:1366"
+ ],
+ "Yes, set it up": [
+  "OnboardingScreen.jsx:458"
+ ],
+ "Yoga class": [
+  "places.js:66"
+ ],
+ "Yoga studio": [
+  "places.js:66"
+ ],
+ "You": [
+  "Drift.jsx:3371",
+  "SocialScreen.jsx:1263",
+  "SocialScreen.jsx:1596"
+ ],
+ "You and @{{username}} are now friends": [
+  "SocialScreen.jsx:994"
+ ],
+ "You beat the deadline and claimed the reward.": [
+  "SocialScreen.jsx:647"
+ ],
+ "You blocked {{name}} for a reason.": [
+  "ios/DriftShield"
+ ],
+ "You can let the screen turn off. The countdown is on your lock screen.": [
+  "LockboxScreen.jsx:737"
+ ],
+ "You can save up to {{MAX_PLACES}} places.": [
+  "AutoTasksModal.jsx:165"
+ ],
+ "You can't add yourself.": [
+  "Drift.jsx:4709",
+  "SocialScreen.jsx:979"
+ ],
+ "You can't switch account types after your account is created.": [
+  "OnboardingScreen.jsx:1369"
+ ],
+ "You chose depth over distraction.": [
+  "ios/DriftShield"
+ ],
+ "You chose depth over {{name}}.": [
+  "ios/DriftShield"
+ ],
+ "You earn your screen time by completing real tasks. Here's the 20-second tour.": [
+  "TutorialOverlay.jsx:22"
+ ],
+ "You earned 1 minute of screen time. Keep the momentum going!": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "You earned {{mins}} minutes of screen time. Keep the momentum going!": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "You earned {{m}} more minutes of screen time.": [
+  "notifications.js:359"
+ ],
+ "You gave consent on {{date}}.": [
+  "ParentConsent.jsx:193"
+ ],
+ "You have about {{max}} seconds before this session is lost.": [
+  "notifications.js:193"
+ ],
+ "You haven't picked any apps yet. Drift In will still run, but distracting apps won't be blocked. Open Profile → Blocked apps to pick some.": [
+  "Drift.jsx:6038"
+ ],
+ "You missed the deadline, so the stake was applied.": [
+  "SocialScreen.jsx:647"
+ ],
+ "You set the rules. They earn their screen time with real tasks.": [
+  "PaywallScreen.jsx:391"
+ ],
+ "You set this boundary for a reason.": [
+  "ios/DriftShield"
+ ],
+ "You verified first and claimed the reward.": [
+  "SocialScreen.jsx:647"
+ ],
+ "You won": [
+  "SocialScreen.jsx:701"
+ ],
+ "You won't earn anything for the time so far.": [
+  "LockboxScreen.jsx:514"
+ ],
+ "You'll earn credits for the time focused so far.": [
+  "DriftInScreen.jsx:230"
+ ],
+ "You'll need to sign back in to access your data.": [
+  "ProfileScreen.jsx:464"
+ ],
+ "You'll stop getting task suggestions there.": [
+  "AutoTasksModal.jsx:178"
+ ],
+ "You're Pro 🎉": [
+  "RedeemCodeModal.jsx:128"
+ ],
+ "You're all set": [
+  "Drift.jsx:4656",
+  "TutorialOverlay.jsx:28"
+ ],
+ "You're at {{label}}": [
+  "places.js:408"
+ ],
+ "You're on a {{streak}}-day streak! Complete a task to keep it going.": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "You're out of earned time. Complete a task to unlock your apps.": [
+  "ios/DriftMonitor"
+ ],
+ "You're slipping down the grove": [
+  "notifications.js:435"
+ ],
+ "You're {{mins}} minutes in. No judgment, just checking.": [
+  "ios/DriftMonitor"
+ ],
+ "You've already redeemed this code — your access is unchanged.": [
+  "RedeemCodeModal.jsx:135"
+ ],
+ "You've done a lot of AI Checks. Try again in a little while.": [
+  "AICheckModal.jsx:459"
+ ],
+ "You've grown enough for {{name}}. ": [
+  "Drift.jsx:2684"
+ ],
+ "You've hit the AI Check limit for now. Try again a bit later.": [
+  "AICheckModal.jsx:406"
+ ],
+ "You've used everything you earned today.": [
+  "Drift.jsx:2800"
+ ],
+ "You've used today's free verified tasks. Go Pro for unlimited tasks, or come back tomorrow.": [
+  "AICheckModal.jsx:361"
+ ],
+ "You, and your child. It's never public, sold or used for ads. It's stored by Supabase (our database host, in the US) and notifications are delivered through Apple. Both are bound to keep it confidential and use it only to run Drift.": [
+  "ParentConsent.jsx:69"
+ ],
+ "Your Drift Family plan is bought through Apple, which notifies the account holder of the purchase. That purchase plus your agreement here is how Drift verifies a parent is giving consent.": [
+  "ParentConsent.jsx:72"
+ ],
+ "Your access doesn't expire.": [
+  "RedeemCodeModal.jsx:38"
+ ],
+ "Your account": [
+  "FamilyProfile.jsx:51"
+ ],
+ "Your account has been successfully deleted.": [
+  "Drift.jsx:6249"
+ ],
+ "Your answer…": [
+  "AICheckModal.jsx:579"
+ ],
+ "Your apps are locked until morning.{{p}}Leave your phone where it is.": [
+  "BedtimeOverlay.jsx:196"
+ ],
+ "Your apps are waiting. Complete a quick task to earn screen time.": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "Your balance ticks down while you use blocked apps. Run out and they lock.": [
+  "OnboardingScreen.jsx:197"
+ ],
+ "Your blocked hours and reminder stay as they are. Only the plan is removed.": [
+  "ActionPlanModal.jsx:132"
+ ],
+ "Your build or camera can't run pose detection right now. You can still verify with a photo.": [
+  "RepChallengeModal.jsx:110"
+ ],
+ "Your calendar and your places, turned into tasks.": [
+  "OnboardingScreen.jsx:450"
+ ],
+ "Your code unlocked Drift Pro.": [
+  "RedeemCodeModal.jsx:40"
+ ],
+ "Your earned screen time is gone. Complete a task to unlock again.": [
+  "notifications.js:128"
+ ],
+ "Your earned time": [
+  "TutorialOverlay.jsx:23"
+ ],
+ "Your earned time is nearly gone. Wrap up, or complete a task to keep going.": [
+  "ios/DriftMonitor"
+ ],
+ "Your email draft is ready to send.": [
+  "FeedbackModal.jsx:48"
+ ],
+ "Your friend verified first, so the stake was applied.": [
+  "SocialScreen.jsx:647"
+ ],
+ "Your kid": [
+  "ParentConsent.jsx:106",
+  "ParentShell.jsx:152"
+ ],
+ "Your kid finished \"{{taskTitle}}\". Approve it to grant screen time.": [
+  "notifications.js:349"
+ ],
+ "Your kid finished a task. Approve it to grant screen time.": [
+  "notifications.js:349"
+ ],
+ "Your location and calendar stay on this device. Drift never uploads either one.": [
+  "AutoTasksModal.jsx:652"
+ ],
+ "Your name": [
+  "OnboardingScreen.jsx:1440"
+ ],
+ "Your parent needs to choose a Drift Family plan first. Try again once they have.": [
+  "OnboardingScreen.jsx:1415"
+ ],
+ "Your parent needs to finish setting up your family in Drift first. Ask them to open Drift, then try again.": [
+  "OnboardingScreen.jsx:1416"
+ ],
+ "Your permission, first": [
+  "ParentConsent.jsx:62"
+ ],
+ "Your phone left the box for too long, so this one earned nothing.": [
+  "notifications.js:201",
+  "notifications.js:220"
+ ],
+ "Your phone left the box. No time earned this session.": [
+  "lockbox.js:279"
+ ],
+ "Your phone left the box. Put it back before this reaches zero or the session is forfeited.": [
+  "LockboxScreen.jsx:704"
+ ],
+ "Your phone moved": [
+  "Drift.jsx:1793"
+ ],
+ "Your phone moved at {{toLocaleTimeString}}. No bonus this time.": [
+  "sleepGuard.js:295"
+ ],
+ "Your phone moved during the night. No bonus this time.": [
+  "sleepGuard.js:297"
+ ],
+ "Your phone moved last night": [
+  "notifications.js:174"
+ ],
+ "Your phone stayed in the box. +{{max}} minutes earned.": [
+  "notifications.js:259"
+ ],
+ "Your phone stayed put": [
+  "Drift.jsx:1793",
+  "notifications.js:163"
+ ],
+ "Your phone stayed put all night. +{{rewardMinutes}} minutes earned.": [
+  "sleepGuard.js:292"
+ ],
+ "Your price drops every 2 months you stay, down to {{loyaltyFloor}}/mo.": [
+  "PaywallScreen.jsx:514",
+  "PaywallScreen.jsx:518"
+ ],
+ "Your price drops to {{price}}/month": [
+  "Drift.jsx:4645"
+ ],
+ "Your profile, tasks, history, friendships, challenges and photo are permanently erased. If you subscribe to Drift Pro, cancel it separately in iPhone Settings → Apple ID → Subscriptions.": [
+  "ProfileScreen.jsx:284"
+ ],
+ "Your progress saves across devices.": [
+  "OnboardingScreen.jsx:1099"
+ ],
+ "Your progress under You, and your friends under Friends — streaks, levels and challenges in one place.": [
+  "TutorialOverlay.jsx:26"
+ ],
+ "Your progress.": [
+  "Drift.jsx:2640"
+ ],
+ "Your rights": [
+  "ParentConsent.jsx:71"
+ ],
+ "Your session didn't stick. Please sign in again — nothing you set up was lost.": [
+  "Drift.jsx:4459"
+ ],
+ "Your session is still running. Stay with it.": [
+  "ios/DriftShield"
+ ],
+ "Your target is the same as your baseline, so there's nothing to change yet.": [
+  "ActionPlanModal.jsx:115"
+ ],
+ "best streak": [
+  "FamilyStats.jsx:84"
+ ],
+ "calendar or places": [
+  "Drift.jsx:1218"
+ ],
+ "complete": [
+  "DriftInScreen.jsx:599"
+ ],
+ "day streak": [
+  "ShareCard.jsx:53"
+ ],
+ "declined": [
+  "SocialScreen.jsx:680"
+ ],
+ "experience": [
+  "Drift.jsx:1157",
+  "DriftInScreen.jsx:465",
+  "DriftInScreen.jsx:660"
+ ],
+ "expo-location or expo-task-manager is missing from this build.": [
+  "places.js:492"
+ ],
+ "finish before midnight": [
+  "ChallengeModal.jsx:295"
+ ],
+ "first done wins": [
+  "ChallengeModal.jsx:294"
+ ],
+ "iOS enforces blocking in ~15-minute windows, so timing is approximate.": [
+  "Drift.jsx:2020"
+ ],
+ "min earned": [
+  "ShareCard.jsx:63"
+ ],
+ "no data today": [
+  "SocialScreen.jsx:240"
+ ],
+ "no time": [
+  "Drift.jsx:6465"
+ ],
+ "not set": [
+  "SocialScreen.jsx:680"
+ ],
+ "of {{fmtMins}} earned": [
+  "Drift.jsx:2783"
+ ],
+ "or": [
+  "OnboardingScreen.jsx:672"
+ ],
+ "or let Drift add them from your{{p}}": [
+  "Drift.jsx:1217"
+ ],
+ "remaining": [
+  "DriftInScreen.jsx:595"
+ ],
+ "screen time": [
+  "Drift.jsx:1148",
+  "DriftInScreen.jsx:456",
+  "DriftInScreen.jsx:656"
+ ],
+ "screen time (max)": [
+  "DriftInScreen.jsx:456",
+  "LockboxScreen.jsx:863"
+ ],
+ "task done": [
+  "FamilyStats.jsx:80"
+ ],
+ "tasks done": [
+  "FamilyStats.jsx:80",
+  "ShareCard.jsx:58"
+ ],
+ "to put it back": [
+  "LockboxScreen.jsx:872"
+ ],
+ "you": [
+  "SocialScreen.jsx:677"
+ ],
+ "you can change it from your profile.": [
+  "OnboardingScreen.jsx:930"
+ ],
+ "{{aheadCount}} of your {{total}} friends are on less screen time than you today. You're at {{spent}}.": [
+  "notifications.js:430"
+ ],
+ "{{attemptsLeft}} ATTEMPTS LEFT": [
+  "AICheckModal.jsx:783"
+ ],
+ "{{blockedCount}} {{p}} — locked when your balance hits zero.": [
+  "LabScreen.jsx:207"
+ ],
+ "{{durationSec}}s clip · {{length}} frames sent for review": [
+  "AICheckModal.jsx:668"
+ ],
+ "{{floor}}h {{p}}m today": [
+  "SocialScreen.jsx:240"
+ ],
+ "{{floor}}m {{padStart}}s focused": [
+  "DriftInScreen.jsx:586"
+ ],
+ "{{fmtMins}} earned": [
+  "Drift.jsx:2721"
+ ],
+ "{{fmtMins}} of today's earnings still banked.": [
+  "Drift.jsx:2800"
+ ],
+ "{{fmt}} still to go": [
+  "LockboxScreen.jsx:684",
+  "LockboxScreen.jsx:707"
+ ],
+ "{{formatDuration}} a day": [
+  "ActionPlanModal.jsx:273"
+ ],
+ "{{formatDuration}} a day, phone down by {{phoneDownLabel}}.": [
+  "actionPlan.js:201"
+ ],
+ "{{formatDuration}} less than now": [
+  "ActionPlanModal.jsx:276"
+ ],
+ "{{length}} friends haven't reported today.": [
+  "SocialScreen.jsx:1611"
+ ],
+ "{{mins}} min left · {{p}} this week{{p2}}": [
+  "ParentShell.jsx:336"
+ ],
+ "{{mins}} minutes gone. Still worth it?": [
+  "ios/DriftMonitor"
+ ],
+ "{{mins}} minutes in. There's a task waiting if you'd rather.": [
+  "ios/DriftMonitor"
+ ],
+ "{{minutesPerDay}} minutes a day": [
+  "PaywallScreen.jsx:331"
+ ],
+ "{{minutes}} min · {{credits}} credits at stake": [
+  "AICheckModal.jsx:512"
+ ],
+ "{{minutes}} minutes in the box. +{{rewardMinutes}} minutes earned.": [
+  "lockbox.js:277"
+ ],
+ "{{name}} can wait.": [
+  "ios/DriftShield"
+ ],
+ "{{name}} is blocked.": [
+  "ios/DriftShield"
+ ],
+ "{{name}} unlocks when you complete a task in Drift.": [
+  "ios/DriftShield"
+ ],
+ "{{name}} will still be there in ten minutes.": [
+  "ios/DriftShield"
+ ],
+ "{{n}} min left": [
+  "ParentConsent.jsx:139"
+ ],
+ "{{price}}/mo": [
+  "PaywallScreen.jsx:512",
+  "PaywallScreen.jsx:517"
+ ],
+ "{{price}}/month starts at your next renewal.": [
+  "Drift.jsx:4656"
+ ],
+ "{{price}}/month. Renews automatically — cancel anytime in Settings.": [
+  "PaywallScreen.jsx:389"
+ ],
+ "{{price}}/year. Renews automatically — cancel anytime in Settings.": [
+  "PaywallScreen.jsx:388"
+ ],
+ "{{price}}/yr": [
+  "PaywallScreen.jsx:509"
+ ],
+ "{{p}}\n\nYou can try again, or run the session without the box — it works the same either way.": [
+  "LockboxScreen.jsx:558"
+ ],
+ "{{p}} FROM @{{toUpperCase}}": [
+  "SocialScreen.jsx:511"
+ ],
+ "{{p}} · +{{xp}} XP": [
+  "SocialScreen.jsx:701"
+ ],
+ "{{p}}and{{p}}": [
+  "OnboardingScreen.jsx:1184"
+ ],
+ "{{recurrenceLabel}} at {{prettyTime}} - {{fmtMins}} reward": [
+  "Drift.jsx:3077"
+ ],
+ "{{selectionCount}} of {{FREE_BLOCK_LIMIT}} saved": [
+  "BlockedAppsModal.jsx:159"
+ ],
+ "{{spentMinutes}}m today": [
+  "SocialScreen.jsx:240"
+ ],
+ "{{streak}} nights in a row.": [
+  "SleepGuardModal.jsx:187"
+ ],
+ "{{streak}}-day streak": [
+  "Drift.jsx:2730"
+ ],
+ "{{target}} of {{target}} counted": [
+  "RepChallengeModal.jsx:197"
+ ],
+ "{{timeText}} {{toLowerCase}} · +{{earnedText}} earned": [
+  "Drift.jsx:1626"
+ ],
+ "{{title}} · +{{minutes}} min": [
+  "ParentShell.jsx:306"
+ ],
+ "{{toLocaleDateString}}: {{count}} tasks": [
+  "FamilyStats.jsx:104"
+ ],
+ "{{toNext}} XP to next tier": [
+  "Drift.jsx:2698"
+ ],
+ "{{toNext}} XP to {{name}}. ": [
+  "Drift.jsx:2684"
+ ],
+ "{{totalXp}} XP total": [
+  "Drift.jsx:2670"
+ ],
+ "{{trial}} days free, then {{price}}/month. Renews automatically — cancel anytime in Settings.": [
+  "PaywallScreen.jsx:386"
+ ],
+ "{{trial}} days free, then {{price}}/year. Renews automatically — cancel anytime in Settings.": [
+  "PaywallScreen.jsx:385"
+ ],
+ "{{who}} challenged you": [
+  "notifications.js:377"
+ ],
+ "“Hey Siri, check my Drift balance”\n“Hey Siri, create a task in Drift”\n“Hey Siri, start a Drift In session”": [
+  "OnboardingScreen.jsx:217"
+ ]
+}

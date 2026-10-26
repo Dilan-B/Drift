@@ -1,0 +1,23 @@
+{
+ "Don't break your streak!": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "You're on a {{streak}}-day streak! Complete a task to keep it going.": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "We miss you!": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "Your apps are waiting. Complete a quick task to earn screen time.": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "Great day yesterday!": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "You earned 1 minute of screen time. Keep the momentum going!": [
+  "supabase/functions/send-scheduled-pushes"
+ ],
+ "You earned {{mins}} minutes of screen time. Keep the momentum going!": [
+  "supabase/functions/send-scheduled-pushes"
+ ]
+}

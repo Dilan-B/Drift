@@ -8,8 +8,9 @@ import { Oswald_700Bold } from "@expo-google-fonts/oswald";
 import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions,
   ScrollView, Animated, StatusBar, TextInput, KeyboardAvoidingView,
-  Platform, ActivityIndicator, Alert, Linking, Keyboard, PanResponder,
+  Platform, ActivityIndicator, Alert, Linking, Keyboard, PanResponder, Modal,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase, markSignOutRequested } from "./supabase";
 import { useGoogleSignIn } from "./oauthSignIn";
 import { AppleSignInButton } from "./appleSignIn";
@@ -20,6 +21,7 @@ import Svg, { Circle as SvgCircle, Path as SvgPath } from "react-native-svg";
 import Sprout, { Sprig, SeedDots } from "./SproutArt";
 import { FF } from "./theme";
 
+import { tr, getLanguage } from "./i18n";
 function ClockIcon({ size = 56, color = ACCENT }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -100,22 +102,22 @@ const STEPS = [
   { id: "auth" },
   {
     id: "tasks",
-    question: "Pick your daily\ntasks",
-    subtitle: "Select tasks you'd do regularly. You can always add more later.",
+    get question() { return tr("Pick your daily\ntasks"); },
+    get subtitle() { return tr("Select tasks you'd do regularly. You can always add more later."); },
     type: "multi",
     options: [
-      { id: "make_bed", label: "Make your bed", sub: "2 min · Start the day right" },
-      { id: "workout", label: "Work out", sub: "30 min · Exercise or gym" },
-      { id: "read", label: "Read", sub: "20 min · Books or articles" },
-      { id: "meditate", label: "Meditate", sub: "10 min · Breathe and reset" },
-      { id: "journal", label: "Journal", sub: "10 min · Write your thoughts" },
-      { id: "walk", label: "Go for a walk", sub: "15 min · Fresh air" },
-      { id: "clean", label: "Clean / tidy up", sub: "15 min · Organize your space" },
-      { id: "study", label: "Study", sub: "30 min · Homework or learning" },
-      { id: "cook", label: "Cook a meal", sub: "20 min · Eat something real" },
-      { id: "stretch", label: "Stretch", sub: "5 min · Loosen up" },
-      { id: "no_phone_morning", label: "No phone for 1 hour", sub: "60 min · Morning detox" },
-      { id: "practice", label: "Practice a skill", sub: "20 min · Music, art, code, etc." },
+      { id: "make_bed", get label() { return tr("Make your bed"); }, get sub() { return tr("2 min · Start the day right"); } },
+      { id: "workout", get label() { return tr("Work out"); }, get sub() { return tr("30 min · Exercise or gym"); } },
+      { id: "read", get label() { return tr("Read"); }, get sub() { return tr("20 min · Books or articles"); } },
+      { id: "meditate", get label() { return tr("Meditate"); }, get sub() { return tr("10 min · Breathe and reset"); } },
+      { id: "journal", get label() { return tr("Journal"); }, get sub() { return tr("10 min · Write your thoughts"); } },
+      { id: "walk", get label() { return tr("Go for a walk"); }, get sub() { return tr("15 min · Fresh air"); } },
+      { id: "clean", get label() { return tr("Clean / tidy up"); }, get sub() { return tr("15 min · Organize your space"); } },
+      { id: "study", get label() { return tr("Study"); }, get sub() { return tr("30 min · Homework or learning"); } },
+      { id: "cook", get label() { return tr("Cook a meal"); }, get sub() { return tr("20 min · Eat something real"); } },
+      { id: "stretch", get label() { return tr("Stretch"); }, get sub() { return tr("5 min · Loosen up"); } },
+      { id: "no_phone_morning", get label() { return tr("No phone for 1 hour"); }, get sub() { return tr("60 min · Morning detox"); } },
+      { id: "practice", get label() { return tr("Practice a skill"); }, get sub() { return tr("20 min · Music, art, code, etc."); } },
     ],
   },
   // NOTE: the old "How strict should Drift be?" step (1/3/7/15 min per tap) was
@@ -148,7 +150,7 @@ function WelcomeSlide({ onNext, onDevPre, onDevPost }) {
         <SeedDots size={160} color={COVER_MINT} opacity={0.09} />
       </View>
       <View style={styles.welcomeContent}>
-        <Text style={[styles.welcomeLogo, { fontFamily: "Orbitron_700Bold" }]}>DRIFT</Text>
+        <Text style={[styles.welcomeLogo, { fontFamily: "Orbitron_700Bold" }]}>{tr("DRIFT")}</Text>
         <Animated.View style={[styles.welcomeHero, {
           opacity: heroAnim,
           transform: [{ scale: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }],
@@ -157,20 +159,20 @@ function WelcomeSlide({ onNext, onDevPre, onDevPost }) {
             <Sprout size={150} tone="fresh" />
           </View>
         </Animated.View>
-        <Text style={[styles.welcomeHeadline, { fontFamily: FF.display }]}>{"Welcome to\nDrift"}</Text>
+        <Text style={[styles.welcomeHeadline, { fontFamily: FF.display }]}>{tr("Welcome to\nDrift")}</Text>
         <Text style={styles.welcomeSub}>
-          Earn your screen time by getting real things done. Your phone unlocks when you do.
+          {tr("Earn your screen time by getting real things done. Your phone unlocks when you do.")}
         </Text>
       </View>
       <TouchableOpacity style={[styles.ctaBtn, styles.ctaBtnCover]} onPress={onNext} activeOpacity={0.85}>
-        <Text style={[styles.ctaBtnText, { color: "#16261C" }]}>Get Started</Text>
+        <Text style={[styles.ctaBtnText, { color: "#16261C" }]}>{tr("Get Started")}</Text>
       </TouchableOpacity>
-      <Text style={[styles.legal, { color: COVER_MID }]}>Takes 60 seconds</Text>
+      <Text style={[styles.legal, { color: COVER_MID }]}>{tr("Takes 60 seconds")}</Text>
 
       {SHOW_DEV_TOOLS && (
         <View style={styles.devRow}>
-          <DevButton label="DEV · PRE-SIGNUP" onPress={onDevPre} />
-          <DevButton label="DEV · POST-SIGNUP" onPress={onDevPost} />
+          <DevButton label={tr("DEV · PRE-SIGNUP")} onPress={onDevPre} />
+          <DevButton label={tr("DEV · POST-SIGNUP")} onPress={onDevPost} />
         </View>
       )}
     </View>
@@ -183,37 +185,37 @@ const HOW_SLIDES = [
   {
     id: "how1",
     Icon: ClipboardIcon,
-    headline: "Add real tasks",
-    body: "Reading, working out, studying, cooking.\nAnything productive you'd actually do.",
-    detail: "Each task has a time estimate and earns you screen time when you complete it.",
+    get headline() { return tr("Add real tasks"); },
+    get body() { return tr("Reading, working out, studying, cooking.\nAnything productive you'd actually do."); },
+    get detail() { return tr("Each task has a time estimate and earns you screen time when you complete it."); },
   },
   {
     id: "how2",
     Icon: SparkleIcon,
-    headline: "Earn your time",
-    body: "Complete a task, earn minutes.\nThe harder the task, the more you earn.",
-    detail: "Your balance ticks down while you use blocked apps. Run out and they lock.",
+    get headline() { return tr("Earn your time"); },
+    get body() { return tr("Complete a task, earn minutes.\nThe harder the task, the more you earn."); },
+    get detail() { return tr("Your balance ticks down while you use blocked apps. Run out and they lock."); },
   },
   {
     id: "how3",
     Icon: LockIcon,
-    headline: "Apps lock when\nyou're out",
-    body: "Choose which apps to block.\nDrift enforces it even when closed.",
-    detail: "No willpower needed. The system does the hard part.",
+    get headline() { return tr("Apps lock when\nyou're out"); },
+    get body() { return tr("Choose which apps to block.\nDrift enforces it even when closed."); },
+    get detail() { return tr("No willpower needed. The system does the hard part."); },
   },
   {
     id: "how4",
     Icon: BellIcon,
-    headline: "Tasks can add\nthemselves",
-    body: "Save places like your gym, and Drift offers\nthe task when you arrive. It can pull in\ntoday's calendar events too.",
-    detail: "Both are optional, off until you turn them on, and stay on your device. Find them in Profile → Automatic tasks.",
+    get headline() { return tr("Tasks can add\nthemselves"); },
+    get body() { return tr("Save places like your gym, and Drift offers\nthe task when you arrive. It can pull in\ntoday's calendar events too."); },
+    get detail() { return tr("Both are optional, off until you turn them on, and stay on your device. Find them in Profile → Automatic tasks."); },
   },
   {
     id: "how5",
     Icon: MicIcon,
-    headline: "Just ask Siri",
-    body: "“Hey Siri, check my Drift balance”\n“Hey Siri, create a task in Drift”\n“Hey Siri, start a Drift In session”",
-    detail: "Nothing to set up — the commands work as soon as Drift is installed. They show up in Shortcuts too.",
+    get headline() { return tr("Just ask Siri"); },
+    get body() { return tr("“Hey Siri, check my Drift balance”\n“Hey Siri, create a task in Drift”\n“Hey Siri, start a Drift In session”"); },
+    get detail() { return tr("Nothing to set up — the commands work as soon as Drift is installed. They show up in Shortcuts too."); },
   },
 ];
 
@@ -245,7 +247,7 @@ function HowItWorksSlide({ slideData, stepNum, onNext }) {
             </View>
           </View>
 
-          <Text style={styles.howKicker}>STEP {stepNum + 1} OF {HOW_SLIDES.length}</Text>
+          <Text style={styles.howKicker}>{tr("STEP {{p}} OF {{length}}", { p: stepNum + 1, length: HOW_SLIDES.length })}</Text>
 
           <Text style={{
             fontFamily: FF.display,
@@ -302,7 +304,7 @@ function HowItWorksSlide({ slideData, stepNum, onNext }) {
 
       <TouchableOpacity style={styles.ctaBtn} onPress={onNext}>
         <Text style={styles.ctaBtnText}>
-          {stepNum === HOW_SLIDES.length - 1 ? "Let's set you up" : "Next"}
+          {stepNum === HOW_SLIDES.length - 1 ? tr("Let's set you up") : tr("Next")}
         </Text>
       </TouchableOpacity>
     </View>
@@ -332,11 +334,11 @@ function AutoTasksDiagram() {
       <View style={{ flexDirection: "row", gap: 10 }}>
         <View style={chip}>
           <ClipboardIcon size={13} color={ACCENT} strokeWidth={1.8} />
-          <Text style={chipText}>9:00 Standup</Text>
+          <Text style={chipText}>{tr("9:00 Standup")}</Text>
         </View>
         <View style={chip}>
           <LeafIcon size={13} color={CLAY} strokeWidth={1.8} />
-          <Text style={chipText}>At the gym</Text>
+          <Text style={chipText}>{tr("At the gym")}</Text>
         </View>
       </View>
 
@@ -355,7 +357,7 @@ function AutoTasksDiagram() {
       }}>
         <CheckIcon size={14} color={ACCENT} strokeWidth={2} />
         <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: "#2D5A3E" }}>
-          Added to today — if you confirm
+          {tr("Added to today — if you confirm")}
         </Text>
       </View>
     </View>
@@ -413,7 +415,7 @@ function AutoTasksSlide({ onNext }) {
             fontFamily: FF.display, fontSize: 27, color: TEXT,
             textAlign: "center", lineHeight: 34, letterSpacing: -0.3,
           }}>
-            {"Getting it all\nset up for you"}
+            {tr("Getting it all\nset up for you")}
           </Text>
           <ActivityIndicator color={ACCENT} style={{ marginTop: 20 }} />
         </Animated.View>
@@ -426,7 +428,7 @@ function AutoTasksSlide({ onNext }) {
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingBottom: 16 }}>
         {/* Kicker sits above the icon on its own line — it used to collide
             with the bell disc. */}
-        <Text style={[styles.howKicker, { marginBottom: 16 }]}>OPTIONAL</Text>
+        <Text style={[styles.howKicker, { marginBottom: 16 }]}>{tr("OPTIONAL")}</Text>
 
         <View style={styles.howIconRing}>
           <View style={styles.howIconDisc}>
@@ -438,14 +440,14 @@ function AutoTasksSlide({ onNext }) {
           fontFamily: FF.display, fontSize: 30, color: TEXT,
           textAlign: "center", lineHeight: 37, letterSpacing: -0.3, marginBottom: 12,
         }}>
-          {"Let tasks add\nthemselves?"}
+          {tr("Let tasks add\nthemselves?")}
         </Text>
 
         <Text style={{
           fontFamily: FF.body, fontSize: 16, color: MUTED,
           textAlign: "center", lineHeight: 23, marginBottom: 26, paddingHorizontal: 18,
         }}>
-          Your calendar and your places, turned into tasks.
+          {tr("Your calendar and your places, turned into tasks.")}
         </Text>
 
         <AutoTasksDiagram />
@@ -453,12 +455,12 @@ function AutoTasksSlide({ onNext }) {
 
       <TouchableOpacity style={styles.ctaBtn} onPress={enable} disabled={phase !== "idle"}>
         <Text style={styles.ctaBtnText}>
-          {phase === "working" ? "Setting up…" : "Yes, set it up"}
+          {phase === "working" ? tr("Setting up…") : tr("Yes, set it up")}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={onNext} disabled={phase !== "idle"} style={{ paddingVertical: 14, alignItems: "center" }}>
         <Text style={{ fontFamily: FF.body, fontSize: 14, color: MUTED }}>
-          Not now
+          {tr("Not now")}
         </Text>
       </TouchableOpacity>
     </View>
@@ -517,12 +519,12 @@ function QuestionSlide({ step, answers, onToggle, onNext, canContinue, onSkip })
         onPress={canContinue ? onNext : null}
         activeOpacity={canContinue ? 0.8 : 1}
       >
-        <Text style={styles.ctaBtnText}>Continue</Text>
+        <Text style={styles.ctaBtnText}>{tr("Continue")}</Text>
       </TouchableOpacity>
 
       {onSkip && (
         <TouchableOpacity onPress={onSkip} style={styles.skipBtn} activeOpacity={0.6}>
-          <Text style={styles.skipText}>Skip for now</Text>
+          <Text style={styles.skipText}>{tr("Skip for now")}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -541,20 +543,20 @@ function isEmailVerified(user) {
 }
 
 function validatePassword(pw) {
-  if (pw.length < 12) return "Password must be at least 12 characters.";
-  if (pw.length > 72) return "Password too long (max 72 characters).";
+  if (pw.length < 12) return tr("Password must be at least 12 characters.");
+  if (pw.length > 72) return tr("Password too long (max 72 characters).");
   if (!/[a-z]/.test(pw) || !/[A-Z]/.test(pw) || !/\d/.test(pw) || !/[^A-Za-z0-9]/.test(pw))
-    return "Use uppercase, lowercase, a number, and a symbol.";
+    return tr("Use uppercase, lowercase, a number, and a symbol.");
   if (/^(password|qwerty|letmein|welcome|drift)/i.test(pw) || /123456|password/i.test(pw))
-    return "Use a less common password.";
+    return tr("Use a less common password.");
   return null;
 }
 
 function validateEmail(e) {
   const trimmed = e.trim().toLowerCase();
-  if (!trimmed) return "Email required.";
-  if (trimmed.length > 254) return "Email too long.";
-  if (!EMAIL_RE.test(trimmed)) return "Enter a valid email address.";
+  if (!trimmed) return tr("Email required.");
+  if (trimmed.length > 254) return tr("Email too long.");
+  if (!EMAIL_RE.test(trimmed)) return tr("Enter a valid email address.");
   return null;
 }
 
@@ -570,10 +572,10 @@ function normalizeUsername(raw) {
 
 function validateUsername(raw) {
   const u = normalizeUsername(raw);
-  if (!u) return "Pick a username.";
-  if (u.length < 3) return "Username must be at least 3 characters.";
-  if (u.length > 20) return "Username can be at most 20 characters.";
-  if (!/^[a-z0-9_]+$/.test(u)) return "Use letters, numbers, and underscores only.";
+  if (!u) return tr("Pick a username.");
+  if (u.length < 3) return tr("Username must be at least 3 characters.");
+  if (u.length > 20) return tr("Username can be at most 20 characters.");
+  if (!/^[a-z0-9_]+$/.test(u)) return tr("Use letters, numbers, and underscores only.");
   return null;
 }
 
@@ -616,7 +618,7 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone, dark = fals
     if (!res || res.cancelled) return;
     if (res.error) {
       setLoading(false);
-      setError(prettyAuthError(res.error.message) || "Google sign-in failed.");
+      setError(prettyAuthError(res.error.message) || tr("Google sign-in failed."));
       return;
     }
     // (Payments removed — everyone is Pro for free; no trial to claim.)
@@ -628,7 +630,7 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone, dark = fals
     setError("");
     if (loading) return;
     if (!google.isConfigured) {
-      setError("Google sign-in isn't configured for this build.");
+      setError(tr("Google sign-in isn't configured for this build."));
       return;
     }
     // Detect Expo Go — Google's OAuth no longer accepts exp:// redirect URIs.
@@ -637,7 +639,7 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone, dark = fals
     const isExpoGo = Constants?.appOwnership === "expo" ||
                      Constants?.executionEnvironment === "storeClient";
     if (isExpoGo) {
-      setError("Google sign-in requires a dev client build (won't work in Expo Go).");
+      setError(tr("Google sign-in requires a dev client build (won't work in Expo Go)."));
       return;
     }
     setLoading(true);
@@ -646,7 +648,7 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone, dark = fals
       // setLoading(false) happens in the onSignedIn callback
     } catch (e) {
       setLoading(false);
-      setError(e?.message || "Google sign-in failed.");
+      setError(e?.message || tr("Google sign-in failed."));
     }
   };
 
@@ -657,7 +659,7 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone, dark = fals
   };
   const handleAppleError = (err) => {
     setLoading(false);
-    setError(prettyAuthError(err?.message) || "Apple sign-in failed.");
+    setError(prettyAuthError(err?.message) || tr("Apple sign-in failed."));
   };
 
   // No providers available — render nothing
@@ -667,7 +669,7 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone, dark = fals
     <>
       <View style={{ flexDirection: "row", alignItems: "center", marginTop: 16, marginBottom: 12, gap: 10 }}>
         <View style={{ flex: 1, height: 1, backgroundColor: BORDER }} />
-        <Text style={{ color: FAINT, fontFamily: FF.body, fontSize: 12 }}>or</Text>
+        <Text style={{ color: FAINT, fontFamily: FF.body, fontSize: 12 }}>{tr("or")}</Text>
         <View style={{ flex: 1, height: 1, backgroundColor: BORDER }} />
       </View>
 
@@ -697,7 +699,7 @@ function OAuthButtons({ mode, loading, setLoading, setError, onDone, dark = fals
           <>
             <GoogleGlyph />
             <Text style={{ color: TEXT, fontSize: 15, fontFamily: FF.bodyMed }}>
-              {mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
+              {mode === "signup" ? tr("Sign up with Google") : tr("Sign in with Google")}
             </Text>
           </>
         )}
@@ -723,11 +725,11 @@ function GoogleGlyph() {
 function prettyAuthError(msg) {
   const raw = (msg || "").toLowerCase();
   if (raw.includes("invalid_grant") || raw.includes("nonce"))
-    return "Sign-in token couldn't be verified. Try again.";
+    return tr("Sign-in token couldn't be verified. Try again.");
   if (raw.includes("network") || raw.includes("fetch"))
-    return "Network error. Check your connection.";
+    return tr("Network error. Check your connection.");
   if (raw.includes("disabled") || raw.includes("provider not enabled"))
-    return "This sign-in method isn't enabled yet. Contact support.";
+    return tr("This sign-in method isn't enabled yet. Contact support.");
   return msg || null;
 }
 
@@ -764,14 +766,14 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
     if (canOpen) {
       await Linking.openURL(url).catch(() => {});
     } else {
-      Alert.alert("Open your email", "Open your email app and find your 8-digit Drift code.");
+      Alert.alert(tr("Open your email"), tr("Open your email app and find your 8-digit Drift code."));
     }
   }
 
   async function handleVerifyOtp() {
     const cleanEmail = verificationEmail.trim().toLowerCase();
     const code = (verifyCode || "").replace(/\D/g, "").slice(0, 8);
-    if (code.length !== 8) { setError("Enter the 8-digit code from your email."); setNotice(""); return; }
+    if (code.length !== 8) { setError(tr("Enter the 8-digit code from your email.")); setNotice(""); return; }
     setError(""); setNotice(""); setVerifying(true);
     try {
       const { data, error: vErr } = await rateLimited(`auth_verify_otp_${cleanEmail}`, { limit: 10, windowMs: 10 * 60_000 }, () =>
@@ -788,11 +790,11 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
       // invalid") for both a wrong code AND an expired one — it doesn't tell us
       // which — so the message must cover both cases.
       if (raw.includes("expired") || raw.includes("invalid") || raw.includes("token") || raw.includes("otp")) {
-        setError("That code is incorrect or expired. Double-check it, or tap Resend code for a new one.");
+        setError(tr("That code is incorrect or expired. Double-check it, or tap Resend code for a new one."));
       } else if (raw.includes("network") || raw.includes("fetch")) {
-        setError("Network error. Check your connection.");
+        setError(tr("Network error. Check your connection."));
       } else {
-        setError(e?.message || "Could not verify. Try again.");
+        setError(e?.message || tr("Could not verify. Try again."));
       }
       setNotice("");
     } finally {
@@ -808,7 +810,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
     const now = Date.now();
     resendAttemptsRef.current = resendAttemptsRef.current.filter(t => now - t < 60_000);
     if (resendAttemptsRef.current.length >= 3) {
-      setError("Too many resend attempts. Wait a minute and try again.");
+      setError(tr("Too many resend attempts. Wait a minute and try again."));
       setNotice("");
       return;
     }
@@ -826,15 +828,15 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
         })
       );
       if (resendErr) throw resendErr;
-      setNotice("Verification email sent again.");
+      setNotice(tr("Verification email sent again."));
     } catch (e) {
       const raw = (e?.message || "").toLowerCase();
       if (raw.includes("rate") || raw.includes("too many")) {
-        setError("Too many resend attempts. Try again in a few minutes.");
+        setError(tr("Too many resend attempts. Try again in a few minutes."));
       } else if (raw.includes("network") || raw.includes("fetch")) {
-        setError("Network error. Check your connection.");
+        setError(tr("Network error. Check your connection."));
       } else {
-        setError("Could not resend the email. Try again.");
+        setError(tr("Could not resend the email. Try again."));
       }
       setNotice("");
     } finally {
@@ -853,7 +855,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
 
     // Validate password. Strength rules apply to signup; existing users may
     // still have older passwords until Supabase policy forces a reset.
-    if (!password) { setError("Password required."); return; }
+    if (!password) { setError(tr("Password required.")); return; }
     if (mode === "signup") {
       const pwErr = validatePassword(password);
       if (pwErr) { setError(pwErr); return; }
@@ -874,9 +876,9 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           )
         );
         if (lookupErr) throw lookupErr;
-        if (taken) { setError("That username is taken. Try another."); return; }
+        if (taken) { setError(tr("That username is taken. Try another.")); return; }
       } catch {
-        setError("Could not check username availability. Try again.");
+        setError(tr("Could not check username availability. Try again."));
         return;
       }
     }
@@ -905,7 +907,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
         // `identities` array is EMPTY. Detect that and block the signup with a
         // clear message instead of silently sending nothing.
         if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-          setError("An account with that email already exists — switch to Sign in to log in.");
+          setError(tr("An account with that email already exists — switch to Sign in to log in."));
           setNotice("");
           setLoading(false);
           return;
@@ -924,8 +926,8 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
             // in the same window. Don't sign them out — just inform them and
             // let them keep the suffixed name (they can change it later).
             setError(
-              `That username was just taken. You've been assigned @${prof.username} for now — ` +
-              `you can change it from your profile.`
+              tr("That username was just taken. You've been assigned @{{username}} for now — ", { username: prof.username }) +
+              tr("you can change it from your profile.")
             );
             // Continue with the rest of the flow — don't return early
           }
@@ -945,7 +947,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           await supabase.auth.signOut().catch(() => {});
           setVerificationEmail(cleanEmail);
           setError("");
-          setNotice("Check your email to verify your account, then sign in again.");
+          setNotice(tr("Check your email to verify your account, then sign in again."));
           setLoading(false);
           return;
         }
@@ -965,7 +967,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           await supabase.auth.signOut().catch(() => {});
           setVerificationEmail(cleanEmail);
           setError("");
-          setNotice("Check your email to verify your account, then sign in again.");
+          setNotice(tr("Check your email to verify your account, then sign in again."));
           return;
         }
         onDone(data.user);
@@ -974,26 +976,26 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
       // Map generic Supabase errors to friendlier messages WITHOUT leaking enumeration info
       const raw = (e?.message || "").toLowerCase();
       if (raw.includes("already") || raw.includes("registered") || raw.includes("exists")) {
-        setError("An account with that email already exists. Try signing in.");
+        setError(tr("An account with that email already exists. Try signing in."));
       } else if (raw.includes("duplicate") || (raw.includes("unique") && raw.includes("username"))) {
-        setError("That username is taken. Try another.");
+        setError(tr("That username is taken. Try another."));
       } else if (raw.includes("invalid") && raw.includes("credential")) {
-        setError("Email or password is incorrect.");
+        setError(tr("Email or password is incorrect."));
       } else if (raw.includes("sending") || (raw.includes("error") && raw.includes("email") && raw.includes("confirmation"))) {
         // "Error sending confirmation email" — the verification email FAILED to
         // send (SMTP/provider problem), so there is nothing in their inbox to
         // check. This used to fall into the "email...confirm" branch below and
         // tell them to check their email, hiding a live outage. Say what is
         // actually true.
-        setError("We couldn't send your verification email right now. This is on our end — please try again in a few minutes.");
+        setError(tr("We couldn't send your verification email right now. This is on our end — please try again in a few minutes."));
       } else if (raw.includes("email") && raw.includes("confirm")) {
-        setError("Check your email to verify your account, then try signing in again.");
+        setError(tr("Check your email to verify your account, then try signing in again."));
       } else if (raw.includes("network") || raw.includes("fetch")) {
-        setError("Network error. Check your connection.");
+        setError(tr("Network error. Check your connection."));
       } else if (raw.includes("rate") || raw.includes("too many")) {
-        setError("Too many attempts. Try again in a few minutes.");
+        setError(tr("Too many attempts. Try again in a few minutes."));
       } else {
-        setError(e?.message || "Sign-in failed. Try again.");
+        setError(e?.message || tr("Sign-in failed. Try again."));
       }
     } finally {
       setLoading(false);
@@ -1012,9 +1014,9 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
 
         <View style={styles.verifyContent}>
           <View style={styles.stepBadge}><WaveIcon size={24} color={ACCENT} /></View>
-          <Text style={styles.question}>Enter your code</Text>
+          <Text style={styles.question}>{tr("Enter your code")}</Text>
           <Text style={styles.questionSub}>
-            We emailed an 8-digit code to {verificationEmail}. Enter it below — or tap the link in that email on this phone.
+            {tr("We emailed an 8-digit code to {{verificationEmail}}. Enter it below — or tap the link in that email on this phone.", { verificationEmail })}
           </Text>
 
           <View style={styles.authForm}>
@@ -1033,12 +1035,12 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             {notice ? <Text style={styles.noticeText}>{notice}</Text> : null}
             <TouchableOpacity onPress={handleOpenMail} style={{ alignSelf: "center", marginTop: 2, padding: 6 }}>
-              <Text style={styles.linkText}>Open my email app</Text>
+              <Text style={styles.linkText}>{tr("Open my email app")}</Text>
             </TouchableOpacity>
             {/* Auth mail still goes out from Supabase's shared sender, which
                 lands in spam often enough that people stall here waiting for
                 a code that already arrived. Remove once custom SMTP is set up. */}
-            <Text style={[styles.legal, { marginTop: 2 }]}>No email yet? Check Spam!</Text>
+            <Text style={[styles.legal, { marginTop: 2 }]}>{tr("No email yet? Check Spam!")}</Text>
           </View>
         </View>
 
@@ -1047,7 +1049,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           onPress={handleVerifyOtp}
           disabled={verifying || verifyCode.length !== 8}
         >
-          {verifying ? <ActivityIndicator color="#FAF6EE" /> : <Text style={styles.ctaBtnText}>Verify</Text>}
+          {verifying ? <ActivityIndicator color="#FAF6EE" /> : <Text style={styles.ctaBtnText}>{tr("Verify")}</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -1058,7 +1060,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           {resending ? (
             <ActivityIndicator color={ACCENT} />
           ) : (
-            <Text style={styles.secondaryBtnText}>Resend code</Text>
+            <Text style={styles.secondaryBtnText}>{tr("Resend code")}</Text>
           )}
         </TouchableOpacity>
 
@@ -1066,7 +1068,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           onPress={() => { setVerificationEmail(""); setMode("login"); setError(""); setNotice(""); }}
           style={{ marginTop: 14, marginBottom: 32, alignItems: "center" }}
         >
-          <Text style={styles.switchMode}>Back to sign in</Text>
+          <Text style={styles.switchMode}>{tr("Back to sign in")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -1091,19 +1093,17 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
       >
         <View style={styles.stepBadge}><WaveIcon size={24} color={ACCENT} /></View>
         <Text style={styles.question}>
-          {mode === "signup" ? "Create your account" : "Welcome back"}
+          {mode === "signup" ? tr("Create your account") : tr("Welcome back")}
         </Text>
         <Text style={styles.questionSub}>
-          {mode === "signup"
-            ? "Your progress saves across devices."
-            : "Sign in to pick up where you left off."}
+          {mode === "signup" ? tr("Your progress saves across devices.") : tr("Sign in to pick up where you left off.")}
         </Text>
 
         <View style={styles.authForm}>
           {mode === "signup" && (
             <Field
-              label="Username"
-              placeholder="3–20 chars, letters/numbers/_"
+              label={tr("Username")}
+              placeholder={tr("3–20 chars, letters/numbers/_")}
               value={username}
               onChangeText={(t) => setUsername(normalizeUsername(t))}
               autoCapitalize="none"
@@ -1116,7 +1116,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           )}
 
           <Field
-            label="Email"
+            label={tr("Email")}
             inputRef={emailRef}
             placeholder="you@example.com"
             value={email}
@@ -1131,9 +1131,9 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           />
 
           <Field
-            label="Password"
+            label={tr("Password")}
             inputRef={passwordRef}
-            placeholder="12+ chars, number, symbol"
+            placeholder={tr("12+ chars, number, symbol")}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -1145,7 +1145,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
           {mode === "signup" ? (
             <Text style={styles.authHint}>
-              Email accounts must be verified before Drift unlocks.
+              {tr("Email accounts must be verified before Drift unlocks.")}
             </Text>
           ) : null}
         </View>
@@ -1160,7 +1160,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
           <ActivityIndicator color="#fff" />
         ) : (
           <Text style={styles.ctaBtnText}>
-            {mode === "signup" ? "Create account" : "Sign in"}
+            {mode === "signup" ? tr("Create account") : tr("Sign in")}
           </Text>
         )}
       </TouchableOpacity>
@@ -1177,15 +1177,14 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
       {/* Terms + privacy disclosure shown to anyone creating an account */}
       {!keyboardUp && mode === "signup" && (
         <Text style={{ marginTop: 14, marginHorizontal: 24, textAlign: "center", color: MUTED, fontFamily: FF.body, fontSize: 11, lineHeight: 16 }}>
-          By creating an account you agree to our{" "}
+          {tr("By creating an account you agree to our{{p}}", { p: " " })}
           <Text style={{ color: ACCENT, textDecorationLine: "underline" }}
             onPress={() => require("react-native").Linking.openURL("https://driftproductivity.com/terms/")}>
-            Terms of Use
-          </Text>{" "}
-          and{" "}
+            {tr("Terms of Use")}
+          </Text>{tr("{{p}}and{{p}}", { p: " " })}
           <Text style={{ color: ACCENT, textDecorationLine: "underline" }}
             onPress={() => require("react-native").Linking.openURL("https://driftproductivity.com/privacy/")}>
-            Privacy Policy
+            {tr("Privacy Policy")}
           </Text>.
         </Text>
       )}
@@ -1202,9 +1201,7 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
         style={{ marginTop: 14, marginBottom: 32, alignItems: "center" }}
       >
         <Text style={styles.switchMode}>
-          {mode === "signup"
-            ? "Already have an account? Sign in"
-            : "No account yet? Sign up"}
+          {mode === "signup" ? tr("Already have an account? Sign in") : tr("No account yet? Sign up")}
         </Text>
       </TouchableOpacity>
       )}
@@ -1215,18 +1212,139 @@ function AuthSlide({ onDone, defaultMode = "signup", accountType = "personal", o
 // ─── Account-type selection ──────────────────────────────────────────────────
 
 const ACCOUNT_TYPES = [
-  { id: "personal", label: "Just me", sub: "Earn your own screen time by completing tasks." },
-  { id: "parent",   label: "I'm a parent", sub: "Set tasks for your kids and approve their screen time." },
-  { id: "child",    label: "I'm a kid", sub: "Join your family with a code from your parent." },
+  { id: "personal", get label() { return tr("Just me"); }, get sub() { return tr("Earn your own screen time by completing tasks."); } },
+  { id: "parent",   get label() { return tr("I'm a parent"); }, get sub() { return tr("Set tasks for your kids and approve their screen time."); } },
+  { id: "child",    get label() { return tr("I'm a kid"); }, get sub() { return tr("Join your family with a code from your parent."); } },
 ];
 
+// ─── Age screen (COPPA) ──────────────────────────────────────────────────────
+// Personal accounts are 13+, parent accounts 18+. Neutral by FTC guidance: the
+// user picks a month and year with no default and nothing hinting at the
+// "right" answer. Nothing is stored except, when someone is too young, a flag
+// that keeps the answer from being changed by going back and trying again.
+const AGE_GATE_KEY = "drift_age_gate_v1";
+const MIN_AGE = { personal: 13, parent: 18 };
+
+function ageFrom(month, year) {
+  const now = new Date();
+  let age = now.getFullYear() - year;
+  if (now.getMonth() + 1 < month) age -= 1;
+  return age;
+}
+
+function AgeGateModal({ visible, accountType, onPass, onCancel, onChildInstead }) {
+  const [month, setMonth] = useState(null);
+  const [year, setYear] = useState(null);
+  const [blocked, setBlocked] = useState(null); // "personal" | "parent" | null
+  const thisYear = new Date().getFullYear();
+  const years = Array.from({ length: 100 }, (_, i) => thisYear - i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const monthName = (m) => new Date(2000, m - 1, 1).toLocaleDateString(getLanguage(), { month: "long" });
+
+  useEffect(() => {
+    if (!visible) return;
+    setMonth(null); setYear(null); setBlocked(null);
+    AsyncStorage.getItem(AGE_GATE_KEY).then((v) => {
+      try {
+        const g = JSON.parse(v || "{}");
+        if (g[accountType]) setBlocked(accountType);
+      } catch {}
+    }).catch(() => {});
+  }, [visible, accountType]);
+
+  function confirm() {
+    if (!month || !year) return;
+    const ok = ageFrom(month, year) >= (MIN_AGE[accountType] || 13);
+    if (ok) { onPass(); return; }
+    setBlocked(accountType);
+    AsyncStorage.getItem(AGE_GATE_KEY).then((v) => {
+      let g = {};
+      try { g = JSON.parse(v || "{}"); } catch {}
+      g[accountType] = true;
+      return AsyncStorage.setItem(AGE_GATE_KEY, JSON.stringify(g));
+    }).catch(() => {});
+  }
+
+  const col = (items, value, set, label) => (
+    <ScrollView style={ageStyles.col} showsVerticalScrollIndicator={false}>
+      {items.map((it) => (
+        <TouchableOpacity key={it} onPress={() => set(it)} style={[ageStyles.cell, value === it && ageStyles.cellOn]}>
+          <Text style={[ageStyles.cellText, value === it && ageStyles.cellTextOn]}>{label(it)}</Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  );
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onCancel}>
+      <View style={ageStyles.wrap}>
+        <View style={ageStyles.card}>
+          {blocked ? (
+            <>
+              <Text style={styles.question}>{blocked === "parent" ? tr("Parent accounts are for adults") : tr("Ask a parent to set you up")}</Text>
+              <Text style={styles.questionSub}>
+                {blocked === "parent"
+                  ? tr("A parent or guardian aged 18 or over needs to create the Family account.")
+                  : tr("Personal Drift accounts are for people 13 and older. A parent can set up Drift Family, then you join with their code.")}
+              </Text>
+              <TouchableOpacity style={styles.ctaBtn} onPress={onChildInstead}>
+                <Text style={styles.ctaBtnText}>{tr("Join my family with a code")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.skipBtn} onPress={onCancel}>
+                <Text style={styles.skipText}>{tr("Back")}</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.question}>{tr("When were you born?")}</Text>
+              <Text style={styles.questionSub}>{tr("We ask everyone. It isn't saved or shown to anyone.")}</Text>
+              <View style={ageStyles.cols}>
+                {col(months, month, setMonth, monthName)}
+                {col(years, year, setYear, (y) => String(y))}
+              </View>
+              <TouchableOpacity
+                style={[styles.ctaBtn, !(month && year) && styles.ctaBtnDisabled]}
+                onPress={confirm}
+                activeOpacity={month && year ? 0.8 : 1}
+              >
+                <Text style={styles.ctaBtnText}>{tr("Continue")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.skipBtn} onPress={onCancel}>
+                <Text style={styles.skipText}>{tr("Back")}</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const ageStyles = StyleSheet.create({
+  wrap: { flex: 1, backgroundColor: "rgba(20,30,24,0.35)", justifyContent: "flex-end" },
+  card: { backgroundColor: "#FAF6EE", borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 24, paddingBottom: 36, maxHeight: "86%" },
+  cols: { flexDirection: "row", gap: 12, height: 260 },
+  col: { flex: 1, borderRadius: 16, backgroundColor: "#fff" },
+  cell: { paddingVertical: 12, paddingHorizontal: 14 },
+  cellOn: { backgroundColor: "#3A6B4F" },
+  cellText: { fontFamily: FF.body, fontSize: 16, color: "#1F3A2A" },
+  cellTextOn: { color: "#FAF6EE", fontFamily: FF.bodyMed },
+});
+
 function AccountTypeSlide({ selected, onSelect, onNext }) {
+  const [ageOpen, setAgeOpen] = useState(false);
+  // Kids go straight to joining (they're covered by the parent's consent);
+  // everyone else answers the age screen first.
+  const proceed = () => {
+    if (selected === "personal" || selected === "parent") setAgeOpen(true);
+    else onNext();
+  };
   return (
     <View style={styles.slide}>
       <View style={{ flex: 1 }}>
         <View style={styles.stepBadge}><UsersIcon size={24} color={ACCENT} /></View>
-        <Text style={styles.question}>Who's using{"\n"}Drift?</Text>
-        <Text style={styles.questionSub}>Pick the one that fits — this can't be changed later.</Text>
+        <Text style={styles.question}>{tr("Who's using{{p}}Drift?", { p: "\n" })}</Text>
+        <Text style={styles.questionSub}>{tr("Pick the one that fits — this can't be changed later.")}</Text>
         <ScrollView style={styles.optionsScroll} showsVerticalScrollIndicator={false}>
           {ACCOUNT_TYPES.map((opt) => {
             const sel = selected === opt.id;
@@ -1248,15 +1366,22 @@ function AccountTypeSlide({ selected, onSelect, onNext }) {
             );
           })}
         </ScrollView>
-        <Text style={styles.authHint}>You can't switch account types after your account is created.</Text>
+        <Text style={styles.authHint}>{tr("You can't switch account types after your account is created.")}</Text>
       </View>
       <TouchableOpacity
         style={[styles.ctaBtn, !selected && styles.ctaBtnDisabled]}
-        onPress={selected ? onNext : null}
+        onPress={selected ? proceed : null}
         activeOpacity={selected ? 0.8 : 1}
       >
-        <Text style={styles.ctaBtnText}>Continue</Text>
+        <Text style={styles.ctaBtnText}>{tr("Continue")}</Text>
       </TouchableOpacity>
+      <AgeGateModal
+        visible={ageOpen}
+        accountType={selected}
+        onPass={() => { setAgeOpen(false); onNext(); }}
+        onCancel={() => setAgeOpen(false)}
+        onChildInstead={() => { setAgeOpen(false); onSelect("child"); }}
+      />
     </View>
   );
 }
@@ -1273,26 +1398,27 @@ function ChildJoinSlide({ onDone }) {
     setError("");
     const n = name.trim();
     const c = normalizeFamilyCode(code);
-    if (n.length < 1) { setError("Enter your name."); return; }
-    if (c.length < 4) { setError("Enter the family code from your parent."); return; }
+    if (n.length < 1) { setError(tr("Enter your name.")); return; }
+    if (c.length < 4) { setError(tr("Enter the family code from your parent.")); return; }
     setLoading(true);
     const res = await joinFamily(c, n);
     setLoading(false);
     if (!res.ok) {
       const map = {
-        invalid_code: "That family code doesn't exist. Double-check it with your parent.",
-        inactive:     "That family code isn't active anymore.",
-        family_full:  "This family already has the maximum number of kids.",
+        invalid_code: tr("That family code doesn't exist. Double-check it with your parent."),
+        inactive:     tr("That family code isn't active anymore."),
+        family_full:  tr("This family already has the maximum number of kids."),
         // Distinct from family_full on purpose: this one is fixable, and only
         // the parent can fix it. Saying "full" would send the kid to try again
         // forever.
-        no_seats:     "Every seat in this family is taken. Ask your parent to add one in Drift, then try again.",
-        no_plan:      "Your parent needs to choose a Drift Family plan first. Try again once they have.",
-        bad_name:     "Enter your name.",
-        network:      "Network error. Check your connection.",
-        session:      "Couldn't finish signing in. Try again.",
+        no_seats:     tr("Every seat in this family is taken. Ask your parent to add one in Drift, then try again."),
+        no_plan:      tr("Your parent needs to choose a Drift Family plan first. Try again once they have."),
+        no_consent:   tr("Your parent needs to finish setting up your family in Drift first. Ask them to open Drift, then try again."),
+        bad_name:     tr("Enter your name."),
+        network:      tr("Network error. Check your connection."),
+        session:      tr("Couldn't finish signing in. Try again."),
       };
-      setError(map[res.reason] || "Couldn't join the family. Try again.");
+      setError(map[res.reason] || tr("Couldn't join the family. Try again."));
       return;
     }
     onDone(res.user);
@@ -1305,14 +1431,14 @@ function ChildJoinSlide({ onDone }) {
       </View>
       <View style={{ flex: 1 }}>
         <View style={styles.stepBadge}><WaveIcon size={24} color={ACCENT} /></View>
-        <Text style={styles.question}>Join your{"\n"}family</Text>
+        <Text style={styles.question}>{tr("Join your{{p}}family", { p: "\n" })}</Text>
         <Text style={styles.questionSub}>
-          Type your name and the family code your parent gives you. No email needed.
+          {tr("Type your name and the family code your parent gives you. No email needed.")}
         </Text>
         <View style={styles.authForm}>
           <Field
-            label="Your name"
-            placeholder="Alex"
+            label={tr("Your name")}
+            placeholder={tr("Alex")}
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
@@ -1321,7 +1447,7 @@ function ChildJoinSlide({ onDone }) {
             maxLength={40}
           />
           <Field
-            label="Family code"
+            label={tr("Family code")}
             style={{ letterSpacing: 4, textAlign: "center", fontSize: 20 }}
             placeholder="ABC123"
             value={code}
@@ -1340,7 +1466,7 @@ function ChildJoinSlide({ onDone }) {
         onPress={submit}
         disabled={loading}
       >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaBtnText}>Join family</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaBtnText}>{tr("Join family")}</Text>}
       </TouchableOpacity>
     </KeyboardAvoidingView>
   );
@@ -1437,8 +1563,8 @@ export default function OnboardingScreen({ onComplete, signInOnly = false }) {
       supabase.auth.getSession().then(({ data }) => {
         if (!data?.session?.user?.id) {
           Alert.alert(
-            "DEV skip — no session",
-            "This jumps past sign-in, so onboarding won't be able to finish. Sign in normally to test the full flow.",
+            tr("DEV skip — no session"),
+            tr("This jumps past sign-in, so onboarding won't be able to finish. Sign in normally to test the full flow."),
           );
         }
       }).catch(() => {});

@@ -8,6 +8,7 @@
 import { Share, Platform } from "react-native";
 import { supabase } from "./supabase";
 
+import { tr } from "./i18n";
 const INVITE_BASE_URL = "https://driftproductivity.com";
 
 /** Fetch the current user's referral code and stats. */
@@ -39,9 +40,7 @@ export async function shareReferralLink(code) {
   const link = `${INVITE_BASE_URL}?ref=${code}`;
   try {
     await Share.share({
-      message: Platform.OS === "ios"
-        ? `I use Drift to earn my screen time — join with my code ${code} for 15 bonus minutes: ${link}`
-        : `I use Drift to earn my screen time — join with my code ${code} for 15 bonus minutes: ${link}`,
+      message: Platform.OS === "ios" ? tr("I use Drift to earn my screen time — join with my code {{code}} for 15 bonus minutes: {{link}}", { code, link }) : tr("I use Drift to earn my screen time — join with my code {{code}} for 15 bonus minutes: {{link}}", { code, link }),
       url: Platform.OS === "ios" ? link : undefined,
     });
     return true;

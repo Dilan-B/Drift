@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { FF, getTheme } from "./theme";
 
+import { tr } from "./i18n";
 // Remapped onto the organic-editorial system — see theme.js FF.
 const FK = FF.bodyMed;
 const FO = FF.bodyBold;
@@ -21,7 +22,7 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
   const [body, setBody] = useState("");
 
   const openMail = async (message = body.trim()) => {
-    const subject = encodeURIComponent("Drift feedback");
+    const subject = encodeURIComponent(tr("Drift feedback"));
     const emailBody = encodeURIComponent(
       `${message}\n\n-- App version: 1.0\n-- Device: ${Platform.OS} ${Platform.Version}\n-- Username: @${username || "(none)"}\n-- User ID: ${userId || "(none)"}`
     );
@@ -30,21 +31,21 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
       await Linking.openURL(`mailto:${FEEDBACK_EMAIL}?subject=${subject}&body=${emailBody}`);
       return true;
     } catch {
-      Alert.alert("Mail not set up", `Email us at ${FEEDBACK_EMAIL}`);
+      Alert.alert(tr("Mail not set up"), tr("Email us at {{FEEDBACK_EMAIL}}", { FEEDBACK_EMAIL }));
       return false;
     }
   };
 
   const submit = async () => {
     const clean = body.trim();
-    if (clean.length < 5) { Alert.alert("Too short", "Tell us a bit more."); return; }
-    if (clean.length > 5000) { Alert.alert("Too long", "Keep it under 5000 characters."); return; }
+    if (clean.length < 5) { Alert.alert(tr("Too short"), tr("Tell us a bit more.")); return; }
+    if (clean.length > 5000) { Alert.alert(tr("Too long"), tr("Keep it under 5000 characters.")); return; }
 
     const opened = await openMail(clean);
     if (opened) {
       setBody("");
       onClose?.();
-      Alert.alert("Thanks", "Your email draft is ready to send.");
+      Alert.alert(tr("Thanks"), tr("Your email draft is ready to send."));
     }
   };
 
@@ -54,25 +55,25 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
         behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View style={s.header}>
           <TouchableOpacity onPress={onClose}>
-            <Text style={[s.headerCancel, { color: ink.mid }]}>Cancel</Text>
+            <Text style={[s.headerCancel, { color: ink.mid }]}>{tr("Cancel")}</Text>
           </TouchableOpacity>
-          <Text style={[s.headerTitle, { color: ink.deep, fontFamily: FK }]}>Send feedback</Text>
+          <Text style={[s.headerTitle, { color: ink.deep, fontFamily: FK }]}>{tr("Send feedback")}</Text>
           <TouchableOpacity onPress={submit}>
-            <Text style={[s.headerSend, { color: earn.green }]}>Send</Text>
+            <Text style={[s.headerSend, { color: earn.green }]}>{tr("Send")}</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
           <Text style={{ fontFamily: FO, fontSize: 9, color: ink.faint, letterSpacing: 2, marginBottom: 6 }}>
-            FEEDBACK
+            {tr("FEEDBACK")}
           </Text>
           <Text style={{ color: ink.mid, fontSize: 13, lineHeight: 18, marginBottom: 14 }}>
-            Bugs, ideas, anything. We read every message.
+            {tr("Bugs, ideas, anything. We read every message.")}
           </Text>
           <TextInput
             value={body}
             onChangeText={setBody}
-            placeholder="What's on your mind?"
+            placeholder={tr("What's on your mind?")}
             placeholderTextColor={ink.faint}
             multiline
             maxLength={5000}
@@ -88,7 +89,7 @@ export default function FeedbackModal({ visible, onClose, userId, username, dark
 
           <TouchableOpacity onPress={() => openMail()} style={{ marginTop: 24, padding: 14, alignItems: "center" }}>
             <Text style={{ color: ink.mid, fontSize: 13 }}>
-              Tap to open Mail to <Text style={{ color: earn.green }}>{FEEDBACK_EMAIL}</Text>
+              {tr("Tap to open Mail to")}{" "} <Text style={{ color: earn.green }}>{FEEDBACK_EMAIL}</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>

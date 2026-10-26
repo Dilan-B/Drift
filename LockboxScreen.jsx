@@ -40,6 +40,7 @@ import {
   scheduleLockboxLoss, cancelLockboxLoss, scheduleLockboxEnd, cancelLockboxEnd,
 } from "./notifications";
 
+import { tr } from "./i18n";
 // The native AR view is only present in a dev/standalone build. requireNativeComponent
 // throws in Expo Go, so this is resolved lazily and the screen degrades to the
 // no-AR path rather than crashing the tab.
@@ -340,7 +341,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
       onStarted?.(sess);
       await startMonitoring();
     } catch (e) {
-      Alert.alert("Couldn't start", e?.message || "Try again.");
+      Alert.alert(tr("Couldn't start"), e?.message || tr("Try again."));
     } finally { setBusy(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [minutes, task]);
@@ -503,17 +504,17 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
       onStarted?.(s);
       await startMonitoring();
     } catch (e) {
-      Alert.alert("Couldn't start", e?.message || "Try again.");
+      Alert.alert(tr("Couldn't start"), e?.message || tr("Try again."));
     } finally { setBusy(false); }
   };
 
   const cancel = () => {
     Alert.alert(
-      "End this session?",
-      "You won't earn anything for the time so far.",
+      tr("End this session?"),
+      tr("You won't earn anything for the time so far."),
       [
-        { text: "Keep going", style: "cancel" },
-        { text: "End", style: "destructive", onPress: () => settle("cancelled") },
+        { text: tr("Keep going"), style: "cancel" },
+        { text: tr("End"), style: "destructive", onPress: () => settle("cancelled") },
       ],
     );
   };
@@ -553,12 +554,12 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
       setSurface(false);
       setPlaced(false);
       Alert.alert(
-        "Couldn't map the room",
-        `${nativeEvent?.message || "The camera couldn't find a surface."}\n\nYou can try again, or run the session without the box — it works the same either way.`,
+        tr("Couldn't map the room"),
+        tr("{{p}}\n\nYou can try again, or run the session without the box — it works the same either way.", { p: nativeEvent?.message || tr("The camera couldn't find a surface.") }),
         [
-          { text: "Try again", onPress: () => callAR(arRef.current, "reset") },
-          { text: "Without the box", onPress: () => { beginSettle(); } },
-          { text: "Back", style: "cancel", onPress: () => { stopEntering(false); unsubRef.current?.(); Lockbox.stopMonitoring(); setPhase("setup"); } },
+          { text: tr("Try again"), onPress: () => callAR(arRef.current, "reset") },
+          { text: tr("Without the box"), onPress: () => { beginSettle(); } },
+          { text: tr("Back"), style: "cancel", onPress: () => { stopEntering(false); unsubRef.current?.(); Lockbox.stopMonitoring(); setPhase("setup"); } },
         ],
       );
     },
@@ -581,9 +582,9 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
         callAR(arRef.current, "reset");
       };
       const hint = placed
-        ? (!boxVisible ? "Point at where you left the box"
-          : strayed ? "That's not the box — set it inside" : "Set your phone in the box, screen up")
-        : surface ? "Aim at the spot, then tap to drop the box" : "Move slowly over a table or desk";
+        ? (!boxVisible ? tr("Point at where you left the box")
+          : strayed ? tr("That's not the box — set it inside") : tr("Set your phone in the box, screen up"))
+        : surface ? tr("Aim at the spot, then tap to drop the box") : tr("Move slowly over a table or desk");
 
       // Full screen (see onImmersiveChange): nothing of the app shell sits over
       // the camera. It should feel like the Camera app, not a page. The camera
@@ -607,7 +608,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
             {/* Bottom: a shutter, like the Camera app */}
             <View style={cam.bottom} pointerEvents="box-none">
               <TouchableOpacity onPress={placed ? redo : beginSettle} style={cam.side}>
-                <Text style={cam.sideText}>{placed ? "Redo" : "Skip"}</Text>
+                <Text style={cam.sideText}>{placed ? tr("Redo") : tr("Skip")}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -618,7 +619,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
                 disabled={placed ? busy : !surface}
                 activeOpacity={0.8}
                 style={[cam.shutter, { opacity: (placed ? busy : !surface) ? 0.35 : 1 }]}
-                accessibilityLabel={placed ? "Start now" : "Drop the box"}
+                accessibilityLabel={placed ? tr("Start now") : tr("Drop the box")}
               >
                 <View style={cam.shutterInner}>
                   {placed && <LockIcon size={22} color="#0B1A11" />}
@@ -626,7 +627,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
               </TouchableOpacity>
 
               <View style={cam.side}>
-                {placed && <Text style={cam.sideText}>Start now</Text>}
+                {placed && <Text style={cam.sideText}>{tr("Start now")}</Text>}
               </View>
             </View>
           </SafeAreaView>
@@ -637,8 +638,8 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
             <View style={[StyleSheet.absoluteFill, cam.lockIn]}>
               <LockIcon size={26} color="#8EA8FF" />
               <Text style={cam.lockInCount}>{entering}</Text>
-              <Text style={cam.lockInText}>Leave it there</Text>
-              <Text style={cam.lockInSub}>Pick it up to see the box again</Text>
+              <Text style={cam.lockInText}>{tr("Leave it there")}</Text>
+              <Text style={cam.lockInSub}>{tr("Pick it up to see the box again")}</Text>
             </View>
           )}
         </View>
@@ -653,13 +654,13 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
       return (
         <View style={[s.night, { backgroundColor: night }]}>
           <StatusBar barStyle="light-content" />
-          <Text style={[s.bigSerif, { color: "#F7F7F4" }]}>Set your phone{"\n"}down</Text>
+          <Text style={[s.bigSerif, { color: "#F7F7F4" }]}>{tr("Set your phone{{p}}down", { p: "\n" })}</Text>
           <Text style={[s.sub, { color: onNight }]}>
-            Screen up. The session starts once it's completely still.
+            {tr("Screen up. The session starts once it's completely still.")}
           </Text>
           <ActivityIndicator color="#7FB58F" style={{ marginTop: 30 }} />
           <TouchableOpacity onPress={() => settle("cancelled")} style={{ marginTop: 44 }}>
-            <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: "rgba(247,247,244,0.5)" }}>Cancel</Text>
+            <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: "rgba(247,247,244,0.5)" }}>{tr("Cancel")}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -673,15 +674,14 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
             <View style={[cam.top, { justifyContent: "center" }]}>
               <View style={[cam.pill, { backgroundColor: "rgba(150,40,30,0.85)" }]}>
                 <Text style={cam.pillText}>
-                  {!boxVisible ? "Point at where you left the box"
-                  : strayed ? "That's not the box — set it inside" : "Put it back in the box"}
+                  {!boxVisible ? tr("Point at where you left the box") : strayed ? tr("That's not the box — set it inside") : tr("Put it back in the box")}
                 </Text>
               </View>
             </View>
             <View style={cam.breachCount}>
               <Text style={cam.breachNum}>{grace ?? Lockbox.GRACE_SECONDS}</Text>
             </View>
-            <Text style={[cam.gestures, { bottom: 60 }]}>{fmt(left)} still to go</Text>
+            <Text style={[cam.gestures, { bottom: 60 }]}>{tr("{{fmt}} still to go", { fmt: fmt(left) })}</Text>
           </SafeAreaView>
         </View>
       );
@@ -692,7 +692,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
         <View style={[s.night, { backgroundColor: "#2A1512" }]}>
           <StatusBar barStyle="light-content" />
           <Text style={{ fontFamily: FF.kicker, fontSize: 10, letterSpacing: 1.8, color: "#E89078" }}>
-            PUT IT BACK
+            {tr("PUT IT BACK")}
           </Text>
           <Text style={{
             fontFamily: FF.display, fontSize: 84, color: "#F7F7F4",
@@ -701,11 +701,10 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
             {grace ?? Lockbox.GRACE_SECONDS}
           </Text>
           <Text style={[s.sub, { color: "rgba(247,247,244,0.75)" }]}>
-            Your phone left the box. Put it back before this reaches zero or the
-            session is forfeited.
+            {tr("Your phone left the box. Put it back before this reaches zero or the session is forfeited.")}
           </Text>
           <Text style={{ fontFamily: FF.body, fontSize: 12.5, color: "rgba(247,247,244,0.45)", marginTop: 22 }}>
-            {fmt(left)} still to go
+            {tr("{{fmt}} still to go", { fmt: fmt(left) })}
           </Text>
         </View>
       );
@@ -718,7 +717,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 18 }}>
             <LockIcon size={14} color="#7FB58F" />
             <Text style={{ fontFamily: FF.kicker, fontSize: 10, letterSpacing: 1.8, color: "#7FB58F" }}>
-              IN THE BOX
+              {tr("IN THE BOX")}
             </Text>
           </View>
           <Text style={{
@@ -731,16 +730,16 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
             <Text style={[s.sub, { color: onNight, marginTop: 6 }]}>{session.task}</Text>
           )}
           <Text style={{ fontFamily: FF.body, fontSize: 12.5, color: "rgba(247,247,244,0.45)", marginTop: 26 }}>
-            +{session?.rewardMinutes || 0} minutes when this finishes
+            {tr("+{{p}} minutes when this finishes", { p: session?.rewardMinutes || 0 })}
           </Text>
           {!!session?.offscreen && (
             <Text style={{ fontFamily: FF.body, fontSize: 12.5, color: "rgba(247,247,244,0.45)", marginTop: 8, textAlign: "center" }}>
-              You can let the screen turn off. The countdown is on your lock screen.
+              {tr("You can let the screen turn off. The countdown is on your lock screen.")}
             </Text>
           )}
           <TouchableOpacity onPress={cancel} style={{ marginTop: 46 }}>
             <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: "rgba(247,247,244,0.5)" }}>
-              End early
+              {tr("End early")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -753,17 +752,17 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
         <View style={[s.night, { backgroundColor: won ? night : "#241A16" }]}>
           <StatusBar barStyle="light-content" />
           <Text style={[s.bigSerif, { color: "#F7F7F4" }]}>
-            {won ? "Nice." : "Session lost."}
+            {won ? tr("Nice.") : tr("Session lost.")}
           </Text>
           <Text style={[s.sub, { color: onNight }]}>{Lockbox.describeResult(result)}</Text>
           <TouchableOpacity
             onPress={() => { setResult(null); setSession(null); setPhase("setup"); }}
             style={{ marginTop: 34, backgroundColor: earn.green, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 30 }}
           >
-            <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: "#fff" }}>Again</Text>
+            <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: "#fff" }}>{tr("Again")}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onClose} style={{ marginTop: 18 }}>
-            <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: "rgba(247,247,244,0.5)" }}>Done</Text>
+            <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: "rgba(247,247,244,0.5)" }}>{tr("Done")}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -807,13 +806,13 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
               fontFamily: FF.kicker, fontSize: 10, letterSpacing: 2.4,
               color: ink.faint, marginBottom: 6,
             }}>
-              PHONE AWAY
+              {tr("PHONE AWAY")}
             </Text>
             <Text style={{ fontFamily: FF.display, fontSize: 40, color: ink.deep, letterSpacing: -0.4 }}>
-              Lockbox
+              {tr("Lockbox")}
             </Text>
             <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, lineHeight: 20, marginTop: 8 }}>
-              Drop a box on your desk. Phone goes in, and stays in.
+              {tr("Drop a box on your desk. Phone goes in, and stays in.")}
             </Text>
           </View>
 
@@ -833,7 +832,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
             </View>
 
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-              <Text style={[s.fieldKicker(ink), { marginBottom: 0 }]}>LENGTH</Text>
+              <Text style={[s.fieldKicker(ink), { marginBottom: 0 }]}>{tr("LENGTH")}</Text>
               <Text style={{ fontFamily: FF.display, fontSize: 24, color: ink.deep, letterSpacing: -0.4 }}>
                 {durLabel}
               </Text>
@@ -854,14 +853,14 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
 
             <View style={s.divider(ink)} />
 
-            <Text style={s.fieldKicker(ink)}>YOU'LL EARN</Text>
+            <Text style={s.fieldKicker(ink)}>{tr("YOU'LL EARN")}</Text>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: FF.display, fontSize: 26, color: earn.sage, letterSpacing: -0.4 }}>
                   {reward}m
                 </Text>
                 <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                  {capped ? "screen time (max)" : "screen time"}
+                  {capped ? tr("screen time (max)") : tr("screen time")}
                 </Text>
               </View>
               <View style={{ width: 1, height: 36, backgroundColor: ink.hairline, marginHorizontal: 16 }} />
@@ -870,7 +869,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
                   {Lockbox.GRACE_SECONDS}s
                 </Text>
                 <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                  to put it back
+                  {tr("to put it back")}
                 </Text>
               </View>
             </View>
@@ -878,7 +877,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
 
           {!ARView && (
             <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint, marginTop: 14, lineHeight: 17, textAlign: "center" }}>
-              No AR on this device — just set your phone down flat.
+              {tr("No AR on this device — just set your phone down flat.")}
             </Text>
           )}
         </ScrollView>
@@ -898,7 +897,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
               <TextInput
                 value={task}
                 onChangeText={setTask}
-                placeholder="What for? (optional)"
+                placeholder={tr("What for? (optional)")}
                 placeholderTextColor={ink.faint}
                 maxLength={60}
                 returnKeyType="done"
@@ -930,7 +929,7 @@ export default function LockboxScreen({ dark = false, modePicker = null, onClose
                   <>
                     <LockIcon size={15} color={onDeep} />
                     <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, letterSpacing: 0.2, color: onDeep }}>
-                      {ARView ? "Place the box" : "Start"}
+                      {ARView ? tr("Place the box") : tr("Start")}
                     </Text>
                   </>
                 )}
@@ -1070,13 +1069,13 @@ function LockSeal({ onDone }) {
         opacity: label,
         transform: [{ translateY: label.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
       }}>
-        Locked
+        {tr("Locked")}
       </Animated.Text>
       <Animated.Text style={{
         fontFamily: FF.body, fontSize: 13.5, color: "rgba(247,247,244,0.6)",
         marginTop: 8, opacity: label,
       }}>
-        Leave it where it is.
+        {tr("Leave it where it is.")}
       </Animated.Text>
     </Animated.View>
   );

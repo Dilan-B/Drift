@@ -1,82 +1,142 @@
 # Drift Privacy Policy
 
-**Effective: October 12, 2026**
+**Effective: October 25, 2026**
 
-This Privacy Policy describes how Drift ("we", "us") handles your data when you use the Drift mobile application. We've kept it short and human-readable. If something here isn't clear, email **driftappcontact@gmail.com** and we'll explain.
+This policy explains what the Drift app collects, why, who it goes to, how long we keep it, and what you can do about it. We've tried to keep it short and exact. If anything here is unclear, email **driftappcontact@gmail.com**.
+
+Drift is not a healthcare provider and is not covered by HIPAA. We hold ourselves to the commitments below instead.
 
 ## What we collect
 
-**Account data** — when you sign up, we store:
-- Your email address (used for sign-in and account recovery).
-- A username you pick.
-- A salted password hash (we never see your password — Supabase manages this).
-- The date you installed the app.
+**Account**
+- Your email address (sign-in and account recovery), or the identifier Apple or Google gives us if you sign in with them.
+- The username you pick and, if you add one, a profile photo.
+- Your password, stored only as a salted hash by our authentication provider. We never see it.
 
-**Activity data** — to make the app work, we store:
-- Tasks you create, mark complete, or delete (titles, durations, categories).
-- Earned screen-time credits and XP totals.
-- Friendships you've initiated or accepted, by user ID.
-- Challenges you send or receive, including status, type, and exercise picked.
+**What you do in Drift**
+- Tasks you create: title, duration, category, when you completed them, and any written proof you add.
+- Your screen-time balance, credits, XP, level and streak.
+- Friends you add, and challenges you send or receive.
+- The answers you give during setup (which daily tasks to start with, and how strict you want verification to be).
+- Recurring tasks, blocked-hours schedules and action plans you set up.
 
-**Optional data** — only collected if you opt in:
-- An avatar image you upload (Supabase Storage).
-- Photos or text you submit for AI verification (processed by OpenAI via our server, then discarded — not stored).
-- App selections you make in Apple's Screen Time picker (stored on your device only — see "Apple Screen Time" below).
+**AI Check (optional, Pro and free-tier verification)**
+- When you ask Drift to verify a task, we send the task title, your written proof and, if you attach one, a photo or a handful of still frames from a short video to OpenAI through our server.
+- **The photo or video is not stored** by us. We keep a short text description of what the AI saw, and its verdict, on the task so you can answer a follow-up question and so the result can be reviewed.
+- OpenAI processes this under its API terms: it does not use API data to train its models, and may keep it for up to 30 days to monitor for abuse before deleting it.
+- **Children's accounts never use AI Check.** Our servers refuse it.
 
-**Crash diagnostics** — none. We don't include third-party analytics, crash reporters, advertising SDKs, or trackers.
+**Product analytics**
+- Simple usage events, such as "task completed" or "app opened", with your user ID, platform, OS version and app version. They're stored in our own database, never sent to an analytics or advertising company, and used only to understand how Drift is used.
+- **Children's accounts are never tracked.**
 
-## What we don't collect
+**Technical**
+- A push-notification token for your device, and the app language it uses, so we can send the notifications you've allowed.
+- A one-way hash of your IP address when you redeem a code or start a trial, to stop abuse.
 
-- We don't read your contacts, calendar, photos library (beyond a photo you explicitly pick for proof), location, or Health data.
-- We don't track which apps you actually use on your phone. Apple's Screen Time API gives us *opaque tokens* representing your selection — even we can't see which apps you picked.
-- We don't sell, rent, or share your personal data with advertisers or data brokers. Ever.
+## What stays on your phone
 
-## Where your data lives
+These never leave your device:
+- **Apple Screen Time selections.** Apple gives Drift only opaque tokens for the apps you pick. We can't see which apps they are, or how you use them.
+- **Location.** Places you save and arrival detection run on the device. Coordinates are never uploaded.
+- **Calendar and Reminders.** If you turn on calendar sync, today's events are read on the device to create tasks. Nothing is uploaded except the tasks you choose to keep.
+- **Motion data** for Lockbox, sleep guard and exercise counting.
+- **Pose detection** during exercise challenges runs on the device. No camera image is uploaded for it.
+- **NFC tag ID** for the sleep guard.
 
-- **Account, tasks, friendships, screen-time history**: Supabase (PostgreSQL, hosted in the US). Encrypted at rest and in transit.
-- **AI verification proofs**: sent over HTTPS to OpenAI through our Supabase Edge Function, used for one evaluation, then discarded. Neither we nor OpenAI retain training data from these submissions.
-- **Apple Screen Time selection**: stored *only on your device* (iOS UserDefaults). Never uploaded to our servers.
-- **Subscription status**: purchases are made through Apple. RevenueCat receives your Drift account ID and the receipt Apple issues so it can tell us whether your subscription is active. It does not receive your tasks, proofs or screen-time data.
-- **Local app state** (current day's balance, dark mode preference): stored on your device only.
+**Contacts (optional).** If you use "Find friends from contacts", contact email addresses are normalised and SHA-256 hashed on your device. Only the hashes are sent, to match them against Drift users. We don't store them.
 
-## Who can see your data
+## What we don't do
 
-- **You** — full access via the app.
-- **Your friends** — only your username and total screen-time minutes earned today. Not the underlying tasks.
-- **Drift staff** — only with your explicit support request, and only the minimum needed to debug your issue.
-- **No one else.** We do not share, sell, or hand over data to third parties except as required by law (e.g., a valid US court order).
+- We don't sell or rent personal data, or "share" it for cross-context behavioural advertising.
+- There are no advertising SDKs, data brokers, third-party analytics or crash reporters in Drift.
+- We don't collect your precise location, Health app data, contacts' names or phone numbers, or your browsing.
 
-## Apple Screen Time
+## Who receives data
 
-Drift uses Apple's Family Controls and Device Activity frameworks to optionally block apps you select during focus sessions or when your earned balance hits zero. Per Apple's design:
-- The list of apps you pick is **never visible to us** — we receive only opaque tokens.
-- The shield is applied and enforced by iOS itself, not by Drift's servers.
-- All Screen Time activity stays on your device.
+We use these service providers. Each processes data only to run Drift, under contracts that require them to keep it confidential and secure:
 
-## Children
+| Provider | What for | What it receives |
+|---|---|---|
+| Supabase (USA) | Database, sign-in, file storage, server functions | Everything stored in your account |
+| OpenAI (USA) | AI Check and task valuation | Task title, written proof, proof photo or frames |
+| RevenueCat (USA) | Subscription status | Your Drift account ID and Apple's receipt, not your tasks |
+| Apple | In-app purchases, Sign in with Apple, push delivery | Purchase, sign-in and notification data |
+| Expo (USA) | Push notification delivery | Push token and the notification text |
+| Google | Google sign-in (if you use it) | Sign-in data |
 
-Drift is rated 12+ and not directed at children under 13. We don't knowingly collect data from anyone under 13. If you believe a minor has signed up, email us and we'll delete the account.
+We disclose data to authorities only when legally required, for example a valid court order.
 
-## Your rights
+## What other people can see
 
-You can:
-- **View your data** by tapping the user icon in Drift.
-- **Delete your account and all associated data** by emailing **driftappcontact@gmail.com** with the subject "Delete my account" from the address you signed up with. We process deletions within 7 days.
-- **Export your data** — same email, subject "Export my data". You'll get a JSON file within 14 days.
+- Other Drift users can see your **username, profile photo and level**.
+- **Friends** you've added can also see today's screen-time minutes, your streak, and challenges between you.
+- Your tasks, proof and AI results are visible only to you. For a child account, they're also visible to the parent.
 
-If you're in the EEA, UK, or California, you have additional rights under GDPR / UK GDPR / CCPA (access, correction, portability, right to object). The email above handles those requests too.
+## Children and families
+
+Personal Drift accounts are for people 13 and older. Children under 13 may use Drift only through a **Family** account that a parent sets up. This section is our notice to parents under the Children's Online Privacy Protection Act (COPPA).
+
+**Parental consent first.** A family code doesn't work until the parent has read our notice in the app and agreed to it. We verify consent through the parent's Drift Family purchase. Apple processes it as a monetary transaction and notifies the account holder. We record when consent was given and which version of the notice it was for, and we ask again if that notice changes materially.
+
+**What we collect from a child**
+- The first name or nickname they type when joining.
+- Tasks the parent assigns, and whether they're done.
+- Their screen-time balance and the app categories the parent allows.
+- Requests they send the parent to allow an app.
+- A push-notification token.
+
+**What we don't collect from a child:** email, phone number, password, photos, video, location, contacts, birthday, or usage analytics. Children's accounts never use AI Check, so nothing a child does is sent to OpenAI. Which apps a child uses stays on their phone.
+
+**Why.** Only to provide the features the parent uses: assigning and approving tasks, and unlocking screen time on the child's phone. We don't use children's data for advertising, profiling or AI training, and we never make it public.
+
+**Who receives it.** Only Supabase (storage) and Apple and Expo (notification delivery), as service providers. No other third parties.
+
+**Parents' rights.** In the parent's Drift app, a parent can at any time:
+- **Review** what Drift holds about each child: tap **Data** next to the child's name.
+- **Delete** a child's data: Data → Delete.
+- **Withdraw consent**: Profile → *Withdraw consent and delete kids' data*. This deletes every child's data and stops all further collection.
+
+Parents can also email driftappcontact@gmail.com.
+
+**Retention.** A child's data is kept only while the child uses Drift. It's deleted when the parent removes the child, withdraws consent or deletes their own account, and automatically after 18 months with no activity.
+
+## How long we keep data
+
+| Data | Kept for |
+|---|---|
+| Your account and the things you've created | Until you delete your account |
+| Product analytics events | 13 months |
+| AI Check usage records | 90 days |
+| Push tokens | Until 9 months after the device last checks in |
+| A child's data | See "Children and families" above |
+| Subscription event records (opaque account ID, product, dates) | As long as needed for billing, tax and dispute obligations |
+
+These limits are enforced automatically every night.
+
+## Your rights and choices
+
+- **Delete your account in the app:** Profile → *Delete account*. This permanently erases your profile, tasks, history, friendships, challenges, analytics and profile photo. It also deletes any children in your family, and revokes Sign in with Apple. Deleting your account doesn't cancel an Apple subscription; cancel it in iPhone Settings → Apple ID → Subscriptions.
+- **Access, correction, export or objection:** email driftappcontact@gmail.com from your account's email address. We reply within 30 days.
+- **Permissions:** location, calendar, contacts, camera, motion and notifications are all optional. You can turn each one off in iPhone Settings at any time.
+
+**California (CCPA/CPRA) and other US states.** You have the right to know, delete, correct and port your personal information, and to not be discriminated against for using these rights. We don't sell or share personal information, and we don't use sensitive personal information to infer characteristics about you. To make a request, use the email above; an authorised agent may make one for you.
+
+**Consumer health data (Washington, Nevada and similar laws).** Some of what you do in Drift, such as exercise tasks, workout challenges and sleep-guard results, could be treated as consumer health data. We collect it only to provide the feature you're using, with your consent when you choose that feature. We don't sell it or share it with third parties beyond the providers listed above, and you can review or delete it, or withdraw consent, as described in this policy. We never geofence health-care facilities.
+
+**EEA, UK and Switzerland (GDPR).** We process your data to provide the service you asked for (contract), to measure and improve it and prevent abuse (legitimate interests), and with your consent for optional features such as contacts matching and calendar sync. You may withdraw consent at any time. Data is processed in the United States under Standard Contractual Clauses. You have the rights of access, rectification, erasure, restriction, portability and objection, and the right to complain to your local data-protection authority.
 
 ## Security
 
-- All network traffic uses HTTPS / TLS 1.2+. Plain HTTP is disabled in our iOS build.
-- Passwords are hashed and salted by Supabase Auth (bcrypt-equivalent).
-- The Supabase anon key shipped with the app is restricted by Row Level Security — it can't read or modify another user's data.
-- We do not store payment card details — Apple handles all payments.
+- All traffic is encrypted in transit (TLS 1.2+), and data is encrypted at rest.
+- Row-level security means one account can never read another's private data. The parent–child relationship is the only exception.
+- Sign-in tokens on your phone are encrypted with a key held in the iOS Keychain.
+- We keep a written information-security programme, review risks at least once a year, and will notify you and the relevant authorities of a breach as the law requires.
 
-## Changes to this policy
+## Changes
 
-If we change anything material, we'll post the new version in the app and notify you on next launch. The effective date at the top reflects the most recent revision.
+If we make a material change, we'll show the new version in the app before it applies. Parents will be asked for consent again if the change affects children's data. The date at the top is the latest revision.
 
 ## Contact
 
-**driftappcontact@gmail.com** — privacy, deletion, GDPR, anything.
+Drift, **driftappcontact@gmail.com**. This covers privacy, deletion, parental requests and GDPR/CCPA requests.

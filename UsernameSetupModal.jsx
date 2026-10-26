@@ -14,6 +14,7 @@ import {
 import { supabase } from "./supabase";
 import { FF, getTheme } from "./theme";
 
+import { tr } from "./i18n";
 // Remapped onto the organic-editorial system — see theme.js FF.
 const FO  = FF.bodyBold;
 const FOM = FF.kicker;
@@ -23,10 +24,10 @@ function normalize(raw) {
   return (raw || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
 }
 function validate(u) {
-  if (!u) return "Pick a username.";
-  if (u.length < 3) return "At least 3 characters.";
-  if (u.length > 20) return "Max 20 characters.";
-  if (!/^[a-z0-9_]+$/.test(u)) return "Letters, numbers, underscores only.";
+  if (!u) return tr("Pick a username.");
+  if (u.length < 3) return tr("At least 3 characters.");
+  if (u.length > 20) return tr("Max 20 characters.");
+  if (!/^[a-z0-9_]+$/.test(u)) return tr("Letters, numbers, underscores only.");
   return null;
 }
 
@@ -50,7 +51,7 @@ export default function UsernameSetupModal({ visible, userId, onDone, dark = fal
       const { data: taken } = await supabase
         .from("profiles").select("id").ilike("username", v).maybeSingle();
       if (taken && taken.id !== userId) {
-        setError("That username is taken. Try another.");
+        setError(tr("That username is taken. Try another."));
         setBusy(false);
         return;
       }
@@ -60,7 +61,7 @@ export default function UsernameSetupModal({ visible, userId, onDone, dark = fal
         .from("profiles").update({ username: v }).eq("id", userId);
       if (updErr) {
         if (/duplicate|unique/i.test(updErr.message || "")) {
-          setError("That username is taken. Try another.");
+          setError(tr("That username is taken. Try another."));
         } else {
           setError(updErr.message);
         }
@@ -70,7 +71,7 @@ export default function UsernameSetupModal({ visible, userId, onDone, dark = fal
 
       onDone?.(v);
     } catch (e) {
-      setError(e?.message || "Could not save. Try again.");
+      setError(e?.message || tr("Could not save. Try again."));
     } finally {
       setBusy(false);
     }
@@ -87,22 +88,22 @@ export default function UsernameSetupModal({ visible, userId, onDone, dark = fal
         <View style={{ flex: 1, padding: 28, paddingTop: 60, justifyContent: "space-between" }}>
           <View>
             <Text style={{ fontFamily: FOM, fontSize: 9, color: ink.faint, letterSpacing: 2, marginBottom: 8 }}>
-              ONE MORE THING
+              {tr("ONE MORE THING")}
             </Text>
             <Text style={{ fontFamily: FK, fontSize: 28, color: ink.deep, marginBottom: 8 }}>
-              Pick your username
+              {tr("Pick your username")}
             </Text>
             <Text style={{ fontSize: 14, color: ink.mid, marginBottom: 32, lineHeight: 20 }}>
-              How friends find you. Can't be changed later.
+              {tr("How friends find you. Can't be changed later.")}
             </Text>
 
             <Text style={{ fontFamily: FOM, fontSize: 9, color: ink.faint, letterSpacing: 2, marginBottom: 8 }}>
-              USERNAME
+              {tr("USERNAME")}
             </Text>
             <TextInput
               value={value}
               onChangeText={(t) => setValue(normalize(t))}
-              placeholder="3–20 chars, letters/numbers/_"
+              placeholder={tr("3–20 chars, letters/numbers/_")}
               placeholderTextColor={ink.faint}
               autoCapitalize="none"
               autoCorrect={false}
@@ -131,7 +132,7 @@ export default function UsernameSetupModal({ visible, userId, onDone, dark = fal
             {busy
               ? <ActivityIndicator color={dark ? "#16261C" : "#fff"} />
               : <Text style={{ fontFamily: FO, fontSize: 13, color: dark ? "#16261C" : "#fff", letterSpacing: 2 }}>
-                  CLAIM USERNAME
+                  {tr("CLAIM USERNAME")}
                 </Text>}
           </TouchableOpacity>
         </View>

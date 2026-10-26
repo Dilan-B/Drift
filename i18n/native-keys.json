@@ -1,0 +1,122 @@
+{
+ "{{name}} unlocks when you complete a task in Drift.": [
+  "ios/DriftShield"
+ ],
+ "{{name}} will still be there in ten minutes.": [
+  "ios/DriftShield"
+ ],
+ "Session's still running. {{name}} can wait.": [
+  "ios/DriftShield"
+ ],
+ "Finish up. {{name}} will still be there.": [
+  "ios/DriftShield"
+ ],
+ "You blocked {{name}} for a reason.": [
+  "ios/DriftShield"
+ ],
+ "Is {{name}} the move right now?": [
+  "ios/DriftShield"
+ ],
+ "You chose depth over {{name}}.": [
+  "ios/DriftShield"
+ ],
+ "{{name}} is blocked.": [
+  "ios/DriftShield"
+ ],
+ "{{name}} can wait.": [
+  "ios/DriftShield"
+ ],
+ "Earn screen time by completing a task in Drift.": [
+  "ios/DriftShield"
+ ],
+ "Your session is still running. Stay with it.": [
+  "ios/DriftShield"
+ ],
+ "This moment is yours, not your phone's.": [
+  "ios/DriftShield"
+ ],
+ "Complete a task to earn your time back.": [
+  "ios/DriftShield"
+ ],
+ "Finish first. This will still be here.": [
+  "ios/DriftShield"
+ ],
+ "Complete a task in Drift to unlock.": [
+  "ios/DriftShield"
+ ],
+ "You set this boundary for a reason.": [
+  "ios/DriftShield"
+ ],
+ "No balance. One task changes that.": [
+  "ios/DriftShield"
+ ],
+ "One task in Drift and it's yours.": [
+  "ios/DriftShield"
+ ],
+ "You chose depth over distraction.": [
+  "ios/DriftShield"
+ ],
+ "Nothing here that can't wait.": [
+  "ios/DriftShield"
+ ],
+ "Stillness is productive too.": [
+  "ios/DriftShield"
+ ],
+ "One task is all it takes.": [
+  "ios/DriftShield"
+ ],
+ "Blocked.": [
+  "ios/DriftShield"
+ ],
+ "Not yet.": [
+  "ios/DriftShield"
+ ],
+ "Not now.": [
+  "ios/DriftShield"
+ ],
+ "Breathe.": [
+  "ios/DriftShield"
+ ],
+ "Focus.": [
+  "ios/DriftShield"
+ ],
+ "I'll come back later": [
+  "ios/DriftShield"
+ ],
+ "Almost out of time": [
+  "ios/DriftMonitor"
+ ],
+ "Your earned time is nearly gone. Wrap up, or complete a task to keep going.": [
+  "ios/DriftMonitor"
+ ],
+ "Is {{label}} really the move right now?": [
+  "ios/DriftMonitor"
+ ],
+ "Is this really the move right now?": [
+  "ios/DriftMonitor"
+ ],
+ "You're {{mins}} minutes in. No judgment, just checking.": [
+  "ios/DriftMonitor"
+ ],
+ "{{mins}} minutes gone. Still worth it?": [
+  "ios/DriftMonitor"
+ ],
+ "That's {{mins}} minutes of your earned time. Your call.": [
+  "ios/DriftMonitor"
+ ],
+ "{{mins}} minutes in. There's a task waiting if you'd rather.": [
+  "ios/DriftMonitor"
+ ],
+ "Time's up": [
+  "ios/DriftMonitor"
+ ],
+ "You're out of earned time. Complete a task to unlock your apps.": [
+  "ios/DriftMonitor"
+ ],
+ "Drift Balance": [
+  "ios/DriftWidgets"
+ ],
+ "See your earned screen-time balance at a glance.": [
+  "ios/DriftWidgets"
+ ]
+}

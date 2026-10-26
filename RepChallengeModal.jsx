@@ -22,6 +22,7 @@ import { FF, getTheme } from "./theme";
 import { CheckIcon, CameraIcon } from "./Icons";
 import { LeafGlyph } from "./SproutArt";
 
+import { tr } from "./i18n";
 // Sensible rep targets when a legacy challenge row has no reps column.
 const DEFAULT_REPS = {
   pushups: 20, squats: 30, jacks: 30, situps: 20, burpees: 10, lunges: 20, dips: 15,
@@ -100,14 +101,13 @@ export default function RepChallengeModal({ challenge, onVerified, onUsePhoto, o
         fontFamily: FF.bodyMed, fontSize: 14, color: ink.deep,
         textAlign: "center", marginTop: 12,
       }}>
-        Live tracking isn't available
+        {tr("Live tracking isn't available")}
       </Text>
       <Text style={{
         fontFamily: FF.body, fontSize: 12, color: ink.mid,
         textAlign: "center", marginTop: 6, lineHeight: 18,
       }}>
-        Your build or camera can't run pose detection right now. You can still
-        verify with a photo.
+        {tr("Your build or camera can't run pose detection right now. You can still verify with a photo.")}
       </Text>
       <TouchableOpacity
         onPress={onUsePhoto}
@@ -118,7 +118,7 @@ export default function RepChallengeModal({ challenge, onVerified, onUsePhoto, o
         }, fx.glow]}
       >
         <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: ink.void }}>
-          Verify with photo
+          {tr("Verify with photo")}
         </Text>
       </TouchableOpacity>
     </View>
@@ -148,7 +148,7 @@ export default function RepChallengeModal({ challenge, onVerified, onUsePhoto, o
           alignItems: "center",
         }}>
           <Text style={{ fontFamily: FF.kicker, fontSize: 10, letterSpacing: 2.4, color: ink.faint, marginBottom: 8 }}>
-            LIVE CHECK
+            {tr("LIVE CHECK")}
           </Text>
           <Text
             numberOfLines={1}
@@ -168,7 +168,7 @@ export default function RepChallengeModal({ challenge, onVerified, onUsePhoto, o
           }}>
             <LeafGlyph size={14} color={earn.sage} />
             <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.deep }}>
-              The camera counts your reps — no photo needed
+              {tr("The camera counts your reps — no photo needed")}
             </Text>
           </View>
         </View>
@@ -191,10 +191,10 @@ export default function RepChallengeModal({ challenge, onVerified, onUsePhoto, o
                 <CheckIcon size={36} color={ink.void} />
               </View>
               <Text style={{ fontFamily: FF.display, fontSize: 30, color: ink.deep, letterSpacing: -0.4 }}>
-                Verified
+                {tr("Verified")}
               </Text>
               <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, marginTop: 6 }}>
-                {target} of {target} counted
+                {tr("{{target}} of {{target}} counted", { target })}
               </Text>
             </View>
           ) : available ? (
@@ -237,14 +237,14 @@ export default function RepChallengeModal({ challenge, onVerified, onUsePhoto, o
           {available && !done && (
             <TouchableOpacity onPress={onUsePhoto} style={{ height: 42, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid }}>
-                Trouble tracking? Verify with a photo instead
+                {tr("Trouble tracking? Verify with a photo instead")}
               </Text>
             </TouchableOpacity>
           )}
           {!done && (
             <TouchableOpacity onPress={onClose} style={{ height: 42, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.faint }}>
-                Not now
+                {tr("Not now")}
               </Text>
             </TouchableOpacity>
           )}

@@ -1,0 +1,1447 @@
+1	\n\nLưu ý: vị trí đang đặt là "Khi dùng ứng dụng", nên khi Drift đóng, việc đến nơi thật sẽ không kích hoạt.
+2	 Mỗi mức giá thấp hơn sẽ được đề xuất trong ứng dụng để bạn chấp nhận.
+3	 Giá cuối cùng do App Store hiển thị.
+4	 · bị trả lại, thử lại nhé
+5	 · chuỗi {{streak}} ngày
+6	"{{title}}" sẽ bị xóa khỏi hôm nay.
+7	"{{title}}" sẽ bị xóa.
+8	"{{title}}" — mở Drift để chấp nhận hoặc từ chối.
+9	(TÙY CHỌN)
+11	+ Việc
+12	+{{minutes}} phút
+13	+{{minutes}} phút{{p}}
+14	+{{p}} phút khi xong
+15	+{{rewardMinutes}} phút đang chờ nếu để yên
+16	+{{xp}} XP
+17	1 đêm liên tiếp.
+18	10 burpee
+19	Chạy bộ 10 phút
+20	10 phút · Hít thở và làm mới
+21	10 phút · Viết ra suy nghĩ
+22	Chạy bộ 10 phút
+23	12+ ký tự, số, ký hiệu
+24	15 phút · Hít thở không khí
+25	15 phút · Dọn gọn chỗ của bạn
+26	2 phút · Khởi đầu ngày mới
+27	20 lần lunge
+28	20 phút · Sách hoặc bài viết
+29	20 phút · Ăn một bữa tử tế
+30	20 phút · Nhạc, vẽ, lập trình…
+31	20 lần hít đất
+32	20 lần gập bụng
+33	30 lần bật nhảy
+34	30 phút · Tập luyện hoặc phòng gym
+35	30 phút · Bài tập về nhà hoặc học
+36	30 lần squat
+37	3–20 ký tự, chữ/số/_
+38	5 phút · Thả lỏng
+39	5/GIỜ · TỐI ĐA 20/NGÀY
+40	60 phút · Cai điện thoại buổi sáng
+41	Plank 60 giây
+42	9:00 Họp nhanh
+43	@tenban
+44	@{{fromUsername}} muốn cùng bạn phát triển trên Drift.
+45	@{{leaderName}} hôm nay dùng màn hình ít hơn bạn. Bạn đang ở {{spent}}.
+46	@{{name}} đã nhận thử thách của bạn
+47	@{{name}} đã từ chối thử thách của bạn
+48	@{{username}} không có tài khoản Drift.
+49	@{{username}} hôm nay chưa báo cáo.
+50	@{{username}} chưa dùng Drift.
+51	Thông báo "Bạn đang ở {{label}}" sẽ hiện ngay. Chạm vào — Drift sẽ mở với "{{title}}" sẵn sàng xác nhận.
+52	Cả đêm ở phòng khác. Được +{{max}} phút.
+53	Một mã thông báo
+54	Phụ huynh cần đặt mã PIN trong ứng dụng của họ trước.
+56	TÀI KHOẢN
+57	THÊM CON
+58	AI
+59	KIỂM TRA AI
+60	AI kiểm tra bằng chứng trước khi bạn nhận tín dụng. Với Pro, AI còn đọc việc của bạn và định giá theo độ khó.
+61	Tính năng AI cần gói đăng ký đang hoạt động.
+62	AI đọc việc của bạn để định giá và phân loại, rồi kiểm tra bằng chứng trước khi bạn nhận tín dụng.
+63	ĐÃ XONG
+64	GIAO DIỆN
+65	LƯU TRỮ
+66	VIỆC TỰ ĐỘNG
+67	Bỏ dở
+68	Bỏ phiên
+69	Bỏ phiên này?
+70	Bỏ dở sẽ không được tín dụng nào.
+71	Còn khoảng {{m}} phút thời gian đã kiếm.
+72	Chấp nhận
+73	Đang chấp nhận…
+74	Đã xóa tài khoản
+75	Cài đặt tài khoản nằm trong hồ sơ của bạn.
+76	Kế hoạch hành động
+77	Thêm
+78	Thêm "{{title}}" ({{minutes}} phút)? Chạm để xác nhận.
+79	Thêm việc
+80	Thêm câu trả lời
+81	Kết bạn với mình trên Drift: {{link}}
+82	Thêm một việc để bắt đầu.
+83	Thêm bằng chứng
+84	Thêm việc thật
+85	Thêm việc
+86	Thêm việc này?
+87	Thêm tài khoản Google trong Cài đặt → Ứng dụng → Lịch → Tài khoản, bật Lịch cho tài khoản đó, rồi chạm Kiểm tra lại.
+88	Sẽ thêm vào hôm nay — nếu bạn xác nhận
+89	Đang thêm…
+90	Thêm các giờ chặn này. Giờ của bạn vẫn giữ nguyên.
+91	Buổi chiều
+92	Mỗi buổi chiều
+93	Lại
+94	Hướng vào chỗ đó, rồi chạm để đặt hộp
+95	Sân bay
+96	Minh
+97	Tất cả
+98	Đã xong hết
+99	Cho phép truy cập lịch để nhập sự kiện thành việc.
+100	Cho phép máy ảnh trong Cài đặt.
+101	Cho phép truy cập ảnh trong Cài đặt.
+102	Được phép
+103	Ứng dụng được phép
+104	Sắp hết giờ
+105	Sắp xong rồi
+106	Đã có tài khoản? Đăng nhập
+107	Luôn cho phép với {{display_name}}
+108	Cần vị trí "Luôn luôn"
+109	Email này đã có tài khoản — chuyển sang Đăng nhập.
+110	Email này đã có tài khoản. Hãy thử đăng nhập.
+111	Cổ thụ
+112	Trả lời câu hỏi để hoàn tất xác minh.
+113	Mã App Store chỉ đổi được trên iPhone.
+114	Chặn ứng dụng cần bản Drift đầy đủ — bạn có thể thiết lập sau.
+115	Chặn ứng dụng bằng Thời gian sử dụng của Apple chỉ có trên iOS.
+116	Yêu cầu ứng dụng
+117	Chặn bằng Thời gian sử dụng của Apple cần bản Drift tùy chỉnh.
+118	Chặn bằng Thời gian sử dụng của Apple cần bản Drift tùy chỉnh. Hãy cập nhật Drift rồi thử lại.
+119	Đăng nhập bằng Apple thất bại.
+120	Lịch hẹn
+121	Duyệt
+122	Ứng dụng
+123	Ứng dụng bị khóa
+124	Ứng dụng bị khóa\nkhi bạn hết giờ
+125	Ứng dụng, danh mục hoặc tên miền web.
+126	Lưu trữ
+127	Bạn chắc chứ?
+128	Đã bật lúc {{toLocaleTimeString}}. Cứ để điện thoại ở đó, Drift sẽ kiểm tra vào buổi sáng.
+129	Tay
+130	Đã bật nhận biết khi đến nơi
+131	Sẽ không nhận biết khi đến nơi
+132	Đến một nơi bạn đã lưu và Drift sẽ đề xuất việc.
+133	Giao
+134	Bất cứ lúc nào bạn cũng có thể xem Drift lưu gì về con (chạm Dữ liệu cạnh tên con), xóa nó, hoặc rút lại sự đồng ý — khi đó dữ liệu của tất cả các con sẽ bị xóa và ngừng thu thập. Thắc mắc: driftappcontact@gmail.com.
+135	Ít nhất 3 ký tự.
+136	Ở phòng gym
+137	Dùng được ngay
+138	TRƯỚC KHI CON BẠN THAM GIA
+139	GIỜ CHẶN
+140	CHI TIẾT
+141	Quay lại
+142	Về đăng nhập
+143	Số dư bằng 0 trong các khung giờ này.
+144	Ngân hàng
+145	Việc ở ngân hàng
+146	Quán bar
+147	Tiệm cắt tóc
+148	Bóng rổ
+149	Sân bóng rổ
+150	Cụ thể vào! Mô tả việc bạn thực sự sẽ làm (vd. "Đọc 20 trang", không phải "vài thứ").
+151	Bãi biển
+152	Đi dạo biển
+153	Đường xe đạp
+154	Lỗi chặn
+155	Chặn mọi ứng dụng, việc không giới hạn, Lockbox và cây đầy đủ.
+156	Đã chặn
+157	Ứng dụng bị chặn
+158	Giờ chặn
+159	Đã chặn.
+160	Hiệu sách
+161	Vườn bách thảo
+162	Cả hai tài khoản đều có Pro, nên việc hoàn thành dùng Kiểm tra AI.
+163	Cả hai đều tùy chọn, tắt cho đến khi bạn bật, và chỉ ở trên thiết bị. Tìm trong Hồ sơ → Việc tự động.
+164	Leo núi bouldering
+165	Tường bouldering
+166	Bowling
+167	Sân bowling
+168	Phòng tập boxing
+169	Tập boxing
+170	Hít thở.
+171	Đưa sự kiện hôm nay vào làm việc. Chỉ đọc — Drift không bao giờ sửa lịch của bạn.
+172	Lỗi, ý tưởng, gì cũng được. Chúng tôi đọc mọi tin nhắn.
+173	Phiên sáng tạo
+174	Do một nhóm rất nhỏ làm ra. Đánh giá chỉ mất mười giây và thực sự giúp ích.
+175	Burpee
+176	Trạm xe buýt
+177	Khi tạo tài khoản, bạn đồng ý với{{p}}
+178	TÀI KHOẢN LỊCH
+179	LỊCH SẼ DÙNG
+180	DANH MỤC
+181	THỬ THÁCH
+182	THUA THỬ THÁCH
+183	THẮNG THỬ THÁCH
+184	THỬ THÁCH - {{length}}
+185	GIỮ TÊN NGƯỜI DÙNG
+186	NHẬN {{credits}} PHÚT TÍN DỤNG
+187	ĐÓNG
+188	ĐÃ XONG
+189	ĐỘ TIN CẬY: {{p}}
+190	DANH BẠ
+191	TIẾP TỤC
+192	CẤP HIỆN TẠI
+193	Quán cà phê
+194	Lịch
+195	Cần quyền truy cập lịch
+196	Đồng bộ lịch
+197	Lịch & địa điểm
+198	Gọi cho bạn bè
+199	Máy ảnh
+200	Việc ở trại
+201	Khu cắm trại
+202	Khuôn viên trường
+203	Không thể xác minh
+204	Hủy
+205	Hủy thử thách này?
+206	Hủy đêm nay
+207	Tán cây
+208	Việc xe cộ
+209	Tiệm sửa xe
+210	Rửa xe
+211	Bắt kịp việc
+212	Thử thách
+213	Thử thách
+214	Sửa bất cứ gì bạn muốn trước khi xác nhận.
+215	Đổi ứng dụng bị chặn
+216	Kiểm tra bạn đã đăng nhập App Store và có kết nối, rồi thử lại.
+217	Kiểm tra email để xác minh tài khoản, rồi đăng nhập lại.
+218	Kiểm tra email để xác minh tài khoản, rồi thử đăng nhập lại.
+219	Hãy chọn gói Drift Family trước. Đó là cách Drift xác nhận người lớn đang thiết lập.
+220	Chọn ứng dụng để chặn
+221	Chọn giờ
+222	Chọn ứng dụng cần chặn.\nDrift vẫn áp dụng kể cả khi đã đóng.
+223	Chọn lịch để đọc và quản lý địa điểm đã lưu.
+224	Nhà thờ
+225	Nhận tín dụng
+226	Dọn dẹp
+227	Dọn phòng
+228	Chỗ khách hàng
+229	Gặp khách hàng
+230	Phòng leo núi
+231	Buổi leo núi
+232	Clip quá nặng
+233	Clip quá dài
+234	Đóng
+235	Gần đúng là được. Miễn là thật.
+236	Câu lạc bộ
+237	Họp câu lạc bộ
+238	Nhận thưởng
+239	Nhà văn hóa
+240	Sự kiện cộng đồng
+241	Vườn cộng đồng
+242	Đọc khi đi đường
+243	Thi đấu
+244	Tên thử thách
+245	Hãy hoàn thành một việc trước.
+246	Hoàn thành một việc trong Drift để mở khóa.
+247	Hoàn thành một việc để lấy lại thời gian.
+248	Hoàn thành một việc hôm nay để kiếm thời gian màn hình.
+249	Hoàn thành việc, kiếm phút.\nViệc càng khó, kiếm càng nhiều.
+250	Xong sớm
+251	Hoàn thành việc đầu tiên để dành vài phút. Chào mừng đến với sự tập trung.
+252	Nhà hát hòa nhạc
+253	Trung tâm hội nghị
+254	Xác nhận
+255	Xác minh email hoặc số điện thoại trước khi tiếp tục.
+256	Kết nối Google Lịch
+257	Cần quyền truy cập danh bạ
+258	Tiếp tục
+259	Tiếp tục không cập nhật (dev)
+260	Nấu một bữa
+261	Đã sao chép
+262	Không kiểm tra được tên người dùng. Thử lại.
+263	Không thể xóa tài khoản
+264	Không gửi lại được email. Thử lại.
+265	Không lưu được. Thử lại.
+266	Không gửi được thử thách.
+267	Không cập nhật được ảnh đại diện.
+268	Không cập nhật được tên người dùng.
+269	Không xác minh được email
+270	Không xác minh được. Thử lại.
+271	Không thêm được
+272	Chưa áp dụng được lúc này
+273	Không giao được việc. Thử lại.
+274	Không chặn được ứng dụng
+275	Không hủy được
+276	Không kiểm tra được mã PIN. Thử lại.
+277	Không nén clip đủ nhỏ. Hãy quay clip ngắn hơn.
+278	Không nén ảnh đủ nhỏ. Hãy thử ảnh khác.
+279	Không xóa được. Kiểm tra kết nối rồi thử lại.
+280	Không hoàn tất đăng nhập. Thử lại.
+281	Không thể hoàn tất đăng nhập cho bạn
+282	Không lấy được vị trí
+283	Không tham gia được gia đình. Thử lại.
+284	Không quét được căn phòng
+285	Không kết nối được dịch vụ AI. Nếu bạn dùng Wi-Fi công cộng (phòng gym, quán cà phê, trường học), có thể nó đang chặn Drift — tắt Wi-Fi để dùng dữ liệu di động rồi thử lại.
+286	Không kết nối được App Store
+287	Không đọc được lịch sử chuyển động đêm qua. Lần này tin bạn.
+288	Không đọc được clip đó
+289	Không đọc được thẻ đó
+290	Hiện không đổi được. Thử lại.
+291	Không gỡ được
+292	Không lưu được mã PIN. Thử lại.
+293	Không lưu được kế hoạch
+294	Không gửi được
+295	Không bắt đầu được
+296	Đang đếm gì đó — số lần, số vòng, số trang? Hãy quay video. Một bức ảnh không thể hiện được con số.
+297	Không gian làm việc chung
+298	Tạo tài khoản
+299	Tạo tài khoản để chia sẻ sự tập trung{{p}}với bạn bè.
+300	Tạo việc này lúc
+301	Tạo tài khoản
+302	Tín dụng theo thời lượng việc.
+303	Phòng CrossFit
+304	Tùy chỉnh
+305	Thử thách tùy chỉnh cần cập nhật SQL Supabase trước khi gửi được.
+306	Thử thách tùy chỉnh gửi bình thường. Xác minh AI bật khi cả hai đều có Pro.
+307	Ngày tùy chỉnh
+308	KÈO
+309	XONG KÈO
+310	THUA KÈO
+311	TẬP TRUNG SÂU
+312	XÓA
+313	DEV bỏ qua — không có phiên
+314	DEV · SAU ĐĂNG KÝ
+315	DEV · TRƯỚC ĐĂNG KÝ
+316	XONG
+317	XONG HÔM NAY
+318	DRIFT
+319	Hằng ngày
+320	Tập nhảy
+321	Phòng tập nhảy
+322	Kèo
+323	Tên kèo
+324	Tối
+325	Dữ liệu
+326	Nhà trẻ
+327	Đã từ chối
+328	Làm việc sâu
+329	Xóa
+330	Xóa tài khoản
+331	Xóa tài khoản?
+332	Xóa kế hoạch này
+333	Xóa kế hoạch này?
+334	Xóa dữ liệu của {{name}}
+335	Xóa dữ liệu của {{name}}?
+336	Xóa việc {{title}}?
+337	Xóa?
+338	Bị từ chối - chạm để bật
+339	Hẹn nha sĩ
+340	Nha sĩ
+341	Từ chối
+342	Mô tả bạn đã hoàn thành "{{title}}" thế nào...
+343	Thiết bị
+344	Thẻ khác
+345	Bỏ qua
+346	Phòng khám
+347	Công viên cho chó
+348	Võ đường
+349	Đừng làm đứt chuỗi!
+350	Xong
+351	Xong trước nửa đêm được +{{xp}} XP
+352	Số dư Drift
+353	Drift Family
+354	Drift In
+355	Drift Pro
+356	Drift Pro chặn bao nhiêu ứng dụng, danh mục và trang web tùy thích.
+357	Drift có thể đối chiếu danh bạ để tìm bạn bè đã dùng Drift. Email trong danh bạ được băm trên thiết bị và không bao giờ tải lên dưới dạng văn bản thường.
+358	Drift có thể đọc lịch của bạn để đề xuất sự kiện hôm nay thành việc. Drift không bao giờ sửa lịch và không tải gì lên.
+359	Drift có thể đọc lời nhắc để đề xuất chúng thành việc. Drift không bao giờ sửa lời nhắc và không tải gì lên.
+360	Drift không thể chặn ứng dụng cho đến khi bạn bật lại quyền trong Cài đặt → Thời gian sử dụng.
+361	Drift kiểm tra khi bạn đến nơi đã lưu để đề xuất việc. Cần quyền "Luôn luôn" để chạy nền. Vị trí của bạn ở lại trên thiết bị và không bao giờ được tải lên.
+362	Drift không ghi âm. Quyền này do một thành phần camera dùng để nhận diện tư thế yêu cầu.
+363	Góp ý Drift
+364	Drift chưa có quyền vị trí (Cài đặt › Drift › Vị trí).
+365	Drift in
+366	Tài khoản trẻ em Drift
+367	Drift có thể lưu ảnh chụp màn hình vào thư viện ảnh nếu bạn chọn chia sẻ tiến độ.
+368	Drift cần quyền vị trí "Luôn luôn" để biết khi bạn đến đâu đó. Bạn có thể đổi trong Cài đặt → Drift → Vị trí.
+369	Drift cần truy cập ảnh để đính kèm ảnh bằng chứng vào việc hoặc đặt ảnh đại diện.
+370	Tài khoản phụ huynh Drift
+371	Drift đọc Google Lịch qua iOS. Mở Cài đặt → Ứng dụng → Lịch → Tài khoản → Thêm tài khoản → Google, đăng nhập và bật Lịch. Rồi quay lại kiểm tra lại.
+372	Drift đọc thẻ NFC bạn đặt ở phòng khác, để chứng minh điện thoại ở đó trước khi ngủ. Drift chỉ đọc ID thẻ và không bao giờ ghi vào thẻ.
+373	Drift dùng Chuyển động & thể chất để kiểm tra điện thoại nằm yên suốt đêm. Bật trong Cài đặt › Drift › Chuyển động & thể chất.
+374	Drift dùng dữ liệu chuyển động để nhận biết động tác trong thử thách tập luyện, và kiểm tra điện thoại nằm yên trong phiên Lockbox hoặc qua đêm với chế độ điện-thoại-ở-phòng-khác, kể cả khi tắt màn hình. Dữ liệu chuyển động được đọc trên thiết bị và không bao giờ tải lên.
+375	Drift dùng máy ảnh để chụp ảnh bằng chứng cho việc, đặt ảnh đại diện và đặt Lockbox lên bề mặt thật bằng thực tế tăng cường.
+376	Drift dùng vị trí để lưu nơi bạn chọn, để đề xuất việc khi bạn đến. Vị trí của bạn ở lại trên thiết bị.
+377	Drift sẽ quên thẻ của bạn và dừng lời nhắc buổi tối. Lịch sử chuỗi vẫn được giữ.
+378	Đi uống
+379	Đặt một chiếc hộp trên bàn. Điện thoại vào trong, và nằm yên trong đó.
+380	Mang đồ tái chế đi
+381	Đặt hộp
+382	Xuống sàn · bật nhảy và vỗ tay trên đầu
+383	Tiệm giặt khô
+384	Gửi đồ giặt khô
+385	CÓ THỂ KIẾM
+386	ĐÃ KIẾM
+387	THÍCH DRIFT CHỨ?
+388	NHẬP MÃ
+389	DỰ KIẾN KIẾM ĐƯỢC
+390	Mỗi việc có thời gian ước tính và cho bạn thời gian màn hình khi hoàn thành.
+391	Kiếm thời gian màn hình bằng cách hoàn thành việc trong Drift.
+392	Kiếm lại phần này để mở khóa
+393	Kiếm thời gian.
+394	Tự kiếm thời gian màn hình bằng cách hoàn thành việc.
+395	Kiếm thời gian màn hình
+396	Kiếm thời gian màn hình bằng việc làm thật. Bạn làm xong thì điện thoại mở khóa.
+397	Kiếm thời gian của bạn
+398	Đã kiếm
+399	Kiếm theo loại
+400	Khuỷu tay
+401	Khuỷu tay 90° khi xuống · duỗi thẳng khi lên
+402	Email
+403	Tài khoản email phải được xác minh trước khi Drift mở khóa.
+404	Email hoặc mật khẩu không đúng.
+405	Cần nhập email.
+406	Email quá dài.
+407	Gửi email cho chúng tôi tại {{FEEDBACK_EMAIL}}
+408	Bật Danh bạ trong Cài đặt để tìm bạn bè. Dữ liệu không bao giờ rời thiết bị khi chưa băm.
+409	Bật Drift trong Cài đặt > Thời gian sử dụng để Drift chặn được ứng dụng.
+410	Bật máy ảnh
+411	Bật quyền vị trí để Drift dùng gợi ý theo địa điểm.
+412	Kết thúc
+413	Kết thúc sớm
+414	Kết thúc phiên này?
+415	Nhập mã.
+416	Nhập email hợp lệ.
+417	Nhập ít nhất 4 chữ số.
+418	Nhập để chọn ứng dụng bị chặn.
+419	Nhập từ 1 đến 600 phút.
+420	Nhập mã 8 chữ số trong email.
+421	Nhập mã từ chương trình của bạn hoặc đội Drift để mở Drift Pro.
+422	Nhập mã gia đình từ bố mẹ.
+423	Nhập mã
+424	Nhập tên của bạn.
+425	Nhập mã người tham gia.
+426	Lỗi
+427	Vĩnh cửu
+428	Buổi tối
+429	Mỗi tối
+430	Sự kiện
+431	Mỗi ngày
+432	Mọi chỗ trong gia đình này đã đầy. Nhờ bố mẹ thêm chỗ trong Drift rồi thử lại.
+433	Mọi thứ được lưu cho tài khoản của {{name}}. Không giữ gì khác.
+434	Mọi thứ thay đổi cách Drift hoạt động.
+435	Bài tập
+436	Khám phá
+437	Xem triển lãm
+438	MÃ GIA ĐÌNH
+439	GÓP Ý
+440	TẬP TRUNG
+441	Mã gia đình
+442	Nhà gia đình
+443	Thời gian gia đình
+444	Nông trại
+445	Việc nông trại
+446	Đổ xăng
+447	Tìm bạn từ danh bạ
+448	Hoàn thành
+449	Xong trước nửa đêm → +{{xp}} XP
+450	Hoàn thành sớm?
+451	Làm xong trước. Thứ này vẫn ở đây.
+452	Làm cho xong. {{name}} vẫn còn đó.
+453	Ai xong trước được +{{xp}} XP
+454	Ai được xác minh trước được +{{xp}} XP
+455	Khối tập trung
+456	Tập trung.
+457	Thời gian tập trung?
+458	Khối làm việc tập trung
+459	Làm việc tập trung, gym, nấu ăn, học
+460	Rừng
+461	Gói miễn phí chặn tối đa {{FREE_BLOCK_LIMIT}}
+462	T6
+463	Đã gửi lời mời kết bạn tới @{{username}}
+464	Đã gửi lời mời kết bạn tới @{{username}}.
+465	Nhà bạn bè
+466	Bạn bè
+467	Bạn bè trên Drift
+468	Gối trước 90° · gối sau gần chạm sàn
+469	MỤC TIÊU
+470	KHU VƯỜN
+471	Đêm chơi game
+472	Cửa hàng game
+473	Dạo vườn
+474	Làm vườn
+475	Trạm xăng
+476	Bắt đầu
+477	Đang chuẩn bị\nmọi thứ cho bạn
+478	Trả lại phút đã kiếm.
+479	Đặt tên cho việc.
+480	Hãy dành thêm chút thời gian cho việc này trước khi chứng minh.
+481	Đi dạo
+482	Sân golf
+483	Chúc ngủ ngon
+484	Làm tốt lắm.
+485	Ngủ ngon
+486	Google
+487	Chưa cấu hình đăng nhập Google.
+488	Đăng nhập Google thất bại
+489	Đăng nhập Google thất bại.
+490	Bản này chưa cấu hình đăng nhập Google.
+491	Đăng nhập Google cần bản dev client (không chạy trên Expo Go).
+492	Hôm qua tuyệt lắm!
+493	Đi chợ
+494	Khu vườn
+495	Đang lớn
+496	Phát triển
+497	Phòng gym
+498	THỜI ĐIỂM KHÓ NHẤT
+499	CÓ MÃ?
+500	CÁCH HOẠT ĐỘNG
+501	CÁCH HOẠT ĐỘNG
+502	Cắt tóc
+503	Đi chơi
+504	Tập nặng, chạy nước rút, hoạt động ngoài trời dài
+505	Cửa hàng vật liệu
+506	Có mã Pro hoặc mã nhóm? Mở khóa tại đây
+507	Có mã?
+508	Chiều cao
+509	Giúp Drift phát triển
+510	Leo núi
+511	Hông
+512	Hông thấp hơn gối · đẩy bằng gót chân
+513	Lịch sử
+514	Xin chào{{p}}
+515	Áp đầu trên điện thoại vào thẻ bạn muốn dùng.
+516	Áp đầu trên điện thoại vào thẻ để bắt đầu đêm.
+517	Áp đầu trên điện thoại vào thẻ.
+518	Giữ điện thoại yên trên thẻ rồi thử lại.
+519	Đang giữ
+520	Nhà
+521	Phòng gym tại nhà
+522	Văn phòng tại nhà
+523	Khách sạn
+524	Bạn bè tìm bạn bằng tên này. Không đổi được sau này.
+525	Chúng tôi giữ trong bao lâu
+526	Có bao nhiêu con?
+527	Cách chúng tôi xác nhận bạn là phụ huynh
+528	TÔI DÙNG KHOẢNG
+529	Tôi đồng ý
+530	Mình vừa kiếm được {{earnedText}} thời gian màn hình nhờ làm "{{title}}" trong {{timeText}} trên Drift.
+531	Mình dùng Drift để kiếm thời gian màn hình — tham gia bằng mã {{code}} để nhận thêm 15 phút: {{link}}
+532	Để sau
+533	Con là trẻ em
+534	Tôi là phụ huynh
+535	Tôi là cha mẹ hoặc người giám hộ hợp pháp của những đứa trẻ sẽ tham gia gia đình này, và tôi đồng ý để Drift thu thập và sử dụng thông tin của các con như mô tả ở trên.
+536	Mình dùng Drift để kiếm thời gian màn hình thay vì lướt vô tận — tham gia cùng mình: {{link}}
+537	TRONG HỘP
+538	THAY VÀO ĐÓ, TÔI SẼ
+539	Sân trượt băng
+540	Bản này chưa cài xử lý ảnh. Hãy dùng bằng chứng văn bản hoặc video.
+541	Tự động nhập
+542	Nhập sự kiện hôm nay
+543	Nặng
+544	Mời danh bạ dùng Drift
+545	Bây giờ có thực sự nên làm việc này?
+546	Bây giờ có thực sự nên mở {{label}}?
+547	Bây giờ là lúc cho {{name}} sao?
+548	Điện thoại bị nhấc lên khoảng {{when}}. Lần này không có thưởng.
+549	Công trường
+550	Tham gia gia đình
+551	Tham gia gia đình mình trên Drift — mở ứng dụng, chọn "Con là trẻ em" và nhập mã này: {{code}}
+552	Tham gia gia đình bằng mã từ bố mẹ.
+553	Tham gia{{p}}gia đình
+554	Nhật ký
+555	Bật nhảy dang chân · giơ tay hẳn qua đầu
+556	Bật nhảy dang tay chân
+557	Chỉ cần hỏi Siri
+558	Chỉ mình tôi
+559	Chỉ một lần
+560	Giữ tài khoản
+561	Cứ tiếp tục
+562	Dưới 5000 ký tự nhé.
+563	Dưới {{VIDEO_MAX_SECONDS}} giây nhé — đủ để thể hiện công việc.
+564	Giữ chuỗi
+565	Trẻ em
+566	Đầu gối
+567	TÌM HIỂU ỨNG DỤNG
+568	ÍT THỜI GIAN MÀN HÌNH NHẤT HÔM NAY
+569	THỜI LƯỢNG
+570	CẤP
+571	LÊN CẤP
+572	TRỰC TIẾP
+573	KIỂM TRA TRỰC TIẾP
+574	Phòng thí nghiệm
+575	Việc phòng thí nghiệm
+576	Hồ
+577	Ngôn ngữ
+578	Luyện ngoại ngữ
+579	Trường ngoại ngữ
+580	Đêm qua
+581	Muộn
+582	Khuya
+583	Để sau
+584	Tiệm giặt
+585	Giặt đồ
+586	Học tập
+587	Để thẻ ở phòng điện thoại sẽ ngủ. Chạm vào lúc đi ngủ để bắt đầu một đêm.
+588	Để đó
+589	Cứ để yên đó.
+590	Rời phiên?
+591	Cứ để điện thoại ở đó. Drift sẽ kiểm tra vào buổi sáng.
+592	Bài giảng
+593	Giảng đường
+594	Để việc\ntự thêm vào?
+595	Để việc tự thêm vào — từ lịch, hoặc khi bạn đến đâu đó.
+596	Cùng thiết lập nào
+597	Chỉ chữ, số và dấu gạch dưới.
+598	Thư viện
+599	Cuộc sống
+600	Nhẹ
+601	Không có theo dõi trực tiếp
+602	Theo dõi trực tiếp cần bản đầy đủ
+603	Đang tải mô hình…
+604	Dịch vụ định vị đang tắt cho cả thiết bị (Cài đặt › Quyền riêng tư › Dịch vụ định vị).
+605	Vị trí đang là "Khi dùng". Nhận biết khi đến nơi cần "Luôn luôn" (Cài đặt › Drift › Vị trí › Luôn luôn).
+606	Bản này không dùng được vị trí.
+607	Cần vị trí
+608	Chốt
+609	Lockbox
+610	Lockbox đã xong
+611	Mất phiên Lockbox
+612	Lockbox · Pro
+613	Đã khóa
+614	Tra cứu thất bại
+615	Ngực xuống sát sàn · tính đủ biên độ
+616	Lunge
+617	Chưa cài Mail
+618	Làm gì đó
+619	Đảm bảo đã bật quyền vị trí, rồi thử lại.
+620	Dọn giường
+621	Trung tâm thương mại
+622	Quản lý quyền ứng dụng
+623	Bản đồ
+624	Bến du thuyền
+625	Lớp võ
+626	Đang đối chiếu danh bạ một cách riêng tư…{{p}}Email được băm trên thiết bị.
+627	Tối đa 20 ký tự.
+628	Ăn ngoài
+629	Thiền
+630	Trung tâm thiền
+631	Tin nhắn
+632	Phút
+633	Trễ hạn là bạn mất {{penaltyMins}} phút thời gian màn hình.
+634	Trễ hạn bị trừ {{penaltyMins}} phút thời gian màn hình.
+635	Vừa
+636	T2
+637	Đang theo dõi 1 địa điểm ở chế độ nền.
+638	Đang theo dõi {{placeCount}} địa điểm ở chế độ nền.
+639	Hằng tháng
+640	Buổi sáng
+641	Mỗi sáng
+642	Cần quyền chuyển động
+643	Hiện chưa có dữ liệu chuyển động. Chúng tôi sẽ kiểm tra lại sau.
+644	Núi
+645	Di chuyển chậm trên bàn
+646	Bảo tàng
+647	Âm nhạc
+648	Trường nhạc
+649	VIỆC MỚI
+650	VIỆC MỚI · AI ĐỊNH GIÁ
+651	VIỆC NÀY ĐÃ HẾT LƯỢT THỬ
+652	CHƯA XÁC MINH
+653	Tiệm làm móng
+654	Tên
+655	Đặt tên cho một việc duy nhất bạn muốn tập trung và chọn thời lượng. Trong Drift In, ứng dụng bị chặn vẫn khóa và đồng hồ vẫn chạy kể cả khi bạn đóng Drift. Hoàn thành phiên, một nửa thời gian tập trung sẽ trả lại thành thời gian màn hình — tối đa 60 phút — cùng kinh nghiệm cho cấp của bạn, không giới hạn. Bỏ dở sớm thì không được gì.
+656	Hãy đặt tên thử thách trước
+657	Hãy đặt tên việc trước
+658	Cần để đếm số lần trực tiếp
+659	Lỗi mạng. Kiểm tra kết nối.
+660	Lời mời kết bạn mới
+661	Việc mới cho {{display_name}}
+662	Tiếp
+663	Làm tốt lắm. Tiến độ của bạn đã lên cấp mới.
+664	Tuyệt.
+665	Đêm đã bắt đầu. Ứng dụng bị khóa đến sáng.
+666	Không
+667	Thiết bị này không có AR — chỉ cần đặt điện thoại nằm phẳng.
+668	Chưa có Google Lịch
+669	Chưa có tài khoản? Đăng ký
+670	Không có ứng dụng để chặn
+671	Không lướt lén.
+672	Hết số dư. Một việc sẽ thay đổi điều đó.
+673	Chưa có giờ chặn.
+674	Lần này không có thưởng.
+675	Không tìm thấy máy ảnh
+676	Chưa có việc nào hoàn thành.
+677	Chưa có việc nào hoàn thành. Việc được duyệt sẽ hiện ở đây.
+678	Chưa có việc nào hoàn thành. Hoàn thành một việc để thấy nó ở đây.
+679	Sẽ không nhận được tín dụng.
+680	Chưa thấy email? Kiểm tra Thư rác!
+681	Không email, số điện thoại, mật khẩu, ảnh, vị trí, danh bạ hay ngày sinh. Tài khoản trẻ em không bao giờ dùng Kiểm tra AI, nên không gì con bạn làm được gửi tới dịch vụ AI. Không quảng cáo, không theo dõi, không phân tích trên tài khoản trẻ em. Con dùng ứng dụng nào thì chỉ ở trên điện thoại của con — Apple chỉ đưa cho Drift các mã không đọc được.
+682	Không email, ảnh, vị trí, danh bạ hay kiểm tra AI. Con mở ứng dụng nào thì chỉ ở trên điện thoại của con.
+683	Không lấy được khung hình nào. Hãy quay lại.
+684	Không tìm thấy lịch iPhone trên thiết bị này.
+685	Chưa có con nào. Chia sẻ mã ở trên, các con sẽ hiện ở đây khi tham gia.
+686	Lịch hôm nay không có sự kiện mới.
+687	Chưa có thử thách cũ
+688	1 giờ không điện thoại
+689	Chưa lưu địa điểm nào — hãy lưu khi bạn đang ở đó.
+690	Chưa lưu địa điểm nào.
+691	Chưa có cây nào
+692	Chưa có việc lặp lại.
+693	Không có thống kê
+694	Chưa có thẻ
+695	Không có việc
+696	Hiện không có việc. Khi bố mẹ giao việc, nó sẽ hiện ở đây.
+697	Chưa kiếm được thời gian
+698	Không có thời gian để trừ.
+699	Không cần ý chí. Hệ thống lo phần khó.
+700	Chưa ai trong danh bạ dùng Drift — mời họ bên dưới.
+701	Chưa có. Đứng tại nơi bạn hay đến — phòng gym, thư viện — rồi lưu bên dưới.
+702	Không khả dụng
+703	Không khả dụng ở đây
+704	Chưa bật - chạm để cấp quyền
+705	Không tìm thấy
+706	Để sau
+707	Để sau.
+708	Chưa thiết lập
+709	Chưa đăng nhập
+710	Chưa
+711	Chưa.
+712	Chưa có gì được lưu trữ.
+713	Không có gì ở đây là không thể đợi.
+714	Chưa chọn gì — lá chắn không có gì để khóa.
+715	Hôm nay chưa dùng gì.
+716	Không có gì để nhập
+717	Không có gì để khôi phục
+718	Không cần thiết lập — lệnh hoạt động ngay khi cài Drift. Chúng cũng có trong Phím tắt.
+719	Thông báo đang tắt
+720	Thông báo đang tắt, nên khi đến nơi sẽ không báo được cho bạn (Cài đặt › Drift › Thông báo).
+721	OK
+722	MỘT ĐIỀU NỮA
+723	KIỂM TRA NHANH
+724	MỞ
+725	TÙY CHỌN
+726	Tắt
+727	Đề xuất việc khi bạn đến nơi đã lưu.
+728	Văn phòng
+729	Rừng già
+730	Bật
+731	Một lần
+732	Một việc trong Drift là của bạn.
+733	Chỉ cần một việc.
+734	Một việc, trọn sự chú ý. Phần còn lại có thể đợi.
+735	Những việc bạn giao và trạng thái
+736	Chỉ để chạy các tính năng bạn dùng: giao việc, duyệt việc và mở thời gian màn hình trên điện thoại của con.
+737	Mới được {{minutes}} phút. Một đêm cần ít nhất {{round}} giờ.
+738	Mở Drift để chấp nhận hoặc từ chối.
+739	Mở Cài đặt
+740	Mở ứng dụng email
+741	Mở email xác minh mới nhất rồi thử lại.
+742	Mở email
+743	Mở ứng dụng email và tìm mã Drift 8 chữ số.
+744	Mở trang Pro trên mọi tài khoản. Không có trong bản phát hành.
+745	Ngoài trời
+746	MÃ NGƯỜI THAM GIA
+747	ĐIỆN THOẠI ĐỂ XA
+748	ĐẶT ĐIỆN THOẠI XUỐNG LÚC
+749	CÂY
+750	CÂY
+751	HỒ SƠ
+752	TIẾN ĐỘ
+753	ĐẶT LẠI VÀO
+754	Phụ huynh
+755	Mã PIN phụ huynh
+756	Công viên
+757	Mật khẩu
+758	Mật khẩu phải có ít nhất 12 ký tự.
+759	Cần nhập mật khẩu.
+760	Mật khẩu quá dài (tối đa 72 ký tự).
+761	Thử thách cũ
+762	Bị từ chối quyền
+763	Nhà thuốc
+764	Điện thoại
+765	Điện thoại trong hộp
+766	Ảnh lỗi
+767	Ảnh quá lớn
+768	Thể chất
+769	Phòng khám vật lý trị liệu
+770	Chọn mục tiêu thấp hơn
+771	Chọn tên người dùng.
+772	Chọn tên người dùng khác.
+773	Chọn ứng dụng để chặn
+774	Chọn ứng dụng bị chặn khi số dư về 0. iOS áp dụng kể cả khi Drift đóng, có thể chậm tới ~15 phút.
+775	Chọn ứng dụng bằng Thời gian sử dụng của Apple
+776	Chọn ít nhất một ứng dụng hoặc danh mục để tiếp tục.
+777	Nhấc lên để thấy lại chiếc hộp
+778	Chọn cái phù hợp — không đổi được sau này.
+779	Lấy thuốc theo đơn
+780	Lấy đồ dùng
+781	Chọn việc\nhằng ngày
+782	Chọn tên người dùng
+783	Chọn ứng dụng cần bản Drift trên App Store hoặc TestFlight.
+784	Đón
+785	Lớp pilates
+786	Phòng tập pilates
+787	Địa điểm
+788	Đã đạt giới hạn địa điểm
+789	Gợi ý theo địa điểm
+790	Gợi ý theo địa điểm đang tắt.
+791	Gợi ý theo địa điểm đến dưới dạng thông báo, nên khi tắt thông báo bạn sẽ không nhận được gì. Bật trong Cài đặt › Drift › Thông báo.
+792	Đặt hộp
+793	Plank
+794	Hiện không tải được các gói. Kiểm tra kết nối rồi thử lại.
+795	Trồng
+796	Trồng một người bạn bằng tên người dùng.
+797	Trồng bạn
+798	Chơi một ván
+799	Vui lòng thử lại sau.
+800	Vui lòng thử lại.
+801	Hướng vào chỗ bạn đã để hộp
+802	Hồ bơi
+803	Bưu điện
+804	Việc ở bưu điện
+805	Luyện tập
+806	Luyện một kỹ năng
+807	Đang chuẩn bị ảnh…
+808	Xem trước paywall (dev)
+809	Quyền riêng tư
+810	Chính sách quyền riêng tư
+811	Chính sách quyền riêng tư
+812	Tính năng Pro
+813	Pro giúp cây của bạn lớn quá {{name}}.
+814	Chưa thiết lập lưu trữ ảnh đại diện. Chạy supabase/profile_challenge_updates.sql trong Supabase rồi thử lại.
+815	Ảnh đại diện cần cột avatar_url trong cơ sở dữ liệu. Chạy supabase/profile_challenge_updates.sql rồi khởi động lại ứng dụng.
+816	Chứng minh ngay — nhưng bạn cần bằng chứng chắc chắn.
+817	Tự đưa sự kiện hôm nay vào mỗi ngày một lần.
+818	Tự đưa sự kiện hôm nay vào mỗi ngày một lần. Khi tắt, bạn nhập thủ công bên dưới.
+819	Mua thất bại
+820	Bản này không mua hàng được.
+821	Nền tảng này chưa thiết lập mua hàng.
+822	Hít đất
+823	Đặt lại vào hộp
+824	Đặt điện thoại lại vào hộp
+825	Để điện thoại ở phòng khác và chạm thẻ để bắt đầu đêm.
+826	Để điện thoại ở phòng khác và chạm thẻ. Đến giờ đã 1 đêm liên tiếp.
+827	Để điện thoại ở phòng khác và chạm thẻ. Đến giờ đã {{streak}} đêm liên tiếp.
+828	Việc nhanh, giấy tờ nhẹ, ít sức
+829	SẴN SÀNG
+830	CÁC ĐÊM GẦN ĐÂY
+831	VIỆC LẶP LẠI
+832	XÓA ẢNH
+833	XÓA VIDEO
+834	LẶP LẠI
+835	Bật lại
+836	Đọc
+837	Đọc một chương
+838	Đọc toàn bộ chính sách quyền riêng tư
+839	Đang đọc clip…
+840	Đang đọc clip… {{done}}/{{total}}
+841	Đọc sách, tập luyện, học, nấu ăn.\nBất cứ việc có ích nào bạn thực sự làm.
+842	Sẵn sàng đi ngủ?
+843	Build lại với expo-video-thumbnails.
+844	Kiểm tra lại
+845	Thời gian hồi phục
+846	Lịch lặp lại cho việc là tính năng Pro.
+847	Việc lặp lại
+848	Trung tâm tái chế
+849	Đổi
+850	Đổi mã
+851	Làm lại
+852	Giảm
+853	Tùng đỏ
+854	Chưa theo dõi khu vực — chạm Bật lại.
+855	Đăng ký thẻ
+856	Đăng ký thẻ để bật chế độ bảo vệ.
+857	Bài tập phục hồi
+858	Gỡ
+859	Gỡ @{{username}}?
+860	Hủy kết bạn
+861	Trừ thời gian
+862	Gỡ {{label}}?
+863	Đã gỡ @{{username}}
+864	Lặp lại
+865	Lặp lại mỗi ngày
+866	Xem lại hướng dẫn
+867	Đã gửi yêu cầu rồi
+868	Đã gửi yêu cầu
+869	Đã gửi yêu cầu tới @{{username}}
+870	Yêu cầu gửi tới bạn
+871	Gửi lại mã
+872	Nhà hàng
+873	Khôi phục
+874	Khôi phục thất bại
+875	Đạp xe
+876	Sông
+877	Dạo ven sông
+878	Cần luật hoặc bằng chứng
+879	Chạy: npx expo install expo-image-picker
+880	Chạy: npx expo install expo-video-thumbnails, rồi build lại ứng dụng. Bằng chứng ảnh và văn bản vẫn hoạt động.
+881	Sắp hết
+883	LƯU NƠI BẠN ĐANG ĐỨNG
+884	ĐỊA ĐIỂM ĐÃ LƯU
+885	THỜI GIAN MÀN HÌNH
+886	THỜI GIAN MÀN HÌNH CÒN LẠI
+887	THƯỞNG THỜI GIAN MÀN HÌNH (PHÚT)
+888	THỜI GIAN MÀN HÌNH HÔM NAY
+889	HẠT GIỐNG - {{length}}
+890	GỬI THỬ THÁCH
+891	GỬI KÈO
+892	GỬI CÂU TRẢ LỜI
+893	HOÀN THÀNH PHIÊN
+894	PHIÊN
+895	CÀI ĐẶT
+896	CHIA SẺ
+897	BƯỚC {{p}}/{{length}}
+898	GỬI ĐỂ XÁC MINH
+899	Cây non
+900	T7
+901	Lưu
+902	Lưu mã PIN
+903	Lưu những nơi như phòng gym, Drift sẽ đề xuất\nviệc khi bạn đến. Drift cũng có thể đưa\nsự kiện lịch hôm nay vào.
+904	Lưu địa điểm này
+905	Tiết kiệm {{annualSavingsPct}}%
+906	Đang lưu…
+907	Quét thẻ khác
+908	Lên lịch
+909	Ứng dụng học tập
+910	Đón con tan học
+911	Đưa con đi học
+912	Trung tâm khoa học
+913	Thời gian sử dụng
+914	Quyền Thời gian sử dụng
+915	Bị từ chối quyền Thời gian sử dụng
+916	Cần quyền Thời gian sử dụng
+917	Thời gian màn hình
+918	Màn hình hướng lên. Phiên bắt đầu khi điện thoại hoàn toàn yên.
+919	Chụp màn hình thẻ này để chia sẻ lên Stories
+920	Tìm ngôn ngữ
+921	Xem Pro
+922	Xem biểu diễn
+923	Nghe nhạc sống
+924	Xem nhanh số dư thời gian màn hình đã kiếm.
+925	Hạt giống
+926	Chọn những việc bạn sẽ làm thường xuyên. Bạn luôn có thể thêm sau.
+927	Gửi
+928	Gửi thử thách
+929	Gửi kèo
+930	Gửi góp ý
+931	Đang gửi…
+932	Đã gửi
+933	Máy chủ: {{error}}{{p}}
+934	Dịch vụ
+935	Hoàn thành phiên
+936	Phiên kết thúc sớm. Không kiếm được thời gian.
+937	Mất phiên.
+938	Ghi chú phiên
+939	Phiên vẫn đang chạy. {{name}} có thể đợi.
+940	Đặt EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID trong .env và ID client iOS/Android.
+941	Đặt mã PIN. Bạn sẽ nhập nó trên điện thoại của con để chọn ứng dụng bị chặn.
+942	Đặt mục tiêu. Drift biến nó thành kế hoạch.
+943	Đặt mục tiêu thời gian màn hình và nhận kế hoạch cụ thể.
+944	Thiết lập
+945	Đặt mã PIN phụ huynh (để chọn ứng dụng cho con)
+946	Giao việc cho con và duyệt thời gian màn hình của con.
+947	Thiết lập
+948	Đặt điện thoại vào hộp, màn hình hướng lên
+949	Đặt{{p}}điện thoại xuống
+950	Đang thiết lập…
+951	Chia sẻ & Mời
+952	Chia sẻ thống kê
+953	Chia sẻ mã
+954	Chia sẻ thống kê, nhận thêm thời gian
+955	Chia sẻ thành tích
+956	Việc theo ca
+957	Đi mua sắm
+958	Đăng nhập
+959	Đăng nhập để tiếp tục từ chỗ bạn dừng.
+960	Đăng nhập để xem khu vườn
+961	Đăng nhập bằng Google
+962	Đăng xuất
+963	Đăng xuất?
+964	Đăng ký bằng Google
+965	Đăng nhập thất bại. Thử lại.
+966	Không xác minh được mã đăng nhập. Thử lại.
+967	Gập bụng
+968	Làm việc tại công trình
+969	Trượt ván
+970	Công viên trượt ván
+971	Buổi trượt ván
+972	Trượt tuyết
+973	Dốc trượt tuyết
+974	Bỏ qua
+975	Bỏ qua lúc này
+976	Bỏ qua những đêm bạn đã chạm thẻ.
+977	Ngủ sớm hơn
+978	Bảo vệ giấc ngủ
+979	Ngủ với điện thoại ở phòng khác
+980	Kéo mục tiêu xuống dưới mức bạn đang dùng.
+981	Bóng đá
+982	Sân bóng đá
+983	Xã hội
+984	Có người muốn kết bạn với bạn trên Drift.
+985	Đã xảy ra lỗi
+986	Đã xảy ra lỗi. Kiểm tra kết nối rồi thử lại.
+987	Spa
+988	Đã dùng khoảng {{minutes}} phút?
+989	Mầm
+990	Squat
+991	Sân vận động
+992	Bắt đầu
+993	Bắt đầu phiên tập trung từ thanh tab. Ứng dụng bị chặn trong lúc bạn tập trung — và bạn kiếm thêm thời gian nhờ đó.
+994	Bắt đầu kiếm
+995	Nằm ngửa · gập lên đến khi khuỷu tay chạm gối
+996	Bắt đầu ngay
+997	Bắt đầu kế hoạch này
+998	Bắt đầu dùng thử miễn phí {{trial}} ngày
+999	Trạng thái: {{next}}. Mở Cài đặt -> Thời gian sử dụng để cấp quyền.
+1000	Giữ tập trung
+1001	Dán một thẻ NFC ở phòng khác. Chạm vào lúc đi ngủ, Drift sẽ chặn ứng dụng đến sáng, rồi kiểm tra điện thoại có thật sự ở đó không.
+1002	Dán một thẻ NFC ở phòng bên cạnh. Chạm vào lúc đi ngủ, Drift sẽ kiểm tra điện thoại ở đó suốt đêm.
+1003	Vẫn đang tải
+1004	Tĩnh lặng cũng là năng suất.
+1005	Dọn kho
+1006	Kho chứa đồ
+1007	Giãn cơ
+1008	Studio
+1009	Buổi ở studio
+1010	Học
+1011	Phòng học
+1012	Buổi học
+1013	Gửi lại bằng chứng.
+1014	Gợi ý
+1015	Đề xuất "{{title}}" ({{minutes}} phút) khi bạn đến — chọn một gợi ý ở trên cho phù hợp hơn.
+1016	Đề xuất "{{title}}" ({{minutes}} phút) khi bạn đến.
+1017	CN
+1018	Siêu thị
+1019	Bơi
+1020	Đang đồng bộ
+1021	VIỆC
+1022	VIỆC
+1023	PHÒNG LAB
+1024	TUẦN NÀY
+1025	TINH CHỈNH
+1026	HÔM NAY
+1027	THỬ LẠI
+1028	BẬT KHÓA
+1029	LOẠI
+1030	Đã đọc thẻ.
+1031	Đã đăng ký thẻ
+1032	Đã lưu thẻ
+1033	Đã lưu thẻ.
+1034	Mang sang phòng khác và chạm thẻ để bắt đầu đêm.
+1035	Lấy điện thoại ra và mở Drift để nhận thời gian.
+1036	Mất 60 giây
+1037	Chạm lại bất cứ lúc nào để đổi thứ bị chặn. Chỉ lưu trên thiết bị.
+1038	Chạm thẻ NFC ở phòng khác lúc đi ngủ. Ứng dụng khóa đến sáng.
+1039	Chạm vào lúc đi ngủ để bắt đầu đêm đầu tiên.
+1040	Chạm + để thêm việc đáng làm. Làm xong và xác nhận để kiếm thời gian màn hình.
+1041	Chạm thẻ
+1042	Chạm để mở Mail tới
+1043	Chạm để xác minh
+1044	Đã thêm việc
+1045	Đã duyệt việc
+1046	Việc chờ kiểm tra
+1047	Việc
+1048	Việc có thể\ntự thêm vào
+1049	Việc đã xong
+1050	Việc tự động quay lại.
+1051	Việc quay lại theo lịch.
+1052	Việc để kiếm được
+1053	Kể thêm chút nữa nhé.
+1054	Đang chăm khu vườn
+1055	Quần vợt
+1056	Sân quần vợt
+1057	Điều khoản
+1058	Điều khoản sử dụng
+1059	Điều khoản sử dụng
+1060	Thử
+1061	Thử thất bại
+1062	Đã gửi thử
+1063	Cảm ơn
+1064	Cảm ơn bạn đã ở lại với Drift. Cứ mỗi hai tháng bạn ở lại, Pro rẻ hơn, xuống tới {{price}}. Xác nhận với Apple và {{price2}} bắt đầu từ lần gia hạn tới.
+1065	Mã PIN không đúng.
+1066	Mã này đã được dùng hết.
+1067	Mã này đã hết hạn.
+1068	Mã không đúng hoặc đã hết hạn. Kiểm tra lại, hoặc chạm Gửi lại mã để nhận mã mới.
+1069	Mã này không còn hiệu lực.
+1070	Mã này không hợp lệ.
+1071	Thao tác đó không mở khóa Drift. Nếu bạn đã bị trừ tiền, chạm Khôi phục.
+1072	Mã gia đình này không tồn tại. Hỏi lại bố mẹ.
+1073	Mã gia đình này không còn hiệu lực.
+1074	Quy mô gia đình này chưa được thiết lập. Thử số khác hoặc liên hệ hỗ trợ.
+1075	Đây không phải thẻ bạn đã thiết lập. Chạm thẻ ở phòng ngủ.
+1076	Mã người tham gia có vẻ không đúng. Hỏi lại nhóm nghiên cứu.
+1077	Mã người tham gia này đã được dùng. Hỏi lại nhóm nghiên cứu.
+1078	Bản ghi quá lớn. Quay clip ngắn hơn rồi thử lại.
+1079	Việc này không được phép. Thử việc có ích hơn nhé!
+1080	Hết thời gian chờ
+1081	Tên người dùng đã có người dùng.
+1082	Tên người dùng đã có người dùng. Thử tên khác.
+1083	Tên người dùng vừa bị lấy mất. Tạm thời bạn được đặt là @{{username}} —
+1084	Đó không phải chiếc hộp — đặt vào trong
+1085	Đó là các việc miễn phí hôm nay
+1086	Đó là bạn
+1087	Đó là {{mins}} phút trong thời gian bạn đã kiếm. Bạn quyết định.
+1088	Kiểm tra AI hết thời gian chờ. Thường là do Wi-Fi đang chặn Drift — tắt Wi-Fi để dùng dữ liệu di động rồi thử lại.
+1089	Dịch vụ AI đang gặp sự cố. Thử lại sau giây lát.
+1090	Dịch vụ AI đang gặp sự cố. Vui lòng thử lại.
+1091	Dịch vụ AI từ chối yêu cầu (lỗi {{status}}). Thử lại, hoặc chỉ dùng bằng chứng văn bản.
+1092	Khu Vườn
+1093	Phòng Lab
+1094	Không ghi nhận được việc đến nơi ({{reason}}).
+1095	Tác vụ nền chưa đăng ký. Thoát hẳn Drift rồi mở lại.
+1096	Máy ảnh không tìm thấy bề mặt.
+1097	Máy ảnh tự đếm số lần — không cần ảnh
+1098	Các danh mục bạn đã chọn
+1099	Thử thách gửi @{{p}} sẽ bị rút lại.
+1100	Tên hoặc biệt danh con nhập khi tham gia. Những việc bạn giao và đã xong hay chưa. Số dư thời gian màn hình và danh mục ứng dụng bạn cho phép. Yêu cầu con gửi xin dùng ứng dụng. Một mã thông báo để điện thoại của con nhận được nhắc nhở.
+1101	Gói miễn phí chặn tối đa {{FREE_BLOCK_LIMIT}}
+1102	Gói miễn phí kiếm được từ {{freeDailyTasks}} việc mỗi ngày. Lên Pro để không giới hạn việc, hoặc quay lại vào ngày mai.
+1103	Hướng dẫn từ lần mở đầu tiên.
+1104	Người thua mất {{penaltyMins}} phút thời gian màn hình.
+1105	Người kia mất {{penaltyMins}} phút thời gian màn hình.
+1106	Người chơi kia có thể đã phản hồi.
+1107	Hiện chưa đăng ký được. Vui lòng thử lại sau.
+1108	Nhà hát
+1109	Nhà trị liệu
+1110	Buổi trị liệu
+1111	Những người này đang dùng Drift. Thêm họ vào khu vườn.
+1112	Những ứng dụng này vẫn mở kể cả khi {{display_name}} hết thời gian màn hình.
+1113	Họ sẽ bị gỡ khỏi khu vườn. Bạn có thể thêm lại sau.
+1114	Không thể hoàn tác.
+1115	Mã này dành cho một nghiên cứu. Nhập mã người tham gia do nhóm nghiên cứu cung cấp.
+1116	Thao tác này xóa tài khoản Drift và đăng xuất bạn. Không thể hoàn tác.
+1117	Lần này không tính là một lượt — chúng tôi chỉ cần thêm một chi tiết.
+1118	Gia đình này đã đủ số con tối đa.
+1119	Đây là việc {{minutes}} phút, nên bằng chứng mở sau {{mmss}} kể từ khi thêm. Đi làm đi — chúng tôi đợi.
+1120	Đây là thời gian bạn đã để dành. Khi về 0, ứng dụng bạn chọn sẽ khóa cho đến khi bạn kiếm thêm.
+1121	Thao tác này bỏ qua đăng nhập, nên phần giới thiệu không thể hoàn tất. Đăng nhập bình thường để thử toàn bộ quy trình.
+1122	Khoảnh khắc này là của bạn, không phải của điện thoại.
+1123	Thao tác này xóa vĩnh viễn tài khoản và dữ liệu của mọi đứa trẻ trong gia đình, và không trẻ nào tham gia được cho đến khi bạn đồng ý lại. Không thể hoàn tác.
+1124	Thao tác này xóa vĩnh viễn tài khoản Drift của bạn và mọi tài khoản trẻ em trong gia đình, cùng toàn bộ dữ liệu. Không thể hoàn tác. Hãy hủy gói Family riêng trong Cài đặt iPhone.
+1125	Thao tác này xóa vĩnh viễn tài khoản, việc, số dư và yêu cầu của {{name}}, và đăng xuất điện thoại của con. Không thể hoàn tác.
+1126	Thao tác này xóa vĩnh viễn tài khoản Drift của bạn. Không thể hoàn tác.
+1127	Cách đăng nhập này chưa được bật. Liên hệ hỗ trợ.
+1128	Hiện không thể xác minh việc này.
+1129	Phiên bản Drift này đã cũ. Cập nhật bản mới nhất để tiếp tục kiếm thời gian màn hình.
+1130	Tươi tốt
+1131	T5
+1132	Đánh dấu ô để xác nhận bạn là cha mẹ hoặc người giám hộ hợp pháp.
+1133	Dọn một thứ
+1134	Dọn dẹp
+1135	Lấy lại thời gian
+1136	Thời gian còn từ trước.
+1137	Thời gian trên mặt nước
+1138	Đến lúc cho điện thoại đi ngủ
+1139	Đến lúc cập nhật Drift
+1140	Hết giờ
+1141	Hẹn giờ
+1142	Tới @{{toName}}
+1143	Hôm nay
+1144	Quá dài
+1145	Thử quá nhiều lần. Thử lại sau vài phút.
+1146	Thử quá nhiều lần. Thử lại sau ít phút.
+1147	Gửi lại quá nhiều lần. Thử lại sau vài phút.
+1148	Gửi lại quá nhiều lần. Đợi một phút rồi thử lại.
+1149	Quá ngắn
+1150	Đường chạy
+1151	Tập đường chạy
+1152	Đầu đường mòn
+1153	Tập hoặc giãn cơ
+1154	Ga tàu
+1155	Việc du lịch
+1156	Khó theo dõi? Xác minh bằng ảnh
+1157	Thử lại
+1158	Thử lại.
+1159	T3
+1160	Tắt
+1161	Tắt bảo vệ giấc ngủ?
+1162	Bật Chuyển động & thể chất cho Drift trong Cài đặt để dùng tính năng này.
+1163	Bật thông báo
+1164	Bật trong Cài đặt › Drift › Thông báo, rồi thử lại.
+1165	Biến sự kiện hôm nay thành việc. Chỉ đọc.
+1166	Trung tâm gia sư
+1167	Buổi học thêm
+1168	Nhập tên con và mã gia đình bố mẹ đưa. Không cần email.
+1169	MỞ KHÓA SAU {{mmss}}
+1170	CẦN CẬP NHẬT
+1171	NÂNG CẤP
+1172	Luật Mỹ (COPPA) yêu cầu sự đồng ý của phụ huynh trước khi ứng dụng thu thập thông tin của trẻ dưới 13 tuổi. Đây là chính xác những gì Drift làm với thông tin của con bạn. Mã gia đình sẽ không hoạt động cho đến khi bạn đồng ý.
+1173	ĐÃ DÙNG
+1174	TÊN NGƯỜI DÙNG
+1175	Phản hồi bất thường từ dịch vụ AI.
+1176	Ứng dụng và việc không giới hạn, Lockbox, thử thách
+1177	Mở khóa đến {{toLocaleDateString}}.
+1178	Cho đến khi bạn xóa. Dữ liệu bị xóa khi bạn gỡ con, rút lại sự đồng ý hoặc xóa tài khoản, và tự động sau 18 tháng không hoạt động.
+1179	Thư giãn
+1180	Tối đa {{FREE_BLOCK_LIMIT}} ứng dụng, danh mục hoặc tên miền web với gói miễn phí.
+1181	Cập nhật Drift để dùng Kiểm tra AI.
+1182	Cập nhật kế hoạch
+1183	Cần cập nhật
+1184	Cập nhật ngay
+1185	Nâng cấp lên Pro
+1186	Nâng cấp để thách đấu
+1187	Dùng mật khẩu ít phổ biến hơn.
+1188	Dùng ngôn ngữ của thiết bị
+1189	Chỉ dùng chữ, số và dấu gạch dưới.
+1190	Dùng lịch iPhone thay thế
+1191	Dùng giờ như 22:00 và 7:00.
+1192	Dùng chữ hoa, chữ thường, một số và một ký hiệu.
+1193	Tên người dùng
+1194	Tên người dùng tối đa 20 ký tự.
+1195	Lỗi tên người dùng
+1196	Tên người dùng phải có ít nhất 3 ký tự.
+1197	Tên người dùng đã có người dùng
+1198	ĐÃ XÁC MINH
+1199	Đã gửi lại email xác minh.
+1200	Xác minh thất bại
+1201	Đã xác minh
+1202	Xác minh trực tiếp — máy ảnh theo dõi động tác và tự đếm từng lần.
+1203	Xác minh bằng ảnh khi tập xong.
+1204	Xác minh
+1205	Xác minh bằng ảnh thay thế
+1206	Xác minh bằng ảnh
+1207	Xác minh tài khoản
+1208	Xác minh địa chỉ email trước, rồi đổi mã.
+1209	Bác sĩ thú y
+1210	Đi khám thú y
+1211	Bằng chứng video cần bản mới
+1212	Ca tình nguyện
+1213	Nơi tình nguyện
+1214	ĐANG CHỜ BẠN DUYỆT
+1215	CHÀO MỪNG
+1216	NHỮNG GÌ BỊ CHẶN
+1217	NHỮNG GÌ HIỆN RA
+1218	CÒN THIẾU GÌ
+1219	WOD
+1220	Đang chờ
+1221	Đang chờ kết quả
+1222	Đang chờ họ chấp nhận
+1223	Đi dạo bên nước
+1224	Đi dạo trong rừng
+1225	Đi dạo ngoài trời
+1226	Dắt chó đi dạo
+1227	Nhà kho
+1228	Rửa xe
+1229	Xem trận đấu
+1230	Không tìm thấy gói đăng ký trên Apple ID này. Nếu bạn đăng ký bằng ID khác, hãy đăng nhập ID đó trong Cài đặt rồi thử lại.
+1231	Hiện chưa gửi được email xác minh. Lỗi từ phía chúng tôi — vui lòng thử lại sau vài phút.
+1232	Chúng tôi đã gửi mã 8 chữ số tới {{verificationEmail}}. Nhập bên dưới — hoặc chạm liên kết trong email trên điện thoại này.
+1233	Nhớ bạn đó!
+1234	Chúng tôi sẽ đề xuất lại lần tới bạn mở Drift.
+1235	Chúng tôi đã cập nhật cách xử lý dữ liệu của con bạn
+1236	T4
+1237	Ngày thường
+1238	Cuối tuần
+1239	Chào mừng trở lại
+1240	Chào mừng về nhà
+1241	Chào mừng đến với\nDrift
+1242	Chào mừng đến với Drift
+1243	Drift lưu gì về {{name}}
+1244	Để làm gì? (tùy chọn)
+1245	Đây là nơi nào?
+1246	Cần làm gì? vd. "30 phút gym"
+1247	Điều gì cần bạn chú ý?
+1248	Việc họ phải làm
+1249	Chúng tôi thu thập gì từ con bạn
+1250	Chúng tôi không thu thập gì
+1251	Bạn sẽ làm gì?
+1252	Bạn đang nghĩ gì?
+1253	Nơi bạn tinh chỉnh Drift: ứng dụng nào bị chặn, việc gì lặp lại và gì được gợi ý tự động.
+1254	Ai có thể xem
+1255	Ai sẽ dùng{{p}}Drift?
+1256	Vì sao
+1257	Đang héo
+1258	Khung giờ ứng dụng vẫn khóa dù số dư bao nhiêu.
+1259	Rút lại
+1260	Rút lại sự đồng ý và xóa dữ liệu của con
+1261	Rút lại sự đồng ý?
+1262	Không dùng hộp
+1263	Công việc
+1264	Tập luyện
+1265	Đang xử lý
+1266	Buổi tập
+1267	Xưởng
+1268	Viết đánh giá
+1269	Viết những gì bạn đã làm, hoặc chụp ảnh hay quay video.
+1270	BẠN SẼ NHẬN
+1271	GIA ĐÌNH BẠN
+1272	CÁC CON
+1273	QUYỀN RIÊNG TƯ CỦA CON
+1274	KẾ HOẠCH CỦA BẠN
+1275	KẾ HOẠCH ĐÃ SẴN SÀNG
+1276	BẰNG CHỨNG CỦA BẠN
+1277	THẺ CỦA BẠN
+1278	VIỆC CỦA BẠN
+1279	Hằng năm
+1280	Có
+1281	Có, thiết lập đi
+1282	Lớp yoga
+1283	Phòng tập yoga
+1284	Bạn
+1285	Bạn và @{{username}} đã là bạn bè
+1286	Bạn kịp hạn và nhận phần thưởng.
+1287	Bạn chặn {{name}} là có lý do.
+1288	Bạn có thể để màn hình tắt. Đồng hồ đếm ngược nằm trên màn hình khóa.
+1289	Bạn có thể lưu tối đa {{MAX_PLACES}} địa điểm.
+1290	Bạn không thể tự thêm mình.
+1291	Không thể đổi loại tài khoản sau khi đã tạo.
+1292	Bạn đã chọn chiều sâu thay vì xao nhãng.
+1293	Bạn đã chọn chiều sâu thay vì {{name}}.
+1294	Bạn kiếm thời gian màn hình bằng cách hoàn thành việc thật. Đây là phần giới thiệu 20 giây.
+1295	Bạn đã kiếm được 1 phút thời gian màn hình. Giữ phong độ nhé!
+1296	Bạn đã kiếm được {{mins}} phút thời gian màn hình. Giữ phong độ nhé!
+1297	Bạn kiếm thêm được {{m}} phút thời gian màn hình.
+1298	Bạn đã đồng ý vào {{date}}.
+1299	Bạn còn khoảng {{max}} giây trước khi mất phiên này.
+1300	Bạn chưa chọn ứng dụng nào. Drift In vẫn chạy, nhưng ứng dụng gây xao nhãng sẽ không bị chặn. Mở Hồ sơ → Ứng dụng bị chặn để chọn.
+1301	Bạn trễ hạn nên phải chịu kèo.
+1302	Bạn đặt luật. Các con kiếm thời gian màn hình bằng việc thật.
+1303	Bạn đặt giới hạn này là có lý do.
+1304	Bạn được xác minh trước và nhận phần thưởng.
+1305	Bạn thắng
+1306	Bạn sẽ không nhận được gì cho thời gian vừa qua.
+1307	Bạn sẽ nhận tín dụng cho thời gian đã tập trung.
+1308	Bạn sẽ cần đăng nhập lại để truy cập dữ liệu.
+1309	Bạn sẽ không còn nhận gợi ý việc ở đó.
+1310	Bạn đã là Pro 🎉
+1311	Mọi thứ đã sẵn sàng
+1312	Bạn đang ở {{label}}
+1313	Bạn đang có chuỗi {{streak}} ngày! Hoàn thành một việc để giữ chuỗi.
+1314	Bạn đã hết thời gian đã kiếm. Hoàn thành một việc để mở khóa ứng dụng.
+1315	Bạn đang tụt hạng trong khu vườn
+1316	Đã {{mins}} phút rồi. Không phán xét, chỉ hỏi thôi.
+1317	Bạn đã đổi mã này rồi — quyền của bạn không đổi.
+1318	Bạn đã dùng Kiểm tra AI nhiều lần. Thử lại sau ít phút.
+1319	Bạn đã lớn đủ để thành {{name}}.
+1320	Bạn đã đạt giới hạn Kiểm tra AI lúc này. Thử lại sau một chút.
+1321	Bạn đã dùng hết những gì kiếm được hôm nay.
+1322	Bạn đã dùng hết việc được xác minh miễn phí hôm nay. Lên Pro để không giới hạn việc, hoặc quay lại vào ngày mai.
+1323	Bạn và con bạn. Dữ liệu không bao giờ công khai, bán hay dùng cho quảng cáo. Supabase (nơi lưu cơ sở dữ liệu của chúng tôi, ở Mỹ) lưu trữ, và thông báo được gửi qua Apple. Cả hai đều phải giữ bí mật và chỉ dùng để vận hành Drift.
+1324	Gói Drift Family được mua qua Apple, Apple sẽ báo cho chủ tài khoản về giao dịch. Giao dịch đó cùng với sự đồng ý của bạn ở đây là cách Drift xác minh phụ huynh đồng ý.
+1325	Quyền truy cập của bạn không hết hạn.
+1326	Tài khoản của bạn
+1327	Đã xóa tài khoản thành công.
+1328	Câu trả lời của bạn…
+1329	Ứng dụng bị khóa đến sáng.{{p}}Cứ để điện thoại ở đó.
+1330	Ứng dụng đang chờ bạn. Hoàn thành một việc nhanh để kiếm thời gian màn hình.
+1331	Số dư giảm khi bạn dùng ứng dụng bị chặn. Hết số dư thì chúng bị khóa.
+1332	Giờ chặn và lời nhắc vẫn giữ nguyên. Chỉ xóa kế hoạch.
+1333	Bản build hoặc máy ảnh hiện không nhận diện được tư thế. Bạn vẫn có thể xác minh bằng ảnh.
+1334	Lịch và địa điểm của bạn, biến thành việc.
+1335	Mã của bạn đã mở khóa Drift Pro.
+1336	Thời gian màn hình đã kiếm đã hết. Hoàn thành một việc để mở khóa lại.
+1337	Thời gian bạn đã kiếm
+1338	Thời gian đã kiếm sắp hết. Kết thúc đi, hoặc hoàn thành một việc để tiếp tục.
+1339	Bản nháp email đã sẵn sàng để gửi.
+1340	Bạn của bạn được xác minh trước, nên bạn phải chịu kèo.
+1341	Con bạn
+1342	Con bạn đã xong "{{taskTitle}}". Duyệt để cấp thời gian màn hình.
+1343	Con bạn đã xong một việc. Duyệt để cấp thời gian màn hình.
+1344	Vị trí và lịch của bạn ở lại trên thiết bị này. Drift không bao giờ tải lên cái nào.
+1345	Tên của bạn
+1346	Bố mẹ cần chọn gói Drift Family trước. Thử lại khi bố mẹ đã chọn nhé.
+1347	Bố mẹ cần hoàn tất thiết lập gia đình trong Drift trước. Nhờ bố mẹ mở Drift rồi thử lại nhé.
+1348	Trước hết, sự cho phép của bạn
+1349	Điện thoại ra khỏi hộp quá lâu nên phiên này không được gì.
+1350	Điện thoại đã ra khỏi hộp. Phiên này không kiếm được thời gian.
+1351	Điện thoại đã ra khỏi hộp. Đặt lại trước khi về 0, nếu không phiên sẽ bị hủy.
+1352	Điện thoại đã di chuyển
+1353	Điện thoại di chuyển lúc {{toLocaleTimeString}}. Lần này không có thưởng.
+1354	Điện thoại di chuyển trong đêm. Lần này không có thưởng.
+1355	Đêm qua điện thoại đã di chuyển
+1356	Điện thoại ở yên trong hộp. Được +{{max}} phút.
+1357	Điện thoại nằm yên
+1358	Điện thoại nằm yên cả đêm. Được +{{rewardMinutes}} phút.
+1359	Giá giảm mỗi 2 tháng bạn ở lại, xuống tới {{loyaltyFloor}}/tháng.
+1360	Giá của bạn giảm còn {{price}}/tháng
+1361	Hồ sơ, việc, lịch sử, bạn bè, thử thách và ảnh của bạn sẽ bị xóa vĩnh viễn. Nếu bạn đăng ký Drift Pro, hãy hủy riêng trong Cài đặt iPhone → Apple ID → Đăng ký.
+1362	Tiến độ được lưu trên mọi thiết bị.
+1363	Tiến độ của bạn ở mục Bạn, bạn bè ở mục Bạn bè — chuỗi, cấp và thử thách ở một chỗ.
+1364	Tiến độ của bạn.
+1365	Quyền của bạn
+1366	Phiên đăng nhập chưa giữ được. Vui lòng đăng nhập lại — không mất gì bạn đã thiết lập.
+1367	Phiên vẫn đang chạy. Cứ tiếp tục nhé.
+1368	Mục tiêu bằng mức khởi đầu, nên chưa có gì để thay đổi.
+1369	chuỗi dài nhất
+1370	lịch hoặc địa điểm
+1372	hoàn thành
+1373	ngày liên tiếp
+1374	đã từ chối
+1376	kinh nghiệm
+1377	Bản này thiếu expo-location hoặc expo-task-manager.
+1378	xong trước nửa đêm
+1379	ai xong trước thắng
+1380	iOS chặn theo khung khoảng 15 phút, nên thời gian chỉ gần đúng.
+1381	phút đã kiếm
+1382	hôm nay không có dữ liệu
+1383	không có thời gian
+1384	chưa đặt
+1385	trên {{fmtMins}} đã kiếm
+1386	hoặc
+1387	hoặc để Drift tự thêm từ{{p}}
+1388	còn lại
+1389	thời gian màn hình
+1390	thời gian màn hình (tối đa)
+1391	việc đã xong
+1392	việc đã xong
+1393	để đặt lại vào
+1394	bạn
+1395	bạn có thể đổi trong hồ sơ.
+1397	{{aheadCount}} trong {{total}} người bạn hôm nay dùng màn hình ít hơn bạn. Bạn đang ở {{spent}}.
+1399	{{blockedCount}} {{p}} — bị khóa khi số dư về 0.
+1400	Clip {{durationSec}} giây · đã gửi {{length}} khung hình để xem xét
+1401	Hôm nay {{floor}} giờ {{p}} phút
+1402	Tập trung {{floor}} phút {{padStart}} giây
+1403	Đã kiếm {{fmtMins}}
+1404	Còn {{fmtMins}} trong số kiếm được hôm nay.
+1405	Còn {{fmt}}
+1406	{{formatDuration}} mỗi ngày
+1407	{{formatDuration}} mỗi ngày, đặt điện thoại xuống lúc {{phoneDownLabel}}.
+1408	Ít hơn hiện tại {{formatDuration}}
+1409	{{length}} người bạn hôm nay chưa báo cáo.
+1411	Còn {{mins}} phút · {{p}} tuần này{{p2}}
+1412	Đã trôi qua {{mins}} phút. Vẫn đáng chứ?
+1413	Đã {{mins}} phút rồi. Có một việc đang đợi nếu bạn muốn.
+1414	{{minutesPerDay}} phút mỗi ngày
+1415	{{minutes}} phút · {{credits}} tín dụng đặt cược
+1416	{{minutes}} phút trong hộp. Được +{{rewardMinutes}} phút.
+1417	{{name}} có thể đợi.
+1418	{{name}} đang bị chặn.
+1419	{{name}} mở khóa khi bạn hoàn thành một việc trong Drift.
+1420	{{name}} vẫn còn đó sau mười phút nữa.
+1421	Còn {{n}} phút
+1422	{{price}}/tháng
+1423	{{price}}/tháng bắt đầu từ lần gia hạn tới.
+1424	{{price}}/tháng. Tự động gia hạn — hủy bất cứ lúc nào trong Cài đặt.
+1425	{{price}}/năm. Tự động gia hạn — hủy bất cứ lúc nào trong Cài đặt.
+1426	{{price}}/năm
+1427	{{p}}\n\nBạn có thể thử lại, hoặc chạy phiên không cần hộp — vẫn như nhau.
+1428	{{p}} TỪ @{{toUpperCase}}
+1429	{{p}} · +{{xp}} XP
+1430	{{p}}và{{p}}
+1431	{{recurrenceLabel}} lúc {{prettyTime}} - thưởng {{fmtMins}}
+1432	Đã lưu {{selectionCount}}/{{FREE_BLOCK_LIMIT}}
+1433	Hôm nay {{spentMinutes}} phút
+1434	{{streak}} đêm liên tiếp.
+1435	Chuỗi {{streak}} ngày
+1436	Đã đếm {{target}}/{{target}}
+1437	{{timeText}} {{toLowerCase}} · đã kiếm +{{earnedText}}
+1438	{{title}} · +{{minutes}} phút
+1439	{{toLocaleDateString}}: {{count}} việc
+1440	Còn {{toNext}} XP đến cấp tiếp theo
+1441	Còn {{toNext}} XP đến {{name}}.
+1442	Tổng {{totalXp}} XP
+1443	Miễn phí {{trial}} ngày, sau đó {{price}}/tháng. Tự động gia hạn — hủy bất cứ lúc nào trong Cài đặt.
+1444	Miễn phí {{trial}} ngày, sau đó {{price}}/năm. Tự động gia hạn — hủy bất cứ lúc nào trong Cài đặt.
+1445	{{who}} đã thách đấu bạn
+1446	"Hey Siri, xem số dư Drift của tôi"\n"Hey Siri, tạo việc trong Drift"\n"Hey Siri, bắt đầu phiên Drift In"
+1447	CÒN 1 LƯỢT THỬ
+1448	CÒN {{attemptsLeft}} LƯỢT THỬ
+1449	Tài khoản Family phải do cha mẹ hoặc người giám hộ từ 18 tuổi trở lên tạo.
+1450	Nhờ bố mẹ thiết lập cho con
+1451	Tham gia gia đình bằng mã
+1452	Tài khoản phụ huynh dành cho người lớn
+1453	Tài khoản Drift cá nhân dành cho người từ 13 tuổi. Bố mẹ có thể thiết lập Drift Family, rồi con tham gia bằng mã của bố mẹ.
+1454	Chúng tôi hỏi tất cả mọi người. Thông tin không được lưu hay hiển thị cho ai.
+1455	Bạn sinh khi nào?

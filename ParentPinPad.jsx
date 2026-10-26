@@ -21,6 +21,7 @@ import { selectionTick, notify } from "./haptics";
 import { presentAppPicker, isAvailable as screenTimeAvailable } from "./screenTime";
 import { verifyFamilyPin } from "./family";
 
+import { tr } from "./i18n";
 const MIN = 4;
 const MAX = 8;
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "del", "0", "ok"];
@@ -58,15 +59,15 @@ export default function ParentPinPad({ visible, onClose, dark, familyId }) {
     const res = await verifyFamilyPin(familyId, pin, "custom");
     setBusy(false);
     if (!res.ok) {
-      wrong(res.reason === "no_pin" ? "A parent needs to set a PIN in their app first."
-        : res.reason === "network" ? "Couldn't check the PIN. Try again."
-        : "That PIN isn't right.");
+      wrong(res.reason === "no_pin" ? tr("A parent needs to set a PIN in their app first.")
+        : res.reason === "network" ? tr("Couldn't check the PIN. Try again.")
+        : tr("That PIN isn't right."));
       return;
     }
     notify(true);
     onClose?.();
     if (!screenTimeAvailable()) {
-      Alert.alert("Not available here", "Picking apps needs the App Store or TestFlight version of Drift.");
+      Alert.alert(tr("Not available here"), tr("Picking apps needs the App Store or TestFlight version of Drift."));
       return;
     }
     // Let the modal finish dismissing; iOS won't present the picker over a
@@ -85,8 +86,8 @@ export default function ParentPinPad({ visible, onClose, dark, familyId }) {
         </View>
 
         <View style={s.top}>
-          <Text style={[s.title, { color: t.ink.deep }]}>Parent PIN</Text>
-          <Text style={[s.sub, { color: t.ink.mid }]}>Enter it to choose which apps are blocked.</Text>
+          <Text style={[s.title, { color: t.ink.deep }]}>{tr("Parent PIN")}</Text>
+          <Text style={[s.sub, { color: t.ink.mid }]}>{tr("Enter it to choose which apps are blocked.")}</Text>
 
           <Animated.View style={[s.dots, { transform: [{ translateX: shake }] }]}>
             {Array.from({ length: Math.max(MIN, pin.length) }, (_, i) => (
@@ -120,7 +121,7 @@ export default function ParentPinPad({ visible, onClose, dark, familyId }) {
                     : k === "del" ? "transparent" : t.paper.card,
                   borderColor: k === "del" || isOk ? "transparent" : t.ink.border,
                 }]}
-                accessibilityLabel={k === "del" ? "Delete" : isOk ? "Confirm" : k}
+                accessibilityLabel={k === "del" ? tr("Delete") : isOk ? tr("Confirm") : k}
               >
                 {k === "del" ? (
                   <Text style={[s.keyAlt, { color: pin ? t.ink.mid : t.ink.faint }]}>⌫</Text>

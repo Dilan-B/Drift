@@ -11,6 +11,7 @@
 import { supabase } from "./supabase";
 import { cached, rateLimited } from "./apiGuards";
 
+import { tr, getLanguage } from "./i18n";
 const ALLOWED_CATEGORIES = ["work", "physical", "outdoor", "learning", "social", "life"];
 
 export async function evaluateTask({ title, mins, category }) {
@@ -23,7 +24,7 @@ export async function evaluateTask({ title, mins, category }) {
   let invokeErr = null;
   try {
     const res = await supabase.functions.invoke("evaluate-task", {
-      body: { title, mins, category },
+      body: { title, mins, category, locale: getLanguage() },
     });
     body = res.data;
     invokeErr = res.error;
@@ -37,7 +38,7 @@ export async function evaluateTask({ title, mins, category }) {
 
   // Paywall
   if (body?.error === "subscription_required" || status === 402) {
-    const e = new Error(body?.message || "AI features require an active subscription.");
+    const e = new Error(body?.message || tr("AI features require an active subscription."));
     e.code = "subscription_required";
     throw e;
   }

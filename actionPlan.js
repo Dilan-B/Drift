@@ -23,6 +23,7 @@
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { tr } from "./i18n";
 const KEY = (userId) => `drift_action_plan_${userId || "anon"}`;
 
 /**
@@ -37,20 +38,20 @@ export const EARN_RATIO = 0.5;
 
 export const HARDEST = [
   // `short` is the segmented-control label on the plan screen.
-  { key: "morning",   label: "Mornings",   short: "Morning",   window: [7 * 60,  11 * 60] },
-  { key: "afternoon", label: "Afternoons", short: "Afternoon", window: [13 * 60, 17 * 60] },
-  { key: "evening",   label: "Evenings",   short: "Evening",   window: [18 * 60, 21 * 60] },
-  { key: "late",      label: "Late night", short: "Late",      window: null },  // uses phone-down time
+  { key: "morning",   get label() { return tr("Mornings"); },   get short() { return tr("Morning"); },   window: [7 * 60,  11 * 60] },
+  { key: "afternoon", get label() { return tr("Afternoons"); }, get short() { return tr("Afternoon"); }, window: [13 * 60, 17 * 60] },
+  { key: "evening",   get label() { return tr("Evenings"); },   get short() { return tr("Evening"); },   window: [18 * 60, 21 * 60] },
+  { key: "late",      get label() { return tr("Late night"); }, get short() { return tr("Late"); },      window: null },  // uses phone-down time
 ];
 
 export const SWAPS = [
-  { key: "walk",    label: "Go for a walk" },
-  { key: "read",    label: "Read" },
-  { key: "sleep",   label: "Sleep earlier" },
-  { key: "friend",  label: "Call a friend" },
-  { key: "move",    label: "Train or stretch" },
-  { key: "tidy",    label: "Tidy one thing" },
-  { key: "make",    label: "Make something" },
+  { key: "walk",    get label() { return tr("Go for a walk"); } },
+  { key: "read",    get label() { return tr("Read"); } },
+  { key: "sleep",   get label() { return tr("Sleep earlier"); } },
+  { key: "friend",  get label() { return tr("Call a friend"); } },
+  { key: "move",    get label() { return tr("Train or stretch"); } },
+  { key: "tidy",    get label() { return tr("Tidy one thing"); } },
+  { key: "make",    get label() { return tr("Make something"); } },
 ];
 
 export const DEFAULT_PLAN = {
@@ -195,7 +196,7 @@ export function mergeRules(existing, suggested) {
 
 /** One-line summary for the Lab row. */
 export function planSummary(plan) {
-  if (!plan) return "Set a screen-time goal and get a concrete plan for it.";
+  if (!plan) return tr("Set a screen-time goal and get a concrete plan for it.");
   const d = derivePlan(plan);
-  return `${formatDuration(d.target)} a day, phone down by ${d.phoneDownLabel}.`;
+  return tr("{{formatDuration}} a day, phone down by {{phoneDownLabel}}.", { formatDuration: formatDuration(d.target), phoneDownLabel: d.phoneDownLabel });
 }

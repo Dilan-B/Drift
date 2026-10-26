@@ -15,6 +15,7 @@ import {
   View, Text, TouchableOpacity, Animated, PanResponder, Alert,
 } from "react-native";
 
+import { tr } from "./i18n";
 const REVEAL  = 96;   // how far the row slides to expose the delete action
 const COMMIT  = 44;   // shorter travel keeps the row open more reliably
 const CAPTURE = 4;    // claim early so the ScrollView/tab swipe does not steal it
@@ -22,8 +23,8 @@ const CAPTURE = 4;    // claim early so the ScrollView/tab swipe does not steal 
 export default function Swipeable({
   children,
   onDelete,
-  confirmTitle = "Delete?",
-  confirmMessage = "This can't be undone.",
+  confirmTitle = tr("Delete?"),
+  confirmMessage = tr("This can't be undone."),
   height,
   disabled = false,
   rowStyle,
@@ -55,8 +56,8 @@ export default function Swipeable({
 
   const askDelete = () => {
     Alert.alert(confirmTitle, confirmMessage, [
-      { text: "Cancel", style: "cancel", onPress: close },
-      { text: "Delete", style: "destructive", onPress: performDelete },
+      { text: tr("Cancel"), style: "cancel", onPress: close },
+      { text: tr("Delete"), style: "destructive", onPress: performDelete },
     ]);
   };
 
@@ -132,7 +133,7 @@ export default function Swipeable({
         }}
       >
         <TouchableOpacity onPress={askDelete} style={{ width: REVEAL, height: "100%", alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13, letterSpacing: 1 }}>DELETE</Text>
+          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13, letterSpacing: 1 }}>{tr("DELETE")}</Text>
         </TouchableOpacity>
       </Animated.View>
 

@@ -14,6 +14,7 @@ import React, { useMemo, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { getTheme, FF } from "./theme";
 
+import { tr } from "./i18n";
 const DAY = 86_400_000;
 const dayKey = (d) => {
   const x = new Date(d);
@@ -73,14 +74,14 @@ export function FamilyWeekCard({ week, dark }) {
 
   return (
     <View style={[s.card, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
-      <Text style={[s.kicker, { color: t.ink.faint }]}>THIS WEEK</Text>
+      <Text style={[s.kicker, { color: t.ink.faint }]}>{tr("THIS WEEK")}</Text>
 
       <View style={s.tiles}>
-        <Tile t={t} value={week.tasks} label={week.tasks === 1 ? "task done" : "tasks done"} />
+        <Tile t={t} value={week.tasks} label={week.tasks === 1 ? tr("task done") : tr("tasks done")} />
         <View style={[s.rule, { backgroundColor: t.ink.hairline }]} />
         <Tile t={t} value={`${week.minutes}m`} label="earned" />
         <View style={[s.rule, { backgroundColor: t.ink.hairline }]} />
-        <Tile t={t} value={`${week.bestStreak}d`} label="best streak" />
+        <Tile t={t} value={`${week.bestStreak}d`} label={tr("best streak")} />
       </View>
 
       {/* Readout for the tapped bar; the day letters sit under the bars. */}
@@ -100,7 +101,7 @@ export function FamilyWeekCard({ week, dark }) {
               style={s.col}
               activeOpacity={0.7}
               onPress={() => setSel(on ? null : i)}
-              accessibilityLabel={`${new Date(d.start).toLocaleDateString([], { weekday: "long" })}: ${d.count} tasks`}
+              accessibilityLabel={tr("{{toLocaleDateString}}: {{count}} tasks", { toLocaleDateString: new Date(d.start).toLocaleDateString([], { weekday: "long" }), count: d.count })}
             >
               <View style={s.barArea}>
                 <View style={{

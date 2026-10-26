@@ -23,6 +23,7 @@ import { cached, invalidateCache, rateLimited } from "./apiGuards";
 import { FF } from "./theme";
 import Sprout, { LeafGlyph, Sprig } from "./SproutArt";
 
+import { tr } from "./i18n";
 let Clipboard = null;
 try { Clipboard = require("expo-clipboard"); } catch { Clipboard = null; }
 
@@ -83,10 +84,10 @@ const palette = (dark) => dark ? {
  */
 function growthState(minutes) {
   // <30m = thriving, 30-90 = good, 90-180 = ok, 180+ = wilting
-  if (minutes < 30)  return { stage: 4, label: "Thriving",  hue: "#5C9670" };
-  if (minutes < 90)  return { stage: 3, label: "Growing",   hue: "#7FB58A" };
-  if (minutes < 180) return { stage: 2, label: "Holding",   hue: "#B79A5C" };
-  return                    { stage: 1, label: "Wilting",   hue: "#B7714A" };
+  if (minutes < 30)  return { stage: 4, label: tr("Thriving"),  hue: "#5C9670" };
+  if (minutes < 90)  return { stage: 3, label: tr("Growing"),   hue: "#7FB58A" };
+  if (minutes < 180) return { stage: 2, label: tr("Holding"),   hue: "#B79A5C" };
+  return                    { stage: 1, label: tr("Wilting"),   hue: "#B7714A" };
 }
 
 /**
@@ -138,7 +139,7 @@ const cleanUsername = (raw) =>
 
 const SIX_MONTHS_MS = 183 * 24 * 60 * 60 * 1000;
 const CHALLENGE_CACHE_EPOCH = "challenge-reset-2026-06-05";
-const LOADING_MESSAGES = ["Almost there", "Working on it", "Syncing updates", "Still loading"];
+const LOADING_MESSAGES = [tr("Almost there"), tr("Working on it"), tr("Syncing updates"), tr("Still loading")];
 
 // NOTE: LayoutAnimation was removed here. On the New Architecture (Fabric) it
 // crashes (EXC_BAD_ACCESS in UIManager::animationTick / RCTPerformMountInstructions)
@@ -236,11 +237,7 @@ const FriendPlant = React.memo(function FriendPlant({ friend, onPress, dark }) {
         color: typeof friend.spentMinutes === "number" ? th.mid : th.faint,
         marginTop: 6,
       }}>
-        {typeof friend.spentMinutes === "number"
-          ? (friend.spentMinutes < 60
-              ? `${friend.spentMinutes}m today`
-              : `${Math.floor(friend.spentMinutes / 60)}h ${friend.spentMinutes % 60}m today`)
-          : "no data today"}
+        {typeof friend.spentMinutes === "number" ? friend.spentMinutes < 60 ? tr("{{spentMinutes}}m today", { spentMinutes: friend.spentMinutes }) : tr("{{floor}}h {{p}}m today", { floor: Math.floor(friend.spentMinutes / 60), p: friend.spentMinutes % 60 }) : tr("no data today")}
       </Text>
     </TouchableOpacity>
   );
@@ -255,7 +252,7 @@ function LoadingState({ elapsedMs, dark }) {
   const dynamic = elapsedMs >= 5000;
   const text = dynamic
     ? LOADING_MESSAGES[Math.floor(elapsedMs / 1100) % LOADING_MESSAGES.length]
-    : "Tending the grove";
+    : tr("Tending the grove");
   return (
     <View style={{ minHeight: 120, alignItems: "center", justifyContent: "center" }}>
       <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid }}>{text}</Text>
@@ -310,7 +307,7 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, onRemove, isPrem
             fontFamily: FF.kicker, fontSize: 9, color: th.faint,
             letterSpacing: 2.4, textAlign: "center", marginBottom: 4,
           }}>
-            LEVEL
+            {tr("LEVEL")}
           </Text>
           <Text
             numberOfLines={1}
@@ -339,7 +336,7 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, onRemove, isPrem
               borderWidth: 1, borderColor: th.hairline,
             }}>
               <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: th.faint, letterSpacing: 1.6, marginBottom: 4 }}>
-                SCREEN TIME
+                {tr("SCREEN TIME")}
               </Text>
               <Text style={{ fontFamily: FF.display, fontSize: 26, color: th.ink, letterSpacing: -0.4 }}>
                 {fmt(friend.minutes || 0)}
@@ -351,7 +348,7 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, onRemove, isPrem
               borderWidth: 1, borderColor: th.hairline,
             }}>
               <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: th.faint, letterSpacing: 1.6, marginBottom: 4 }}>
-                SESSIONS
+                {tr("SESSIONS")}
               </Text>
               <Text style={{ fontFamily: FF.display, fontSize: 26, color: th.ink, letterSpacing: -0.4 }}>
                 {friend.unlocks || 0}
@@ -382,18 +379,18 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, onRemove, isPrem
               color: dark ? "#1F3A2A" : "#FAF6EE",
               letterSpacing: 0.2,
             }}>
-              {isPremium ? "Challenge" : "Upgrade to challenge"}
+              {isPremium ? tr("Challenge") : tr("Upgrade to challenge")}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => {
               Alert.alert(
-                `Remove @${friend.username}?`,
-                "They'll be removed from your grove. You can add them again later.",
+                tr("Remove @{{username}}?", { username: friend.username }),
+                tr("They'll be removed from your grove. You can add them again later."),
                 [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Remove", style: "destructive", onPress: () => { onClose(); onRemove?.(friend); } },
+                  { text: tr("Cancel"), style: "cancel" },
+                  { text: tr("Remove"), style: "destructive", onPress: () => { onClose(); onRemove?.(friend); } },
                 ],
               );
             }}
@@ -401,7 +398,7 @@ function FriendStatsModal({ friend, dark, onClose, onChallenge, onRemove, isPrem
             style={{ paddingVertical: 12, alignItems: "center", marginTop: 4 }}
           >
             <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.clay }}>
-              Remove friend
+              {tr("Remove friend")}
             </Text>
           </TouchableOpacity>
         </Pressable>
@@ -416,7 +413,7 @@ function ChallengeRow({ item, myId, dark, onPress, onVerify }) {
   const outgoingPending = item.challenger_id === myId && item.status === "pending";
   const mineDone = item.challenger_id === myId ? item.challenger_done : item.challenged_done;
   const isDare = item.type === "dare";
-  const label = item.title || item.exercise?.replace(/_/g, " ") || (isDare ? "Dare" : "Challenge");
+  const label = item.title || item.exercise?.replace(/_/g, " ") || (isDare ? tr("Dare") : tr("Challenge"));
   const fromName = item.challenger?.username || item.challenger_username || "friend";
   const toName = item.challenged?.username || "friend";
   const stake = getStake(item);
@@ -450,13 +447,13 @@ function ChallengeRow({ item, myId, dark, onPress, onVerify }) {
           numberOfLines={1}
           style={{ fontFamily: FF.bodyMed, fontSize: 14, color: th.ink, textTransform: "capitalize" }}
         >
-          {incoming ? `@${fromName}` : outgoingPending ? `To @${toName}` : label}
+          {incoming ? `@${fromName}` : outgoingPending ? tr("To @{{toName}}", { toName }) : label}
         </Text>
         <Text
           numberOfLines={1}
           style={{ fontFamily: FF.body, fontSize: 11, color: th.mid, marginTop: 2 }}
         >
-          {incoming ? label : outgoingPending ? "Waiting for them to accept" : mineDone ? "Waiting for result" : "Tap to verify"}
+          {incoming ? label : outgoingPending ? tr("Waiting for them to accept") : mineDone ? tr("Waiting for result") : tr("Tap to verify")}
         </Text>
       </View>
       <View style={{
@@ -465,7 +462,7 @@ function ChallengeRow({ item, myId, dark, onPress, onVerify }) {
         borderLeftWidth: 0.5, borderLeftColor: th.hairline,
       }}>
         <Text style={{ fontFamily: FF.bodyBold, fontSize: 13, color: th.sage }}>
-          +{stake.xp} XP
+          {tr("+{{xp}} XP", { xp: stake.xp })}
         </Text>
         <Text style={{ fontFamily: FF.body, fontSize: 11, color: th.clay, marginTop: 1 }}>
           -{stake.penaltyMins}m
@@ -480,7 +477,7 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
   if (!challenge) return null;
   const stake = getStake(challenge);
   const isDare = challenge.type === "dare";
-  const label = challenge.title || challenge.exercise?.replace(/_/g, " ") || (isDare ? "Dare" : "Challenge");
+  const label = challenge.title || challenge.exercise?.replace(/_/g, " ") || (isDare ? tr("Dare") : tr("Challenge"));
   const fromName = challenge.challenger?.username || "friend";
   const canRespond = challenge.status === "pending" && challenge.challenged_id === myId;
   return (
@@ -511,7 +508,7 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
             fontFamily: FF.kicker, fontSize: 9, color: th.sage,
             letterSpacing: 2.4, marginBottom: 8,
           }}>
-            {isDare ? "DARE" : "CHALLENGE"} FROM @{fromName.toUpperCase()}
+            {tr("{{p}} FROM @{{toUpperCase}}", { p: isDare ? tr("DARE") : tr("CHALLENGE"), toUpperCase: fromName.toUpperCase() })}
           </Text>
           <Text style={{
             fontFamily: FF.display, fontSize: 30, color: th.ink,
@@ -532,12 +529,10 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
             borderWidth: 1, borderColor: th.hairline,
           }}>
             <Text style={{ fontFamily: FF.bodyBold, fontSize: 14, color: th.ink, marginBottom: 4 }}>
-              {isDare ? `Finish before midnight → +${stake.xp} XP` : `First verified wins +${stake.xp} XP`}
+              {isDare ? tr("Finish before midnight → +{{xp}} XP", { xp: stake.xp }) : tr("First verified wins +{{xp}} XP", { xp: stake.xp })}
             </Text>
             <Text style={{ fontFamily: FF.body, fontSize: 12, color: th.mid, lineHeight: 18 }}>
-              {isDare
-                ? `Miss the deadline and you lose ${stake.penaltyMins} minutes of screen time.`
-                : `The other person loses ${stake.penaltyMins} minutes of screen time.`}
+              {isDare ? tr("Miss the deadline and you lose {{penaltyMins}} minutes of screen time.", { penaltyMins: stake.penaltyMins }) : tr("The other person loses {{penaltyMins}} minutes of screen time.", { penaltyMins: stake.penaltyMins })}
             </Text>
           </View>
 
@@ -568,7 +563,7 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
                   alignItems: "center",
                 }}
               >
-                <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: th.mid }}>Deny</Text>
+                <Text style={{ fontFamily: FF.bodyMed, fontSize: 14, color: th.mid }}>{tr("Deny")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => onAccept(challenge.id)}
@@ -583,7 +578,7 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
                   fontFamily: FF.bodyMed, fontSize: 14,
                   color: dark ? "#1F3A2A" : "#FAF6EE",
                 }}>
-                  {accepting ? "Accepting…" : "Accept"}
+                  {accepting ? tr("Accepting…") : tr("Accept")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -599,7 +594,7 @@ function ChallengeDetailModal({ challenge, myId, dark, accepting, acceptedBurst,
                 fontFamily: FF.bodyMed, fontSize: 14,
                 color: dark ? "#1F3A2A" : "#FAF6EE",
               }}>
-                Close
+                {tr("Close")}
               </Text>
             </TouchableOpacity>
           )}
@@ -637,23 +632,19 @@ function ChallengeOutcomeModal({ outcome, dark, onClose }) {
             color: outcome.won ? th.sage : th.clay,
             letterSpacing: 2.4, marginBottom: 4,
           }}>
-            {outcome.won
-              ? (isDare ? "DARE DONE" : "CHALLENGE WON")
-              : (isDare ? "DARE FAILED" : "CHALLENGE LOST")}
+            {outcome.won ? isDare ? tr("DARE DONE") : tr("CHALLENGE WON") : isDare ? tr("DARE FAILED") : tr("CHALLENGE LOST")}
           </Text>
           <Text style={{
             fontFamily: FF.display, fontSize: 36, color: th.ink,
             letterSpacing: -0.5, marginBottom: 10,
           }}>
-            {outcome.won ? `+${outcome.xp} XP` : `-${outcome.penaltyMins}m`}
+            {outcome.won ? tr("+{{xp}} XP", { xp: outcome.xp }) : `-${outcome.penaltyMins}m`}
           </Text>
           <Text style={{
             fontFamily: FF.body, fontSize: 13, color: th.mid,
             textAlign: "center", lineHeight: 20, marginBottom: 22,
           }}>
-            {outcome.won
-              ? (isDare ? "You beat the deadline and claimed the reward." : "You verified first and claimed the reward.")
-              : (isDare ? "You missed the deadline, so the stake was applied." : "Your friend verified first, so the stake was applied.")}
+            {outcome.won ? isDare ? tr("You beat the deadline and claimed the reward.") : tr("You verified first and claimed the reward.") : isDare ? tr("You missed the deadline, so the stake was applied.") : tr("Your friend verified first, so the stake was applied.")}
           </Text>
           <TouchableOpacity
             onPress={onClose}
@@ -668,7 +659,7 @@ function ChallengeOutcomeModal({ outcome, dark, onClose }) {
               fontFamily: FF.bodyMed, fontSize: 14,
               color: dark ? "#1F3A2A" : "#FAF6EE",
             }}>
-              Continue
+              {tr("Continue")}
             </Text>
           </TouchableOpacity>
         </Pressable>
@@ -680,13 +671,13 @@ function ChallengeOutcomeModal({ outcome, dark, onClose }) {
 function PastChallengeRow({ item, myId, dark }) {
   const th = palette(dark);
   const isDare = item.type === "dare";
-  const label = item.title || item.exercise?.replace(/_/g, " ") || (isDare ? "Dare" : "Challenge");
+  const label = item.title || item.exercise?.replace(/_/g, " ") || (isDare ? tr("Dare") : tr("Challenge"));
   const stake = getStake(item);
   const winnerName =
-    item.winner_id === myId ? "you" :
+    item.winner_id === myId ? tr("you") :
     item.winner_id === item.challenger_id ? (item.challenger?.username || "friend") :
     item.winner_id === item.challenged_id ? (item.challenged?.username || "friend") :
-    item.status === "declined" ? "declined" : "not set";
+    item.status === "declined" ? tr("declined") : tr("not set");
   const youWon = item.winner_id === myId;
   return (
     <View style={{
@@ -707,9 +698,7 @@ function PastChallengeRow({ item, myId, dark }) {
           {label}
         </Text>
         <Text style={{ fontFamily: FF.body, fontSize: 11, color: th.mid, marginTop: 2 }}>
-          {item.status === "declined"
-            ? "Declined"
-            : `${winnerName === "you" ? "You won" : `${winnerName} won`} · +${stake.xp} XP`}
+          {item.status === "declined" ? tr("Declined") : tr("{{p}} · +{{xp}} XP", { p: winnerName === "you" ? tr("You won") : `${winnerName} won`, xp: stake.xp })}
         </Text>
       </View>
     </View>
@@ -985,9 +974,9 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
           .maybeSingle())
       );
 
-      if (lookupErr) { Alert.alert("Lookup failed", "Please try again."); return; }
-      if (!profile) { Alert.alert("Not found", `@${username} doesn't have a Drift account.`); return; }
-      if (profile.id === userId) { Alert.alert("That's you", "You can't add yourself."); return; }
+      if (lookupErr) { Alert.alert(tr("Lookup failed"), tr("Please try again.")); return; }
+      if (!profile) { Alert.alert(tr("Not found"), tr("@{{username}} doesn't have a Drift account.", { username })); return; }
+      if (profile.id === userId) { Alert.alert(tr("That's you"), tr("You can't add yourself.")); return; }
 
       const { data: reverse } = await supabase
         .from("friendships")
@@ -1002,7 +991,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
           supabase.from("friendships").update({ status: "accepted" }).eq("id", reverse.id)
         );
         invalidateCache(`friends_screen_time_${userId}`);
-        setToast(`You and @${profile.username} are now friends`);
+        setToast(tr("You and @{{username}} are now friends", { username: profile.username }));
         setTimeout(() => setToast(""), 2200);
         setAddUsername("");
         setShowAdd(false);
@@ -1013,11 +1002,11 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
       const { error } = await rateLimited(`friend_request_${userId}`, { limit: 20, windowMs: 60_000 }, () =>
         supabase.from("friendships").insert({ user_id: userId, friend_id: profile.id, status: "pending" })
       );
-      if (error && error.code !== "23505") Alert.alert("Error", error.message);
+      if (error && error.code !== "23505") Alert.alert(tr("Error"), error.message);
       else {
         setAddUsername("");
         setShowAdd(false);
-        setToast(error?.code === "23505" ? "Request already sent" : `Friend request sent to @${profile.username}`);
+        setToast(error?.code === "23505" ? tr("Request already sent") : tr("Friend request sent to @{{username}}", { username: profile.username }));
         setTimeout(() => setToast(""), 2200);
         loadAll();
       }
@@ -1044,9 +1033,9 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
     );
     if (error && error.code !== "23505") {
       setContactAddedIds(p => ({ ...p, [match.id]: false }));
-      Alert.alert("Couldn't add", error.message);
+      Alert.alert(tr("Couldn't add"), error.message);
     } else {
-      setToast(`Request sent to @${match.username}`);
+      setToast(tr("Request sent to @{{username}}", { username: match.username }));
       setTimeout(() => setToast(""), 2000);
       loadAll();
     }
@@ -1076,7 +1065,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
     smoothUpdate(() => setFriends(prev => prev.filter(f => f.id !== fid)));
     invalidateCache(`friends_screen_time_${userId}`);
     const done = () => {
-      setToast(`Removed @${friend.username}`);
+      setToast(tr("Removed @{{username}}", { username: friend.username }));
       setTimeout(() => setToast(""), 2000);
       loadAll();
     };
@@ -1101,7 +1090,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
         if (delErr) throw delErr;
         done();
       } catch (e2) {
-        Alert.alert("Couldn't remove", e2?.message || e?.message || "Try again.");
+        Alert.alert(tr("Couldn't remove"), e2?.message || e?.message || tr("Try again."));
         loadFriends();
       }
     }
@@ -1163,9 +1152,9 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
         if (oldStatus && oldStatus === "pending" && ch.challenger_id === userId && ch.status !== "pending") {
           const name = ch.challenged?.username || "friend";
           const msg = ch.status === "active"
-            ? `@${name} accepted your challenge`
+            ? tr("@{{name}} accepted your challenge", { name })
             : ch.status === "declined"
-              ? `@${name} denied your challenge`
+              ? tr("@{{name}} denied your challenge", { name })
               : "";
           if (msg) {
             setToast(msg);
@@ -1231,7 +1220,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
     );
     if (error) {
       setChallenges(before);
-      Alert.alert("Couldn't cancel", error.message || "The other player may have already responded.");
+      Alert.alert(tr("Couldn't cancel"), error.message || tr("The other player may have already responded."));
     }
   };
 
@@ -1242,10 +1231,10 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
     }}>
       <Sprout size={120} tone={dark ? "night" : "fresh"} />
       <Text style={{ fontFamily: FF.display, fontSize: 30, color: th.ink, letterSpacing: -0.3, marginTop: 12, marginBottom: 6 }}>
-        Sign in to see the grove
+        {tr("Sign in to see the grove")}
       </Text>
       <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid, textAlign: "center", lineHeight: 20 }}>
-        Create an account to share your focus{"\n"}with friends.
+        {tr("Create an account to share your focus{{p}}with friends.", { p: "\n" })}
       </Text>
     </View>
   );
@@ -1271,7 +1260,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
         unreported.push(f);
       }
     }
-    ranked.push({ id: "me", username: "You", minutes: Math.max(0, Math.round(mySpentToday)), isMe: true });
+    ranked.push({ id: "me", username: tr("You"), minutes: Math.max(0, Math.round(mySpentToday)), isMe: true });
     // Ties broken so I never appear above someone I actually tied with — the
     // board should never flatter its owner.
     ranked.sort((a, b) => a.minutes - b.minutes || (a.isMe ? 1 : b.isMe ? -1 : 0));
@@ -1313,13 +1302,13 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
           fontFamily: FF.kicker, fontSize: 10, color: th.faint,
           letterSpacing: 2.4, marginBottom: 6,
         }}>
-          {friends.length} {friends.length === 1 ? "PLANT" : "PLANTS"}
+          {friends.length} {friends.length === 1 ? tr("PLANT") : tr("PLANTS")}
         </Text>
         <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
           <Text style={{
             fontFamily: FF.display, fontSize: 38, color: th.ink, letterSpacing: -0.5,
           }}>
-            Grove
+            {tr("Grove")}
           </Text>
           <TouchableOpacity
             onPress={() => setShowAdd(v => !v)}
@@ -1355,7 +1344,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
               borderRadius: 14,
               borderWidth: 1, borderColor: th.hairline,
             }}
-            placeholder="@username"
+            placeholder={tr("@username")}
             placeholderTextColor={th.faint}
             value={addUsername}
             onChangeText={setAddUsername}
@@ -1381,7 +1370,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                 fontFamily: FF.bodyMed, fontSize: 13,
                 color: dark ? "#1F3A2A" : "#FAF6EE",
               }}>
-                Send
+                {tr("Send")}
               </Text>
             )}
           </TouchableOpacity>
@@ -1402,7 +1391,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
         >
           <UsersIcon size={16} color={th.sage} />
           <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.ink }}>
-            Find friends from contacts
+            {tr("Find friends from contacts")}
           </Text>
         </TouchableOpacity>
       )}
@@ -1450,13 +1439,13 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                       @{myProfile.username}
                     </Text>
                     {copiedFlag && (
-                      <Text style={{ fontFamily: FF.body, fontSize: 11, color: th.sage }}>Copied</Text>
+                      <Text style={{ fontFamily: FF.body, fontSize: 11, color: th.sage }}>{tr("Copied")}</Text>
                     )}
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => {
                       const link = `drift://add-friend/${myProfile.username}`;
-                      Share.share({ message: `Add me on Drift: ${link}`, url: link }).catch(() => {});
+                      Share.share({ message: tr("Add me on Drift: {{link}}", { link }), url: link }).catch(() => {});
                     }}
                     style={{
                       width: 42, height: 42, borderRadius: 14,
@@ -1480,7 +1469,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                   borderWidth: 1, borderColor: th.hairline,
                 }}>
                   <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: th.faint, letterSpacing: 1.6, marginBottom: 10 }}>
-                    SEEDS - {friendRequests.length}
+                    {tr("SEEDS - {{length}}", { length: friendRequests.length })}
                   </Text>
                   {friendRequests.map((r, idx) => (
                     <View key={r.id} style={{
@@ -1516,7 +1505,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                           fontFamily: FF.bodyMed, fontSize: 12,
                           color: dark ? "#1F3A2A" : "#FAF6EE",
                         }}>
-                          Plant
+                          {tr("Plant")}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -1531,7 +1520,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                     fontFamily: FF.kicker, fontSize: 9, color: th.faint, letterSpacing: 1.6,
                     marginBottom: 10, paddingLeft: 4,
                   }}>
-                    CHALLENGES - {visibleChallenges.length}
+                    {tr("CHALLENGES - {{length}}", { length: visibleChallenges.length })}
                   </Text>
                   {visibleChallenges.map(ch => {
                     const canCancel = ch.challenger_id === userId && ch.status === "pending";
@@ -1551,8 +1540,8 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                       <View key={ch.id} style={{ marginBottom: 8 }}>
                         <Swipeable
                           onDelete={() => cancelOutgoingChallenge(ch.id)}
-                          confirmTitle="Cancel this challenge?"
-                          confirmMessage={`The challenge to @${ch.challenged?.username || "friend"} will be withdrawn.`}
+                          confirmTitle={tr("Cancel this challenge?")}
+                          confirmMessage={tr("The challenge to @{{p}} will be withdrawn.", { p: ch.challenged?.username || "friend" })}
                         >
                           {row}
                         </Swipeable>
@@ -1576,7 +1565,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                   borderWidth: 1, borderColor: th.hairline,
                 }}>
                   <Text style={{ fontFamily: FF.kicker, fontSize: 9, color: th.faint, letterSpacing: 1.6, marginBottom: 12 }}>
-                    LEAST SCREEN TIME TODAY
+                    {tr("LEAST SCREEN TIME TODAY")}
                   </Text>
 
                   {leaderboard.ranked.map((r, idx) => (
@@ -1604,7 +1593,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                           color: r.isMe ? th.sage : th.ink,
                         }}
                       >
-                        {r.isMe ? "You" : `@${r.username}`}
+                        {r.isMe ? tr("You") : `@${r.username}`}
                       </Text>
                       <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.mid }}>
                         {r.minutes < 60
@@ -1619,9 +1608,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                       fontFamily: FF.body, fontSize: 11, color: th.faint,
                       marginTop: 10, lineHeight: 16,
                     }}>
-                      {leaderboard.unreported.length === 1
-                        ? `@${leaderboard.unreported[0].username} hasn't reported today.`
-                        : `${leaderboard.unreported.length} friends haven't reported today.`}
+                      {leaderboard.unreported.length === 1 ? tr("@{{username}} hasn't reported today.", { username: leaderboard.unreported[0].username }) : tr("{{length}} friends haven't reported today.", { length: leaderboard.unreported.length })}
                     </Text>
                   )}
                 </View>
@@ -1648,7 +1635,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                     <LockIcon size={13} color={th.sage} />
                   </View>
                   <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.ink, flex: 1 }}>
-                    Challenges
+                    {tr("Challenges")}
                   </Text>
                   <Text style={{ fontFamily: FF.serifReg, fontSize: 20, color: th.faint }}>{"›"}</Text>
                 </TouchableOpacity>
@@ -1675,7 +1662,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                 }}
               >
                 <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.ink }}>
-                  Archive
+                  {tr("Archive")}
                 </Text>
                 <View style={{
                   minWidth: 22,
@@ -1731,13 +1718,13 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                   fontFamily: FF.display, fontSize: 28, color: th.ink,
                   letterSpacing: -0.3, marginTop: 4, marginBottom: 6,
                 }}>
-                  No plants yet
+                  {tr("No plants yet")}
                 </Text>
                 <Text style={{
                   fontFamily: FF.body, fontSize: 13, color: th.mid,
                   textAlign: "center", lineHeight: 20, marginBottom: 18,
                 }}>
-                  Plant a friend by username.
+                  {tr("Plant a friend by username.")}
                 </Text>
                 <TouchableOpacity
                   onPress={() => setShowAdd(true)}
@@ -1758,7 +1745,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                     fontFamily: FF.bodyMed, fontSize: 13,
                     color: dark ? "#1F3A2A" : "#FAF6EE",
                   }}>
-                    Plant friend
+                    {tr("Plant friend")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1843,17 +1830,17 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
           }}>
             <View>
               <Text style={{ fontFamily: FF.kicker, fontSize: 10, color: th.faint, letterSpacing: 2.4, marginBottom: 4 }}>
-                CONTACTS
+                {tr("CONTACTS")}
               </Text>
               <Text style={{ fontFamily: FF.display, fontSize: 28, color: th.ink, letterSpacing: -0.4 }}>
-                Friends on Drift
+                {tr("Friends on Drift")}
               </Text>
             </View>
             <TouchableOpacity
               onPress={() => setShowContacts(false)}
               style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: th.deep, ...th.glow }}
             >
-              <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: dark ? "#1F3A2A" : "#FAF6EE" }}>Close</Text>
+              <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: dark ? "#1F3A2A" : "#FAF6EE" }}>{tr("Close")}</Text>
             </TouchableOpacity>
           </View>
 
@@ -1861,16 +1848,16 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
               <ActivityIndicator color={th.sage} />
               <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid, marginTop: 14, textAlign: "center" }}>
-                Matching your contacts privately…{"\n"}Emails are hashed on your device.
+                {tr("Matching your contacts privately…{{p}}Emails are hashed on your device.", { p: "\n" })}
               </Text>
             </View>
           ) : contactsResult?.denied ? (
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
               <Text style={{ fontFamily: FF.display, fontSize: 22, color: th.ink, marginBottom: 8, textAlign: "center" }}>
-                Contacts access needed
+                {tr("Contacts access needed")}
               </Text>
               <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid, textAlign: "center", lineHeight: 20 }}>
-                Enable Contacts in Settings to find friends. They never leave your device unhashed.
+                {tr("Enable Contacts in Settings to find friends. They never leave your device unhashed.")}
               </Text>
             </View>
           ) : (
@@ -1880,9 +1867,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
               contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 40, flexGrow: 1 }}
               ListHeaderComponent={
                 <Text style={{ fontFamily: FF.body, fontSize: 12, color: th.mid, marginBottom: 14, lineHeight: 18 }}>
-                  {(contactsResult?.matches?.length || 0) > 0
-                    ? "These contacts are on Drift. Add them to your grove."
-                    : "None of your contacts are on Drift yet — invite them below."}
+                  {(contactsResult?.matches?.length || 0) > 0 ? tr("These contacts are on Drift. Add them to your grove.") : tr("None of your contacts are on Drift yet — invite them below.")}
                 </Text>
               }
               renderItem={({ item: m }) => (
@@ -1908,7 +1893,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                     }}
                   >
                     <Text style={{ fontFamily: FF.bodyMed, fontSize: 12, color: contactAddedIds[m.id] ? th.mid : (dark ? "#1F3A2A" : "#FAF6EE") }}>
-                      {contactAddedIds[m.id] ? "Sent" : "Add"}
+                      {contactAddedIds[m.id] ? tr("Sent") : tr("Add")}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -1925,7 +1910,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                 >
                   <ShareIcon size={16} color={th.sage} strokeWidth={2.1} />
                   <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: th.ink }}>
-                    Invite contacts to Drift
+                    {tr("Invite contacts to Drift")}
                   </Text>
                 </TouchableOpacity>
               }
@@ -1944,12 +1929,12 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
               <Text style={{
                 fontFamily: FF.kicker, fontSize: 10, color: th.faint, letterSpacing: 2.4, marginBottom: 4,
               }}>
-                ARCHIVE
+                {tr("ARCHIVE")}
               </Text>
               <Text style={{
                 fontFamily: FF.display, fontSize: 28, color: th.ink, letterSpacing: -0.4,
               }}>
-                Past challenges
+                {tr("Past challenges")}
               </Text>
             </View>
             <TouchableOpacity
@@ -1964,7 +1949,7 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                 fontFamily: FF.bodyMed, fontSize: 12,
                 color: dark ? "#1F3A2A" : "#FAF6EE",
               }}>
-                Close
+                {tr("Close")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1979,10 +1964,10 @@ function SocialScreen({ userId, isPremium, onOpenPaywall, onSwipeLockChange, onC
                   fontFamily: FF.display, fontSize: 24, color: th.ink, letterSpacing: -0.3,
                   marginTop: 6, marginBottom: 6,
                 }}>
-                  No past challenges
+                  {tr("No past challenges")}
                 </Text>
                 <Text style={{ fontFamily: FF.body, fontSize: 13, color: th.mid, textAlign: "center" }}>
-                  Nothing archived yet.
+                  {tr("Nothing archived yet.")}
                 </Text>
               </View>
             }

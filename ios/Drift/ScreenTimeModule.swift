@@ -547,6 +547,29 @@ class ScreenTimeModule: NSObject {
     resolve(nil)
   }
 
+  /// Mirror the in-app language into the App Group so the shield, the
+  /// DriftMonitor notifications and the widgets use it (they can't see JS).
+  @objc(setLanguage:resolver:rejecter:)
+  func setLanguage(_ code: String,
+                   resolver resolve: RCTPromiseResolveBlock,
+                   rejecter reject: RCTPromiseRejectBlock) {
+    let defaults = UserDefaults(suiteName: DRIFT_APP_GROUP)
+    defaults?.set(code, forKey: "drift_language")
+    resolve(nil)
+  }
+
+  /// Reload the JS bundle after a language change, so module-level copy is
+  /// re-evaluated in the new language. RCTTriggerReloadCommandListeners is the
+  /// same path the dev menu's Reload uses and works in release builds.
+  @objc(reloadApp:rejecter:)
+  func reloadApp(_ resolve: @escaping RCTPromiseResolveBlock,
+                 rejecter reject: RCTPromiseRejectBlock) {
+    resolve(nil)
+    DispatchQueue.main.async {
+      RCTTriggerReloadCommandListeners("language change")
+    }
+  }
+
   @objc(consumePendingHealthEarn:rejecter:)
   func consumePendingHealthEarn(_ resolve: RCTPromiseResolveBlock,
                                 rejecter reject: RCTPromiseRejectBlock) {

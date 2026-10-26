@@ -24,6 +24,7 @@ import Sprout, { LeafGlyph } from "./SproutArt";
 import LockboxScreen from "./LockboxScreen";
 import PlantSlider from "./PlantSlider";
 
+import { tr } from "./i18n";
 // Persisted in-progress session so the countdown survives backgrounding and even
 // an app kill — the timer is wall-clock based (an end timestamp), not a ticking
 // counter, so it keeps progressing while Drift is closed.
@@ -141,7 +142,7 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
           setSecLeft(left);
           setPhase("active");
           // Re-sync the parent (shield + live activity); applyBlocking is idempotent.
-          onSessionStart?.({ task: saved.task || "Drift In", durationSeconds: left });
+          onSessionStart?.({ task: saved.task || tr("Drift In"), durationSeconds: left });
           startTicking();
         } else {
           // Finished while we were away — let the user collect what they focused.
@@ -190,11 +191,11 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
     if (phase !== "active") return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
       Alert.alert(
-        "Leave session?",
-        "Abandoning won't earn any credits.",
+        tr("Leave session?"),
+        tr("Abandoning won't earn any credits."),
         [
-          { text: "Stay focused", style: "cancel" },
-          { text: "Abandon", style: "destructive", onPress: abandon },
+          { text: tr("Stay focused"), style: "cancel" },
+          { text: tr("Abandon"), style: "destructive", onPress: abandon },
         ]
       );
       return true;
@@ -225,11 +226,11 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
 
   const completeEarly = () => {
     Alert.alert(
-      "Finish early?",
-      "You'll earn credits for the time focused so far.",
+      tr("Finish early?"),
+      tr("You'll earn credits for the time focused so far."),
       [
-        { text: "Keep going", style: "cancel" },
-        { text: "Finish", onPress: () => {
+        { text: tr("Keep going"), style: "cancel" },
+        { text: tr("Finish"), onPress: () => {
           if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
           clearPersisted();
           setPhase("done");
@@ -267,8 +268,8 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
       marginBottom: 22,
     }}>
       {[
-        { key: "timer",   label: "Timer" },
-        { key: "lockbox", label: lockboxLocked ? "Lockbox · Pro" : "Lockbox", locked: lockboxLocked },
+        { key: "timer",   label: tr("Timer") },
+        { key: "lockbox", label: lockboxLocked ? tr("Lockbox · Pro") : tr("Lockbox"), locked: lockboxLocked },
       ].map(opt => {
         const on = mode === opt.key;
         return (
@@ -306,8 +307,8 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
         onImmersiveChange={onImmersiveChange}
         onClose={() => setMode("timer")}
         onStarted={(sess) => onSessionStart?.({
-          heading: "Lockbox",
-          task: sess?.task || "Phone in the box",
+          heading: tr("Lockbox"),
+          task: sess?.task || tr("Phone in the box"),
           durationSeconds: Math.max(60, Math.round(((sess?.endsAt || 0) - Date.now()) / 1000)),
         })}
         onEnded={() => onSessionEnd?.()}
@@ -359,14 +360,14 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
               fontFamily: FF.kicker, fontSize: 10, letterSpacing: 2.4,
               color: ink.faint, marginBottom: 6,
             }}>
-              DEEP FOCUS
+              {tr("DEEP FOCUS")}
             </Text>
             <Text style={{ fontFamily: FF.display, fontSize: 40, color: ink.deep, letterSpacing: -0.4 }}>
-              Drift in
+              {tr("Drift in")}
             </Text>
             <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8, gap: 8 }}>
               <Text style={{ fontFamily: FF.body, fontSize: 14, color: ink.mid, lineHeight: 20, flexShrink: 1 }}>
-                One task, full attention. The rest can wait.
+                {tr("One task, full attention. The rest can wait.")}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowInfo(v => !v)}
@@ -396,14 +397,9 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
                 borderColor: ink.border,
                 padding: 16,
               }}>
-                <Text style={s.fieldKicker(ink)}>HOW IT WORKS</Text>
+                <Text style={s.fieldKicker(ink)}>{tr("HOW IT WORKS")}</Text>
                 <Text style={{ fontFamily: FF.body, fontSize: 13, color: ink.mid, lineHeight: 20 }}>
-                  Name the one thing you want to focus on and choose a length.
-                  While you're drifted in, your blocked apps stay locked and the
-                  timer keeps running even if you close Drift. Finish the session
-                  and half of your focused time comes back as screen time — up to
-                  a maximum of 60 minutes — plus experience toward your tier,
-                  which isn't capped. Abandoning early earns nothing.
+                  {tr("Name the one thing you want to focus on and choose a length. While you're drifted in, your blocked apps stay locked and the timer keeps running even if you close Drift. Finish the session and half of your focused time comes back as screen time — up to a maximum of 60 minutes — plus experience toward your tier, which isn't capped. Abandoning early earns nothing.")}
                 </Text>
               </View>
             )}
@@ -428,7 +424,7 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
 
             {/* Length */}
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-              <Text style={[s.fieldKicker(ink), { marginBottom: 0 }]}>LENGTH</Text>
+              <Text style={[s.fieldKicker(ink), { marginBottom: 0 }]}>{tr("LENGTH")}</Text>
               <Text style={{ fontFamily: FF.display, fontSize: 24, color: ink.deep, letterSpacing: -0.4 }}>
                 {durLabel}
               </Text>
@@ -450,14 +446,14 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
             <View style={s.divider(ink)} />
 
             {/* Earn preview — a quiet divided row, not two shouting boxes */}
-            <Text style={s.fieldKicker(ink)}>YOU'LL EARN</Text>
+            <Text style={s.fieldKicker(ink)}>{tr("YOU'LL EARN")}</Text>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: FF.display, fontSize: 26, color: earn.sage, letterSpacing: -0.4 }}>
                   {Math.min(MAX_EARN_MINS, Math.floor(dur / 2))}m
                 </Text>
                 <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                  {Math.floor(dur / 2) > MAX_EARN_MINS ? "screen time (max)" : "screen time"}
+                  {Math.floor(dur / 2) > MAX_EARN_MINS ? tr("screen time (max)") : tr("screen time")}
                 </Text>
               </View>
               <View style={{ width: 1, height: 36, backgroundColor: ink.hairline, marginHorizontal: 16 }} />
@@ -466,7 +462,7 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
                   +{Math.round(dur * 1.5 * 0.45 + 8)}
                 </Text>
                 <Text style={{ fontFamily: FF.body, fontSize: 11, color: ink.mid, marginTop: 2 }}>
-                  experience
+                  {tr("experience")}
                 </Text>
               </View>
             </View>
@@ -489,7 +485,7 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
               <TextInput
                 value={task}
                 onChangeText={setTask}
-                placeholder="What needs your attention?"
+                placeholder={tr("What needs your attention?")}
                 placeholderTextColor={ink.faint}
                 maxLength={80}
                 style={{
@@ -531,7 +527,7 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
                   fontFamily: FF.bodyMed, fontSize: 15, letterSpacing: 0.2,
                   color: ready ? (dark ? "#16261C" : "#FAF6EE") : ink.faint,
                 }}>
-                  {ready ? "Drift in" : "Name your task first"}
+                  {ready ? tr("Drift in") : tr("Name your task first")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -561,8 +557,8 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
       }} />
 
       <View style={s.focusHeader}>
-        <Text style={[s.focusKicker, { color: focusInk.faint }]}>DEEP FOCUS</Text>
-        <Text style={[s.focusTitle, { color: focusInk.deep }]}>Drift in</Text>
+        <Text style={[s.focusKicker, { color: focusInk.faint }]}>{tr("DEEP FOCUS")}</Text>
+        <Text style={[s.focusTitle, { color: focusInk.deep }]}>{tr("Drift in")}</Text>
         <View style={[s.focusTaskPill, { backgroundColor: focusEarn.sageLo, borderColor: focusInk.border }]}>
           <LeafGlyph size={14} color={focusEarn.sage} />
           <Text style={[s.focusTaskText, { color: focusInk.deep }]} numberOfLines={2}>{task}</Text>
@@ -587,7 +583,7 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
           <View style={{ alignItems: "center", zIndex: 1 }}>
             <Text style={[s.timerText, { color: focusInk.deep }]}>{fmtSecs(secLeft)}</Text>
             <Text style={[s.timerSub, { color: focusInk.mid }]}>
-              {Math.floor(elapsed / 60)}m {String(elapsed % 60).padStart(2,"0")}s focused
+              {tr("{{floor}}m {{padStart}}s focused", { floor: Math.floor(elapsed / 60), padStart: String(elapsed % 60).padStart(2,"0") })}
             </Text>
           </View>
         </Animated.View>
@@ -596,31 +592,31 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
         <View style={s.focusStats}>
           <View style={[s.focusStat, { backgroundColor: focusInk.ghost }]}>
             <Text style={[s.focusStatValue, { color: focusEarn.sage }]}>{Math.max(0, Math.floor(secLeft / 60))}m</Text>
-            <Text style={[s.focusStatLabel, { color: focusInk.mid }]}>remaining</Text>
+            <Text style={[s.focusStatLabel, { color: focusInk.mid }]}>{tr("remaining")}</Text>
           </View>
           <View style={[s.focusStat, { backgroundColor: focusInk.ghost }]}>
             <Text style={[s.focusStatValue, { color: focusEarn.clay }]}>{Math.round(progress * 100)}%</Text>
-            <Text style={[s.focusStatLabel, { color: focusInk.mid }]}>complete</Text>
+            <Text style={[s.focusStatLabel, { color: focusInk.mid }]}>{tr("complete")}</Text>
           </View>
         </View>
       </View>
 
       <View style={s.focusActions}>
         <TouchableOpacity onPress={completeEarly} style={[s.completeBtn, { backgroundColor: focusEarn.deep }, focusTheme.fx.glow]}>
-          <Text style={[s.completeBtnText, { color: focusInk.void }]}>Complete early</Text>
+          <Text style={[s.completeBtnText, { color: focusInk.void }]}>{tr("Complete early")}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => Alert.alert(
-            "Abandon session?",
-            "No credits will be earned.",
+            tr("Abandon session?"),
+            tr("No credits will be earned."),
             [
-              { text: "Stay focused", style: "cancel" },
-              { text: "Abandon", style: "destructive", onPress: abandon },
+              { text: tr("Stay focused"), style: "cancel" },
+              { text: tr("Abandon"), style: "destructive", onPress: abandon },
             ]
           )}
           style={s.abandonBtn}
         >
-          <Text style={[s.abandonText, { color: focusInk.faint }]}>Abandon session</Text>
+          <Text style={[s.abandonText, { color: focusInk.faint }]}>{tr("Abandon session")}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -647,8 +643,8 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
       <View style={[s.doneHero, { backgroundColor: focusEarn.sageLo, borderColor: focusInk.border }]}>
         <Sprout size={116} tone="night" />
       </View>
-      <Text style={[s.doneKicker, { color: focusInk.faint }]}>SESSION COMPLETE</Text>
-      <Text style={[s.doneTitle, { color: focusInk.deep }]}>Good work.</Text>
+      <Text style={[s.doneKicker, { color: focusInk.faint }]}>{tr("SESSION COMPLETE")}</Text>
+      <Text style={[s.doneTitle, { color: focusInk.deep }]}>{tr("Good work.")}</Text>
       <Text style={[s.doneTask, { color: focusInk.mid }]} numberOfLines={2}>
         {"“"}{task}{"”"}
       </Text>
@@ -657,11 +653,11 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
       <View style={s.doneStats}>
         <View style={[s.doneCard, { backgroundColor: focusInk.ghost }]}>
           <Text style={[s.doneVal, { color: focusEarn.sage }]}>{creditsEarned}m</Text>
-          <Text style={[s.doneCardLabel, { color: focusInk.mid }]}>screen time</Text>
+          <Text style={[s.doneCardLabel, { color: focusInk.mid }]}>{tr("screen time")}</Text>
         </View>
         <View style={[s.doneCard, { backgroundColor: focusInk.ghost }]}>
           <Text style={[s.doneVal, { color: focusEarn.clay }]}>+{xpEarned}</Text>
-          <Text style={[s.doneCardLabel, { color: focusInk.mid }]}>experience</Text>
+          <Text style={[s.doneCardLabel, { color: focusInk.mid }]}>{tr("experience")}</Text>
         </View>
       </View>
 
@@ -676,7 +672,7 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
         style={[s.collectBtn, { backgroundColor: focusEarn.deep }, focusTheme.fx.glow]}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Text style={[s.collectBtnText, { color: focusInk.void }]}>Collect rewards</Text>
+          <Text style={[s.collectBtnText, { color: focusInk.void }]}>{tr("Collect rewards")}</Text>
           <CheckIcon size={16} color={focusInk.void} />
         </View>
       </TouchableOpacity>

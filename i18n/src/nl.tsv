@@ -1,0 +1,1447 @@
+1	\n\nLet op: locatie staat op 'Bij gebruik van app', dus echte aankomsten werken niet zolang Drift gesloten is.
+2	 Elke lagere prijs wordt je in de app aangeboden om te accepteren.
+3	 Eindprijs zoals getoond door de App Store.
+4	 · teruggestuurd, probeer opnieuw
+5	 · reeks van {{streak}} dagen
+6	'{{title}}' wordt van vandaag verwijderd.
+7	'{{title}}' wordt verwijderd.
+8	'{{title}}' — open Drift om te accepteren of te weigeren.
+9	(OPTIONEEL)
+11	+ Taak
+12	+{{minutes}} min
+13	+{{minutes}} min{{p}}
+14	+{{p}} minuten als dit klaar is
+15	+{{rewardMinutes}} min wacht als hij blijft liggen
+16	+{{xp}} XP
+17	1 nacht op rij.
+18	10 burpees
+19	10 min joggen
+20	10 min · Ademen en resetten
+21	10 min · Je gedachten opschrijven
+22	10 minuten joggen
+23	12+ tekens, cijfer, symbool
+24	15 min · Frisse lucht
+25	15 min · Je ruimte opruimen
+26	2 min · De dag goed beginnen
+27	20 lunges
+28	20 min · Boeken of artikelen
+29	20 min · Iets echts eten
+30	20 min · Muziek, kunst, code enz.
+31	20 push-ups
+32	20 sit-ups
+33	30 jumping jacks
+34	30 min · Sporten of gym
+35	30 min · Huiswerk of leren
+36	30 squats
+37	3–20 tekens, letters/cijfers/_
+38	5 min · Losmaken
+39	5/UUR · LIMIET 20/DAG
+40	60 min · Ochtenddetox
+41	60 seconden plank
+42	9:00 Stand-up
+43	@gebruikersnaam
+44	@{{fromUsername}} wil met je groeien op Drift.
+45	@{{leaderName}} heeft vandaag minder schermtijd dan jij. Jij zit op {{spent}}.
+46	@{{name}} heeft je uitdaging geaccepteerd
+47	@{{name}} heeft je uitdaging geweigerd
+48	@{{username}} heeft geen Drift-account.
+49	@{{username}} heeft vandaag nog niets gedeeld.
+50	@{{username}} zit nog niet op Drift.
+51	Er zou nu een melding 'Je bent bij {{label}}' moeten verschijnen. Tik erop — Drift opent dan met '{{title}}' klaar om te bevestigen.
+52	Een hele nacht in de andere kamer. +{{max}} minuten verdiend.
+53	Een meldingstoken
+54	Een ouder moet eerst een pincode instellen in zijn app.
+56	ACCOUNT
+57	KIND TOEVOEGEN
+58	AI
+59	AI-CHECK
+60	AI controleert je bewijs voordat je tegoed verdient. Met Pro leest hij ook je taak en bepaalt hij de waarde op basis van de moeilijkheid.
+61	AI-functies vereisen een actief abonnement.
+62	AI leest je taak om de waarde te bepalen en een categorie te kiezen, en controleert daarna je bewijs voordat je tegoed verdient.
+63	AL GEDAAN
+64	WEERGAVE
+65	ARCHIEF
+66	AUTOMATISCHE TAKEN
+67	Opgeven
+68	Sessie opgeven
+69	Sessie opgeven?
+70	Opgeven levert geen tegoed op.
+71	Nog ongeveer {{m}} min verdiende tijd over.
+72	Accepteren
+73	Accepteren…
+74	Account verwijderd
+75	Accountinstellingen vind je in je profiel.
+76	Actieplan
+77	Toevoegen
+78	'{{title}}' ({{minutes}} min) toevoegen? Tik om te bevestigen.
+79	Taak toevoegen
+80	Antwoord toevoegen
+81	Voeg me toe op Drift: {{link}}
+82	Voeg er een toe om te beginnen.
+83	Bewijs toevoegen
+84	Echte taken toevoegen
+85	Taak toevoegen
+86	Deze taak toevoegen?
+87	Voeg je Google-account toe via Instellingen → Apps → Agenda → Accounts, zorg dat Agenda's aanstaat en tik dan op Opnieuw controleren.
+88	Wordt aan vandaag toegevoegd — als je bevestigt
+89	Toevoegen…
+90	Voegt deze blokuren toe. Die van jou blijven.
+91	Middag
+92	Middagen
+93	Nog eens
+94	Richt op de plek en tik om de doos neer te zetten
+95	Vliegveld
+96	Alex
+97	Alles
+98	Alles bijgewerkt
+99	Geef toegang tot je agenda om afspraken als taken te importeren.
+100	Sta de camera toe in Instellingen.
+101	Sta toegang tot foto's toe in Instellingen.
+102	Toegestaan
+103	Toegestane apps
+104	Bijna geen tijd meer
+105	Bijna klaar
+106	Heb je al een account? Inloggen
+107	Altijd toestaan voor {{display_name}}
+108	Locatie 'Altijd' nodig
+109	Er bestaat al een account met dit e-mailadres — ga naar Inloggen.
+110	Er bestaat al een account met dit e-mailadres. Probeer in te loggen.
+111	Oeroud
+112	Beantwoord de vraag om de controle af te ronden.
+113	App Store-codes kunnen alleen op iPhone worden ingewisseld.
+114	Apps blokkeren vereist een volledige versie van Drift — je kunt dit later instellen.
+115	Apps blokkeren via Apples Schermtijd kan alleen op iOS.
+116	App-verzoeken
+117	Blokkeren via Apples Schermtijd vereist een aangepaste versie van Drift.
+118	Blokkeren via Apples Schermtijd vereist een aangepaste versie van Drift. Werk Drift bij en probeer het opnieuw.
+119	Inloggen met Apple mislukt.
+120	Afspraak
+121	Goedkeuren
+122	Apps
+123	Apps gaan op slot
+124	Apps gaan op slot\nals je tijd op is
+125	Apps, categorieën of webdomeinen.
+126	Archiveren
+127	Weet je het zeker?
+128	Ingesteld om {{toLocaleTimeString}}. Laat je telefoon liggen; Drift controleert het 's ochtends.
+129	Armen
+130	Aankomsten staan aan
+131	Aankomsten werken niet
+132	Kom aan op een opgeslagen plek en Drift biedt de taak aan.
+133	Toewijzen
+134	Je kunt altijd bekijken wat Drift over je kind bewaart (tik op Gegevens naast de naam), het verwijderen of je toestemming intrekken. Dan worden de gegevens van al je kinderen verwijderd en wordt er niets meer verzameld. Vragen: driftappcontact@gmail.com.
+135	Minstens 3 tekens.
+136	In de gym
+137	Nu beschikbaar
+138	VOORDAT JE KINDEREN MEEDOEN
+139	BLOKUREN
+140	OVERZICHT
+141	Terug
+142	Terug naar inloggen
+143	Je saldo is 0 tijdens deze periodes.
+144	Bank
+145	Bankzaak
+146	Bar
+147	Kapper
+148	Basketbal
+149	Basketbalveld
+150	Wees concreet! Beschrijf wat je echt gaat doen (bijv. '20 pagina's lezen', niet 'dingen').
+151	Strand
+152	Strandwandeling
+153	Fietspad
+154	Blokkeerfout
+155	Blokkeer elke app, onbeperkte taken, Lockbox en je volledige plant.
+156	Geblokkeerd
+157	Geblokkeerde apps
+158	Blokuren
+159	Geblokkeerd.
+160	Boekhandel
+161	Botanische tuin
+162	Beide accounts hebben Pro, dus voltooien gaat via de AI-check.
+163	Beide zijn optioneel, staan uit tot je ze aanzet en blijven op je apparaat. Je vindt ze bij Profiel → Automatische taken.
+164	Boulderen
+165	Boulderwand
+166	Bowlen
+167	Bowlingbaan
+168	Boksschool
+169	Bokstraining
+170	Adem in.
+171	Haal de afspraken van vandaag binnen als taken. Alleen lezen — Drift wijzigt je agenda nooit.
+172	Bugs, ideeën, alles. We lezen elk bericht.
+173	Bouwsessie
+174	Gemaakt door een piepklein team. Een review kost tien seconden en helpt echt.
+175	Burpees
+176	Bushalte
+177	Door een account te maken ga je akkoord met onze{{p}}
+178	AGENDA-ACCOUNT
+179	TE GEBRUIKEN AGENDA'S
+180	CATEGORIE
+181	UITDAGING
+182	UITDAGING VERLOREN
+183	UITDAGING GEWONNEN
+184	UITDAGINGEN - {{length}}
+185	GEBRUIKERSNAAM CLAIMEN
+186	CLAIM {{credits}} MIN TEGOED
+187	SLUITEN
+188	VOLTOOID
+189	ZEKERHEID: {{p}}
+190	CONTACTEN
+191	DOORGAAN
+192	HUIDIG NIVEAU
+193	Café
+194	Agenda
+195	Agendatoegang nodig
+196	Agenda synchroniseren
+197	Agenda's en plekken
+198	Een vriend bellen
+199	Camera
+200	Kampklusjes
+201	Camping
+202	Campus
+203	Kan dit niet controleren
+204	Annuleren
+205	Deze uitdaging annuleren?
+206	Vannacht annuleren
+207	Bladerdak
+208	Klusje met de auto
+209	Garage
+210	Wasstraat
+211	Bijwerken
+212	Uitdaging
+213	Uitdagingen
+214	Pas aan wat je wilt voordat je bevestigt.
+215	Geblokkeerde apps wijzigen
+216	Controleer of je bent ingelogd bij de App Store en verbinding hebt, en probeer het opnieuw.
+217	Bevestig je account via je e-mail en log daarna opnieuw in.
+218	Bevestig je account via je e-mail en probeer daarna opnieuw in te loggen.
+219	Kies eerst een Drift Family-abonnement. Zo weet Drift zeker dat een volwassene dit instelt.
+220	Apps kiezen om te blokkeren
+221	Tijd kiezen
+222	Kies welke apps je blokkeert.\nDrift handhaaft het ook als het dicht is.
+223	Kies welke agenda's je wilt lezen en beheer opgeslagen plekken.
+224	Kerk
+225	Tegoed claimen
+226	Schoonmaken / opruimen
+227	Ruim je kamer op
+228	Bij de klant
+229	Klantbezoek
+230	Klimhal
+231	Klimsessie
+232	Clip te zwaar
+233	Clip te lang
+234	Sluiten
+235	Ongeveer is prima. Hou het echt.
+236	Club
+237	Clubbijeenkomst
+238	Beloningen ophalen
+239	Buurthuis
+240	Buurtactiviteit
+241	Gemeenschapstuin
+242	Lezen onderweg
+243	Uitdagen
+244	Titel van de uitdaging
+245	Voltooi eerst een taak.
+246	Voltooi een taak in Drift om te ontgrendelen.
+247	Voltooi een taak om je tijd terug te verdienen.
+248	Voltooi vandaag een taak om schermtijd te verdienen.
+249	Voltooi een taak, verdien minuten.\nHoe zwaarder, hoe meer je verdient.
+250	Eerder afronden
+251	Voltooi je eerste taak om minuten te sparen. Welkom bij focus.
+252	Concertzaal
+253	Congrescentrum
+254	Bevestigen
+255	Bevestig je e-mailadres of telefoonnummer voordat je verdergaat.
+256	Google Agenda koppelen
+257	Toegang tot contacten nodig
+258	Doorgaan
+259	Doorgaan zonder bijwerken (dev)
+260	Een maaltijd koken
+261	Gekopieerd
+262	Kon niet controleren of de gebruikersnaam vrij is. Probeer opnieuw.
+263	Kon account niet verwijderen
+264	Kon de e-mail niet opnieuw sturen. Probeer opnieuw.
+265	Opslaan mislukt. Probeer opnieuw.
+266	Kon uitdaging niet versturen.
+267	Kon profielfoto niet bijwerken.
+268	Kon gebruikersnaam niet bijwerken.
+269	Kon e-mail niet bevestigen
+270	Controle mislukt. Probeer opnieuw.
+271	Toevoegen mislukt
+272	Kon het nu niet toepassen
+273	Kon de taak niet toewijzen. Probeer opnieuw.
+274	Kon apps niet blokkeren
+275	Annuleren mislukt
+276	Kon de pincode niet controleren. Probeer opnieuw.
+277	Kon de clip niet genoeg comprimeren. Neem een kortere op.
+278	Kon de foto niet genoeg comprimeren. Probeer een andere.
+279	Verwijderen mislukt. Controleer je verbinding en probeer opnieuw.
+280	Kon inloggen niet afronden. Probeer opnieuw.
+281	We konden je inlog niet afronden
+282	Kon locatie niet bepalen
+283	Kon niet bij het gezin komen. Probeer opnieuw.
+284	Kon de kamer niet in kaart brengen
+285	Kon de AI-dienst niet bereiken. Zit je op openbare wifi (gym, café of campus), dan blokkeert die Drift misschien — zet wifi uit om mobiele data te gebruiken en probeer opnieuw.
+286	Kon de App Store niet bereiken
+287	Kon de bewegingsgegevens van vannacht niet lezen. Je krijgt het voordeel van de twijfel.
+288	Kon die clip niet lezen
+289	Kon die tag niet lezen
+290	Inwisselen lukt nu niet. Probeer opnieuw.
+291	Verwijderen mislukt
+292	Kon de pincode niet opslaan. Probeer opnieuw.
+293	Kon je plan niet opslaan
+294	Versturen mislukt
+295	Starten mislukt
+296	Tel je iets — herhalingen, rondes, pagina's? Neem een video op. Eén foto kan geen getal laten zien.
+297	Coworkingruimte
+298	Account maken
+299	Maak een account om je focus{{p}}met vrienden te delen.
+300	Deze taak maken om
+301	Maak je account
+302	Tegoed op basis van de duur van de taak.
+303	CrossFit-box
+304	Aangepast
+305	Aangepaste uitdagingen hebben de Supabase SQL-update nodig voordat ze verstuurd kunnen worden.
+306	Aangepaste uitdagingen worden normaal verstuurd. AI-controle gaat aan als jullie allebei Pro hebben.
+307	Aangepaste dagen
+308	DURF
+309	DURF GELUKT
+310	DURF MISLUKT
+311	DIEPE FOCUS
+312	VERWIJDEREN
+313	DEV overslaan — geen sessie
+314	DEV · NA AANMELDEN
+315	DEV · VOOR AANMELDEN
+316	KLAAR
+317	VANDAAG KLAAR
+318	DRIFT
+319	Dagelijks
+320	Dansoefening
+321	Dansstudio
+322	Durf
+323	Titel van de durf
+324	Donker
+325	Gegevens
+326	Kinderopvang
+327	Geweigerd
+328	Diep werk
+329	Verwijderen
+330	Account verwijderen
+331	Account verwijderen?
+332	Dit plan verwijderen
+333	Dit plan verwijderen?
+334	Gegevens van {{name}} verwijderen
+335	Gegevens van {{name}} verwijderen?
+336	Taak {{title}} verwijderen?
+337	Verwijderen?
+338	Geweigerd — tik om in te schakelen
+339	Tandartsafspraak
+340	Tandarts
+341	Weigeren
+342	Beschrijf hoe je '{{title}}' hebt gedaan...
+343	Apparaat
+344	Andere tag
+345	Sluiten
+346	Huisartsenpraktijk
+347	Hondenuitlaatplek
+348	Dojo
+349	Verbreek je reeks niet!
+350	Klaar
+351	Voor middernacht klaar levert +{{xp}} XP op
+352	Drift-saldo
+353	Drift Family
+354	Drift In
+355	Drift Pro
+356	Drift Pro blokkeert zoveel apps, categorieën en websites als je wilt.
+357	Drift kan je contacten vergelijken om vrienden te vinden die al op Drift zitten. E-mailadressen worden op je apparaat gehasht en nooit als leesbare tekst geüpload.
+358	Drift kan je agenda lezen om afspraken van vandaag als taken aan te bieden. Je agenda wordt nooit gewijzigd en er wordt niets geüpload.
+359	Drift kan je herinneringen lezen om ze als taken aan te bieden. Je herinneringen worden nooit gewijzigd en er wordt niets geüpload.
+360	Drift kan geen apps blokkeren tot je Schermtijd-toegang weer aanzet via Instellingen → Schermtijd.
+361	Drift ziet wanneer je bij opgeslagen plekken aankomt, zodat het een taak kan voorstellen. Op de achtergrond is daarvoor 'Altijd' nodig. Je locatie blijft op je apparaat en wordt nooit geüpload.
+362	Drift neemt geen geluid op. Deze toestemming is nodig voor een cameracomponent die houding herkent.
+363	Drift-feedback
+364	Drift heeft geen locatietoestemming (Instellingen › Drift › Locatie).
+365	Drift in
+366	Drift-kinderaccount
+367	Drift kan een screenshot in je fotobibliotheek bewaren als je je voortgang wilt delen.
+368	Drift heeft locatietoegang 'Altijd' nodig om te merken wanneer je ergens aankomt. Je kunt dit wijzigen via Instellingen → Drift → Locatie.
+369	Drift heeft toegang tot je foto's nodig om bewijs aan een taak toe te voegen of je profielfoto in te stellen.
+370	Drift-ouderaccount
+371	Drift leest Google Agenda via iOS. Open Instellingen → Apps → Agenda → Accounts → Voeg account toe → Google, log in en zet Agenda's aan. Kom daarna terug en controleer opnieuw.
+372	Drift leest een NFC-tag die je in een andere kamer legt, zodat je kunt laten zien dat je telefoon daar is voor je gaat slapen. Drift leest alleen de ID van de tag en schrijft er nooit naar.
+373	Drift gebruikt Beweging en fitness om te controleren of je telefoon 's nachts stil lag. Zet het aan via Instellingen › Drift › Beweging en fitness.
+374	Drift gebruikt bewegingsgegevens om oefeningen te herkennen bij workout-uitdagingen en om te controleren of je telefoon blijft liggen tijdens een Lockbox-sessie of 's nachts met de telefoon-in-een-andere-kamer-bewaker, ook met het scherm uit. Bewegingsgegevens worden op je apparaat gelezen en nooit geüpload.
+375	Drift gebruikt je camera voor bewijsfoto's van je taken, om je profielfoto in te stellen en om de Lockbox met augmented reality op een echt oppervlak te zetten.
+376	Drift gebruikt je locatie om de plekken op te slaan die je kiest, zodat het een taak kan voorstellen als je aankomt. Je locatie blijft op je apparaat.
+377	Drift vergeet je tag en stopt de avondherinnering. Je reeksgeschiedenis blijft bewaard.
+378	Borrel
+379	Zet een doos op je bureau. Je telefoon gaat erin en blijft erin.
+380	Recycling wegbrengen
+381	Doos neerzetten
+382	Naar de grond · spring omhoog en klap boven je hoofd
+383	Stomerij
+384	Kleding naar de stomerij
+385	TE VERDIENEN
+386	VERDIEND
+387	VIND JE DRIFT LEUK?
+388	CODE INVOEREN
+389	GESCHATTE OPBRENGST
+390	Elke taak heeft een geschatte duur en levert schermtijd op als je hem afrondt.
+391	Verdien schermtijd door een taak in Drift te voltooien.
+392	Verdien dit terug om te ontgrendelen
+393	Verdien tijd.
+394	Verdien je eigen schermtijd door taken te voltooien.
+395	Verdien je schermtijd
+396	Verdien je schermtijd door echte dingen te doen. Je telefoon gaat open als jij dat doet.
+397	Verdien je tijd
+398	Verdiend
+399	Verdiend per soort
+400	Elleboog
+401	Ellebogen op 90° onder · bovenaan uitstrekken
+402	E-mail
+403	E-mailaccounts moeten bevestigd zijn voordat Drift ontgrendelt.
+404	E-mail of wachtwoord is onjuist.
+405	E-mail is verplicht.
+406	E-mail te lang.
+407	Mail ons op {{FEEDBACK_EMAIL}}
+408	Zet Contacten aan in Instellingen om vrienden te vinden. Ze verlaten je apparaat nooit zonder hash.
+409	Zet Drift aan via Instellingen > Schermtijd zodat Drift apps kan blokkeren.
+410	Camera aanzetten
+411	Zet locatietoegang aan zodat Drift plekvoorstellen kan gebruiken.
+412	Einde
+413	Eerder stoppen
+414	Deze sessie beëindigen?
+415	Voer een code in.
+416	Voer een geldig e-mailadres in.
+417	Voer minstens 4 cijfers in.
+418	Voer hem in om te kiezen welke apps geblokkeerd worden.
+419	Voer 1 tot 600 minuten in.
+420	Voer de 8-cijferige code uit je e-mail in.
+421	Voer de code in die je van je programma of het Drift-team hebt gekregen om Drift Pro te ontgrendelen.
+422	Voer de gezinscode van je ouder in.
+423	Voer je code in
+424	Voer je naam in.
+425	Voer je deelnemers-ID in.
+426	Fout
+427	Eeuwig
+428	Avond
+429	Avonden
+430	Afspraak
+431	Elke dag
+432	Alle plekken in dit gezin zijn bezet. Vraag je ouder er een toe te voegen in Drift en probeer het opnieuw.
+433	Alles wat voor het account van {{name}} is opgeslagen. Verder wordt niets bewaard.
+434	Alles wat verandert hoe Drift werkt.
+435	Oefening
+436	Verkennen
+437	Een tentoonstelling bekijken
+438	GEZINSCODE
+439	FEEDBACK
+440	FOCUS
+441	Gezinscode
+442	Ouderlijk huis
+443	Gezinstijd
+444	Boerderij
+445	Boerderijklusjes
+446	Tanken
+447	Vrienden zoeken in contacten
+448	Afronden
+449	Voor middernacht klaar → +{{xp}} XP
+450	Eerder afronden?
+451	Eerst afmaken. Dit is er straks nog.
+452	Maak het af. {{name}} is er straks nog.
+453	Wie het eerst klaar is wint +{{xp}} XP
+454	Wie het eerst bevestigd is wint +{{xp}} XP
+455	Focusblok
+456	Focus.
+457	Gefocuste tijd?
+458	Gefocust werkblok
+459	Geconcentreerd werk, gym, koken, studeren
+460	Bos
+461	Het gratis abonnement blokkeert tot {{FREE_BLOCK_LIMIT}}
+462	Vr
+463	Vriendschapsverzoek gestuurd naar @{{username}}
+464	Vriendschapsverzoek gestuurd naar @{{username}}.
+465	Bij een vriend
+466	Vrienden
+467	Vrienden op Drift
+468	Voorste knie op 90° · achterste knie raakt bijna de grond
+469	DOEL
+470	BOSJE
+471	Spelletjesavond
+472	Spellenwinkel
+473	Tuinwandeling
+474	Tuinwerk
+475	Tankstation
+476	Aan de slag
+477	We zetten alles\nvoor je klaar
+478	Verdiende minuten teruggeven.
+479	Geef de taak een naam.
+480	Geef deze taak wat meer tijd voordat je hem bewijst.
+481	Een wandeling maken
+482	Golfbaan
+483	Welterusten
+484	Goed gedaan.
+485	Welterusten
+486	Google
+487	Inloggen met Google is niet ingesteld.
+488	Inloggen met Google mislukt
+489	Inloggen met Google mislukt.
+490	Inloggen met Google is niet ingesteld in deze versie.
+491	Inloggen met Google vereist een dev client-versie (werkt niet in Expo Go).
+492	Goeie dag gisteren!
+493	Boodschappen
+494	Bosje
+495	Groeiend
+496	Groei
+497	Gym
+498	MOEILIJKSTE TIJD
+499	EEN CODE?
+500	HOE HET WERKT
+501	HOE DIT WERKT
+502	Knipbeurt
+503	Afspreken
+504	Zware workout, intense sprint, lange tocht
+505	Bouwmarkt
+506	Pro- of groepscode? Ontgrendel hem hier
+507	Een code?
+508	Hoogte
+509	Help Drift groeien
+510	Hike
+511	Heup
+512	Heupen onder de knieën · duw af via je hielen
+513	Geschiedenis
+514	Hoi{{p}}
+515	Houd de bovenkant van je telefoon tegen de tag die je wilt gebruiken.
+516	Houd de bovenkant van je telefoon tegen je tag om de nacht te starten.
+517	Houd de bovenkant van je telefoon tegen je tag.
+518	Houd je telefoon stil tegen de tag en probeer opnieuw.
+519	Vasthouden
+520	Thuis
+521	Thuisgym
+522	Thuiskantoor
+523	Hotel
+524	Zo vinden vrienden je. Kan later niet worden gewijzigd.
+525	Hoe lang we het bewaren
+526	Hoeveel kinderen?
+527	Hoe we bevestigen dat je de ouder bent
+528	IK BESTEED ONGEVEER
+529	Ik ga akkoord
+530	Ik heb net {{earnedText}} schermtijd verdiend door '{{title}}' {{timeText}} lang te doen op Drift.
+531	Ik verdien mijn schermtijd met Drift — doe mee met mijn code {{code}} voor 15 bonusminuten: {{link}}
+532	Ik kom later terug
+533	Ik ben een kind
+534	Ik ben een ouder
+535	Ik ben de ouder of wettelijke voogd van de kinderen die bij dit gezin komen en ga akkoord dat Drift hun gegevens verzamelt en gebruikt zoals hierboven beschreven.
+536	Ik verdien mijn schermtijd met Drift in plaats van eindeloos te scrollen — doe mee: {{link}}
+537	IN DE DOOS
+538	IN PLAATS DAARVAN GA IK
+539	IJsbaan
+540	Beeldverwerking is niet geïnstalleerd in deze versie. Gebruik tekst- of videobewijs.
+541	Automatisch importeren
+542	Afspraken van vandaag importeren
+543	Zwaar
+544	Contacten uitnodigen voor Drift
+545	Is dit nu echt wat je wilt doen?
+546	Is {{label}} nu echt wat je wilt doen?
+547	Is {{name}} nu wat je wilt?
+548	Hij werd rond {{when}} opgepakt. Deze keer geen bonus.
+549	Werklocatie
+550	Bij gezin komen
+551	Kom bij ons gezin op Drift — open de app, kies 'Ik ben een kind' en voer deze code in: {{code}}
+552	Kom bij je gezin met een code van je ouder.
+553	Kom bij je{{p}}gezin
+554	Dagboek
+555	Benen wijd springen · armen helemaal boven je hoofd
+556	Jumping jacks
+557	Vraag het gewoon aan Siri
+558	Alleen ik
+559	Eenmalig
+560	Account houden
+561	Ga zo door
+562	Blijf onder de 5000 tekens.
+563	Blijf onder de {{VIDEO_MAX_SECONDS}} seconden — genoeg om het werk te laten zien.
+564	Houd je reeks vast
+565	Kind
+566	Knie
+567	LEER DE APP KENNEN
+568	MINSTE SCHERMTIJD VANDAAG
+569	DUUR
+570	LEVEL
+571	LEVEL OMHOOG
+572	LIVE
+573	LIVE CHECK
+574	Lab
+575	Labwerk
+576	Meer
+577	Taal
+578	Taaloefening
+579	Taalschool
+580	Vannacht
+581	Laat
+582	Laat op de avond
+583	Later
+584	Wasserette
+585	Was
+586	Leren
+587	Laat hem in de kamer waar je telefoon slaapt. Tik er bij bedtijd op om een nacht te starten.
+588	Laat het daar
+589	Laat hem liggen.
+590	Sessie verlaten?
+591	Laat je telefoon liggen. Drift controleert het 's ochtends.
+592	College
+593	Collegezaal
+594	Taken zichzelf\nlaten toevoegen?
+595	Laat taken zichzelf toevoegen — uit je agenda of als je ergens aankomt.
+596	We zetten je klaar
+597	Alleen letters, cijfers en underscores.
+598	Bibliotheek
+599	Leven
+600	Licht
+601	Live volgen is niet beschikbaar
+602	Live volgen vereist een volledige versie
+603	Model laden…
+604	Locatievoorzieningen staan uit voor het hele apparaat (Instellingen › Privacy › Locatievoorzieningen).
+605	Locatie staat op 'Bij gebruik van app'. Aankomsten hebben 'Altijd' nodig (Instellingen › Drift › Locatie › Altijd).
+606	Locatie is niet beschikbaar in deze versie.
+607	Locatie nodig
+608	Vastleggen
+609	Lockbox
+610	Lockbox voltooid
+611	Lockbox-sessie verloren
+612	Lockbox · Pro
+613	Vergrendeld
+614	Opzoeken mislukt
+615	Borst naar de grond · volledige beweging telt
+616	Lunges
+617	Mail niet ingesteld
+618	Iets maken
+619	Zorg dat locatietoegang aan staat en probeer opnieuw.
+620	Je bed opmaken
+621	Winkelcentrum
+622	App-toegang beheren
+623	Kaarten
+624	Jachthaven
+625	Vechtsportles
+626	Je contacten privé vergelijken…{{p}}E-mails worden op je apparaat gehasht.
+627	Max. 20 tekens.
+628	Uit eten
+629	Mediteren
+630	Meditatiecentrum
+631	Berichten
+632	Minuten
+633	Mis de deadline en je verliest {{penaltyMins}} minuten schermtijd.
+634	De deadline missen kost {{penaltyMins}} minuten schermtijd.
+635	Gemiddeld
+636	Ma
+637	1 plek wordt op de achtergrond gevolgd.
+638	{{placeCount}} plekken worden op de achtergrond gevolgd.
+639	Maandelijks
+640	Ochtend
+641	Ochtenden
+642	Bewegingstoegang nodig
+643	Bewegingsgegevens zijn nu niet beschikbaar. We controleren het zo opnieuw.
+644	Berg
+645	Beweeg langzaam boven een tafel of bureau
+646	Museum
+647	Muziek
+648	Muziekschool
+649	NIEUWE TAAK
+650	NIEUWE TAAK · DOOR AI GEWAARDEERD
+651	GEEN POGINGEN MEER VOOR DEZE TAAK
+652	NIET BEVESTIGD
+653	Nagelsalon
+654	Naam
+655	Noem het ene ding waar je je op wilt richten en kies een duur. Tijdens Drift In blijven je geblokkeerde apps op slot en loopt de timer door, ook als je Drift sluit. Rond de sessie af en de helft van je focustijd komt terug als schermtijd — maximaal 60 minuten — plus ervaring voor je niveau, zonder limiet. Eerder stoppen levert niets op.
+656	Geef je uitdaging eerst een naam
+657	Geef je taak eerst een naam
+658	Nodig om je herhalingen live te tellen
+659	Netwerkfout. Controleer je verbinding.
+660	Nieuw vriendschapsverzoek
+661	Nieuwe taak voor {{display_name}}
+662	Volgende
+663	Goed gedaan. Je voortgang is naar een nieuw niveau gegroeid.
+664	Mooi.
+665	De nacht is begonnen. Je apps zitten op slot tot de ochtend.
+666	Nee
+667	Geen AR op dit apparaat — leg je telefoon gewoon plat neer.
+668	Nog geen Google-agenda
+669	Nog geen account? Registreren
+670	Geen apps om te blokkeren
+671	Niet stiekem scrollen.
+672	Geen saldo. Eén taak verandert dat.
+673	Nog geen blokuren.
+674	Deze keer geen bonus.
+675	Geen camera gevonden
+676	Nog geen voltooide taken.
+677	Nog geen voltooide taken. Goedgekeurde taken verschijnen hier.
+678	Nog geen voltooide taken. Rond een taak af om hem hier te zien.
+679	Er wordt geen tegoed verdiend.
+680	Geen e-mail? Kijk in je spam!
+681	Geen e-mail, telefoonnummer, wachtwoord, foto's, locatie, contacten of geboortedatum. Kinderaccounts gebruiken nooit de AI-check, dus niets wat je kind doet gaat naar een AI-dienst. Geen advertenties, geen tracking, geen analyses op kinderaccounts. Welke apps het gebruikt, blijft op zijn telefoon — Apple geeft Drift alleen onleesbare tokens.
+682	Geen e-mail, foto's, locatie, contacten of AI-checks. Welke apps het opent, blijft op zijn telefoon.
+683	Er kwamen geen beelden uit. Neem opnieuw op.
+684	Geen iPhone-agenda's gevonden op dit apparaat.
+685	Nog geen kinderen. Deel je code hierboven; ze verschijnen hier zodra ze meedoen.
+686	Geen nieuwe afspraken in de agenda van vandaag.
+687	Geen eerdere uitdagingen
+688	1 uur geen telefoon
+689	Nog geen plekken opgeslagen — sla er een op terwijl je er bent.
+690	Nog geen plekken opgeslagen.
+691	Nog geen planten
+692	Nog geen terugkerende taken.
+693	Geen statistieken
+694	Nog geen tag
+695	Geen taken
+696	Nu geen taken. Als een ouder je er een geeft, verschijnt hij hier.
+697	Nog geen tijd verdiend
+698	Geen tijd om af te halen.
+699	Geen wilskracht nodig. Het systeem doet het zware werk.
+700	Nog geen van je contacten zit op Drift — nodig ze hieronder uit.
+701	Nog geen. Ga naar een plek waar je vaak komt — je gym, de bieb — en sla hem hieronder op.
+702	Niet beschikbaar
+703	Hier niet beschikbaar
+704	Niet ingeschakeld — tik om toe te staan
+705	Niet gevonden
+706	Niet nu
+707	Niet nu.
+708	Nog niet ingesteld
+709	Niet ingelogd
+710	Nog niet
+711	Nog niet.
+712	Nog niets gearchiveerd.
+713	Niets hier dat niet kan wachten.
+714	Nog niets geselecteerd — het schild heeft niets om te vergrendelen.
+715	Vandaag nog niets uitgegeven.
+716	Niets te importeren
+717	Niets te herstellen
+718	Niets in te stellen — de opdrachten werken zodra Drift is geïnstalleerd. Ze staan ook in Opdrachten.
+719	Meldingen staan uit
+720	Meldingen staan uit, dus een aankomst kan je niet bereiken (Instellingen › Drift › Meldingen).
+721	OK
+722	NOG ÉÉN DING
+723	EEN SNELLE CHECK
+724	OPENEN
+725	OPTIONEEL
+726	Uit
+727	Een taak aanbieden als je aankomt op een opgeslagen plek.
+728	Kantoor
+729	Oerbos
+730	Aan
+731	Eenmalig
+732	Eén taak in Drift en het is van jou.
+733	Eén taak is genoeg.
+734	Eén taak, volle aandacht. De rest kan wachten.
+735	Die jij toewees, en hun status
+736	Alleen om de functies te laten werken die je gebruikt: taken toewijzen, goedkeuren en schermtijd vrijgeven op de telefoon van je kind.
+737	Pas {{minutes}} minuten. Een nacht moet minstens {{round}} uur zijn.
+738	Open Drift om te accepteren of te weigeren.
+739	Instellingen openen
+740	Mijn mail-app openen
+741	Open de nieuwste bevestigingsmail en probeer opnieuw.
+742	Open je e-mail
+743	Open je mail-app en zoek je 8-cijferige Drift-code.
+744	Opent het Pro-venster op elk account. Niet in releaseversies.
+745	Buiten
+746	DEELNEMERS-ID
+747	TELEFOON WEG
+748	TELEFOON WEG OM
+749	PLANT
+750	PLANTEN
+751	PROFIEL
+752	VOORTGANG
+753	TERUGLEGGEN
+754	Ouder
+755	Ouderpincode
+756	Park
+757	Wachtwoord
+758	Je wachtwoord moet minstens 12 tekens hebben.
+759	Wachtwoord is verplicht.
+760	Wachtwoord te lang (max. 72 tekens).
+761	Eerdere uitdagingen
+762	Toegang geweigerd
+763	Apotheek
+764	Telefoon
+765	Telefoon in de doos
+766	Foto mislukt
+767	Foto te groot
+768	Fysiek
+769	Fysiotherapiepraktijk
+770	Kies een lager doel
+771	Kies een gebruikersnaam.
+772	Kies een andere gebruikersnaam.
+773	Apps kiezen om te blokkeren
+774	Kies apps die op slot gaan als je saldo nul is. iOS handhaaft dit ook als Drift dicht is, soms tot ~15 min later.
+775	Apps kiezen met Apples Schermtijd
+776	Kies minstens één app of categorie om door te gaan.
+777	Pak hem op om de doos weer te zien
+778	Kies wat past — dit kan later niet worden gewijzigd.
+779	Recept ophalen
+780	Spullen ophalen
+781	Kies je dagelijkse\ntaken
+782	Kies je gebruikersnaam
+783	Voor het kiezen van apps heb je de App Store- of TestFlight-versie van Drift nodig.
+784	Ophalen
+785	Pilatesles
+786	Pilatesstudio
+787	Plek
+788	Maximum aantal plekken bereikt
+789	Plekvoorstellen
+790	Plekvoorstellen staan uit.
+791	Plekvoorstellen komen als melding, dus met meldingen uit bereikt niets je. Zet ze aan via Instellingen › Drift › Meldingen.
+792	Zet de doos neer
+793	Plank
+794	Abonnementen laden nu niet. Controleer je verbinding en probeer opnieuw.
+795	Planten
+796	Plant een vriend via gebruikersnaam.
+797	Vriend planten
+798	Een rondje spelen
+799	Probeer het later opnieuw.
+800	Probeer het opnieuw.
+801	Richt op de plek waar je de doos liet
+802	Zwembad
+803	Postkantoor
+804	Postzaak
+805	Oefenen
+806	Een vaardigheid oefenen
+807	Foto voorbereiden…
+808	Paywall-voorbeeld (dev)
+809	Privacy
+810	Privacybeleid
+811	Privacybeleid
+812	Pro-functie
+813	Met Pro groeit je plant verder dan {{name}}.
+814	Opslag voor profielfoto's is nog niet ingesteld. Voer supabase/profile_challenge_updates.sql uit in Supabase en probeer opnieuw.
+815	Profielfoto's hebben de databasekolom avatar_url nodig. Voer supabase/profile_challenge_updates.sql uit en herstart de app.
+816	Bewijs het meteen — maar je hebt stevig bewijs nodig.
+817	Haal de afspraken van vandaag één keer per dag vanzelf binnen.
+818	Haal de afspraken van vandaag één keer per dag vanzelf binnen. Staat het uit, dan importeer je hieronder handmatig.
+819	Aankoop mislukt
+820	Aankopen zijn niet beschikbaar in deze versie.
+821	Aankopen zijn op dit platform nog niet ingesteld.
+822	Push-ups
+823	Terug in de doos leggen
+824	Leg je telefoon terug in de doos
+825	Leg je telefoon in de andere kamer en tik op de tag om de nacht te starten.
+826	Leg je telefoon in de andere kamer en tik op de tag. Tot nu toe 1 nacht op rij.
+827	Leg je telefoon in de andere kamer en tik op de tag. Tot nu toe {{streak}} nachten op rij.
+828	Snelle taak, makkelijk regelwerk, weinig inspanning
+829	KLAAR
+830	RECENTE NACHTEN
+831	TERUGKERENDE TAKEN
+832	FOTO VERWIJDEREN
+833	VIDEO VERWIJDEREN
+834	HERHALEN
+835	Opnieuw activeren
+836	Lezen
+837	Een hoofdstuk lezen
+838	Lees het volledige privacybeleid
+839	Je clip wordt gelezen…
+840	Je clip wordt gelezen… {{done}}/{{total}}
+841	Lezen, sporten, studeren, koken.\nAlles wat productief is en wat je echt zou doen.
+842	Klaar om te slapen?
+843	Bouw opnieuw met expo-video-thumbnails geïnstalleerd.
+844	Opnieuw controleren
+845	Hersteltijd
+846	Schema's voor terugkerende taken zijn een Pro-functie.
+847	Terugkerende taken
+848	Milieustraat
+849	Inwisselen
+850	Code inwisselen
+851	Opnieuw doen
+852	Verlagen
+853	Sequoia
+854	Gebieden worden nog niet gevolgd — tik op Opnieuw activeren.
+855	Tag registreren
+856	Registreer een tag om de bewaker aan te zetten.
+857	Revalidatie-oefeningen
+858	Verwijderen
+859	@{{username}} verwijderen?
+860	Vriend verwijderen
+861	Tijd afhalen
+862	{{label}} verwijderen?
+863	@{{username}} verwijderd
+864	Herhaalt
+865	Herhaalt elke dag
+866	Rondleiding opnieuw bekijken
+867	Verzoek al verstuurd
+868	Verzoek verstuurd
+869	Verzoek verstuurd naar @{{username}}
+870	Verzoeken aan jou
+871	Code opnieuw sturen
+872	Restaurant
+873	Herstellen
+874	Herstellen mislukt
+875	Fietsen
+876	Rivier
+877	Wandeling langs de rivier
+878	Regels of bewijs nodig
+879	Uitvoeren: npx expo install expo-image-picker
+880	Uitvoeren: npx expo install expo-video-thumbnails en bouw de app opnieuw. Foto- en tekstbewijs werken nog steeds.
+881	Bijna op
+883	OPSLAAN WAAR JE BENT
+884	OPGESLAGEN PLEKKEN
+885	SCHERMTIJD
+886	RESTERENDE SCHERMTIJD
+887	SCHERMTIJDBELONING (MINUTEN)
+888	SCHERMTIJD VANDAAG
+889	ZADEN - {{length}}
+890	STUUR EEN UITDAGING
+891	STUUR EEN DURF
+892	ANTWOORD VERSTUREN
+893	SESSIE VOLTOOID
+894	SESSIES
+895	INSTELLINGEN
+896	DELEN
+897	STAP {{p}} VAN {{length}}
+898	VERSTUREN VOOR CONTROLE
+899	Jonge boom
+900	Za
+901	Opslaan
+902	Pincode opslaan
+903	Sla plekken op zoals je gym, en Drift biedt\nde taak aan als je aankomt. Het kan ook\nde afspraken van vandaag binnenhalen.
+904	Deze plek opslaan
+905	Bespaar {{annualSavingsPct}}%
+906	Opslaan…
+907	Andere tag scannen
+908	Plannen
+909	School-apps
+910	Kind van school halen
+911	Naar school brengen
+912	Wetenschapsmuseum
+913	Schermtijd
+914	Toegang tot Schermtijd
+915	Toegang tot Schermtijd geweigerd
+916	Toegang tot Schermtijd nodig
+917	Schermtijd
+918	Scherm naar boven. De sessie start zodra hij helemaal stil ligt.
+919	Maak een screenshot van deze kaart om in je Stories te delen
+920	Talen zoeken
+921	Bekijk Pro
+922	Een voorstelling zien
+923	Livemuziek zien
+924	Zie je verdiende schermtijdsaldo in één oogopslag.
+925	Zaadje
+926	Kies taken die je regelmatig zou doen. Je kunt later altijd meer toevoegen.
+927	Versturen
+928	Uitdaging versturen
+929	Durf versturen
+930	Feedback sturen
+931	Versturen…
+932	Verstuurd
+933	Server: {{error}}{{p}}
+934	Dienst
+935	Sessie voltooid
+936	Sessie vroeg gestopt. Geen tijd verdiend.
+937	Sessie verloren.
+938	Sessienotities
+939	De sessie loopt nog. {{name}} kan wachten.
+940	Stel EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in .env in, plus de iOS/Android-client-ID's.
+941	Stel een pincode in. Die voer je in op de telefoon van je kind om te kiezen welke apps worden geblokkeerd.
+942	Stel een doel. Drift maakt er een plan van.
+943	Stel een schermtijddoel en krijg een concreet plan.
+944	Instellen
+945	Ouderpincode instellen (om apps van een kind te kiezen)
+946	Geef je kinderen taken en keur hun schermtijd goed.
+947	Instellen
+948	Leg je telefoon in de doos, scherm naar boven
+949	Leg je{{p}}telefoon weg
+950	Instellen…
+951	Delen & uitnodigen
+952	Statistieken delen
+953	Code delen
+954	Deel je statistieken, verdien bonustijd
+955	Deel je succes
+956	Dienstklussen
+957	Winkelen
+958	Inloggen
+959	Log in om verder te gaan waar je was.
+960	Log in om het bosje te zien
+961	Inloggen met Google
+962	Uitloggen
+963	Uitloggen?
+964	Registreren met Google
+965	Inloggen mislukt. Probeer opnieuw.
+966	Inlogtoken kon niet worden gecontroleerd. Probeer opnieuw.
+967	Sit-ups
+968	Werk op locatie
+969	Skaten
+970	Skatepark
+971	Skatesessie
+972	Skiafdaling
+973	Skipiste
+974	Overslaan
+975	Nu overslaan
+976	Overgeslagen op nachten dat je al hebt ingetikt.
+977	Eerder slapen
+978	Slaapbewaker
+979	Slaap met je telefoon in een andere kamer
+980	Schuif je doel onder wat je nu gebruikt.
+981	Voetbal
+982	Voetbalveld
+983	Sociaal
+984	Iemand wil je toevoegen op Drift.
+985	Er ging iets mis
+986	Er ging iets mis. Controleer je verbinding en probeer opnieuw.
+987	Spa
+988	Ongeveer {{minutes}} minuten gebruikt?
+989	Spruit
+990	Squats
+991	Stadion
+992	Start
+993	Start een focussessie vanuit de tabbalk. Je apps blijven geblokkeerd terwijl je focust — en je verdient er tijd mee.
+994	Begin met verdienen
+995	Begin plat · rol op tot je ellebogen je knieën raken
+996	Nu starten
+997	Dit plan starten
+998	Start gratis proef van {{trial}} dagen
+999	Status: {{next}}. Open Instellingen -> Schermtijd om toegang te geven.
+1000	Blijf gefocust
+1001	Plak een NFC-tag in een andere kamer. Tik er bij bedtijd op en Drift blokkeert je apps tot de ochtend en controleert daarna of je telefoon echt daar bleef.
+1002	Plak een NFC-tag in de kamer ernaast. Tik er bij bedtijd op en Drift controleert of je telefoon er de hele nacht bleef.
+1003	Nog aan het laden
+1004	Stilte is ook productief.
+1005	Opslag opruimen
+1006	Opslagbox
+1007	Stretchen
+1008	Studio
+1009	Studiosessie
+1010	Studeren
+1011	Studieruimte
+1012	Studiesessie
+1013	Stuur je bewijs opnieuw in.
+1014	Suggesties
+1015	Stelt '{{title}}' ({{minutes}} min) voor als je aankomt — kies hierboven een suggestie voor een betere match.
+1016	Stelt '{{title}}' ({{minutes}} min) voor als je aankomt.
+1017	Zo
+1018	Supermarkt
+1019	Zwemmen
+1020	Updates synchroniseren
+1021	TAAK
+1022	TAKEN
+1023	HET LAB
+1024	DEZE WEEK
+1025	SLEUTELEN
+1026	VANDAAG
+1027	OPNIEUW PROBEREN
+1028	ZET HET SLOT AAN
+1029	SOORT
+1030	Tag gelezen.
+1031	Tag geregistreerd
+1032	Tag opgeslagen
+1033	Tag opgeslagen.
+1034	Breng hem naar de andere kamer en tik op je tag om de nacht te starten.
+1035	Haal je telefoon eruit en open Drift om je tijd op te halen.
+1036	Duurt 60 seconden
+1037	Tik altijd opnieuw om te wijzigen wat geblokkeerd is. Alleen op je apparaat opgeslagen.
+1038	Tik bij bedtijd op een NFC-tag in een andere kamer. Apps blijven op slot tot de ochtend.
+1039	Tik er bij bedtijd op om je eerste nacht te starten.
+1040	Tik op + om iets zinvols toe te voegen. Rond het af en bevestig om schermtijd te verdienen.
+1041	Tik op de tag
+1042	Tik om Mail te openen naar
+1043	Tik om te controleren
+1044	Taak toegevoegd
+1045	Taak goedgekeurd
+1046	Taak klaar om te controleren
+1047	Taken
+1048	Taken kunnen zichzelf\ntoevoegen
+1049	Taken gedaan
+1050	Taken die automatisch terugkomen.
+1051	Taken die volgens een schema terugkomen.
+1052	Taken om het te verdienen
+1053	Vertel ons iets meer.
+1054	Het bosje verzorgen
+1055	Tennis
+1056	Tennisbaan
+1057	Voorwaarden
+1058	Gebruiksvoorwaarden
+1059	Gebruiksvoorwaarden
+1060	Testen
+1061	Test mislukt
+1062	Test verstuurd
+1063	Bedankt
+1064	Bedankt dat je bij Drift blijft. Elke twee maanden dat je blijft, wordt Pro goedkoper, tot {{price}}. Bevestig bij Apple en {{price2}} gaat in bij je volgende verlenging.
+1065	Die pincode klopt niet.
+1066	Die code is volledig ingewisseld.
+1067	Die code is verlopen.
+1068	Die code is onjuist of verlopen. Controleer hem of tik op Code opnieuw sturen voor een nieuwe.
+1069	Die code is niet meer actief.
+1070	Die code is ongeldig.
+1071	Dat heeft Drift niet ontgrendeld. Is er geld afgeschreven, tik dan op Herstellen.
+1072	Die gezinscode bestaat niet. Controleer hem met je ouder.
+1073	Die gezinscode is niet meer actief.
+1074	Die gezinsgrootte is nog niet ingesteld. Probeer een ander aantal of neem contact op met support.
+1075	Dat is niet de tag die je hebt ingesteld. Tik op die in je slaapkamer.
+1076	Die deelnemers-ID lijkt niet te kloppen. Controleer hem met je onderzoeksteam.
+1077	Die deelnemers-ID is al gebruikt. Controleer hem met je onderzoeksteam.
+1078	Die opname is enorm. Neem een kortere clip op en probeer opnieuw.
+1079	Die taak is niet toegestaan. Probeer iets productiefs!
+1080	Dat duurde te lang
+1081	Die gebruikersnaam is bezet.
+1082	Die gebruikersnaam is bezet. Probeer een andere.
+1083	Die gebruikersnaam is net bezet. Je hebt voorlopig @{{username}} gekregen —
+1084	Dat is niet de doos — leg hem erin
+1085	Dat waren de gratis taken van vandaag
+1086	Dat ben jij
+1087	Dat is {{mins}} minuten van je verdiende tijd. Jouw keuze.
+1088	De AI-check duurde te lang. Vaak blokkeert de wifi Drift — zet wifi uit om mobiele data te gebruiken en probeer opnieuw.
+1089	De AI-dienst heeft nu problemen. Probeer het zo opnieuw.
+1090	De AI-dienst heeft problemen. Probeer het opnieuw.
+1091	De AI-dienst wees het verzoek af (fout {{status}}). Probeer opnieuw of gebruik alleen tekstbewijs.
+1092	Het bosje
+1093	Het lab
+1094	De aankomst kwam niet door ({{reason}}).
+1095	De achtergrondtaak is niet geregistreerd. Sluit Drift helemaal af en open het opnieuw.
+1096	De camera vond geen oppervlak.
+1097	De camera telt je herhalingen — geen foto nodig
+1098	De categorieën die je koos
+1099	De uitdaging aan @{{p}} wordt ingetrokken.
+1100	De voornaam of bijnaam die het invult bij het meedoen. De taken die je toewijst en of ze klaar zijn. Het schermtijdsaldo en de appcategorieën die je toestaat. Verzoeken om een app toe te staan. Een meldingstoken zodat de telefoon meldingen krijgt.
+1101	Het gratis abonnement blokkeert tot {{FREE_BLOCK_LIMIT}}
+1102	Met het gratis abonnement verdien je met {{freeDailyTasks}} taken per dag. Neem Pro voor onbeperkte taken of kom morgen terug.
+1103	De rondleiding van je eerste start.
+1104	De verliezer levert {{penaltyMins}} minuten schermtijd in.
+1105	De ander verliest {{penaltyMins}} minuten schermtijd.
+1106	De andere speler heeft misschien al gereageerd.
+1107	Het abonnement is nu niet beschikbaar. Probeer het zo opnieuw.
+1108	Theater
+1109	Therapeut
+1110	Therapiesessie
+1111	Deze contacten zitten op Drift. Voeg ze toe aan je bosje.
+1112	Deze blijven open, ook als {{display_name}} geen schermtijd meer heeft.
+1113	Ze worden uit je bosje verwijderd. Je kunt ze later weer toevoegen.
+1114	Dit kan niet ongedaan worden gemaakt.
+1115	Deze code is voor een onderzoek. Voer de deelnemers-ID in die je van je onderzoeksteam kreeg.
+1116	Dit verwijdert je Drift-account en logt je uit. Dit kan niet ongedaan worden gemaakt.
+1117	Dit telt niet als poging — we hebben alleen één detail nodig om zeker te zijn.
+1118	Dit gezin heeft al het maximumaantal kinderen.
+1119	Dit is een taak van {{minutes}} minuten, dus bewijzen kan {{mmss}} na het toevoegen. Ga het doen — we wachten.
+1120	Dit is de tijd die je hebt gespaard. Als die nul is, gaan je gekozen apps op slot tot je meer verdient.
+1121	Dit slaat inloggen over, dus de introductie kan niet afronden. Log normaal in om de hele flow te testen.
+1122	Dit moment is van jou, niet van je telefoon.
+1123	Dit verwijdert definitief de accounts en gegevens van alle kinderen in je gezin, en geen kind kan meedoen tot je opnieuw akkoord gaat. Dit kan niet ongedaan worden gemaakt.
+1124	Dit verwijdert definitief je Drift-account en alle kinderaccounts in je gezin, met al hun gegevens. Dit kan niet ongedaan worden gemaakt. Zeg je Family-abonnement apart op in de iPhone-instellingen.
+1125	Dit verwijdert definitief het account, de taken, het saldo en de verzoeken van {{name}} en logt de telefoon uit. Dit kan niet ongedaan worden gemaakt.
+1126	Dit verwijdert je Drift-account definitief. Dit kan niet ongedaan worden gemaakt.
+1127	Deze inlogmethode is nog niet ingeschakeld. Neem contact op met support.
+1128	Deze taak kan nu niet worden gecontroleerd.
+1129	Deze versie van Drift is verouderd. Werk bij naar de nieuwste versie om schermtijd te blijven verdienen.
+1130	Bloeiend
+1131	Do
+1132	Vink het vakje aan om te bevestigen dat je de ouder of wettelijke voogd bent.
+1133	Eén ding opruimen
+1134	Opruimen
+1135	Tijd terug
+1136	Overgebleven tijd van eerder.
+1137	Tijd op het water
+1138	Tijd om je telefoon naar bed te brengen
+1139	Tijd om Drift bij te werken
+1140	Tijd is op
+1141	Timer
+1142	Aan @{{toName}}
+1143	Vandaag
+1144	Te lang
+1145	Te veel pogingen. Probeer het over een paar minuten opnieuw.
+1146	Te veel pogingen. Probeer het straks opnieuw.
+1147	Te vaak opnieuw verstuurd. Probeer het over een paar minuten opnieuw.
+1148	Te vaak opnieuw verstuurd. Wacht een minuut en probeer opnieuw.
+1149	Te kort
+1150	Atletiekbaan
+1151	Baantraining
+1152	Startpunt wandelroute
+1153	Trainen of stretchen
+1154	Station
+1155	Reisregelingen
+1156	Lukt het volgen niet? Bevestig dan met een foto
+1157	Opnieuw proberen
+1158	Probeer opnieuw.
+1159	Di
+1160	Uitzetten
+1161	Slaapbewaker uitzetten?
+1162	Zet Beweging en fitness voor Drift aan in Instellingen om dit te gebruiken.
+1163	Meldingen aanzetten
+1164	Zet ze aan via Instellingen › Drift › Meldingen en test opnieuw.
+1165	Maak van de afspraken van vandaag taken. Alleen lezen.
+1166	Bijlescentrum
+1167	Bijles
+1168	Typ je naam en de gezinscode die je ouder je geeft. Geen e-mail nodig.
+1169	ONTGRENDELT OVER {{mmss}}
+1170	UPDATE VEREIST
+1171	UPGRADEN
+1172	De Amerikaanse wet (COPPA) vereist toestemming van een ouder voordat een app gegevens verzamelt van kinderen onder de 13. Hier staat precies wat Drift met de gegevens van je kinderen doet. Je gezinscode werkt pas als je akkoord gaat.
+1173	GEBRUIKT
+1174	GEBRUIKERSNAAM
+1175	Onverwacht antwoord van de AI-dienst.
+1176	Onbeperkt apps en taken, Lockbox, uitdagingen
+1177	Ontgrendeld tot {{toLocaleDateString}}.
+1178	Tot je het verwijdert. Het wordt gewist als je je kind verwijdert, je toestemming intrekt of je account verwijdert, en automatisch na 18 maanden zonder activiteit.
+1179	Ontspannen
+1180	Tot {{FREE_BLOCK_LIMIT}} apps, categorieën of webdomeinen met het gratis abonnement.
+1181	Werk Drift bij om de AI-check te gebruiken.
+1182	Mijn plan bijwerken
+1183	Update nodig
+1184	Nu bijwerken
+1185	Upgraden naar Pro
+1186	Upgrade om uit te dagen
+1187	Gebruik een minder gangbaar wachtwoord.
+1188	Taal van apparaat gebruiken
+1189	Gebruik alleen letters, cijfers en underscores.
+1190	Gebruik liever mijn iPhone-agenda
+1191	Gebruik tijden als 22:00 en 7:00.
+1192	Gebruik hoofdletters, kleine letters, een cijfer en een symbool.
+1193	Gebruikersnaam
+1194	Gebruikersnaam mag maximaal 20 tekens hebben.
+1195	Gebruikersnaam mislukt
+1196	Gebruikersnaam moet minstens 3 tekens hebben.
+1197	Gebruikersnaam bezet
+1198	BEVESTIGD
+1199	Bevestigingsmail opnieuw verstuurd.
+1200	Controle mislukt
+1201	Bevestigd
+1202	Live bevestigd — de camera volgt de beweging en telt elke herhaling automatisch.
+1203	Bevestigd met een foto als de oefening klaar is.
+1204	Controleren
+1205	Liever met een foto bevestigen
+1206	Bevestigen met foto
+1207	Bevestig je account
+1208	Bevestig eerst je e-mailadres en wissel daarna in.
+1209	Dierenarts
+1210	Bezoek aan de dierenarts
+1211	Videobewijs vereist een nieuwe versie
+1212	Vrijwilligersdienst
+1213	Vrijwilligersplek
+1214	WACHT OP JOUW OK
+1215	WELKOM
+1216	WAT WORDT GEBLOKKEERD
+1217	WAT ER VERSCHIJNT
+1218	WAT ONTBRAK
+1219	WOD
+1220	Wachten
+1221	Wachten op resultaat
+1222	Wachten tot ze accepteren
+1223	Wandelen langs het water
+1224	Wandelen in het bos
+1225	Buiten wandelen
+1226	De hond uitlaten
+1227	Magazijn
+1228	De auto wassen
+1229	De wedstrijd kijken
+1230	We vonden geen abonnement op deze Apple ID. Heb je met een andere geabonneerd, log dan in Instellingen in met die Apple ID en probeer opnieuw.
+1231	We konden je bevestigingsmail nu niet versturen. Dat ligt aan ons — probeer het over een paar minuten opnieuw.
+1232	We hebben een 8-cijferige code gestuurd naar {{verificationEmail}}. Voer hem hieronder in — of tik op deze telefoon op de link in die e-mail.
+1233	We missen je!
+1234	We bieden het opnieuw aan als je Drift weer opent.
+1235	We hebben aangepast hoe we met de gegevens van je kinderen omgaan
+1236	Wo
+1237	Doordeweeks
+1238	Weekenden
+1239	Welkom terug
+1240	Welkom thuis
+1241	Welkom bij\nDrift
+1242	Welkom bij Drift
+1243	Wat Drift over {{name}} bewaart
+1244	Waarvoor? (optioneel)
+1245	Wat voor plek is dit?
+1246	Wat moet er gebeuren? bijv. '30 min gym'
+1247	Wat vraagt je aandacht?
+1248	Wat ze moeten doen
+1249	Wat we van je kind verzamelen
+1250	Wat we niet verzamelen
+1251	Wat ga je doen?
+1252	Waar denk je aan?
+1253	Hier stel je Drift af: welke apps geblokkeerd worden, wat terugkomt en wat automatisch wordt voorgesteld.
+1254	Wie het kan zien
+1255	Wie gebruikt{{p}}Drift?
+1256	Waarom
+1257	Verwelkend
+1258	Periodes waarin apps op slot blijven, wat je saldo ook is.
+1259	Intrekken
+1260	Toestemming intrekken en gegevens van kinderen verwijderen
+1261	Toestemming intrekken?
+1262	Zonder de doos
+1263	Werk
+1264	Sporten
+1265	Bezig
+1266	Workout
+1267	Werkplaats
+1268	Een review schrijven
+1269	Schrijf wat je deed, of maak een foto of video.
+1270	JE VERDIENT
+1271	JOUW GEZIN
+1272	JOUW KINDEREN
+1273	PRIVACY VAN JE KINDEREN
+1274	JOUW PLAN
+1275	JOUW PLAN IS KLAAR
+1276	JOUW BEWIJS
+1277	JOUW TAG
+1278	JOUW TAKEN
+1279	Jaarlijks
+1280	Ja
+1281	Ja, instellen
+1282	Yogales
+1283	Yogastudio
+1284	Jij
+1285	Jij en @{{username}} zijn nu vrienden
+1286	Je was op tijd en hebt de beloning gepakt.
+1287	Je hebt {{name}} niet voor niets geblokkeerd.
+1288	Je mag het scherm laten uitgaan. Het aftellen staat op je vergrendelscherm.
+1289	Je kunt tot {{MAX_PLACES}} plekken opslaan.
+1290	Je kunt jezelf niet toevoegen.
+1291	Je kunt het accounttype niet wijzigen nadat je account is gemaakt.
+1292	Je koos diepgang boven afleiding.
+1293	Je koos diepgang boven {{name}}.
+1294	Je verdient je schermtijd door echte taken af te ronden. Hier is de rondleiding van 20 seconden.
+1295	Je hebt 1 minuut schermtijd verdiend. Ga zo door!
+1296	Je hebt {{mins}} minuten schermtijd verdiend. Ga zo door!
+1297	Je hebt {{m}} minuten extra schermtijd verdiend.
+1298	Je gaf toestemming op {{date}}.
+1299	Je hebt nog ongeveer {{max}} seconden voordat deze sessie verloren gaat.
+1300	Je hebt nog geen apps gekozen. Drift In werkt wel, maar afleidende apps worden niet geblokkeerd. Open Profiel → Geblokkeerde apps om er een paar te kiezen.
+1301	Je miste de deadline, dus de inzet is toegepast.
+1302	Jij stelt de regels. Zij verdienen hun schermtijd met echte taken.
+1303	Je hebt deze grens niet voor niets gesteld.
+1304	Jij was als eerste bevestigd en pakte de beloning.
+1305	Je hebt gewonnen
+1306	Je verdient niets voor de tijd tot nu toe.
+1307	Je verdient tegoed voor de gefocuste tijd tot nu toe.
+1308	Je moet opnieuw inloggen om bij je gegevens te komen.
+1309	Je krijgt daar geen taaksuggesties meer.
+1310	Je bent Pro 🎉
+1311	Alles klaar
+1312	Je bent bij {{label}}
+1313	Je hebt een reeks van {{streak}} dagen! Voltooi een taak om hem vast te houden.
+1314	Je verdiende tijd is op. Voltooi een taak om je apps te ontgrendelen.
+1315	Je zakt weg in het bosje
+1316	Je bent {{mins}} minuten bezig. Geen oordeel, gewoon even checken.
+1317	Je hebt deze code al ingewisseld — je toegang blijft hetzelfde.
+1318	Je hebt veel AI-checks gedaan. Probeer het straks opnieuw.
+1319	Je bent genoeg gegroeid voor {{name}}.
+1320	Je hebt de AI-checklimiet voorlopig bereikt. Probeer het wat later opnieuw.
+1321	Je hebt alles gebruikt wat je vandaag hebt verdiend.
+1322	Je hebt de gratis bevestigde taken van vandaag gebruikt. Neem Pro voor onbeperkte taken of kom morgen terug.
+1323	Jij en je kind. Het is nooit openbaar, wordt nooit verkocht en nooit gebruikt voor advertenties. Het wordt opgeslagen bij Supabase (onze databasehost, in de VS) en meldingen gaan via Apple. Beide moeten het vertrouwelijk houden en alleen gebruiken om Drift te laten werken.
+1324	Je Drift Family-abonnement koop je via Apple, dat de accounthouder over de aankoop informeert. Die aankoop plus jouw akkoord hier is hoe Drift controleert dat een ouder toestemming geeft.
+1325	Je toegang verloopt niet.
+1326	Je account
+1327	Je account is verwijderd.
+1328	Je antwoord…
+1329	Je apps zitten op slot tot de ochtend.{{p}}Laat je telefoon liggen.
+1330	Je apps wachten. Voltooi een snelle taak om schermtijd te verdienen.
+1331	Je saldo loopt terug terwijl je geblokkeerde apps gebruikt. Is het op, dan gaan ze op slot.
+1332	Je blokuren en herinnering blijven zoals ze zijn. Alleen het plan wordt verwijderd.
+1333	Je versie of camera kan nu geen houding herkennen. Je kunt nog steeds met een foto bevestigen.
+1334	Je agenda en je plekken, omgezet in taken.
+1335	Je code heeft Drift Pro ontgrendeld.
+1336	Je verdiende schermtijd is op. Voltooi een taak om weer te ontgrendelen.
+1337	Je verdiende tijd
+1338	Je verdiende tijd is bijna op. Rond af, of voltooi een taak om door te gaan.
+1339	Je e-mailconcept staat klaar om te versturen.
+1340	Je vriend was eerst bevestigd, dus de inzet is toegepast.
+1341	Je kind
+1342	Je kind heeft '{{taskTitle}}' afgerond. Keur het goed om schermtijd te geven.
+1343	Je kind heeft een taak afgerond. Keur hem goed om schermtijd te geven.
+1344	Je locatie en agenda blijven op dit apparaat. Drift uploadt geen van beide.
+1345	Je naam
+1346	Je ouder moet eerst een Drift Family-abonnement kiezen. Probeer opnieuw als dat gebeurd is.
+1347	Je ouder moet je gezin eerst helemaal instellen in Drift. Vraag of ze Drift openen en probeer het dan opnieuw.
+1348	Eerst jouw toestemming
+1349	Je telefoon was te lang uit de doos, dus deze leverde niets op.
+1350	Je telefoon ging uit de doos. Geen tijd verdiend deze sessie.
+1351	Je telefoon ging uit de doos. Leg hem terug voordat dit nul is, anders vervalt de sessie.
+1352	Je telefoon bewoog
+1353	Je telefoon bewoog om {{toLocaleTimeString}}. Deze keer geen bonus.
+1354	Je telefoon bewoog 's nachts. Deze keer geen bonus.
+1355	Je telefoon bewoog vannacht
+1356	Je telefoon bleef in de doos. +{{max}} minuten verdiend.
+1357	Je telefoon bleef liggen
+1358	Je telefoon bleef de hele nacht liggen. +{{rewardMinutes}} minuten verdiend.
+1359	Je prijs daalt elke 2 maanden dat je blijft, tot {{loyaltyFloor}}/mnd.
+1360	Je prijs daalt naar {{price}}/maand
+1361	Je profiel, taken, geschiedenis, vriendschappen, uitdagingen en foto worden definitief gewist. Heb je Drift Pro, zeg het dan apart op via iPhone-instellingen → Apple ID → Abonnementen.
+1362	Je voortgang wordt bewaard op al je apparaten.
+1363	Je voortgang onder Jij, je vrienden onder Vrienden — reeksen, levels en uitdagingen op één plek.
+1364	Je voortgang.
+1365	Je rechten
+1366	Je sessie bleef niet bewaard. Log opnieuw in — niets van wat je instelde is kwijt.
+1367	Je sessie loopt nog. Blijf erbij.
+1368	Je doel is gelijk aan je startpunt, dus er valt nog niets te veranderen.
+1369	beste reeks
+1370	agenda of plekken
+1372	voltooid
+1373	dagen reeks
+1374	geweigerd
+1376	ervaring
+1377	expo-location of expo-task-manager ontbreekt in deze versie.
+1378	voor middernacht klaar
+1379	wie het eerst klaar is wint
+1380	iOS blokkeert in periodes van ~15 minuten, dus tijden zijn bij benadering.
+1381	min verdiend
+1382	vandaag geen gegevens
+1383	geen tijd
+1384	niet ingesteld
+1385	van {{fmtMins}} verdiend
+1386	of
+1387	of laat Drift ze toevoegen uit je{{p}}
+1388	resterend
+1389	schermtijd
+1390	schermtijd (max)
+1391	taak gedaan
+1392	taken gedaan
+1393	om hem terug te leggen
+1394	jij
+1395	je kunt het wijzigen in je profiel.
+1397	{{aheadCount}} van je {{total}} vrienden hebben vandaag minder schermtijd dan jij. Jij zit op {{spent}}.
+1399	{{blockedCount}} {{p}} — op slot als je saldo nul is.
+1400	Clip van {{durationSec}} s · {{length}} beelden verstuurd voor controle
+1401	{{floor}} u {{p}} min vandaag
+1402	{{floor}} min {{padStart}} s gefocust
+1403	{{fmtMins}} verdiend
+1404	{{fmtMins}} van vandaag nog gespaard.
+1405	Nog {{fmt}}
+1406	{{formatDuration}} per dag
+1407	{{formatDuration}} per dag, telefoon weg om {{phoneDownLabel}}.
+1408	{{formatDuration}} minder dan nu
+1409	{{length}} vrienden hebben vandaag nog niets gedeeld.
+1411	{{mins}} min over · {{p}} deze week{{p2}}
+1412	{{mins}} minuten weg. Nog steeds de moeite waard?
+1413	Al {{mins}} minuten. Er wacht een taak als je wilt.
+1414	{{minutesPerDay}} minuten per dag
+1415	{{minutes}} min · {{credits}} tegoed op het spel
+1416	{{minutes}} minuten in de doos. +{{rewardMinutes}} minuten verdiend.
+1417	{{name}} kan wachten.
+1418	{{name}} is geblokkeerd.
+1419	{{name}} gaat open als je een taak in Drift voltooit.
+1420	{{name}} is er over tien minuten ook nog.
+1421	Nog {{n}} min
+1422	{{price}}/mnd
+1423	{{price}}/maand gaat in bij je volgende verlenging.
+1424	{{price}}/maand. Wordt automatisch verlengd — altijd opzegbaar in Instellingen.
+1425	{{price}}/jaar. Wordt automatisch verlengd — altijd opzegbaar in Instellingen.
+1426	{{price}}/jr
+1427	{{p}}\n\nJe kunt het opnieuw proberen of de sessie zonder de doos doen — het werkt hetzelfde.
+1428	{{p}} VAN @{{toUpperCase}}
+1429	{{p}} · +{{xp}} XP
+1430	{{p}}en{{p}}
+1431	{{recurrenceLabel}} om {{prettyTime}} - {{fmtMins}} beloning
+1432	{{selectionCount}} van {{FREE_BLOCK_LIMIT}} opgeslagen
+1433	{{spentMinutes}} min vandaag
+1434	{{streak}} nachten op rij.
+1435	Reeks van {{streak}} dagen
+1436	{{target}} van {{target}} geteld
+1437	{{timeText}} {{toLowerCase}} · +{{earnedText}} verdiend
+1438	{{title}} · +{{minutes}} min
+1439	{{toLocaleDateString}}: {{count}} taken
+1440	Nog {{toNext}} XP tot het volgende niveau
+1441	Nog {{toNext}} XP tot {{name}}.
+1442	{{totalXp}} XP totaal
+1443	{{trial}} dagen gratis, daarna {{price}}/maand. Wordt automatisch verlengd — altijd opzegbaar in Instellingen.
+1444	{{trial}} dagen gratis, daarna {{price}}/jaar. Wordt automatisch verlengd — altijd opzegbaar in Instellingen.
+1445	{{who}} heeft je uitgedaagd
+1446	'Hé Siri, check mijn Drift-saldo'\n'Hé Siri, maak een taak in Drift'\n'Hé Siri, start een Drift In-sessie'
+1447	NOG 1 POGING
+1448	NOG {{attemptsLeft}} POGINGEN
+1449	Een ouder of voogd van 18 jaar of ouder moet het Family-account maken.
+1450	Vraag een ouder om je in te stellen
+1451	Met een code bij mijn gezin komen
+1452	Ouderaccounts zijn voor volwassenen
+1453	Persoonlijke Drift-accounts zijn voor mensen van 13 jaar en ouder. Een ouder kan Drift Family instellen; daarna doe je mee met zijn of haar code.
+1454	We vragen het iedereen. Het wordt niet opgeslagen en aan niemand getoond.
+1455	Wanneer ben je geboren?

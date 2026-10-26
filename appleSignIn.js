@@ -71,6 +71,26 @@ export async function signInWithApple() {
 }
 
 /**
+ * Fresh authorization code for revoking the user's Apple token on account
+ * deletion (App Store 5.1.1(v)). Apple shows its sheet once more; the code is
+ * single-use and only the delete-account edge function redeems it.
+ * Returns { code } | { cancelled: true } | { skipped: true } (not an Apple user
+ * / not available) | { error }.
+ */
+export async function getAppleRevocationCode(user) {
+  const providers = user?.app_metadata?.providers || [user?.app_metadata?.provider].filter(Boolean);
+  if (!providers.includes("apple")) return { skipped: true };
+  if (!(await isAppleAuthAvailable())) return { skipped: true };
+  try {
+    const credential = await AppleAuthentication.signInAsync({ requestedScopes: [] });
+    return credential?.authorizationCode ? { code: credential.authorizationCode } : { skipped: true };
+  } catch (e) {
+    if (e?.code === "ERR_REQUEST_CANCELED" || e?.code === "ERR_CANCELED") return { cancelled: true };
+    return { error: e };
+  }
+}
+
+/**
  * Official Apple button. Renders nothing when Apple auth is unavailable
  * (non-iOS, simulator without an Apple ID, older iOS), so callers can drop it
  * in unconditionally.

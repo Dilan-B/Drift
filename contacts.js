@@ -22,6 +22,7 @@
 import { Share } from "react-native";
 import * as Crypto from "expo-crypto";
 import { supabase } from "./supabase";
+import { tr } from "./i18n";
 
 let Contacts = null;
 try { Contacts = require("expo-contacts"); } catch {}
@@ -99,8 +100,8 @@ export async function inviteContacts() {
     const code = info?.code;
     const link = code ? `${INVITE_URL}?ref=${code}` : INVITE_URL;
     const msg = code
-      ? `I use Drift to earn my screen time — join with my code ${code} for 15 bonus minutes: ${link}`
-      : `I'm using Drift to earn my screen time instead of doom-scrolling — join me: ${link}`;
+      ? tr("I use Drift to earn my screen time — join with my code {{code}} for 15 bonus minutes: {{link}}", { code, link })
+      : tr("I'm using Drift to earn my screen time instead of doom-scrolling — join me: {{link}}", { link });
     await Share.share({ message: msg });
     return true;
   } catch {

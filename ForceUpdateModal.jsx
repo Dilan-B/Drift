@@ -21,6 +21,7 @@ import { View, Text, TouchableOpacity, Modal, Linking } from "react-native";
 import { getTheme, FF } from "./theme";
 import Sprout from "./SproutArt";
 
+import { tr } from "./i18n";
 const TAPS_TO_UNLOCK = 7;
 const TAP_TIMEOUT_MS = 2500; // taps must be deliberate, not spread over minutes
 
@@ -50,13 +51,13 @@ export default function ForceUpdateModal({ visible, storeUrl, dark = false, onOv
           <Sprout size={120} tone={dark ? "night" : "fresh"} />
         </TouchableOpacity>
         <Text style={{ fontFamily: FF.kicker, fontSize: 11, color: earn.sage, letterSpacing: 2.6, marginBottom: 12 }}>
-          UPDATE REQUIRED
+          {tr("UPDATE REQUIRED")}
         </Text>
         <Text style={{ fontFamily: FF.display, fontSize: 32, color: ink.deep, textAlign: "center", marginBottom: 14 }}>
-          Time to update Drift
+          {tr("Time to update Drift")}
         </Text>
         <Text style={{ fontFamily: FF.body, fontSize: 15, color: ink.mid, textAlign: "center", lineHeight: 22, maxWidth: 320, marginBottom: 36 }}>
-          This version of Drift is out of date. Update to the latest version to keep earning your screen time.
+          {tr("This version of Drift is out of date. Update to the latest version to keep earning your screen time.")}
         </Text>
         <TouchableOpacity
           onPress={open}
@@ -64,7 +65,7 @@ export default function ForceUpdateModal({ visible, storeUrl, dark = false, onOv
           style={{ backgroundColor: earn.deep, paddingVertical: 16, paddingHorizontal: 48, borderRadius: 16, ...fx.glow }}
         >
           <Text style={{ fontFamily: FF.bodyMed, fontSize: 15, color: dark ? "#16261C" : "#FAF6EE" }}>
-            Update now
+            {tr("Update now")}
           </Text>
         </TouchableOpacity>
 
@@ -75,7 +76,7 @@ export default function ForceUpdateModal({ visible, storeUrl, dark = false, onOv
             style={{ marginTop: 28, paddingVertical: 10, paddingHorizontal: 18 }}
           >
             <Text style={{ fontFamily: FF.body, fontSize: 12.5, color: ink.faint, textDecorationLine: "underline" }}>
-              Continue without updating (dev)
+              {tr("Continue without updating (dev)")}
             </Text>
           </TouchableOpacity>
         )}

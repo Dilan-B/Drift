@@ -20,19 +20,21 @@ import { FamilyWeekCard, useFamilyWeek } from "./FamilyStats";
 import {
   fetchMyFamily, fetchFamilyChildren, fetchPendingApprovals, fetchChildrenBalances,
   fetchFamilyHistory, assignChildTask, approveChildTask, rejectChildTask, setChildAppPolicy,
-  setFamilyPin,
+  setFamilyPin, CONSENT_NOTICE_VERSION,
 } from "./family";
+import { ParentConsentCard, ChildDataModal, ConsentSettings } from "./ParentConsent";
 
+import { tr } from "./i18n";
 // Curated apps a parent can choose to keep available even when time runs out.
 // (Full arbitrary per-app selection needs the on-device picker; this covers the
 // common "let them still text / call / navigate" cases.)
 const ALLOWABLE_APPS = [
-  { id: "messages", label: "Messages" },
-  { id: "phone",    label: "Phone" },
-  { id: "maps",     label: "Maps" },
-  { id: "music",    label: "Music" },
-  { id: "camera",   label: "Camera" },
-  { id: "school",   label: "School apps" },
+  { id: "messages", get label() { return tr("Messages"); } },
+  { id: "phone",    get label() { return tr("Phone"); } },
+  { id: "maps",     get label() { return tr("Maps"); } },
+  { id: "music",    get label() { return tr("Music"); } },
+  { id: "camera",   get label() { return tr("Camera"); } },
+  { id: "school",   get label() { return tr("School apps"); } },
 ];
 
 export default function ParentShell({ userId, userEmail, username, dark = false, onSignOut, onToggleTheme, onDeleteAccount }) {
@@ -53,6 +55,7 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
   const [assignErr, setAssignErr] = useState("");
 
   const [appsFor, setAppsFor] = useState(null); // child object
+  const [dataFor, setDataFor] = useState(null); // child object (COPPA review / delete)
   const [tab, setTab] = useState("home");
   const [refreshing, setRefreshing] = useState(false);
   const [history, setHistory] = useState([]);
@@ -141,12 +144,12 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
     if (!family?.code) return;
     try {
       await Share.share({
-        message: `Join our family on Drift — open the app, pick "I'm a kid", and enter this code: ${family.code}`,
+        message: tr("Join our family on Drift — open the app, pick \"I'm a kid\", and enter this code: {{code}}", { code: family.code }),
       });
     } catch {}
   }
 
-  const childName = (id) => children.find((c) => c.user_id === id)?.display_name || "Your kid";
+  const childName = (id) => children.find((c) => c.user_id === id)?.display_name || tr("Your kid");
 
   async function doApprove(taskId) {
     setBusyId(taskId);
@@ -167,23 +170,23 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
 
   async function savePin() {
     setPinMsg("");
-    if (pin.length < 4) { setPinMsg("Enter at least 4 digits."); return; }
+    if (pin.length < 4) { setPinMsg(tr("Enter at least 4 digits.")); return; }
     setPinBusy(true);
     const res = await setFamilyPin(pin);
     setPinBusy(false);
-    if (!res.ok) { setPinMsg("Couldn't save the PIN. Try again."); return; }
+    if (!res.ok) { setPinMsg(tr("Couldn't save the PIN. Try again.")); return; }
     setPin(""); setShowPin(false); setPinMsg("");
   }
 
   async function submitAssign() {
     setAssignErr("");
     const m = Math.round(Number(minutes));
-    if (!title.trim()) { setAssignErr("Give the task a name."); return; }
-    if (!Number.isFinite(m) || m < 1 || m > 600) { setAssignErr("Enter minutes between 1 and 600."); return; }
+    if (!title.trim()) { setAssignErr(tr("Give the task a name.")); return; }
+    if (!Number.isFinite(m) || m < 1 || m > 600) { setAssignErr(tr("Enter minutes between 1 and 600.")); return; }
     setAssigning(true);
     const res = await assignChildTask(assignFor.user_id, title.trim(), m);
     setAssigning(false);
-    if (!res.ok) { setAssignErr("Couldn't assign the task. Try again."); return; }
+    if (!res.ok) { setAssignErr(tr("Couldn't assign the task. Try again.")); return; }
     setAssignFor(null); setTitle(""); setMinutes("20");
   }
 
@@ -199,27 +202,36 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
   }
 
   const mins = (id) => Math.max(0, Math.ceil((balances[id] || 0) / 60));
+  // COPPA: no family code until the parent has consented to the current notice.
+  const needsConsent = !loading && !!family && (!family.consent_at || family.consent_version !== CONSENT_NOTICE_VERSION);
+  const consentCard = (
+    <ParentConsentCard
+      dark={dark}
+      renewing={!!family?.consent_at || children.length > 0}
+      onGranted={(d) => setFamily((f) => ({ ...f, consent_at: d?.consent_at || new Date().toISOString(), consent_version: d?.consent_version || CONSENT_NOTICE_VERSION }))}
+    />
+  );
   const week = useFamilyWeek(history, childIds);
   const hasKids = children.length > 0;
 
   // Family code + parent PIN. Setup things: on the home screen until the first
   // kid joins, then they move into the profile sheet (where they're still one
   // tap away for adding another kid) and the home screen shows the family.
-  const setupSection = (
+  const setupSection = needsConsent ? consentCard : (
     <>
       <View style={[s.card, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
-        <Text style={[s.cardLabel, { color: t.ink.faint }]}>FAMILY CODE</Text>
+        <Text style={[s.cardLabel, { color: t.ink.faint }]}>{tr("FAMILY CODE")}</Text>
         {loading ? <ActivityIndicator color={t.earn.sage} style={{ marginVertical: 14 }} />
           : <Text style={[s.code, { color: t.ink.deep }]}>{family?.code || "—"}</Text>}
         <TouchableOpacity style={[s.shareBtn, { backgroundColor: t.earn.deep }, t.fx.glow]} onPress={shareCode} disabled={!family?.code}>
-          <Text style={[s.shareBtnText, { color: onDeep }]}>Share code</Text>
+          <Text style={[s.shareBtnText, { color: onDeep }]}>{tr("Share code")}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Parent PIN — gates the app picker on a kid's device */}
       {showPin ? (
         <View style={[s.pinCard, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}>
-          <Text style={[s.pinLabel, { color: t.ink.mid }]}>Set a PIN. You'll enter it on your kid's phone to pick which apps get blocked.</Text>
+          <Text style={[s.pinLabel, { color: t.ink.mid }]}>{tr("Set a PIN. You'll enter it on your kid's phone to pick which apps get blocked.")}</Text>
           <TextInput
             style={[s.input, { borderColor: t.ink.border, color: t.ink.deep, backgroundColor: t.paper.warm, textAlign: "center", letterSpacing: 8, fontSize: 22 }]}
             placeholder="••••" placeholderTextColor={t.ink.faint}
@@ -229,16 +241,16 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
           {pinMsg ? <Text style={s.err}>{pinMsg}</Text> : null}
           <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
             <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.paper.warm, flex: 1 }]} onPress={() => { setShowPin(false); setPin(""); setPinMsg(""); }}>
-              <Text style={[s.modalBtnText, { color: t.ink.mid }]}>Cancel</Text>
+              <Text style={[s.modalBtnText, { color: t.ink.mid }]}>{tr("Cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, flex: 1 }, t.fx.glow]} onPress={savePin} disabled={pinBusy}>
-              {pinBusy ? <ActivityIndicator color={onDeep} /> : <Text style={[s.modalBtnText, { color: onDeep }]}>Save PIN</Text>}
+              {pinBusy ? <ActivityIndicator color={onDeep} /> : <Text style={[s.modalBtnText, { color: onDeep }]}>{tr("Save PIN")}</Text>}
             </TouchableOpacity>
           </View>
         </View>
       ) : (
         <TouchableOpacity style={[s.linkRow, { borderColor: t.ink.hairline }]} onPress={() => { setShowPin(true); setPinMsg(""); }}>
-          <Text style={[s.linkText, { color: t.ink.mid }]}>Set parent PIN (for picking a kid's apps)</Text>
+          <Text style={[s.linkText, { color: t.ink.mid }]}>{tr("Set parent PIN (for picking a kid's apps)")}</Text>
         </TouchableOpacity>
       )}
     </>
@@ -258,8 +270,8 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
 
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
           <View style={{ flex: 1 }}>
-            <Text style={[s.kicker, { color: t.earn.sage }]}>YOUR FAMILY</Text>
-            <Text style={[s.title, { color: t.ink.deep }]}>Welcome home</Text>
+            <Text style={[s.kicker, { color: t.earn.sage }]}>{tr("YOUR FAMILY")}</Text>
+            <Text style={[s.title, { color: t.ink.deep }]}>{tr("Welcome home")}</Text>
           </View>
           <TouchableOpacity style={[s.profileBtn, { backgroundColor: t.earn.sageLo }]} onPress={() => setShowProfile(true)}>
             <Text style={[s.profileInitial, { color: t.earn.sage }]}>{(username || "?").slice(0, 1).toUpperCase()}</Text>
@@ -268,35 +280,36 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
 
         {tab === "history" ? (
           <>
-            <Text style={[s.sectionLabel, { color: t.ink.faint }]}>COMPLETED</Text>
+            <Text style={[s.sectionLabel, { color: t.ink.faint }]}>{tr("COMPLETED")}</Text>
             <HistoryList
               items={history.map((h) => ({
                 id: h.id, title: h.title, minutes: h.minutes,
                 subtitle: `${childName(h.user_id)} · ${shortDate(h.completed_at)}`,
               }))}
               dark={dark}
-              emptyText="No completed tasks yet. Approved tasks show up here."
+              emptyText={tr("No completed tasks yet. Approved tasks show up here.")}
             />
           </>
         ) : (
         <>
+        {hasKids && needsConsent ? consentCard : null}
         {hasKids ? <FamilyWeekCard week={week} dark={dark} /> : setupSection}
 
         {/* Approvals */}
         {approvals.length > 0 && (
           <>
-            <Text style={[s.sectionLabel, { color: t.ink.faint }]}>WAITING FOR YOUR OK</Text>
+            <Text style={[s.sectionLabel, { color: t.ink.faint }]}>{tr("WAITING FOR YOUR OK")}</Text>
             {approvals.map((a) => (
               <View key={a.id} style={[s.approvalCard, { backgroundColor: t.paper.card, borderColor: t.earn.sage }]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.childName, { color: t.ink.deep }]}>{childName(a.user_id)}</Text>
-                  <Text style={[s.approvalTask, { color: t.ink.mid }]}>{a.title} · +{a.minutes} min</Text>
+                  <Text style={[s.approvalTask, { color: t.ink.mid }]}>{tr("{{title}} · +{{minutes}} min", { title: a.title, minutes: a.minutes })}</Text>
                 </View>
                 <TouchableOpacity style={[s.rejectBtn, { borderColor: t.ink.border }]} onPress={() => doReject(a.id)} disabled={busyId === a.id}>
-                  <Text style={[s.rejectText, { color: t.ink.mid }]}>Not yet</Text>
+                  <Text style={[s.rejectText, { color: t.ink.mid }]}>{tr("Not yet")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.approveBtn, { backgroundColor: t.earn.deep }, t.fx.glow]} onPress={() => doApprove(a.id)} disabled={busyId === a.id}>
-                  {busyId === a.id ? <ActivityIndicator color={onDeep} /> : <Text style={[s.approveText, { color: onDeep }]}>Approve</Text>}
+                  {busyId === a.id ? <ActivityIndicator color={onDeep} /> : <Text style={[s.approveText, { color: onDeep }]}>{tr("Approve")}</Text>}
                 </TouchableOpacity>
               </View>
             ))}
@@ -304,11 +317,11 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
         )}
 
         {/* Kids */}
-        <Text style={[s.sectionLabel, { color: t.ink.faint }]}>YOUR KIDS</Text>
+        <Text style={[s.sectionLabel, { color: t.ink.faint }]}>{tr("YOUR KIDS")}</Text>
         {loading ? null : children.length === 0 ? (
           <View style={[s.emptyCard, { borderColor: t.paper.dash }]}>
             <Text style={[s.emptyText, { color: t.ink.mid }]}>
-              No kids yet. Share your code above and they'll show up here once they join.
+              {tr("No kids yet. Share your code above and they'll show up here once they join.")}
             </Text>
           </View>
         ) : (
@@ -318,17 +331,19 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
                 <Text style={[s.avatarText, { color: t.earn.sage }]}>{(cc.display_name || "?").slice(0, 1).toUpperCase()}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[s.childName, { color: t.ink.deep }]}>{cc.display_name || "Kid"}</Text>
+                <Text style={[s.childName, { color: t.ink.deep }]}>{cc.display_name || tr("Kid")}</Text>
                 <Text style={[s.childSub, { color: t.ink.mid }]}>
-                  {mins(cc.user_id)} min left · {week.perKid[cc.user_id]?.weekTasks || 0} this week
-                  {week.perKid[cc.user_id]?.streak > 1 ? ` · ${week.perKid[cc.user_id].streak}-day streak` : ""}
+                  {tr("{{mins}} min left · {{p}} this week{{p2}}", { mins: mins(cc.user_id), p: week.perKid[cc.user_id]?.weekTasks || 0, p2: week.perKid[cc.user_id]?.streak > 1 ? tr(" · {{streak}}-day streak", { streak: week.perKid[cc.user_id].streak }) : "" })}
                 </Text>
               </View>
+              <TouchableOpacity style={[s.smallBtn, { backgroundColor: t.paper.warm, marginRight: 8 }]} onPress={() => setDataFor(cc)}>
+                <Text style={[s.smallBtnText, { color: t.ink.mid }]}>{tr("Data")}</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={[s.smallBtn, { backgroundColor: t.earn.sageLo }]} onPress={() => setAppsFor(cc)}>
-                <Text style={[s.smallBtnText, { color: t.earn.greenD }]}>Apps</Text>
+                <Text style={[s.smallBtnText, { color: t.earn.greenD }]}>{tr("Apps")}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.smallBtn, { backgroundColor: t.earn.deep, marginLeft: 8 }, t.fx.glow]} onPress={() => { setAssignFor(cc); setAssignErr(""); }}>
-                <Text style={[s.smallBtnText, { color: onDeep }]}>+ Task</Text>
+                <Text style={[s.smallBtnText, { color: onDeep }]}>{tr("+ Task")}</Text>
               </TouchableOpacity>
             </View>
           ))
@@ -343,14 +358,14 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
       <Modal visible={!!assignFor} transparent animationType="fade" onRequestClose={() => setAssignFor(null)}>
         <View style={s.modalWrap}>
           <View style={[s.modalCard, { backgroundColor: t.paper.card }]}>
-            <Text style={[s.modalTitle, { color: t.ink.deep }]}>New task for {assignFor?.display_name}</Text>
-            <Text style={[s.inputLabel, { color: t.ink.faint }]}>TASK</Text>
+            <Text style={[s.modalTitle, { color: t.ink.deep }]}>{tr("New task for {{display_name}}", { display_name: assignFor?.display_name })}</Text>
+            <Text style={[s.inputLabel, { color: t.ink.faint }]}>{tr("TASK")}</Text>
             <TextInput
               style={[s.input, { borderColor: t.ink.border, color: t.ink.deep, backgroundColor: t.paper.warm }]}
-              placeholder="Clean your room" placeholderTextColor={t.ink.faint}
+              placeholder={tr("Clean your room")} placeholderTextColor={t.ink.faint}
               value={title} onChangeText={setTitle} maxLength={100} returnKeyType="next"
             />
-            <Text style={[s.inputLabel, { color: t.ink.faint }]}>SCREEN TIME REWARD (MINUTES)</Text>
+            <Text style={[s.inputLabel, { color: t.ink.faint }]}>{tr("SCREEN TIME REWARD (MINUTES)")}</Text>
             <TextInput
               style={[s.input, { borderColor: t.ink.border, color: t.ink.deep, backgroundColor: t.paper.warm }]}
               placeholder="20" placeholderTextColor={t.ink.faint}
@@ -360,10 +375,10 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
             {assignErr ? <Text style={s.err}>{assignErr}</Text> : null}
             <View style={{ flexDirection: "row", marginTop: 16, gap: 10 }}>
               <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.paper.warm, flex: 1 }]} onPress={() => setAssignFor(null)}>
-                <Text style={[s.modalBtnText, { color: t.ink.mid }]}>Cancel</Text>
+                <Text style={[s.modalBtnText, { color: t.ink.mid }]}>{tr("Cancel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, flex: 1 }, t.fx.glow]} onPress={submitAssign} disabled={assigning}>
-                {assigning ? <ActivityIndicator color={onDeep} /> : <Text style={[s.modalBtnText, { color: onDeep }]}>Assign</Text>}
+                {assigning ? <ActivityIndicator color={onDeep} /> : <Text style={[s.modalBtnText, { color: onDeep }]}>{tr("Assign")}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -374,9 +389,9 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
       <Modal visible={!!appsFor} transparent animationType="fade" onRequestClose={() => setAppsFor(null)}>
         <View style={s.modalWrap}>
           <View style={[s.modalCard, { backgroundColor: t.paper.card }]}>
-            <Text style={[s.modalTitle, { color: t.ink.deep }]}>Always allow for {appsFor?.display_name}</Text>
+            <Text style={[s.modalTitle, { color: t.ink.deep }]}>{tr("Always allow for {{display_name}}", { display_name: appsFor?.display_name })}</Text>
             <Text style={[s.modalSub, { color: t.ink.mid }]}>
-              These stay open even when {appsFor?.display_name} runs out of screen time.
+              {tr("These stay open even when {{display_name}} runs out of screen time.", { display_name: appsFor?.display_name })}
             </Text>
             {ALLOWABLE_APPS.map((app) => {
               const on = (appsFor?.app_policy?.allow || []).includes(app.id);
@@ -385,35 +400,51 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
                   <Text style={[s.allowLabel, { color: t.ink.deep }]}>{app.label}</Text>
                   <View style={[s.toggle, { backgroundColor: on ? t.earn.deep : t.ink.ghost }]}>
                     <Text style={{ color: on ? onDeep : t.ink.faint, fontFamily: FF.bodyMed, fontSize: 12 }}>
-                      {on ? "Allowed" : "Blocked"}
+                      {on ? tr("Allowed") : tr("Blocked")}
                     </Text>
                   </View>
                 </TouchableOpacity>
               );
             })}
             <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, marginTop: 16 }, t.fx.glow]} onPress={() => setAppsFor(null)}>
-              <Text style={[s.modalBtnText, { color: onDeep }]}>Done</Text>
+              <Text style={[s.modalBtnText, { color: onDeep }]}>{tr("Done")}</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
+      <ChildDataModal
+        child={dataFor}
+        minutesLeft={dataFor ? mins(dataFor.user_id) : 0}
+        dark={dark}
+        onClose={() => setDataFor(null)}
+        onDeleted={(id) => { setDataFor(null); setChildren((prev) => prev.filter((c) => c.user_id !== id)); }}
+      />
 
       <FamilyProfileModal
         visible={showProfile}
         onClose={() => setShowProfile(false)}
         dark={dark}
         onToggleTheme={onToggleTheme}
-        name={username || "Parent"}
-        subtitle={userEmail || "Drift parent account"}
+        name={username || tr("Parent")}
+        subtitle={userEmail || tr("Drift parent account")}
         onSignOut={onSignOut}
         onDeleteAccount={onDeleteAccount}
+        deleteMessage={hasKids
+          ? tr("This permanently deletes your Drift account and every child account in your family, with all their data. This can't be undone. Cancel your Family subscription separately in iPhone Settings.")
+          : undefined}
       >
         {hasKids && (
           <>
-            <Text style={[s.sectionLabel, { color: t.ink.faint, marginTop: 8 }]}>ADD A KID</Text>
+            <Text style={[s.sectionLabel, { color: t.ink.faint, marginTop: 8 }]}>{tr("ADD A KID")}</Text>
             {setupSection}
           </>
         )}
+        <ConsentSettings
+          dark={dark}
+          consentAt={family?.consent_at}
+          onWithdrawn={() => { setFamily((f) => ({ ...f, consent_at: null, consent_version: null })); setChildren([]); setShowProfile(false); }}
+        />
       </FamilyProfileModal>
     </View>
   );

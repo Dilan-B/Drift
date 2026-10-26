@@ -20,6 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { supabase } from "./supabase";
 
+import { tr, getLanguage } from "./i18n";
 let Notifications = null;
 try { Notifications = require("expo-notifications"); } catch {}
 
@@ -123,8 +124,8 @@ export async function notifyOutOfTime() {
   await setLatch(OUT_LATCH_KEY, true);
   await fireImmediate(
     OUT_OF_TIME_ID,
-    "Time's up",
-    "Your earned screen time is gone. Complete a task to unlock again.",
+    tr("Time's up"),
+    tr("Your earned screen time is gone. Complete a task to unlock again."),
   );
 }
 
@@ -137,8 +138,8 @@ export async function notifyLowTime(minutesLeft) {
   const m = Math.max(1, Math.round(minutesLeft || 0));
   await fireImmediate(
     LOW_TIME_ID,
-    "Running low",
-    `About ${m} min of earned time left.`,
+    tr("Running low"),
+    tr("About {{m}} min of earned time left.", { m }),
   );
 }
 
@@ -159,8 +160,8 @@ export async function notifySleepGuardResult({ status, rewardMinutes, firstMovem
   if (status === "success") {
     await fireImmediate(
       "drift-sleepguard-result",
-      "Your phone stayed put",
-      `A full night in the other room. +${Math.max(1, Math.round(rewardMinutes || 0))} minutes earned.`,
+      tr("Your phone stayed put"),
+      tr("A full night in the other room. +{{max}} minutes earned.", { max: Math.max(1, Math.round(rewardMinutes || 0)) }),
     );
     return;
   }
@@ -170,8 +171,8 @@ export async function notifySleepGuardResult({ status, rewardMinutes, firstMovem
       : null;
     await fireImmediate(
       "drift-sleepguard-result",
-      "Your phone moved last night",
-      when ? `It was picked up around ${when}. No bonus this time.` : "No bonus this time.",
+      tr("Your phone moved last night"),
+      when ? tr("It was picked up around {{when}}. No bonus this time.", { when }) : tr("No bonus this time."),
     );
   }
 }
@@ -188,16 +189,16 @@ export async function notifySleepGuardResult({ status, rewardMinutes, firstMovem
 export async function notifyLockboxBreach(graceSeconds) {
   await fireImmediate(
     "drift-lockbox-breach",
-    "Put your phone back in the box",
-    `You have about ${Math.max(1, Math.round(graceSeconds))} seconds before this session is lost.`,
+    tr("Put your phone back in the box"),
+    tr("You have about {{max}} seconds before this session is lost.", { max: Math.max(1, Math.round(graceSeconds)) }),
   );
 }
 
 export async function notifyLockboxLost() {
   await fireImmediate(
     "drift-lockbox-lost",
-    "Lockbox session lost",
-    "Your phone left the box for too long, so this one earned nothing.",
+    tr("Lockbox session lost"),
+    tr("Your phone left the box for too long, so this one earned nothing."),
   );
 }
 
@@ -215,8 +216,8 @@ export async function scheduleLockboxLoss(seconds) {
     await Notifications.scheduleNotificationAsync({
       identifier: "drift-lockbox-lost",
       content: {
-        title: "Lockbox session lost",
-        body: "Your phone left the box for too long, so this one earned nothing.",
+        title: tr("Lockbox session lost"),
+        body: tr("Your phone left the box for too long, so this one earned nothing."),
       },
       trigger: { seconds: Math.max(1, Math.round(seconds)), repeats: false },
     });
@@ -239,8 +240,8 @@ export async function scheduleLockboxEnd(seconds) {
     await Notifications.scheduleNotificationAsync({
       identifier: "drift-lockbox-done",
       content: {
-        title: "Lockbox finished",
-        body: "Take your phone out and open Drift to collect your time.",
+        title: tr("Lockbox finished"),
+        body: tr("Take your phone out and open Drift to collect your time."),
       },
       trigger: { seconds: Math.max(1, Math.round(seconds)), repeats: false },
     });
@@ -254,8 +255,8 @@ export async function cancelLockboxEnd() {
 export async function notifyLockboxDone(rewardMinutes) {
   await fireImmediate(
     "drift-lockbox-done",
-    "Session complete",
-    `Your phone stayed in the box. +${Math.max(1, Math.round(rewardMinutes || 0))} minutes earned.`,
+    tr("Session complete"),
+    tr("Your phone stayed in the box. +{{max}} minutes earned.", { max: Math.max(1, Math.round(rewardMinutes || 0)) }),
   );
 }
 
@@ -282,8 +283,8 @@ export async function scheduleDailyReminder(hour = 10, minute = 0) {
     await Notifications.scheduleNotificationAsync({
       identifier: DAILY_ID,
       content: {
-        title: "Keep your streak",
-        body: "Complete a task today to earn screen time.",
+        title: tr("Keep your streak"),
+        body: tr("Complete a task today to earn screen time."),
       },
       trigger,
     });
@@ -309,8 +310,8 @@ export async function scheduleSleepGuardReminder(hour = 21, minute = 45) {
     await Notifications.scheduleNotificationAsync({
       identifier: SLEEP_TAG_ID,
       content: {
-        title: "Time to put your phone to bed",
-        body: "Take it to the other room and tap your tag to start the night.",
+        title: tr("Time to put your phone to bed"),
+        body: tr("Take it to the other room and tap your tag to start the night."),
       },
       trigger,
     });
@@ -327,8 +328,8 @@ export async function notifyFriendRequest(fromUsername) {
     await Notifications.scheduleNotificationAsync({
       identifier: `drift-friend-req-${fromUsername || "x"}`,
       content: {
-        title: "New friend request",
-        body: fromUsername ? `@${fromUsername} wants to grow with you on Drift.` : "Someone wants to add you on Drift.",
+        title: tr("New friend request"),
+        body: fromUsername ? tr("@{{fromUsername}} wants to grow with you on Drift.", { fromUsername }) : tr("Someone wants to add you on Drift."),
       },
       trigger: null,
     });
@@ -344,9 +345,8 @@ export async function notifyChildSubmittedTask(taskTitle) {
     await Notifications.scheduleNotificationAsync({
       identifier: `drift-child-submit-${taskTitle || "task"}`,
       content: {
-        title: "Task ready to check",
-        body: taskTitle ? `Your kid finished "${taskTitle}". Approve it to grant screen time.`
-                        : "Your kid finished a task. Approve it to grant screen time.",
+        title: tr("Task ready to check"),
+        body: taskTitle ? tr("Your kid finished \"{{taskTitle}}\". Approve it to grant screen time.", { taskTitle }) : tr("Your kid finished a task. Approve it to grant screen time."),
       },
       trigger: null,
     });
@@ -356,7 +356,7 @@ export async function notifyChildSubmittedTask(taskTitle) {
 /** A parent approved the child's task — the child earned time. */
 export async function notifyTaskApproved(minutes) {
   const m = Math.max(1, Math.round(minutes || 0));
-  await fireImmediate("drift-task-approved", "Task approved", `You earned ${m} more minutes of screen time.`);
+  await fireImmediate("drift-task-approved", tr("Task approved"), tr("You earned {{m}} more minutes of screen time.", { m }));
 }
 
 /**
@@ -374,8 +374,8 @@ export async function notifyChallengeReceived(fromUsername, title, challengeId) 
     await Notifications.scheduleNotificationAsync({
       identifier: `drift-challenge-${challengeId || Date.now()}`,
       content: {
-        title: `${who} challenged you`,
-        body: title ? `"${title}" — open Drift to accept or decline.` : "Open Drift to accept or decline.",
+        title: tr("{{who}} challenged you", { who }),
+        body: title ? tr("\"{{title}}\" — open Drift to accept or decline.", { title }) : tr("Open Drift to accept or decline."),
         data: { type: "challenge_received", challengeId },
       },
       trigger: null,
@@ -426,13 +426,13 @@ export async function notifyLosingOnLeaderboard({ aheadCount, total, leaderName,
   const mins = Math.max(0, Math.round(myMinutes || 0));
   const spent = mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
   const body = aheadCount === 1 && leaderName
-    ? `@${leaderName} is on less screen time than you today. You're at ${spent}.`
-    : `${aheadCount} of your ${total} friends are on less screen time than you today. You're at ${spent}.`;
+    ? tr("@{{leaderName}} is on less screen time than you today. You're at {{spent}}.", { leaderName, spent })
+    : tr("{{aheadCount}} of your {{total}} friends are on less screen time than you today. You're at {{spent}}.", { aheadCount, total, spent });
 
   try {
     await Notifications.scheduleNotificationAsync({
       identifier: `drift-leaderboard-${today}`,
-      content: { title: "You're slipping down the grove", body, data: { type: "leaderboard_nudge" } },
+      content: { title: tr("You're slipping down the grove"), body, data: { type: "leaderboard_nudge" } },
       trigger: null,
     });
     return true;
@@ -476,6 +476,7 @@ export async function registerForPushNotifications() {
         user_id: user.id,
         expo_push_token: token,
         platform: Platform.OS || "ios",
+        locale: getLanguage(),
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id,expo_push_token" },

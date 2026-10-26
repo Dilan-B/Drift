@@ -81,8 +81,106 @@ struct DriftBalanceWidget: Widget {
     StaticConfiguration(kind: kind, provider: DriftBalanceProvider()) { entry in
       DriftBalanceWidgetView(entry: entry)
     }
-    .configurationDisplayName("Drift Balance")
-    .description("See your earned screen-time balance at a glance.")
+    .configurationDisplayName(driftL("Drift Balance"))
+    .description(driftL("See your earned screen-time balance at a glance."))
     .supportedFamilies([.systemSmall, .systemMedium])
   }
 }
+
+// BEGIN GENERATED L10N (tools/i18n/build.js) — do not edit by hand
+// Extensions can't see the app's JS catalogs, so each carries its own table.
+// Language: what the app last wrote to the App Group (ScreenTimeModule
+// .setLanguage), else the device's preferred language, else English.
+fileprivate let DRIFT_L10N: [String: [String: String]] = [
+  "zh-Hans": [
+    "Drift Balance": "Drift 余额",
+    "See your earned screen-time balance at a glance.": "一眼看到已赚取的屏幕时间余额。",
+  ],
+  "zh-Hant": [
+    "Drift Balance": "Drift 餘額",
+    "See your earned screen-time balance at a glance.": "一眼看到已賺取的螢幕使用時間餘額。",
+  ],
+  "hi": [
+    "Drift Balance": "Drift बैलेंस",
+    "See your earned screen-time balance at a glance.": "अपना कमाया स्क्रीन टाइम बैलेंस एक नज़र में देखें।",
+  ],
+  "es": [
+    "Drift Balance": "Saldo de Drift",
+    "See your earned screen-time balance at a glance.": "Consulta tu saldo de tiempo de pantalla ganado de un vistazo.",
+  ],
+  "fr": [
+    "Drift Balance": "Solde Drift",
+    "See your earned screen-time balance at a glance.": "Voyez votre solde de temps d’écran gagné en un coup d’œil.",
+  ],
+  "ar": [
+    "Drift Balance": "رصيد Drift",
+    "See your earned screen-time balance at a glance.": "اطّلع على رصيد وقت الشاشة المكتسب بنظرة.",
+  ],
+  "pt": [
+    "Drift Balance": "Saldo do Drift",
+    "See your earned screen-time balance at a glance.": "Veja seu saldo de tempo de tela ganho num relance.",
+  ],
+  "ru": [
+    "Drift Balance": "Баланс Drift",
+    "See your earned screen-time balance at a glance.": "Заработанное экранное время — с одного взгляда.",
+  ],
+  "id": [
+    "Drift Balance": "Saldo Drift",
+    "See your earned screen-time balance at a glance.": "Lihat saldo waktu layar yang kamu dapat dalam sekejap.",
+  ],
+  "de": [
+    "Drift Balance": "Drift-Guthaben",
+    "See your earned screen-time balance at a glance.": "Dein verdientes Bildschirmzeit-Guthaben auf einen Blick.",
+  ],
+  "ja": [
+    "Drift Balance": "Driftの残高",
+    "See your earned screen-time balance at a glance.": "獲得したスクリーンタイムの残高がひと目でわかります。",
+  ],
+  "tr": [
+    "Drift Balance": "Drift Bakiyesi",
+    "See your earned screen-time balance at a glance.": "Kazandığın ekran süresi bakiyesini bir bakışta gör.",
+  ],
+  "vi": [
+    "Drift Balance": "Số dư Drift",
+    "See your earned screen-time balance at a glance.": "Xem nhanh số dư thời gian màn hình đã kiếm.",
+  ],
+  "ko": [
+    "Drift Balance": "Drift 잔액",
+    "See your earned screen-time balance at a glance.": "번 스크린 타임 잔액을 한눈에 보세요.",
+  ],
+  "it": [
+    "Drift Balance": "Saldo Drift",
+    "See your earned screen-time balance at a glance.": "Il tuo saldo di tempo di utilizzo guadagnato a colpo d'occhio.",
+  ],
+  "pl": [
+    "Drift Balance": "Saldo Drift",
+    "See your earned screen-time balance at a glance.": "Zobacz saldo zdobytego czasu przed ekranem jednym spojrzeniem.",
+  ],
+  "uk": [
+    "Drift Balance": "Баланс Drift",
+    "See your earned screen-time balance at a glance.": "Зароблений екранний час — з одного погляду.",
+  ],
+  "th": [
+    "Drift Balance": "ยอด Drift",
+    "See your earned screen-time balance at a glance.": "ดูยอดเวลาหน้าจอที่หามาได้ในแวบเดียว",
+  ],
+  "nl": [
+    "Drift Balance": "Drift-saldo",
+    "See your earned screen-time balance at a glance.": "Zie je verdiende schermtijdsaldo in één oogopslag.",
+  ],
+]
+
+fileprivate func driftLanguage() -> String {
+  if let code = UserDefaults(suiteName: "group.com.sanghani.drift.shared")?.string(forKey: "drift_language"),
+     !code.isEmpty { return code }
+  let pref = Locale.preferredLanguages.first ?? "en"
+  if pref.hasPrefix("zh") { return (pref.contains("Hant") || pref.contains("TW") || pref.contains("HK")) ? "zh-Hant" : "zh-Hans" }
+  return String(pref.split(separator: "-").first ?? "en")
+}
+
+fileprivate func driftL(_ key: String, _ params: [String: String] = [:]) -> String {
+  var s = DRIFT_L10N[driftLanguage()]?[key] ?? key
+  for (k, v) in params { s = s.replacingOccurrences(of: "{{\(k)}}", with: v) }
+  return s
+}
+// END GENERATED L10N

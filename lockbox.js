@@ -38,6 +38,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeModules, NativeEventEmitter, Platform } from "react-native";
 
+import { tr } from "./i18n";
 const Native = NativeModules.LockboxModule;
 
 const KEY_SESSION = "drift_lockbox_session";
@@ -273,11 +274,11 @@ export function describeResult(r) {
   if (!r) return "";
   switch (r.status) {
     case "completed":
-      return `${r.minutes} minutes in the box. +${r.rewardMinutes} minutes earned.`;
+      return tr("{{minutes}} minutes in the box. +{{rewardMinutes}} minutes earned.", { minutes: r.minutes, rewardMinutes: r.rewardMinutes });
     case "forfeited":
-      return "Your phone left the box. No time earned this session.";
+      return tr("Your phone left the box. No time earned this session.");
     case "cancelled":
-      return "Session ended early. No time earned.";
+      return tr("Session ended early. No time earned.");
     default:
       return "";
   }

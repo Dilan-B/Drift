@@ -58,6 +58,7 @@ import {
 } from "./useSubscription";
 import { LOYALTY_LADDER } from "./loyaltyPricing";
 
+import { tr } from "./i18n";
 const TERMS_URL   = "https://driftproductivity.com/terms";
 const PRIVACY_URL = "https://driftproductivity.com/privacy";
 
@@ -212,16 +213,16 @@ export default function PaywallScreen({
   const perPeriod = effBilling === "annual" ? "/year" : "/month";
 
   const REASON_MSG = {
-    no_offering:  "Plans aren't loading right now. Check your connection and try again.",
-    no_package:   "The subscription isn't available right now. Please try again shortly.",
-    tier_unavailable: "That family size isn't set up yet. Try a different number, or contact support.",
-    not_entitled: "That didn't unlock Drift. If you were charged, tap Restore.",
+    no_offering:  tr("Plans aren't loading right now. Check your connection and try again."),
+    no_package:   tr("The subscription isn't available right now. Please try again shortly."),
+    tier_unavailable: tr("That family size isn't set up yet. Try a different number, or contact support."),
+    not_entitled: tr("That didn't unlock Drift. If you were charged, tap Restore."),
     // Only reachable from redeemAppStoreCode now - it is Apple's offer-code
     // sheet, which has no Android counterpart (Play codes are redeemed in the
     // Play Store app). Buying itself is no longer iOS-only.
-    ios_only:     "App Store codes can only be redeemed on iPhone.",
-    store_unavailable: "Purchases aren't set up on this platform yet.",
-    sdk_missing:  "Purchases aren't available in this build.",
+    ios_only:     tr("App Store codes can only be redeemed on iPhone."),
+    store_unavailable: tr("Purchases aren't set up on this platform yet."),
+    sdk_missing:  tr("Purchases aren't available in this build."),
   };
 
   useEffect(() => {
@@ -247,10 +248,10 @@ export default function PaywallScreen({
       // Success needs no navigation: proAccess flips and the gate in Drift.jsx
       // stops rendering this screen. Dismissing here as well would race it.
       if (!result?.success && result?.reason && result.reason !== "cancelled") {
-        Alert.alert("Purchase failed", REASON_MSG[result.reason] || result.reason);
+        Alert.alert(tr("Purchase failed"), REASON_MSG[result.reason] || result.reason);
       }
     } catch (e) {
-      Alert.alert("Something went wrong", e?.message || "Please try again.");
+      Alert.alert(tr("Something went wrong"), e?.message || tr("Please try again."));
     } finally {
       setPurchasing(false);
     }
@@ -265,17 +266,17 @@ export default function PaywallScreen({
       // build with no sandbox account) is not the same as "nothing to restore".
       if (!result?.success && result?.reason && !REASON_MSG[result.reason]) {
         Alert.alert(
-          "Couldn't reach the App Store",
-          "Check you're signed in to the App Store and connected, then try again.",
+          tr("Couldn't reach the App Store"),
+          tr("Check you're signed in to the App Store and connected, then try again."),
         );
       } else if (!result?.success) {
         Alert.alert(
-          "Nothing to restore",
-          "We couldn't find a subscription on this Apple ID. If you subscribed with a different one, sign in to that Apple ID in Settings and try again.",
+          tr("Nothing to restore"),
+          tr("We couldn't find a subscription on this Apple ID. If you subscribed with a different one, sign in to that Apple ID in Settings and try again."),
         );
       }
     } catch (e) {
-      Alert.alert("Restore failed", e?.message || "Please try again.");
+      Alert.alert(tr("Restore failed"), e?.message || tr("Please try again."));
     } finally {
       setRestoring(false);
     }
@@ -315,7 +316,7 @@ export default function PaywallScreen({
               fontFamily: FF.kicker, fontSize: 10, color: earn.green,
               letterSpacing: 2.6, marginBottom: 10,
             }}>
-              YOUR PLAN IS READY
+              {tr("YOUR PLAN IS READY")}
             </Text>
             <Text style={{
               fontFamily: FF.display, fontSize: 34, color: ink.deep,
@@ -327,7 +328,7 @@ export default function PaywallScreen({
               fontFamily: FF.display, fontSize: 34, color: earn.green,
               letterSpacing: -0.6, lineHeight: 40, marginBottom: 14,
             }}>
-              {plan.minutesPerDay} minutes a day
+              {tr("{{minutesPerDay}} minutes a day", { minutesPerDay: plan.minutesPerDay })}
             </Text>
             <View style={{ height: 14 }} />
 
@@ -362,7 +363,7 @@ export default function PaywallScreen({
               }}
             >
               <Text style={{ fontFamily: FF.bodyBold, fontSize: 13, color: onDeep, letterSpacing: 1.6 }}>
-                TURN THE LOCK ON
+                {tr("TURN THE LOCK ON")}
               </Text>
               <LockIcon size={14} color={onDeep} />
             </TouchableOpacity>
@@ -378,15 +379,19 @@ export default function PaywallScreen({
   // read as a lot to take in for a single decision. Everything Apple requires
   // is still here (price + period on each plan, trial terms and auto-renewal
   // under the button, Restore, Terms, Privacy) — just not repeated.
-  const periodWord = perPeriod === "/year" ? "year" : "month";
+  const yearly = perPeriod === "/year";
   const terms = trial
-    ? `${trial} days free, then ${price}/${periodWord}. Renews automatically — cancel anytime in Settings.`
-    : `${price}/${periodWord}. Renews automatically — cancel anytime in Settings.`;
+    ? (yearly
+      ? tr("{{trial}} days free, then {{price}}/year. Renews automatically — cancel anytime in Settings.", { trial, price })
+      : tr("{{trial}} days free, then {{price}}/month. Renews automatically — cancel anytime in Settings.", { trial, price }))
+    : (yearly
+      ? tr("{{price}}/year. Renews automatically — cancel anytime in Settings.", { price })
+      : tr("{{price}}/month. Renews automatically — cancel anytime in Settings.", { price }));
   const pitch = isFamily
-    ? "You set the rules. They earn their screen time with real tasks."
+    ? tr("You set the rules. They earn their screen time with real tasks.")
     // What Pro adds over the free plan — the person reading this is already
     // using the free plan, so selling them what they have is wasted space.
-    : "Block every app, unlimited tasks, Lockbox and your full plant.";
+    : tr("Block every app, unlimited tasks, Lockbox and your full plant.");
 
   // Loyalty pricing (loyaltyPricing.js): monthly gets cheaper the longer
   // someone stays. Shown only when the switch is on AND the floor offer exists
@@ -436,7 +441,7 @@ export default function PaywallScreen({
         <TouchableOpacity
           onPress={onClose}
           disabled={busy}
-          accessibilityLabel="Close"
+          accessibilityLabel={tr("Close")}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={{ position: "absolute", top: Platform.OS === "ios" ? 22 : 16, right: 20, zIndex: 2, padding: 6 }}
         >
@@ -458,7 +463,7 @@ export default function PaywallScreen({
           transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
         }}>
           <Text style={{ fontFamily: FF.display, fontSize: 36, color: ink.deep, letterSpacing: -0.5 }}>
-            {isFamily ? "Drift Family" : "Drift Pro"}
+            {isFamily ? tr("Drift Family") : tr("Drift Pro")}
           </Text>
           <Text style={{ fontFamily: FF.body, fontSize: 16, color: ink.mid, lineHeight: 23, marginTop: 8, marginBottom: 32 }}>
             {pitch}
@@ -469,7 +474,7 @@ export default function PaywallScreen({
           {isFamily ? (
             <>
               <Text style={{ fontFamily: FF.bodyMed, fontSize: 13, color: ink.mid, marginBottom: 8 }}>
-                How many kids?
+                {tr("How many kids?")}
               </Text>
               <View style={{
                 flexDirection: "row", gap: 6, padding: 4, borderRadius: 14, marginBottom: 12,
@@ -501,16 +506,16 @@ export default function PaywallScreen({
           ) : annualOffered ? (
             <View style={{ gap: 10 }}>
               {/* The savings badge is computed from the two live prices, never hardcoded. */}
-              {planRow("annual", "Yearly", `${annual?.product?.priceString || FALLBACK_ANNUAL}/yr`,
+              {planRow("annual", tr("Yearly"), tr("{{price}}/yr", { price: annual?.product?.priceString || FALLBACK_ANNUAL }),
                 effBilling === "annual", () => setBilling("annual"), null,
-                annualSavingsPct > 0 ? `Save ${annualSavingsPct}%` : null)}
-              {planRow("monthly", "Monthly", `${monthly?.product?.priceString || FALLBACK_MONTHLY}/mo`,
+                annualSavingsPct > 0 ? tr("Save {{annualSavingsPct}}%", { annualSavingsPct }) : null)}
+              {planRow("monthly", tr("Monthly"), tr("{{price}}/mo", { price: monthly?.product?.priceString || FALLBACK_MONTHLY }),
                 effBilling === "monthly", () => setBilling("monthly"),
-                loyaltyFloor ? `Your price drops every 2 months you stay, down to ${loyaltyFloor}/mo.` : null)}
+                loyaltyFloor ? tr("Your price drops every 2 months you stay, down to {{loyaltyFloor}}/mo.", { loyaltyFloor }) : null)}
             </View>
           ) : (
-            planRow("monthly", "Monthly", `${price}/mo`, true, () => {},
-              loyaltyFloor ? `Your price drops every 2 months you stay, down to ${loyaltyFloor}/mo.` : null)
+            planRow("monthly", tr("Monthly"), tr("{{price}}/mo", { price }), true, () => {},
+              loyaltyFloor ? tr("Your price drops every 2 months you stay, down to {{loyaltyFloor}}/mo.", { loyaltyFloor }) : null)
           )}
 
           <View style={{ flex: 1, minHeight: 32 }} />
@@ -530,7 +535,7 @@ export default function PaywallScreen({
               : <Text style={{ fontFamily: FF.bodyBold, fontSize: 16, color: onDeep }}>
                   {/* `trial` alone, not `isFreeTrial || trial`: isFreeTrial
                       describes the product, and read "0 free days" to the ineligible. */}
-                  {trial ? `Start ${trial}-day free trial` : "Continue"}
+                  {trial ? tr("Start {{trial}}-day free trial", { trial }) : tr("Continue")}
                 </Text>}
           </TouchableOpacity>
 
@@ -539,8 +544,8 @@ export default function PaywallScreen({
             fontFamily: FF.body, fontSize: 11, color: ink.faint,
             textAlign: "center", lineHeight: 16, marginTop: 12,
           }}>
-            {terms}{priceIsEstimate ? " Final price shown by the App Store." : ""}
-            {loyaltyFloor && effBilling === "monthly" ? " Each lower price is offered in the app for you to accept." : ""}
+            {terms}{priceIsEstimate ? tr(" Final price shown by the App Store.") : ""}
+            {loyaltyFloor && effBilling === "monthly" ? tr(" Each lower price is offered in the app for you to accept.") : ""}
           </Text>
 
           {/* Restore, Terms, Privacy (all mandatory), cohort code, sign out — one quiet row. */}
@@ -551,24 +556,24 @@ export default function PaywallScreen({
             <TouchableOpacity onPress={handleRestore} disabled={busy}>
               {restoring
                 ? <Spinner size={14} color={ink.mid} />
-                : <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid }}>Restore</Text>}
+                : <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.mid }}>{tr("Restore")}</Text>}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => open(TERMS_URL)}>
-              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>Terms</Text>
+              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>{tr("Terms")}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => open(PRIVACY_URL)}>
-              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>Privacy</Text>
+              <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>{tr("Privacy")}</Text>
             </TouchableOpacity>
             {!!onRedeemCode && (
               <TouchableOpacity onPress={onRedeemCode} disabled={busy}>
-                <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>Have a code?</Text>
+                <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>{tr("Have a code?")}</Text>
               </TouchableOpacity>
             )}
             {/* The way out of the hard paywall, which has no dismiss. The Pro
                 sheet closes instead, so it doesn't need one. */}
             {!onClose && (
               <TouchableOpacity onPress={onSignOut}>
-                <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>Sign out</Text>
+                <Text style={{ fontFamily: FF.body, fontSize: 12, color: ink.faint }}>{tr("Sign out")}</Text>
               </TouchableOpacity>
             )}
           </View>

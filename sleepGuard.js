@@ -27,6 +27,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeModules, Platform } from "react-native";
 
+import { tr } from "./i18n";
 const Native = NativeModules.SleepGuardModule;
 
 const KEY_TAG     = "drift_sleepguard_tag";      // the registered tag's UID
@@ -80,8 +81,8 @@ export async function requestMotionAuth() {
 export async function scanTag({ prompt, success, expect } = {}) {
   if (!isAvailable()) throw new Error("unavailable");
   return await Native.scanTag(
-    prompt  || "Hold the top of your phone against your tag.",
-    success || "Tag read.",
+    prompt  || tr("Hold the top of your phone against your tag."),
+    success || tr("Tag read."),
     expect  || "",
   );
 }
@@ -96,8 +97,8 @@ export async function registerTag() {
   // Deliberately not "the Drift tag" — nothing has been shipped to them, they
   // are designating a blank sticker. The old copy read like a missing package.
   const { id } = await scanTag({
-    prompt:  "Hold the top of your phone against the tag you want to use.",
-    success: "Tag saved.",
+    prompt:  tr("Hold the top of your phone against the tag you want to use."),
+    success: tr("Tag saved."),
   });
   await AsyncStorage.setItem(KEY_TAG, id);
   return id;
@@ -150,8 +151,8 @@ export async function armForNight({ rewardMinutes } = {}) {
 
   try {
     await scanTag({
-      prompt:  "Hold the top of your phone against your tag to start the night.",
-      success: "Night started. Your apps are locked until morning.",
+      prompt:  tr("Hold the top of your phone against your tag to start the night."),
+      success: tr("Night started. Your apps are locked until morning."),
       expect:  registered,
     });
   } catch (e) {
@@ -288,18 +289,18 @@ export async function getStreak() {
 export function describeResult(r) {
   switch (r?.status) {
     case "success":
-      return `Your phone stayed put all night. +${r.rewardMinutes} minutes earned.`;
+      return tr("Your phone stayed put all night. +{{rewardMinutes}} minutes earned.", { rewardMinutes: r.rewardMinutes });
     case "moved":
       return r.firstMovementAt
-        ? `Your phone moved at ${new Date(r.firstMovementAt * 1000)
-            .toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. No bonus this time.`
-        : "Your phone moved during the night. No bonus this time.";
+        ? tr("Your phone moved at {{toLocaleTimeString}}. No bonus this time.", { toLocaleTimeString: new Date(r.firstMovementAt * 1000)
+            .toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) })
+        : tr("Your phone moved during the night. No bonus this time.");
     case "too_short":
-      return `Only ${r.minutes} minutes so far. A night needs at least ${Math.round(r.needed / 60)} hours.`;
+      return tr("Only {{minutes}} minutes so far. A night needs at least {{round}} hours.", { minutes: r.minutes, round: Math.round(r.needed / 60) });
     case "inconclusive":
-      return "Couldn't read motion history for last night. Giving you the benefit of the doubt.";
+      return tr("Couldn't read motion history for last night. Giving you the benefit of the doubt.");
     case "unavailable":
-      return "Motion data isn't available right now. We'll check again shortly.";
+      return tr("Motion data isn't available right now. We'll check again shortly.");
     default:
       return "";
   }

@@ -12,6 +12,7 @@
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { tr } from "./i18n";
 let Calendar = null;
 try { Calendar = require("expo-calendar"); } catch {}
 
@@ -128,7 +129,7 @@ export async function listCalendars() {
       .filter(c => c?.id)
       .map(c => ({
         id: c.id,
-        title: c.title || "Calendar",
+        title: c.title || tr("Calendar"),
         color: c.color || null,
         source: c.source?.name || "",
         isGoogle: looksGoogle(c),
@@ -267,7 +268,7 @@ export async function fetchTodayEvents() {
       })
       .map(ev => {
         const mins = minutesBetween(ev.startDate, ev.endDate) || 30;
-        const title = (ev.title || "Event").slice(0, 80);
+        const title = (ev.title || tr("Event")).slice(0, 80);
         return {
           eventId: ev.id,
           title,

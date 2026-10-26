@@ -19,6 +19,7 @@ import FamilyProfileModal from "./FamilyProfile";
 import ParentPinPad from "./ParentPinPad";
 import { FamilyDock, HistoryList, shortDate } from "./FamilyUI";
 
+import { tr } from "./i18n";
 const ACTIVE = ["assigned", "submitted", "rejected"];
 
 export default function ChildShell({ userId, username, secLeft = 0, dark = false, onSignOut, onToggleTheme, onDeleteAccount }) {
@@ -108,7 +109,7 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.earn.sage} />}
       >
         <View style={c.topRow}>
-          <Text style={[c.hi, { color: t.ink.deep }]}>Hi{name ? `, ${name}` : ""}</Text>
+          <Text style={[c.hi, { color: t.ink.deep }]}>{tr("Hi{{p}}", { p: name ? `, ${name}` : "" })}</Text>
           <TouchableOpacity style={[c.profileBtn, { backgroundColor: t.earn.sageLo }]} onPress={() => setShowProfile(true)}>
             <Text style={[c.profileInitial, { color: t.earn.sage }]}>{(name || "?").slice(0, 1).toUpperCase()}</Text>
           </TouchableOpacity>
@@ -119,7 +120,7 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
           <View pointerEvents="none" style={{ position: "absolute", right: -30, bottom: -20, opacity: 0.12 }}>
             <Sprout size={150} tone="fresh" />
           </View>
-          <Text style={[c.timeLabel, { color: t.ink.faint }]}>SCREEN TIME LEFT</Text>
+          <Text style={[c.timeLabel, { color: t.ink.faint }]}>{tr("SCREEN TIME LEFT")}</Text>
           <Text style={[c.timeBig, { color: hasTime ? t.earn.sage : t.ink.faint }]}>{mins}</Text>
           <Text style={[c.timeUnit, { color: t.ink.mid }]}>{mins === 1 ? "minute" : "minutes"}</Text>
         </View>
@@ -130,18 +131,18 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
               style={[c.appAccessBtn, { backgroundColor: t.paper.card, borderColor: t.ink.border }]}
               onPress={() => setShowApps(true)}
             >
-              <Text style={[c.appAccessText, { color: t.ink.deep }]}>Manage app access</Text>
+              <Text style={[c.appAccessText, { color: t.ink.deep }]}>{tr("Manage app access")}</Text>
               <Text style={{ color: t.ink.faint, fontFamily: FF.serifReg, fontSize: 20 }}>›</Text>
             </TouchableOpacity>
 
-            <Text style={[c.section, { color: t.ink.faint }]}>YOUR TASKS</Text>
+            <Text style={[c.section, { color: t.ink.faint }]}>{tr("YOUR TASKS")}</Text>
             {loading ? (
               <ActivityIndicator color={t.earn.sage} style={{ marginTop: 20 }} />
             ) : active.length === 0 ? (
               <View style={[c.msgCard, { backgroundColor: t.earn.sageLo }]}>
-                <Text style={[c.msgTitle, { color: t.earn.greenD }]}>All caught up</Text>
+                <Text style={[c.msgTitle, { color: t.earn.greenD }]}>{tr("All caught up")}</Text>
                 <Text style={[c.msgBody, { color: t.earn.green }]}>
-                  No tasks right now. When a parent gives you one, it'll show up here.
+                  {tr("No tasks right now. When a parent gives you one, it'll show up here.")}
                 </Text>
               </View>
             ) : (
@@ -153,12 +154,12 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
                     <View style={{ flex: 1 }}>
                       <Text style={[c.taskTitle, { color: t.ink.deep }]}>{task.title}</Text>
                       <Text style={[c.taskReward, { color: t.earn.sage }]}>
-                        +{task.minutes} min{rejected ? " · sent back, try again" : ""}
+                        {tr("+{{minutes}} min{{p}}", { minutes: task.minutes, p: rejected ? tr(" · sent back, try again") : "" })}
                       </Text>
                     </View>
                     {submitted ? (
                       <View style={[c.waitPill, { backgroundColor: t.earn.sageLo }]}>
-                        <Text style={[c.waitText, { color: t.earn.greenD }]}>Waiting</Text>
+                        <Text style={[c.waitText, { color: t.earn.greenD }]}>{tr("Waiting")}</Text>
                       </View>
                     ) : (
                       <TouchableOpacity
@@ -168,7 +169,7 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
                       >
                         {busyId === task.id
                           ? <ActivityIndicator color={onDeep} />
-                          : <Text style={[c.doneText, { color: onDeep }]}>Done</Text>}
+                          : <Text style={[c.doneText, { color: onDeep }]}>{tr("Done")}</Text>}
                       </TouchableOpacity>
                     )}
                   </View>
@@ -178,8 +179,8 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
           </>
         ) : (
           <>
-            <Text style={[c.section, { color: t.ink.faint }]}>COMPLETED</Text>
-            <HistoryList items={history} dark={dark} emptyText="No completed tasks yet. Finish a task to see it here." />
+            <Text style={[c.section, { color: t.ink.faint }]}>{tr("COMPLETED")}</Text>
+            <HistoryList items={history} dark={dark} emptyText={tr("No completed tasks yet. Finish a task to see it here.")} />
           </>
         )}
       </ScrollView>
@@ -192,7 +193,7 @@ export default function ChildShell({ userId, username, secLeft = 0, dark = false
         dark={dark}
         onToggleTheme={onToggleTheme}
         name={name}
-        subtitle="Drift kid account"
+        subtitle={tr("Drift kid account")}
         onSignOut={onSignOut}
         onDeleteAccount={onDeleteAccount}
       />

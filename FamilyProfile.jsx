@@ -9,9 +9,12 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Modal, Alert, ScrollView, Platform, StatusBar,
 } from "react-native";
 import { getTheme, FF } from "./theme";
+import LanguagePicker from "./LanguagePicker";
 
+import { tr } from "./i18n";
 export default function FamilyProfileModal({
   visible, onClose, dark, onToggleTheme, name, subtitle, onSignOut, onDeleteAccount,
+  deleteMessage, // overrides the delete confirmation body (parents: their kids' data goes too)
   children,   // account-specific sections (e.g. the parent's family code + PIN)
 }) {
   const t = getTheme(dark);
@@ -21,11 +24,11 @@ export default function FamilyProfileModal({
 
   function confirmDelete() {
     Alert.alert(
-      "Delete account?",
-      "This permanently removes your Drift account. This can't be undone.",
+      tr("Delete account?"),
+      deleteMessage || tr("This permanently removes your Drift account. This can't be undone."),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => { onClose?.(); onDeleteAccount?.(); } },
+        { text: tr("Cancel"), style: "cancel" },
+        { text: tr("Delete"), style: "destructive", onPress: () => { onClose?.(); onDeleteAccount?.(); } },
       ],
     );
   }
@@ -36,7 +39,7 @@ export default function FamilyProfileModal({
         <StatusBar barStyle={dark ? "light-content" : "dark-content"} />
         <View style={st.header}>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Text style={[st.close, { color: t.earn.sage }]}>Done</Text>
+            <Text style={[st.close, { color: t.earn.sage }]}>{tr("Done")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -45,15 +48,15 @@ export default function FamilyProfileModal({
             <View style={[st.avatar, { backgroundColor: t.earn.sageLo }]}>
               <Text style={[st.avatarText, { color: t.earn.sage }]}>{(name || "?").slice(0, 1).toUpperCase()}</Text>
             </View>
-            <Text style={[st.name, { color: t.ink.deep }]}>{name || "Your account"}</Text>
+            <Text style={[st.name, { color: t.ink.deep }]}>{name || tr("Your account")}</Text>
             {subtitle ? <Text style={[st.sub, { color: t.ink.mid }]}>{subtitle}</Text> : null}
           </View>
 
           {children}
 
-          <Text style={[st.section, { color: t.ink.faint }]}>APPEARANCE</Text>
+          <Text style={[st.section, { color: t.ink.faint }]}>{tr("APPEARANCE")}</Text>
           <View style={[st.segment, { borderColor: t.ink.border, backgroundColor: t.paper.card }]}>
-            {["Light", "Dark"].map((label, i) => {
+            {[tr("Light"), tr("Dark")].map((label, i) => {
               const active = (i === 1) === !!dark;
               return (
                 <TouchableOpacity
@@ -67,12 +70,19 @@ export default function FamilyProfileModal({
             })}
           </View>
 
-          <Text style={[st.section, { color: t.ink.faint }]}>ACCOUNT</Text>
+          <LanguagePicker
+            dark={dark}
+            rowStyle={[st.row, st.rowSplit, { borderColor: t.ink.border, backgroundColor: t.paper.card, marginTop: 12 }]}
+            textStyle={[st.rowText, { color: t.ink.deep }]}
+            chevronStyle={[st.rowText, { color: t.ink.faint }]}
+          />
+
+          <Text style={[st.section, { color: t.ink.faint }]}>{tr("ACCOUNT")}</Text>
           <TouchableOpacity style={[st.row, { borderColor: t.ink.border, backgroundColor: t.paper.card }]} onPress={() => { onClose?.(); onSignOut?.(); }}>
-            <Text style={[st.rowText, { color: t.ink.deep }]}>Sign out</Text>
+            <Text style={[st.rowText, { color: t.ink.deep }]}>{tr("Sign out")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[st.row, { borderColor: t.ink.border, backgroundColor: t.paper.card }]} onPress={confirmDelete}>
-            <Text style={[st.rowText, { color: "#B5564B" }]}>Delete account</Text>
+            <Text style={[st.rowText, { color: "#B5564B" }]}>{tr("Delete account")}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -93,5 +103,6 @@ const st = StyleSheet.create({
   segBtn: { flex: 1, paddingVertical: 12, borderRadius: 11, alignItems: "center" },
   segText: { fontFamily: FF.bodyMed, fontSize: 15 },
   row: { borderWidth: 1, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 18, marginBottom: 10 },
+  rowSplit: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   rowText: { fontFamily: FF.bodyMed, fontSize: 16 },
 });
