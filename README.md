@@ -8,7 +8,12 @@ the time is credited.
 [![Download on the App Store](https://img.shields.io/badge/App_Store-Download-0D96F6?logo=apple&logoColor=white)](https://apps.apple.com/app/drift-screentime/id6778215875)
 · [Website](https://dilan-b.github.io/Drift/)
 
-<!-- TODO: add 2–3 screenshots or GIFs here (task → proof → time earned → shield lifting). -->
+<p align="center">
+  <img src="docs/screenshots/today.png" width="200" alt="Today: earned balance, the plant that grows with you, and today's tasks">
+  <img src="docs/screenshots/add-task.png" width="200" alt="Add a task: pick a length and see the screen time it will earn">
+  <img src="docs/screenshots/lockbox.png" width="200" alt="Lockbox: put the phone in an AR box and leave it there">
+  <img src="docs/screenshots/growth.png" width="200" alt="Growth: your tier, XP and weekly streak">
+</p>
 
 ## What it does
 
