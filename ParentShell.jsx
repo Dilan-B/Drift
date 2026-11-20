@@ -19,23 +19,18 @@ import { FamilyDock, HistoryList, shortDate } from "./FamilyUI";
 import { FamilyWeekCard, useFamilyWeek } from "./FamilyStats";
 import {
   fetchMyFamily, fetchFamilyChildren, fetchPendingApprovals, fetchChildrenBalances,
-  fetchFamilyHistory, assignChildTask, approveChildTask, rejectChildTask, setChildAppPolicy,
+  fetchFamilyHistory, assignChildTask, approveChildTask, rejectChildTask,
   setFamilyPin, CONSENT_NOTICE_VERSION,
 } from "./family";
 import { ParentConsentCard, ChildDataModal, ConsentSettings } from "./ParentConsent";
 
 import { tr } from "./i18n";
-// Curated apps a parent can choose to keep available even when time runs out.
-// (Full arbitrary per-app selection needs the on-device picker; this covers the
-// common "let them still text / call / navigate" cases.)
-const ALLOWABLE_APPS = [
-  { id: "messages", get label() { return tr("Messages"); } },
-  { id: "phone",    get label() { return tr("Phone"); } },
-  { id: "maps",     get label() { return tr("Maps"); } },
-  { id: "music",    get label() { return tr("Music"); } },
-  { id: "camera",   get label() { return tr("Camera"); } },
-  { id: "school",   get label() { return tr("School apps"); } },
-];
+// There used to be an "Always allow" list here (Messages, Phone, Maps, ...)
+// saved to family_members.app_policy.allow. Nothing on the child's phone ever
+// read it, so the toggles changed nothing. iOS only hands an app opaque
+// tokens chosen in Apple's picker on the device being managed; a name like
+// "Messages" cannot become one. So the only way to pick a kid's apps is the
+// PIN-gated picker on their phone (ParentPinPad), and this sheet says so.
 
 export default function ParentShell({ userId, userEmail, username, dark = false, onSignOut, onToggleTheme, onDeleteAccount }) {
   const t = getTheme(dark);
@@ -188,17 +183,6 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
     setAssigning(false);
     if (!res.ok) { setAssignErr(tr("Couldn't assign the task. Try again.")); return; }
     setAssignFor(null); setTitle(""); setMinutes("20");
-  }
-
-  async function toggleAllow(child, appId) {
-    const current = child.app_policy?.allow || [];
-    const next = current.includes(appId) ? current.filter((a) => a !== appId) : [...current, appId];
-    // optimistic
-    const currentMode = child.app_policy?.mode || "categories";
-    setChildren((prev) => prev.map((c) => c.user_id === child.user_id
-      ? { ...c, app_policy: { ...(c.app_policy || {}), mode: currentMode, allow: next } } : c));
-    setAppsFor((prev) => prev ? { ...prev, app_policy: { ...(prev.app_policy || {}), allow: next } } : prev);
-    await setChildAppPolicy(child.user_id, next, currentMode);
   }
 
   const mins = (id) => Math.max(0, Math.ceil((balances[id] || 0) / 60));
@@ -389,23 +373,24 @@ export default function ParentShell({ userId, userEmail, username, dark = false,
       <Modal visible={!!appsFor} transparent animationType="fade" onRequestClose={() => setAppsFor(null)}>
         <View style={s.modalWrap}>
           <View style={[s.modalCard, { backgroundColor: t.paper.card }]}>
-            <Text style={[s.modalTitle, { color: t.ink.deep }]}>{tr("Always allow for {{display_name}}", { display_name: appsFor?.display_name })}</Text>
+            <Text style={[s.modalTitle, { color: t.ink.deep }]}>{tr("Apps on {{display_name}}'s phone", { display_name: appsFor?.display_name })}</Text>
             <Text style={[s.modalSub, { color: t.ink.mid }]}>
-              {tr("These stay open even when {{display_name}} runs out of screen time.", { display_name: appsFor?.display_name })}
+              {appsFor?.app_policy?.mode === "custom"
+                ? tr("When {{display_name}} runs out of time, the apps you picked on their phone get blocked.", { display_name: appsFor?.display_name })
+                : tr("When {{display_name}} runs out of time, social and entertainment apps get blocked automatically.", { display_name: appsFor?.display_name })}
             </Text>
-            {ALLOWABLE_APPS.map((app) => {
-              const on = (appsFor?.app_policy?.allow || []).includes(app.id);
-              return (
-                <TouchableOpacity key={app.id} style={[s.allowRow, { borderColor: t.ink.hairline }]} onPress={() => toggleAllow(appsFor, app.id)}>
-                  <Text style={[s.allowLabel, { color: t.ink.deep }]}>{app.label}</Text>
-                  <View style={[s.toggle, { backgroundColor: on ? t.earn.deep : t.ink.ghost }]}>
-                    <Text style={{ color: on ? onDeep : t.ink.faint, fontFamily: FF.bodyMed, fontSize: 12 }}>
-                      {on ? tr("Allowed") : tr("Blocked")}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+            <Text style={[s.modalSub, { color: t.ink.mid }]}>
+              {tr("Apple only lets apps be chosen on the phone being managed. To pick which apps get blocked, or to keep one open:")}
+            </Text>
+            {[
+              tr("Open Drift on {{display_name}}'s phone and tap Manage app access.", { display_name: appsFor?.display_name }),
+              tr("Enter your parent PIN. Apple's app picker opens."),
+              tr("Select the apps to block. Anything you leave out stays open."),
+            ].map((step, i) => (
+              <View key={i} style={[s.allowRow, { borderColor: t.ink.hairline }]}>
+                <Text style={[s.allowLabel, { color: t.ink.deep, flex: 1 }]}>{i + 1}. {step}</Text>
+              </View>
+            ))}
             <TouchableOpacity style={[s.modalBtn, { backgroundColor: t.earn.deep, marginTop: 16 }, t.fx.glow]} onPress={() => setAppsFor(null)}>
               <Text style={[s.modalBtnText, { color: onDeep }]}>{tr("Done")}</Text>
             </TouchableOpacity>

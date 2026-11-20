@@ -133,9 +133,11 @@ export default function ProfileScreen({
     if (!userId) return;
     (async () => {
       const [{ count: tc }, { data: p }, { data: tasks }] = await Promise.all([
-        supabase.from("tasks").select("*", { count: "exact", head: true }).eq("user_id", userId).eq("completed", true),
+        // The column is `done` (schema_v3). This used to filter on `completed`,
+        // which does not exist, so both stats on the share card read 0.
+        supabase.from("tasks").select("*", { count: "exact", head: true }).eq("user_id", userId).eq("done", true),
         supabase.from("profiles").select("current_streak, referral_code").eq("id", userId).maybeSingle(),
-        supabase.from("tasks").select("credits").eq("user_id", userId).eq("completed", true),
+        supabase.from("tasks").select("credits").eq("user_id", userId).eq("done", true),
       ]);
       if (p?.referral_code) setReferralCode(p.referral_code);
       const mins = (tasks || []).reduce((sum, t) => sum + (t.credits || 0), 0);
@@ -420,7 +422,7 @@ export default function ProfileScreen({
           <Row
             id="shareInvite"
             title={tr("Share & Invite")}
-            sub={tr("Share your stats, earn bonus time")}
+            sub={tr("Share your stats, invite friends")}
             cta={tr("SHARE")}
             accent={earn.green}
             icon={(c) => (

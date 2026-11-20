@@ -6,7 +6,18 @@
 // POST { action: "set", pin }                    (caller must be the parent)
 //   → { success: true }
 // POST { action: "verify", family_id, pin }      (child device)
-//   → { success: true, ok: boolean }
+//   → { success: true, ok: true }
+//   → { success: true, ok: false, reason: "no_pin" | "wrong_pin" | "locked",
+//       attemptsLeft?: number, lockedUntil?: string }
+//
+// Wrong guesses are counted per family by public.check_family_pin()
+// (schema_v26): 5 wrong locks the PIN for 15 minutes, doubling each time up to
+// 24 hours. Before that, a child holding a valid session could try all 10,000
+// four-digit PINs in a loop. The caller must belong to the family, or anyone
+// signed in could lock another family out.
+//
+// DEPLOY ORDER: apply migration 20261119000001_family_pin_lockout first. This
+// function calls check_family_pin and fails verify without it.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -54,8 +65,13 @@ serve(async (req: Request) => {
         .from("families").select("id").eq("parent_id", user.id).is("deleted_at", null).maybeSingle();
       if (!fam) return json({ success: false, reason: "not_parent" });
       const pin_hash = await hashPin(fam.id, pin);
+      // A new PIN also clears any lockout, so after a kid's guessing spree the
+      // parent can reset it from their own phone instead of waiting it out.
       const { error } = await admin.from("family_pins")
-        .upsert({ family_id: fam.id, pin_hash, updated_at: new Date().toISOString() }, { onConflict: "family_id" });
+        .upsert({
+          family_id: fam.id, pin_hash, updated_at: new Date().toISOString(),
+          failed_count: 0, lockouts: 0, locked_until: null,
+        }, { onConflict: "family_id" });
       if (error) { console.error("pin set:", error.message); return json({ error: "set_failed" }, 500); }
       return json({ success: true });
     }
@@ -64,16 +80,40 @@ serve(async (req: Request) => {
       const familyId = String((body as { family_id?: unknown }).family_id ?? "");
       const setMode = String((body as { set_mode?: unknown }).set_mode ?? "");
       if (!familyId) return json({ success: false, reason: "not_found" });
-      const { data: row } = await admin
-        .from("family_pins").select("pin_hash").eq("family_id", familyId).maybeSingle();
-      if (!row) return json({ success: true, ok: false, reason: "no_pin" });
+
+      // The caller must be in this family (a child of it, or its parent).
+      const [{ data: membership }, { data: owned }] = await Promise.all([
+        admin.from("family_members").select("id")
+          .eq("family_id", familyId).eq("user_id", user.id).is("removed_at", null).maybeSingle(),
+        admin.from("families").select("id")
+          .eq("id", familyId).eq("parent_id", user.id).is("deleted_at", null).maybeSingle(),
+      ]);
+      if (!membership && !owned) return json({ success: false, reason: "not_found" });
+
       const candidate = await hashPin(familyId, pin);
-      const ok = candidate === row.pin_hash;
+      const { data: check, error: checkErr } = await admin.rpc("check_family_pin", {
+        p_family_id: familyId,
+        p_candidate: candidate,
+      });
+      if (checkErr) {
+        console.error("pin verify rpc:", checkErr.message);
+        return json({ error: "verify_failed" }, 500);
+      }
+      const ok = check?.ok === true;
+      if (!ok) {
+        return json({
+          success: true,
+          ok: false,
+          reason: String(check?.reason || "wrong_pin"),
+          attemptsLeft: typeof check?.attempts_left === "number" ? check.attempts_left : undefined,
+          lockedUntil: check?.locked_until ?? undefined,
+        });
+      }
 
       // On a correct PIN, optionally flip THIS child's blocking mode (the parent
       // is present on the child's device to enter the PIN). The child can't
       // write their own policy, so we do it here with the service role.
-      if (ok && (setMode === "custom" || setMode === "categories")) {
+      if (setMode === "custom" || setMode === "categories") {
         const { data: member } = await admin
           .from("family_members").select("id, app_policy")
           .eq("family_id", familyId).eq("user_id", user.id).eq("role", "child")

@@ -51,6 +51,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { replyLanguageLine } from "../_shared/languages.ts";
+import { DEFAULT_MODEL, chatBody } from "../_shared/openai.ts";
 
 // ── Limits ────────────────────────────────────────────────────
 const MAX_PER_HOUR = 5;
@@ -88,9 +89,10 @@ function requiredWaitMs(minutes: number): number {
 // MODEL_TEXT does the two text-only passes (the capturability pre-flight and
 // the judging pass), so it can be a cheaper text model if one is available.
 //
-// Default for both: gpt-4.1-nano — $0.10/$0.40 per 1M in/out and it accepts
-// image input.
-const MODEL_VISION = Deno.env.get("OPENAI_MODEL") || "gpt-4.1-nano";
+// Default for both: DEFAULT_MODEL in _shared/openai.ts (gpt-5.6-luna, which
+// accepts image input). gpt-4.1-nano was the default until OpenAI shut it
+// down on 2026-10-23; chatBody() adapts the request to either model family.
+const MODEL_VISION = Deno.env.get("OPENAI_MODEL") || DEFAULT_MODEL;
 const MODEL_TEXT   = Deno.env.get("OPENAI_MODEL_TEXT") || MODEL_VISION;
 
 const MAX_PROOF_CHARS = 1000;
@@ -162,7 +164,7 @@ async function proGatingEnforced(client: any): Promise<boolean> {
 //
 // Same caching and fail-safe shape as the gating flag: a failed read keeps the
 // last value seen, else the seeded default.
-const FREE_DAILY_TASKS_DEFAULT = 3;
+const FREE_DAILY_TASKS_DEFAULT = 1;
 let freeAllowance: { n: number; ts: number } | null = null;
 
 async function freeDailyTasks(client: any): Promise<number> {
@@ -371,16 +373,22 @@ serve(async (req: Request) => {
     const midnight = new Date(now);
     midnight.setHours(0, 0, 0, 0);
 
+    // evaluate-task writes to this table too (proof_kind = 'evaluate'). Count
+    // only proof submissions. `neq` also drops NULL proof_kind, which is what
+    // evaluate-task wrote before it was tagged; every row this function writes
+    // has a proof_kind (see logUsage).
     const [{ count: hourCount }, { count: dayCount }] = await Promise.all([
       supabase
         .from("ai_check_usage")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
+        .neq("proof_kind", "evaluate")
         .gte("created_at", hourAgo),
       supabase
         .from("ai_check_usage")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
+        .neq("proof_kind", "evaluate")
         .gte("created_at", midnight.toISOString()),
     ]);
 
@@ -726,7 +734,7 @@ serve(async (req: Request) => {
         const r = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
+          body: JSON.stringify(chatBody(model, messages, { maxTokens, temperature })),
         }, timeoutMs);
         if (!r.ok) {
           // Log only the bare minimum server-side. Never log the full body —

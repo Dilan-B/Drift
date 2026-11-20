@@ -4,15 +4,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { replyLanguageLine } from "../_shared/languages.ts";
+import { DEFAULT_MODEL, chatBody } from "../_shared/openai.ts";
 
 const MAX_PER_HOUR = 30;
 const MAX_PER_DAY  = 200;
 
 // Model is configurable so it can be changed with `supabase secrets set`
-// instead of a code deploy. Default is the cheapest model that handles this
-// job: gpt-4.1-nano ($0.10/$0.40 per 1M in/out) vs gpt-4o-mini ($0.15/$0.60).
-// This call is text-only, so vision support isn't required here.
-const MODEL = Deno.env.get("OPENAI_MODEL_TEXT") || Deno.env.get("OPENAI_MODEL") || "gpt-4.1-nano";
+// instead of a code deploy. Default is DEFAULT_MODEL in _shared/openai.ts
+// (gpt-4.1-nano until OpenAI shut it down on 2026-10-23). This call is
+// text-only, so vision support isn't required here.
+const MODEL = Deno.env.get("OPENAI_MODEL_TEXT") || Deno.env.get("OPENAI_MODEL") || DEFAULT_MODEL;
 
 // Per-instance subscription cache
 const SUB_TTL_MS = 60_000;
@@ -136,15 +137,18 @@ serve(async (req: Request) => {
       return json({ error: "subscription_required" }, 402);
     }
 
-    // Rate limiting (shared ai_check_usage table is fine here too)
+    // Rate limiting. ai_check_usage is shared with verify-task, so each function
+    // counts only its own rows: this one writes proof_kind = 'evaluate', and
+    // verify-task excludes those. Before that split, creating a handful of
+    // AI-valued tasks used up the 5-per-hour proof-check allowance.
     const hourAgo  = new Date(Date.now() - 3_600_000).toISOString();
     const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
 
     const [{ count: hourCount }, { count: dayCount }] = await Promise.all([
       supabase.from("ai_check_usage").select("*", { count: "exact", head: true })
-        .eq("user_id", user.id).gte("created_at", hourAgo),
+        .eq("user_id", user.id).eq("proof_kind", "evaluate").gte("created_at", hourAgo),
       supabase.from("ai_check_usage").select("*", { count: "exact", head: true })
-        .eq("user_id", user.id).gte("created_at", midnight.toISOString()),
+        .eq("user_id", user.id).eq("proof_kind", "evaluate").gte("created_at", midnight.toISOString()),
     ]);
     if ((hourCount ?? 0) >= MAX_PER_HOUR)
       return json({ error: "rate_limit", message: "Hourly limit reached." }, 429);
@@ -194,11 +198,9 @@ serve(async (req: Request) => {
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 150, temperature: 0.4,
-      }),
+      body: JSON.stringify(chatBody(MODEL, [{ role: "user", content: prompt }], {
+        maxTokens: 150, temperature: 0.4,
+      })),
     });
 
     if (!resp.ok) {
@@ -240,7 +242,7 @@ serve(async (req: Request) => {
       result.xp = Math.round(MAX_REWARD_MINUTES * 0.6 + 8);
     }
 
-    supabase.from("ai_check_usage").insert({ user_id: user.id }).then(() => {}, () => {});
+    supabase.from("ai_check_usage").insert({ user_id: user.id, proof_kind: "evaluate" }).then(() => {}, () => {});
     return json(result);
   } catch (err) {
     console.error("evaluate-task error:", err);

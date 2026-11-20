@@ -2,8 +2,15 @@
  * referrals.js
  * Referral system with tracked codes and rewards.
  *
- * Each user gets a unique 6-char referral code. When a new user enters
- * someone's code after signup, both get 15 bonus screen-time minutes.
+ * Each user gets a unique 6-char referral code, carried in invite links as
+ * ?ref=CODE.
+ *
+ * NOT LIVE: apply_referral_code (supabase/admin/referrals.sql) records a
+ * 15-minute bonus for both sides in profiles.bonus_minutes, but no screen
+ * calls applyReferralCode and nothing adds bonus_minutes to a balance. Share
+ * copy therefore promises no bonus. To ship it: add a "Have a code?" field,
+ * credit bonus_minutes through credit_ledger, and require a verified email in
+ * the RPC so throwaway accounts can't farm it.
  */
 import { Share, Platform } from "react-native";
 import { supabase } from "./supabase";
@@ -39,8 +46,9 @@ export async function shareReferralLink(code) {
   if (!code) return false;
   const link = `${INVITE_BASE_URL}?ref=${code}`;
   try {
+    // No bonus promise: see the header note.
     await Share.share({
-      message: Platform.OS === "ios" ? tr("I use Drift to earn my screen time — join with my code {{code}} for 15 bonus minutes: {{link}}", { code, link }) : tr("I use Drift to earn my screen time — join with my code {{code}} for 15 bonus minutes: {{link}}", { code, link }),
+      message: tr("I'm using Drift to earn my screen time instead of doom-scrolling — join me: {{link}}", { link }),
       url: Platform.OS === "ios" ? link : undefined,
     });
     return true;

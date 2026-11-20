@@ -619,6 +619,8 @@ const BLOCKED_TASK_RE = /\b(goon|gooning|fap|fapping|jerk\s*off|jack\s*off|wank|
 const VAGUE_TASK_RE = /^(stuff|things?|work|task|do it|idk|whatever|something|nothing|asdf|aaa+|test|hi|hey|lol|bruh|hmm+|ok|yes|no|nah|yep|pls|help|bro|dude|chill|vibe|vibes|blah|meh|ugh|haha|lmao|yolo|swag|based|slay|cap|bet|fr|ngl|tbh|ong|fam|sus|ratio|w|l|x+|z+|\.+|!+|\?+|a{2,}|ha+)$/i;
 const MIN_TASK_TITLE_LEN = 4;
 const MIN_TASK_TITLE_WORDS = 2;
+// Most the steps shortcut can pay out in one local day (claimPendingHealthEarn).
+const HEALTH_EARN_MAX_SEC = 15 * 60;
 
 function capReward(credits, mins) {
   const floor = Math.max(1, Math.ceil(mins * MIN_REWARD_RATIO));
@@ -652,11 +654,11 @@ const REPEAT_LABELS = Object.fromEntries(REPEAT_OPTIONS);
 // a slider position rather than a value the thumb can't represent.
 const QUICK_LENGTHS = [15, 30, 60, 120];
 
-function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPaywall, onOpenAutoTasks }) {
+function AddTaskOverlay({ onSave, onClose, userId, isSubActive = true, onOpenPaywall, onOpenAutoTasks, initialTitle = "" }) {
   const { dark, theme } = useTheme();
   const { ink, paper, earn } = theme;
 
-  const [title,    setTitle]    = useState("");
+  const [title,    setTitle]    = useState(initialTitle);
   // Provisional only — the AI evaluator classifies the real category
   // server-side and patches it in (see finalizeTaskCredits).
   const [cat]                   = useState("life");
@@ -3533,6 +3535,10 @@ export default function App() {
   const [credits,     setCredits]     = useState({ balance: 0, earned: 0, spent: 0 });
   const [totalXp,     setTotalXp]     = useState(0);
   const [overlay,     setOverlay]     = useState(null);
+  // What a Siri / Shortcuts intent asked for (see consumePendingSiriTask).
+  // Prefills only; the user still taps to save or start.
+  const [siriTaskName, setSiriTaskName] = useState("");
+  const [siriDriftIn,  setSiriDriftIn]  = useState(null); // { minutes, nonce }
   const [popup,       setPopup]       = useState(null);
   const [shareTask,   setShareTask]   = useState(null);
 
@@ -3969,8 +3975,18 @@ export default function App() {
   }, []);
 
   const claimPendingHealthEarn = useCallback(async () => {
-    const earnedSec = await consumePendingHealthEarn();
-    if (earnedSec <= 0) return;
+    const pendingSec = await consumePendingHealthEarn();
+    if (pendingSec <= 0) return;
+    // The steps shortcut (DriftEarnFromStepsIntent) takes its step goal and
+    // payout as Shortcut parameters the user edits, and could be run again and
+    // again. Cap it here: at most HEALTH_EARN_MAX_SEC, once per local day.
+    // (As of this writing that intent is not in any Xcode target, so nothing
+    // sets the pending value; this keeps it safe if it is added back.)
+    const today = new Date().toDateString();
+    const claimedDay = await AsyncStorage.getItem("drift_health_earn_claimed_day").catch(() => null);
+    if (claimedDay === today) return;
+    const earnedSec = Math.min(pendingSec, HEALTH_EARN_MAX_SEC);
+    await AsyncStorage.setItem("drift_health_earn_claimed_day", today).catch(() => {});
     const earnedMin = Math.ceil(earnedSec / 60);
     const newSec = secRef.current + earnedSec;
     secRef.current = newSec;
@@ -4745,9 +4761,18 @@ export default function App() {
     flushPendingStats(userId).catch(() => {});
     claimPendingHealthEarn().catch(() => {});
     refreshSleepGuard().catch(() => {});
+    // Siri / Shortcuts. "Create a task" prefills the title, and "Start a Drift
+    // In session" opens Drift In with the spoken length. Both only prefill: an
+    // utterance Siri misheard should not save a task or start a lock. This used
+    // to open an empty add sheet and drop driftInMinutes entirely.
     consumePendingSiriTask().then(siri => {
-      if (siri?.taskName) setOverlay("add");
-      // driftInMinutes is handled by the sync loop below — requires UI to be ready.
+      if (siri?.taskName) {
+        setSiriTaskName(String(siri.taskName).slice(0, 200));
+        setOverlay("add");
+      } else if (Number(siri?.driftInMinutes) > 0) {
+        setSiriDriftIn({ minutes: Number(siri.driftInMinutes), nonce: Date.now() });
+        setTab("driftin");
+      }
     }).catch(() => {});
     reconcileMonitoring();
     const sync = async () => {
@@ -6563,6 +6588,8 @@ export default function App() {
               onUpgrade={openLockboxPaywall}
               totalXp={totalXp}
               dark={darkMode}
+              presetMinutes={siriDriftIn?.minutes}
+              presetNonce={siriDriftIn?.nonce}
             />
           </View>
           <View style={{ width: TAB_W, height: "100%" }}>
@@ -6732,7 +6759,8 @@ export default function App() {
           {overlay === "add" && (
             <AddTaskOverlay
               onSave={addTask}
-              onClose={() => setOverlay(null)}
+              onClose={() => { setOverlay(null); setSiriTaskName(""); }}
+              initialTitle={siriTaskName}
               userId={userId}
               isSubActive={proAccess}
               onOpenPaywall={() => openPaywall("add_task")}
