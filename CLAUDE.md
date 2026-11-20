@@ -92,7 +92,7 @@ OpenAI calls live in two edge functions only: `evaluate-task` (text) and
 photo). The model is **not hardcoded** — set it as a secret, no deploy needed:
 
 ```
-supabase secrets set OPENAI_MODEL=gpt-4.1-nano
+supabase secrets set OPENAI_MODEL=gpt-5.6-luna
 supabase secrets set OPENAI_MODEL_TEXT=<cheaper text-only model>   # optional
 ```
 
@@ -101,8 +101,19 @@ supabase secrets set OPENAI_MODEL_TEXT=<cheaper text-only model>   # optional
 - `OPENAI_MODEL_TEXT` — used for the text-only calls. Falls back to
   `OPENAI_MODEL` when unset.
 
-Default for both is `gpt-4.1-nano`. Verify current prices before switching —
-they change, and reasoning models (o-series) cost far more, not less.
+With neither secret set, both use `DEFAULT_MODEL` in
+`supabase/functions/_shared/openai.ts`, currently `gpt-5.6-luna` (vision-capable,
+$0.20/$1.20 per 1M tokens in/out). It replaced `gpt-4.1-nano`, which OpenAI shut
+down on 2026-10-23. Every call then failed with 404 `model_not_found`, which
+verify-task showed users as "Couldn't read that image".
+
+`gpt-5.6-luna` is a reasoning model, and those take a different request shape:
+`max_completion_tokens` instead of `max_tokens`, no custom `temperature`, and
+`reasoning_effort`, which otherwise spends the small output budget thinking
+and returns an empty reply. Build request bodies with `chatBody()` from that
+file, never by hand. It picks the shape from the model name, so either family
+works from the secret alone. Verify current prices before switching, because
+they change.
 
 ## Changelog
 `Drift-changelog.xlsx` (repo root) is the running log of shipped work — one row
