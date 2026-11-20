@@ -81,7 +81,10 @@ const MAX_EARN_MINS = 60;
 // `lockboxLocked` is true for free accounts: Lockbox is a Pro feature (see
 // freeTier.js), so its tab stays visible but sends the user to `onUpgrade`
 // instead of opening. The timer is free for everyone.
-function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSessionEnd, onImmersiveChange, lockboxLocked = false, onUpgrade, dark = false }) {
+//
+// `presetMinutes` / `presetNonce` come from Siri's "Start a Drift In session"
+// (StartDriftInIntent); see the effect below.
+function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSessionEnd, onImmersiveChange, lockboxLocked = false, onUpgrade, dark = false, presetMinutes, presetNonce }) {
   const theme = getTheme(dark);
   // Setup-phase colors follow the app theme; active/done always use dark forest
   const [phase,   setPhase]   = useState("setup"); // setup | active | done
@@ -102,6 +105,18 @@ function DriftInScreen({ onSessionComplete, onSessionStart, onSessionTick, onSes
   const glowAnim  = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  // Siri's "Start a Drift In session" (StartDriftInIntent) sends a length of
+  // 5-180 min. Snap it onto the slider (15-300 in 15s) and switch to the
+  // timer. Never starts the session or interrupts one that is running: a
+  // Lockbox owns its own state machine and may be live, so it is left alone.
+  // The nonce re-applies the same length if Siri is asked twice.
+  useEffect(() => {
+    if (!presetNonce || !(presetMinutes > 0) || phaseRef.current !== "setup") return;
+    const snapped = Math.max(15, Math.min(300, Math.round(presetMinutes / 15) * 15));
+    setMode(m => (m === "lockbox" ? m : "timer"));
+    setDur(snapped);
+  }, [presetNonce, presetMinutes]);
 
   const persistSession = (data) => { AsyncStorage.setItem(SESSION_KEY, JSON.stringify(data)).catch(() => {}); };
   const clearPersisted = () => { AsyncStorage.removeItem(SESSION_KEY).catch(() => {}); };

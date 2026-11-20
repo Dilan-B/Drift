@@ -26,6 +26,28 @@ const MIN = 4;
 const MAX = 8;
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "del", "0", "ok"];
 
+// Copy for a refused PIN. "locked" comes from the server's attempt limiter
+// (family-pin / check_family_pin): 5 wrong guesses lock the PIN, for longer
+// each time, so a kid can't run through all 10,000 four-digit PINs.
+function pinErrorText(res) {
+  if (res.reason === "no_pin") return tr("A parent needs to set a PIN in their app first.");
+  if (res.reason === "network") return tr("Couldn't check the PIN. Try again.");
+  if (res.reason === "locked") {
+    const until = res.lockedUntil ? new Date(res.lockedUntil).getTime() : 0;
+    const mins = until ? Math.max(1, Math.ceil((until - Date.now()) / 60000)) : 0;
+    if (!mins) return tr("Too many wrong tries. The PIN is locked for now.");
+    return mins >= 90
+      ? tr("Too many wrong tries. Try again in about {{n}} hours.", { n: Math.round(mins / 60) })
+      : tr("Too many wrong tries. Try again in {{n}} min.", { n: mins });
+  }
+  if (typeof res.attemptsLeft === "number" && res.attemptsLeft <= 2) {
+    return res.attemptsLeft === 1
+      ? tr("That PIN isn't right. 1 try left before it locks.")
+      : tr("That PIN isn't right. {{n}} tries left before it locks.", { n: res.attemptsLeft });
+  }
+  return tr("That PIN isn't right.");
+}
+
 export default function ParentPinPad({ visible, onClose, dark, familyId }) {
   const t = getTheme(dark);
   const [pin, setPin] = useState("");
@@ -59,9 +81,7 @@ export default function ParentPinPad({ visible, onClose, dark, familyId }) {
     const res = await verifyFamilyPin(familyId, pin, "custom");
     setBusy(false);
     if (!res.ok) {
-      wrong(res.reason === "no_pin" ? tr("A parent needs to set a PIN in their app first.")
-        : res.reason === "network" ? tr("Couldn't check the PIN. Try again.")
-        : tr("That PIN isn't right."));
+      wrong(pinErrorText(res));
       return;
     }
     notify(true);

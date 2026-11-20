@@ -99,9 +99,11 @@ export async function inviteContacts() {
     const info = await getReferralInfo().catch(() => null);
     const code = info?.code;
     const link = code ? `${INVITE_URL}?ref=${code}` : INVITE_URL;
-    const msg = code
-      ? tr("I use Drift to earn my screen time — join with my code {{code}} for 15 bonus minutes: {{link}}", { code, link })
-      : tr("I'm using Drift to earn my screen time instead of doom-scrolling — join me: {{link}}", { link });
+    // No "15 bonus minutes" here: no screen in the app takes a referral code,
+    // and the bonus apply_referral_code records (profiles.bonus_minutes) is
+    // never added to anyone's balance. The ?ref= link still attributes the
+    // install. Put the promise back only once both halves exist.
+    const msg = tr("I'm using Drift to earn my screen time instead of doom-scrolling — join me: {{link}}", { link });
     await Share.share({ message: msg });
     return true;
   } catch {

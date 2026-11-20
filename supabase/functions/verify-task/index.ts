@@ -371,16 +371,22 @@ serve(async (req: Request) => {
     const midnight = new Date(now);
     midnight.setHours(0, 0, 0, 0);
 
+    // evaluate-task writes to this table too (proof_kind = 'evaluate'). Count
+    // only proof submissions. `neq` also drops NULL proof_kind, which is what
+    // evaluate-task wrote before it was tagged; every row this function writes
+    // has a proof_kind (see logUsage).
     const [{ count: hourCount }, { count: dayCount }] = await Promise.all([
       supabase
         .from("ai_check_usage")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
+        .neq("proof_kind", "evaluate")
         .gte("created_at", hourAgo),
       supabase
         .from("ai_check_usage")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
+        .neq("proof_kind", "evaluate")
         .gte("created_at", midnight.toISOString()),
     ]);
 

@@ -136,15 +136,18 @@ serve(async (req: Request) => {
       return json({ error: "subscription_required" }, 402);
     }
 
-    // Rate limiting (shared ai_check_usage table is fine here too)
+    // Rate limiting. ai_check_usage is shared with verify-task, so each function
+    // counts only its own rows: this one writes proof_kind = 'evaluate', and
+    // verify-task excludes those. Before that split, creating a handful of
+    // AI-valued tasks used up the 5-per-hour proof-check allowance.
     const hourAgo  = new Date(Date.now() - 3_600_000).toISOString();
     const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
 
     const [{ count: hourCount }, { count: dayCount }] = await Promise.all([
       supabase.from("ai_check_usage").select("*", { count: "exact", head: true })
-        .eq("user_id", user.id).gte("created_at", hourAgo),
+        .eq("user_id", user.id).eq("proof_kind", "evaluate").gte("created_at", hourAgo),
       supabase.from("ai_check_usage").select("*", { count: "exact", head: true })
-        .eq("user_id", user.id).gte("created_at", midnight.toISOString()),
+        .eq("user_id", user.id).eq("proof_kind", "evaluate").gte("created_at", midnight.toISOString()),
     ]);
     if ((hourCount ?? 0) >= MAX_PER_HOUR)
       return json({ error: "rate_limit", message: "Hourly limit reached." }, 429);
@@ -240,7 +243,7 @@ serve(async (req: Request) => {
       result.xp = Math.round(MAX_REWARD_MINUTES * 0.6 + 8);
     }
 
-    supabase.from("ai_check_usage").insert({ user_id: user.id }).then(() => {}, () => {});
+    supabase.from("ai_check_usage").insert({ user_id: user.id, proof_kind: "evaluate" }).then(() => {}, () => {});
     return json(result);
   } catch (err) {
     console.error("evaluate-task error:", err);

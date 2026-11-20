@@ -173,7 +173,12 @@ export async function verifyFamilyPin(familyId, pin, setMode) {
     });
     if (error) return { ok: false, reason: "network" };
     if (!data?.success) return { ok: false, reason: data?.reason || "failed" };
-    return { ok: !!data.ok, reason: data.reason };
+    return {
+      ok: !!data.ok,
+      reason: data.reason,
+      attemptsLeft: data.attemptsLeft,
+      lockedUntil: data.lockedUntil,
+    };
   } catch (e) {
     return { ok: false, reason: e?.message || "failed" };
   }
