@@ -470,6 +470,48 @@ ROWS = [
     ("2026-10-26", "cf38bc0", "Docs", "Privacy", "Privacy policy rewritten to match what the app does",
      "The old policy omitted data the app collects and named a processor it no longer uses. New one lists every data type and provider, a children's section, a retention table, CCPA/GDPR/consumer-health-data rights. Plus SECURITY_PROGRAM.md (the written security program COPPA requires).",
      "1.3.0", "\u2014"),
+    # \u2500\u2500 2026-11-10 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    # The three rows below went live from a machine whose commits were never
+    # pushed. fb6bda1 recorded them on 2026-11-20 from the deployed functions
+    # and the live migration history; the dates are the deploy/apply dates.
+    ("2026-11-10", "fb6bda1", "Bug Fix", "AI Check", "AI Check failed for everyone after OpenAI retired gpt-4.1-nano",
+     "gpt-4.1-nano, the hardcoded default in evaluate-task and verify-task, was shut down on 2026-10-23. Every call returned 404 model_not_found, which verify-task showed as 'Couldn't read that image'. The default is now gpt-5.6-luna, set in _shared/openai.ts. It is a reasoning model, which rejects max_tokens and custom temperature and by default spends its output budget on reasoning, so chatBody() builds the request for whichever family the model belongs to. evaluate-task deployed 2026-11-10, verify-task 2026-11-16.",
+     "Server", "Edge deploy"),
+    ("2026-11-10", "fb6bda1", "Infra", "Backend", "Hourly health monitor with email alerts",
+     "pg_cron calls a health-check edge function every hour at :07, sending a Vault secret that the function checks. It reads health_stats(), which includes the time of the last AI verdict, and emails alerts via Resend. Alert state is kept in ops_alert_state; both the table and the function are service-role only. Migration 20261110000001 applied.",
+     "Server", "SQL migration, Edge deploy"),
+    # \u2500\u2500 2026-11-16 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    ("2026-11-16", "fb6bda1", "Feature", "Billing", "Free plan cut to 1 approved AI check a day",
+     "app_config.free_daily_tasks set from 3 to 1 (migration 20261116000001), and verify-task's fallback when it can't read the config is now 1 as well.",
+     "Server", "SQL migration, Edge deploy"),
+    # \u2500\u2500 2026-11-20 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    ("2026-11-20", "259fc4b", "Security", "Family", "Any signed-in user could give themselves unlimited screen time",
+     "grant_screen_time() and parent_owns_child() (schema_v13) are security definer and were never revoked. Postgres gives EXECUTE on a new function to PUBLIC, so a kid could call grant_screen_time on their own id over PostgREST and mint any balance, logged as a 'parent_grant'. Both functions are now service-role only (schema_v27). Applied 2026-11-20; checked live that anon and authenticated can no longer execute it and service_role still can.",
+     "Server", "SQL migration"),
+    ("2026-11-20", "259fc4b", "Security", "Family", "A kid could raise their own balance by writing to their profile",
+     "profiles.balance_seconds is self-writable because the app syncs drain there, so a child's client could also write any higher number. A trigger now keeps the old value when a child's own write would raise it. Drains, daily resets, erase_account and parent grants are unaffected, because grants run as the function owner. Tested live in a rolled-back transaction: a child's +600 s write left the balance unchanged.",
+     "Server", "SQL migration"),
+    ("2026-11-20", "259fc4b", "Security", "Family", "Parent PIN could be brute-forced from the kid's phone",
+     "family-pin's verify had no attempt counter, a kid already holds a valid session, and a correct PIN flips their own blocking mode, so all 10,000 four-digit PINs could be tried in a loop. check_family_pin() (schema_v26) now counts wrong guesses under a row lock: 5 wrong locks the PIN for 15 min, doubling each time up to 24 h. Setting a new PIN clears it, and verify now requires the caller to belong to the family. The server side is live; the PIN pad's lockout and tries-left text ships with the next build.",
+     "Server", "SQL migration, Edge deploy"),
+    ("2026-11-20", "259fc4b", "Bug Fix", "AI Check", "Creating AI-valued tasks used up the proof-check allowance",
+     "evaluate-task and verify-task wrote to and counted the same ai_check_usage rows, so a few new tasks hit verify's 5-an-hour limit before any proof was sent. evaluate-task now tags its rows proof_kind = 'evaluate', and each function counts only its own. Evaluate rows carry no verdict, so the free plan's daily approval count is unaffected.",
+     "Server", "Edge deploy"),
+    ("2026-11-20", "259fc4b", "Bug Fix", "Profile", "Share card always showed 0 tasks and 0 minutes earned",
+     "ProfileScreen filtered tasks on a 'completed' column that doesn't exist; the column is 'done' (schema_v3).",
+     "Unreleased", "\u2014"),
+    ("2026-11-20", "259fc4b", "Bug Fix", "Siri", "Siri task and Drift In shortcuts ignored what was said",
+     "'Create a task' opened an empty add sheet without the spoken name, and 'Start a Drift In session' never read driftInMinutes, so it only opened the app. The name now fills in the title, and the minutes set the Drift In length, rounded to the slider's 15-minute steps. Neither saves or starts anything without a tap. Not yet tested on a device.",
+     "Unreleased", "\u2014"),
+    ("2026-11-20", "259fc4b", "Bug Fix", "Family", "Parent 'Always allow' toggles did nothing",
+     "They saved family_members.app_policy.allow, which nothing on the child's phone ever read. iOS only identifies an app by tokens from Apple's picker on the phone being managed, so a name like 'Messages' can't be exempted remotely. The sheet now shows the actual steps instead: Manage app access on the kid's phone, the parent PIN, then the picker.",
+     "Unreleased", "\u2014"),
+    ("2026-11-20", "259fc4b", "Bug Fix", "Growth", "Invites promised 15 bonus minutes that never arrived",
+     "No screen calls applyReferralCode, and the bonus apply_referral_code records in profiles.bonus_minutes is never added to a balance. The share text and the Profile row no longer promise a bonus; the ?ref= link still attributes installs.",
+     "Unreleased", "\u2014"),
+    ("2026-11-20", "259fc4b", "Chore", "Screen Time", "Steps shortcut payout capped",
+     "DriftEarnFromStepsIntent takes its step goal and payout as user-editable Shortcut parameters and could be re-run. Claims are now capped at 15 min, once per local day. The intent isn't in any Xcode target, so this guards a feature that doesn't ship yet.",
+     "Unreleased", "\u2014"),
 ]
 
 HEADERS = ["Date", "Commit", "Type", "Area", "Change", "Details", "Release", "Needs"]
@@ -538,7 +580,7 @@ for i, a in enumerate(areas, start=8):
 
 s["G6"] = "By release"
 s["G6"].font = Font(name=FONT, bold=True, size=12, color="1F3A2A")
-rels = ["1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "1.2.0", "1.3.0", "Unreleased"]
+rels = ["1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "1.2.0", "1.3.0", "Server", "Unreleased"]
 s["G7"], s["H7"] = "Release", "Count"
 for c in ("G7", "H7"):
     s[c].font = HDR_FONT
@@ -553,7 +595,7 @@ note_row = 8 + len(areas) + 2
 s[f"A{note_row}"] = "Notes"
 s[f"A{note_row}"].font = Font(name=FONT, bold=True, size=12, color="1F3A2A")
 notes = [
-    "1.2.0 is the version live on the App Store; 1.3.0 is the next submission. Everything marked Unreleased is on main but not shipped.",
+    "1.2.0 is the version live on the App Store; 1.3.0 is the next submission. Everything marked Unreleased is on main but not shipped. Server means live on the backend for every app version, with no build needed.",
     "\"Needs\" says what a change requires beyond a normal JS reload: a native rebuild, an edge-function deploy, or SQL run in Supabase.",
     "Counts on this sheet are formulas over the Changes tab — they update if you edit, add or delete rows there.",
 ]
@@ -624,5 +666,5 @@ assert sum(t.values()) == len(ROWS) and sum(r.values()) == len(ROWS)
 for k in t:
     assert k in ("Feature", "Bug Fix", "UI", "Infra", "Security", "Chore", "Docs"), f"unlisted type {k}"
 for k in r:
-    assert k in ("1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "1.2.0", "1.3.0", "Unreleased"), f"unlisted release {k}"
+    assert k in ("1.1.2", "1.1.3", "1.1.4", "1.1.6", "1.1.7", "1.1.8", "1.2.0", "1.3.0", "Server", "Unreleased"), f"unlisted release {k}"
 print("\nAll type/release values are covered by a summary row - no change is uncounted.")
